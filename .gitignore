@@ -63,6 +63,7 @@ memory/metadata.json
 *.backup
 check-windsurf-logs.sh
 windsurf-mcp-config*.json
+cleanup_docs.sh
 
 # Node.js (MCP Server)
 whitemagic-mcp/node_modules/
