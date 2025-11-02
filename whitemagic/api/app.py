@@ -156,6 +156,11 @@ async def health_check():
     return {"status": "healthy", "version": "0.2.0"}
 
 
+# Include Whop routes
+from .routes import whop
+app.include_router(whop.router)
+
+
 # Memory endpoints
 
 @app.post("/api/v1/memories", response_model=MemoryResponse, tags=["Memories"])
