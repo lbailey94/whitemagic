@@ -17,6 +17,8 @@ from whitemagic import MemoryManager
 
 from .database import Database, User
 from .dependencies import set_database, CurrentUser, DBSession
+from .rate_limit import RateLimiter, set_rate_limiter, get_rate_limiter
+from .middleware import RequestLoggingMiddleware, RateLimitMiddleware, CORSHeadersMiddleware
 from .models import (
     CreateMemoryRequest,
     UpdateMemoryRequest,
@@ -75,9 +77,15 @@ async def lifespan(app: FastAPI):
     await db.create_tables()
     set_database(db)
     
+    # Initialize rate limiter
+    redis_url = os.getenv("REDIS_URL")
+    rate_limiter = RateLimiter(redis_url)
+    set_rate_limiter(rate_limiter)
+    
     yield
     
     # Shutdown
+    await rate_limiter.close()
     await db.close()
 
 
@@ -99,6 +107,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add custom middleware
+app.add_middleware(CORSHeadersMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+# Note: RateLimitMiddleware requires rate_limiter to be initialized
+# It's added in a startup event handler below
 
 
 # Exception handlers
