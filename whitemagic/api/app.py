@@ -11,7 +11,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from whitemagic import MemoryManager
 
@@ -156,9 +157,26 @@ async def health_check():
     return {"status": "healthy", "version": "0.2.0"}
 
 
+# Dashboard endpoint (serve HTML)
+@app.get("/", tags=["Dashboard"])
+async def dashboard_home():
+    """Serve dashboard HTML."""
+    dashboard_path = Path(__file__).parent.parent.parent / "dashboard" / "index.html"
+    if dashboard_path.exists():
+        return FileResponse(dashboard_path)
+    return {"message": "WhiteMagic API", "version": "0.2.0", "docs": "/docs"}
+
+
+# Mount static files for dashboard
+dashboard_dir = Path(__file__).parent.parent.parent / "dashboard"
+if dashboard_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(dashboard_dir)), name="static")
+
+
 # Include Whop routes
-from .routes import whop
+from .routes import whop, dashboard
 app.include_router(whop.router)
+app.include_router(dashboard.router)
 
 
 # Memory endpoints
