@@ -141,8 +141,12 @@ class WhopClient:
             True if signature is valid
         """
         if not self.webhook_secret:
-            print("Warning: WHOP_WEBHOOK_SECRET not set. Skipping verification.")
-            return True  # Allow in development
+            # In production, this should be an error
+            import os
+            if os.getenv('ENVIRONMENT', 'development') == 'production':
+                raise ValueError("WHOP_WEBHOOK_SECRET must be set in production")
+            print("Warning: WHOP_WEBHOOK_SECRET not set. Skipping verification (development only).")
+            return True  # Allow in development only
         
         expected_signature = hmac.new(
             self.webhook_secret.encode(),

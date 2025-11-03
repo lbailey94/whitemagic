@@ -45,9 +45,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response.headers['X-Request-ID'] = request_id
             response.headers['X-Response-Time'] = f"{response_time_ms}ms"
             
-            # Log usage (async, don't wait)
+            # Log usage and update quota (async, don't wait)
             if hasattr(request.state, 'user'):
-                # User was authenticated, log usage
+                # User was authenticated, log usage and update quotas
                 try:
                     await self._log_usage(
                         user=request.state.user,
@@ -56,9 +56,18 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                         status_code=response.status_code,
                         response_time_ms=response_time_ms,
                     )
+                    
+                    # Update quota if request was successful
+                    if 200 <= response.status_code < 300:
+                        from .rate_limit import update_quota_in_db
+                        from .dependencies import get_database
+                        
+                        db = get_database()
+                        async with db.get_session() as session:
+                            await update_quota_in_db(session, request.state.user.id)
                 except Exception as e:
                     # Don't fail request if logging fails
-                    print(f"Failed to log usage: {e}")
+                    print(f"Failed to log usage/update quota: {e}")
             
             return response
             
@@ -77,9 +86,24 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response_time_ms: int,
     ):
         """Create a usage record in the database."""
-        # Note: This is a simplified version
-        # In production, you'd want to batch these or use background tasks
-        pass  # Will be implemented when we add proper logging
+        from .dependencies import get_database
+        from .database import UsageRecord
+        
+        try:
+            db = get_database()
+            async with db.get_session() as session:
+                usage = UsageRecord(
+                    user_id=user.id,
+                    endpoint=endpoint,
+                    method=method,
+                    status_code=status_code,
+                    response_time_ms=response_time_ms,
+                )
+                session.add(usage)
+                await session.commit()
+        except Exception as e:
+            # Don't fail request if logging fails
+            print(f"Failed to create usage record: {e}")
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

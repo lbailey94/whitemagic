@@ -112,8 +112,7 @@ app.add_middleware(
 # Add custom middleware
 app.add_middleware(CORSHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
-# Note: RateLimitMiddleware requires rate_limiter to be initialized
-# It's added in a startup event handler below
+app.add_middleware(RateLimitMiddleware)
 
 
 # Exception handlers
@@ -202,7 +201,7 @@ async def create_memory(
         )
         
         # Get the created memory details
-        memories = manager.list_memories(memory_type=request.type)
+        memories = manager.list_all_memories(memory_type=request.type)
         created_memory = next(
             (m for m in memories if m["filename"] == path.name),
             None
@@ -236,7 +235,7 @@ async def list_memories(
     """
     try:
         manager = get_memory_manager(user)
-        memories = manager.list_memories(memory_type=type)
+        memories = manager.list_all_memories(memory_type=type)
         
         memory_responses = [
             MemoryResponse(
@@ -269,7 +268,7 @@ async def get_memory(
         manager = get_memory_manager(user)
         
         # Find the memory
-        memories = manager.list_memories()
+        memories = manager.list_all_memories()
         memory = next((m for m in memories if m["filename"] == filename), None)
         
         if not memory:
@@ -405,7 +404,7 @@ async def generate_context(
         context = manager.generate_context_summary(tier=request.tier)
         
         # Count memories included (rough estimate)
-        memories_count = len(manager.list_memories())
+        memories_count = len(manager.list_all_memories())
         
         return ContextResponse(
             context=context,

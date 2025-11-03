@@ -79,8 +79,8 @@ async def handle_membership_created(
     )
     
     # TODO: Send welcome email with API key
-    print(f"New user provisioned: {user.email}")
-    print(f"API Key (send to user): {raw_key}")
+    # SECURITY: Never log the full API key
+    print(f"New user provisioned: {user.email} (API key generated: {api_key.key_prefix}...)")
     
     return user
 
