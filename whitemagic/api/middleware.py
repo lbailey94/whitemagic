@@ -59,12 +59,15 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     
                     # Update quota if request was successful
                     if 200 <= response.status_code < 300:
-                        from .rate_limit import update_quota_in_db
+                        from .rate_limit import update_quota_in_db, check_quota_limits
                         from .dependencies import get_database
                         
                         db = get_database()
                         async with db.get_session() as session:
-                            await update_quota_in_db(session, request.state.user.id)
+                            # Check quotas before updating (will raise if exceeded)
+                            await check_quota_limits(session, request.state.user)
+                            # Update usage counters
+                            await update_quota_in_db(session, request.state.user)
                 except Exception as e:
                     # Don't fail request if logging fails
                     print(f"Failed to log usage/update quota: {e}")
@@ -111,11 +114,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Middleware to enforce rate limits.
     
     Must be applied after authentication middleware.
+    Gets rate_limiter from dependencies on each request.
     """
     
-    def __init__(self, app: ASGIApp, rate_limiter):
+    def __init__(self, app: ASGIApp):
         super().__init__(app)
-        self.rate_limiter = rate_limiter
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip rate limiting for health check and docs
@@ -127,8 +130,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             user = request.state.user
             
             try:
+                # Get rate limiter from global
+                from .rate_limit import get_rate_limiter
+                rate_limiter = get_rate_limiter()
+                
                 # Check rate limit
-                rate_limit_info = await self.rate_limiter.check_rate_limit(
+                rate_limit_info = await rate_limiter.check_rate_limit(
                     user=user,
                     request=request,
                 )

@@ -23,6 +23,13 @@ def set_database(database: Database):
     _database = database
 
 
+def get_database() -> Database:
+    """Get the global database instance."""
+    if _database is None:
+        raise RuntimeError("Database not initialized. Call set_database() first.")
+    return _database
+
+
 async def get_db_session() -> AsyncSession:
     """
     FastAPI dependency to get a database session.
