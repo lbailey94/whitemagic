@@ -204,7 +204,8 @@ async def create_memory(
         )
         
         # Get the created memory details
-        memories = await asyncio.to_thread(manager.list_all_memories, memory_type=request.type)
+        all_memories = await asyncio.to_thread(manager.list_all_memories)
+        memories = all_memories.get(request.type, [])
         created_memory = next(
             (m for m in memories if m["filename"] == path.name),
             None
@@ -238,7 +239,14 @@ async def list_memories(
     """
     try:
         manager = get_memory_manager(user)
-        memories = await asyncio.to_thread(manager.list_all_memories, memory_type=type)
+        all_memories = await asyncio.to_thread(manager.list_all_memories)
+        
+        # Filter by type if specified
+        if type:
+            memories = all_memories.get(type, [])
+        else:
+            # Combine all types
+            memories = all_memories.get("short_term", []) + all_memories.get("long_term", [])
         
         memory_responses = [
             MemoryResponse(
@@ -271,8 +279,10 @@ async def get_memory(
         manager = get_memory_manager(user)
         
         # Find the memory
-        memories = await asyncio.to_thread(manager.list_all_memories)
-        memory = next((m for m in memories if m["filename"] == filename), None)
+        all_memories = await asyncio.to_thread(manager.list_all_memories)
+        # Search in all types
+        all_items = all_memories.get("short_term", []) + all_memories.get("long_term", [])
+        memory = next((m for m in all_items if m["filename"] == filename), None)
         
         if not memory:
             raise HTTPException(404, f"Memory not found: {filename}")
@@ -406,8 +416,8 @@ async def generate_context(
         context = await asyncio.to_thread(manager.generate_context_summary, tier=request.tier)
         
         # Count memories included (rough estimate)
-        memories = await asyncio.to_thread(manager.list_all_memories)
-        memories_count = len(memories)
+        all_memories = await asyncio.to_thread(manager.list_all_memories)
+        memories_count = len(all_memories.get("short_term", [])) + len(all_memories.get("long_term", []))
         
         return ContextResponse(
             context=context,
