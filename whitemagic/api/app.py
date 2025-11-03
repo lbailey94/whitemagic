@@ -5,6 +5,7 @@ REST API for WhiteMagic memory management system.
 """
 
 import os
+import asyncio
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -193,7 +194,9 @@ async def create_memory(
     try:
         manager = get_memory_manager(user)
         
-        path = manager.create_memory(
+        # Run blocking I/O in thread pool
+        path = await asyncio.to_thread(
+            manager.create_memory,
             title=request.title,
             content=request.content,
             memory_type=request.type,
@@ -201,7 +204,7 @@ async def create_memory(
         )
         
         # Get the created memory details
-        memories = manager.list_all_memories(memory_type=request.type)
+        memories = await asyncio.to_thread(manager.list_all_memories, memory_type=request.type)
         created_memory = next(
             (m for m in memories if m["filename"] == path.name),
             None
@@ -235,7 +238,7 @@ async def list_memories(
     """
     try:
         manager = get_memory_manager(user)
-        memories = manager.list_all_memories(memory_type=type)
+        memories = await asyncio.to_thread(manager.list_all_memories, memory_type=type)
         
         memory_responses = [
             MemoryResponse(
@@ -268,7 +271,7 @@ async def get_memory(
         manager = get_memory_manager(user)
         
         # Find the memory
-        memories = manager.list_all_memories()
+        memories = await asyncio.to_thread(manager.list_all_memories)
         memory = next((m for m in memories if m["filename"] == filename), None)
         
         if not memory:
@@ -311,7 +314,7 @@ async def update_memory(
         if not updates:
             raise HTTPException(400, "No updates provided")
         
-        manager.update_memory(filename, **updates)
+        await asyncio.to_thread(manager.update_memory, filename, **updates)
         
         # Return updated memory
         return await get_memory(filename, user)
@@ -330,7 +333,7 @@ async def delete_memory(
     """Delete a memory."""
     try:
         manager = get_memory_manager(user)
-        manager.delete_memory(filename)
+        await asyncio.to_thread(manager.delete_memory, filename)
         
         return SuccessResponse(message=f"Memory deleted: {filename}")
         
@@ -353,14 +356,13 @@ async def search_memories(
     try:
         manager = get_memory_manager(user)
         
-        results = manager.search_memories(
+        results = await asyncio.to_thread(
+            manager.search_memories,
             query=request.query,
             tags=request.tags,
             memory_type=request.type,
+            limit=request.limit,
         )
-        
-        # Limit results
-        results = results[:request.limit]
         
         search_results = [
             SearchResultItem(
@@ -401,10 +403,11 @@ async def generate_context(
     """
     try:
         manager = get_memory_manager(user)
-        context = manager.generate_context_summary(tier=request.tier)
+        context = await asyncio.to_thread(manager.generate_context_summary, tier=request.tier)
         
         # Count memories included (rough estimate)
-        memories_count = len(manager.list_all_memories())
+        memories = await asyncio.to_thread(manager.list_all_memories)
+        memories_count = len(memories)
         
         return ContextResponse(
             context=context,
@@ -431,7 +434,8 @@ async def consolidate_memories(
     try:
         manager = get_memory_manager(user)
         
-        result = manager.consolidate_memories(
+        result = await asyncio.to_thread(
+            manager.consolidate_memories,
             dry_run=request.dry_run,
             min_age_days=request.min_age_days,
         )
@@ -458,7 +462,7 @@ async def get_statistics(user: CurrentUser):
     """Get memory statistics."""
     try:
         manager = get_memory_manager(user)
-        stats = manager.get_stats()
+        stats = await asyncio.to_thread(manager.get_stats)
         
         return StatsResponse(
             short_term_count=stats.get("short_term_count", 0),
@@ -477,7 +481,7 @@ async def list_tags(user: CurrentUser):
     """List all unique tags."""
     try:
         manager = get_memory_manager(user)
-        tags = manager.list_tags()
+        tags = await asyncio.to_thread(manager.list_tags)
         
         return TagsResponse(
             tags=sorted(tags),

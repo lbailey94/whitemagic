@@ -85,6 +85,15 @@ class MCPIntegrationTests(unittest.TestCase):
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 process.kill()
+                process.wait()
+            
+            # Close all pipes
+            if process.stdin:
+                process.stdin.close()
+            if process.stdout:
+                process.stdout.close()
+            if process.stderr:
+                process.stderr.close()
 
     def test_mcp_server_can_import_whitemagic(self):
         """Test that MCP server can successfully import whitemagic package."""
@@ -147,6 +156,15 @@ class MCPIntegrationTests(unittest.TestCase):
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 process.kill()
+                process.wait()
+            
+            # Close all pipes
+            if process.stdin:
+                process.stdin.close()
+            if process.stdout:
+                process.stdout.close()
+            if process.stderr:
+                process.stderr.close()
 
     def test_python_wrapper_creates_memory(self):
         """Test that the Python wrapper can create a memory via direct call."""
@@ -250,17 +268,31 @@ class MCPServerLifecycleTests(unittest.TestCase):
                     bufsize=1
                 )
                 
-                time.sleep(1.5)
-                
-                # Verify running
-                self.assertIsNone(process.poll(), f"Server should be running (iteration {i+1})")
-                
-                # Terminate
-                process.terminate()
-                process.wait(timeout=2)
-                
-                # Small delay between restarts
-                time.sleep(0.5)
+                try:
+                    time.sleep(1.5)
+                    
+                    # Verify running
+                    self.assertIsNone(process.poll(), f"Server should be running (iteration {i+1})")
+                    
+                finally:
+                    # Ensure proper cleanup
+                    process.terminate()
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                    
+                    # Close all pipes to prevent resource warnings
+                    if process.stdin:
+                        process.stdin.close()
+                    if process.stdout:
+                        process.stdout.close()
+                    if process.stderr:
+                        process.stderr.close()
+                    
+                    # Small delay between restarts
+                    time.sleep(0.5)
         
         finally:
             import shutil
