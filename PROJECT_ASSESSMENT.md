@@ -10,8 +10,8 @@
 ✅ Clear value proposition
 
 ## Needs Improvement
-⚠️ Dashboard missing memory browser (critical!)
-⚠️ No search UI
+⚠️ Dashboard needs enhanced memory editing/export tools
+⚠️ No advanced search UI
 ⚠️ User onboarding needs wizard
 ⚠️ SQLite only for dev (document this)
 ⚠️ Market positioning unclear (why pay vs self-host?)

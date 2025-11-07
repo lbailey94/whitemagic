@@ -10,13 +10,11 @@
 
 ## 🔑 Getting Your API Key
 
-### Temporary Test Key (For Now):
+### Create a Test Key
 
-```
-wm_YDHAjDUvGkFfmVYIgO5NZ1D1NRU79-W5veu8rRoLFtU
-```
-
-⚠️ **This is a development test key only!**
+1. Use the CLI or API to create a user.
+2. Call `/dashboard/api-keys` (or use the dashboard UI) to mint a key.
+3. Paste that key into the login form.
 
 ### For Production - Use PostgreSQL:
 
@@ -40,15 +38,9 @@ docker run -d \
 export DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/whitemagic"
 ```
 
-3. **Create user via API**:
-```bash
-# The API will auto-create tables on first request
-curl -X POST http://localhost:8000/api/v1/users \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","plan":"professional"}'
-```
-
-4. **Generate API key via dashboard endpoint** (once logged in with Whop)
+3. **Provision via Whop/Dashboard**:
+   - Run through the Whop flow or insert a user directly in the DB.
+   - Use `/dashboard/api-keys` to generate a key once the user exists.
 
 ---
 
@@ -59,6 +51,7 @@ curl -X POST http://localhost:8000/api/v1/users \
 - Account information display
 - Usage statistics with progress bars
 - API key management interface
+- Memory browser with search/filter
 - Clean, modern Tailwind UI
 
 ### 🚧 Coming Soon (Improvements):
@@ -137,6 +130,7 @@ Features:
 2. **Check Network tab** if dashboard doesn't load data
 3. **API endpoints** are at `/api/v1/*` and `/dashboard/*`
 4. **Swagger docs** at http://localhost:8000/docs for API testing
+5. **Point dashboard to another API** by setting `window.WHITEMAGIC_API_BASE` or the `<meta name="whitemagic-api-base">` tag before loading `app.js`.
 
 ---
 

@@ -188,6 +188,7 @@ docker compose logs -f api
 - "Database migrations complete"
 - "Starting server at http://0.0.0.0:8000"
 - No error messages
+- Dashboard reachable at http://localhost:3000
 
 ---
 

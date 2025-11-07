@@ -4,10 +4,13 @@
  * Simple vanilla JS for dashboard functionality.
  */
 
-// Configuration
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000' 
-    : 'https://api.whitemagic.dev';
+// Configuration - prioritize explicit overrides
+const metaApiBase = document.querySelector('meta[name="whitemagic-api-base"]');
+const API_BASE_URL = window.WHITEMAGIC_API_BASE
+    || (metaApiBase && metaApiBase.content.trim())
+    || (window.location.hostname === 'localhost'
+        ? 'http://localhost:8000'
+        : 'https://api.whitemagic.dev');
 
 // State
 let currentApiKey = localStorage.getItem('whitemagic_api_key') || '';
@@ -74,6 +77,7 @@ async function loadDashboardData() {
         await Promise.all([
             loadAccountInfo(),
             loadApiKeys(),
+            loadMemories(),
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -315,4 +319,294 @@ async function rotateApiKey(keyId) {
         alert('Error rotating API key: ' + error.message);
         console.error(error);
     }
+}
+
+// =============================================================================
+// Memory Management
+// =============================================================================
+
+let allMemories = [];
+let currentMemoryFilename = null;
+
+// Load all memories
+async function loadMemories() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/memories`, {
+            headers: {
+                'Authorization': `Bearer ${currentApiKey}`,
+            },
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        allMemories = data.memories || [];
+        
+        // Update count
+        document.getElementById('memoryCount').textContent = 
+            `${allMemories.length} ${allMemories.length === 1 ? 'memory' : 'memories'}`;
+        
+        // Display memories
+        displayMemories(allMemories);
+    } catch (error) {
+        console.error('Error loading memories:', error);
+        document.getElementById('memoryCount').textContent = 'Error loading memories';
+    }
+}
+
+// Display memories in grid
+function displayMemories(memories) {
+    const grid = document.getElementById('memoryGrid');
+    
+    if (memories.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-12 text-gray-500">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+                <p>No memories yet. Create your first one!</p>
+            </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
+    
+    grid.innerHTML = memories.map(memory => `
+        <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="viewMemory('${memory.filename}')">
+            <div class="flex items-start justify-between mb-2">
+                <h3 class="font-semibold text-gray-900 truncate flex-1">${escapeHtml(memory.title)}</h3>
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    memory.type === 'long_term' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                }">
+                    ${memory.type.replace('_', ' ')}
+                </span>
+            </div>
+            <p class="text-sm text-gray-600 line-clamp-3 mb-3">${escapeHtml(memory.content?.substring(0, 150) || '')}...</p>
+            <div class="flex items-center justify-between text-xs text-gray-500">
+                <span>${new Date(memory.created).toLocaleDateString()}</span>
+                ${memory.tags && memory.tags.length > 0 ? `
+                    <div class="flex gap-1">
+                        ${memory.tags.slice(0, 2).map(tag => `
+                            <span class="px-2 py-0.5 bg-gray-100 rounded">${escapeHtml(tag)}</span>
+                        `).join('')}
+                        ${memory.tags.length > 2 ? `<span class="px-2 py-0.5 bg-gray-100 rounded">+${memory.tags.length - 2}</span>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    lucide.createIcons();
+}
+
+// Search memories
+function searchMemories() {
+    const searchTerm = document.getElementById('memorySearch').value.toLowerCase();
+    const typeFilter = document.getElementById('memoryTypeFilter').value;
+    
+    let filtered = allMemories;
+    
+    // Apply type filter
+    if (typeFilter) {
+        filtered = filtered.filter(m => m.type === typeFilter);
+    }
+    
+    // Apply search
+    if (searchTerm) {
+        filtered = filtered.filter(m => 
+            m.title.toLowerCase().includes(searchTerm) ||
+            (m.content && m.content.toLowerCase().includes(searchTerm)) ||
+            (m.tags && m.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+        );
+    }
+    
+    displayMemories(filtered);
+}
+
+// Filter memories by type
+function filterMemories() {
+    searchMemories(); // Reuse search function
+}
+
+// View memory details
+async function viewMemory(filename) {
+    const memory = allMemories.find(m => m.filename === filename);
+    if (!memory) return;
+    
+    currentMemoryFilename = filename;
+    
+    // Populate view modal
+    document.getElementById('viewMemoryTitle').textContent = memory.title;
+    document.getElementById('viewMemoryType').textContent = memory.type.replace('_', ' ');
+    document.getElementById('viewMemoryDate').textContent = 
+        `Created ${new Date(memory.created).toLocaleString()}`;
+    
+    // Type badge color
+    const badge = document.getElementById('viewMemoryTypeBadge');
+    if (memory.type === 'long_term') {
+        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800';
+    } else {
+        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800';
+    }
+    
+    // Content
+    document.getElementById('viewMemoryContent').textContent = memory.content || '';
+    
+    // Tags
+    const tagsContainer = document.getElementById('viewMemoryTagsContainer');
+    if (memory.tags && memory.tags.length > 0) {
+        tagsContainer.innerHTML = memory.tags.map(tag => `
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mr-2">
+                ${escapeHtml(tag)}
+            </span>
+        `).join('');
+    } else {
+        tagsContainer.innerHTML = '';
+    }
+    
+    // Show modal
+    document.getElementById('viewMemoryModal').style.display = 'flex';
+    lucide.createIcons();
+}
+
+// Show create memory modal
+function showCreateMemoryModal() {
+    document.getElementById('memoryModalTitle').textContent = 'Create Memory';
+    document.getElementById('memoryFilename').value = '';
+    document.getElementById('memoryTitle').value = '';
+    document.getElementById('memoryContent').value = '';
+    document.getElementById('memoryType').value = 'short_term';
+    document.getElementById('memoryTags').value = '';
+    document.getElementById('memoryModal').style.display = 'flex';
+}
+
+// Edit current memory
+function editCurrentMemory() {
+    const memory = allMemories.find(m => m.filename === currentMemoryFilename);
+    if (!memory) return;
+    
+    // Hide view modal
+    document.getElementById('viewMemoryModal').style.display = 'none';
+    
+    // Populate edit form
+    document.getElementById('memoryModalTitle').textContent = 'Edit Memory';
+    document.getElementById('memoryFilename').value = memory.filename;
+    document.getElementById('memoryTitle').value = memory.title;
+    document.getElementById('memoryContent').value = memory.content || '';
+    document.getElementById('memoryType').value = memory.type;
+    document.getElementById('memoryTags').value = memory.tags ? memory.tags.join(', ') : '';
+    
+    // Show edit modal
+    document.getElementById('memoryModal').style.display = 'flex';
+}
+
+// Save memory (create or update)
+async function saveMemory(event) {
+    event.preventDefault();
+    
+    const filename = document.getElementById('memoryFilename').value;
+    const title = document.getElementById('memoryTitle').value;
+    const content = document.getElementById('memoryContent').value;
+    const type = document.getElementById('memoryType').value;
+    const tagsInput = document.getElementById('memoryTags').value;
+    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
+    
+    try {
+        const isEdit = !!filename;
+        const url = isEdit 
+            ? `${API_BASE_URL}/api/v1/memories/${filename}`
+            : `${API_BASE_URL}/api/v1/memories`;
+        
+        const method = isEdit ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Authorization': `Bearer ${currentApiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title,
+                content,
+                type,
+                tags,
+            }),
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to save memory');
+        }
+        
+        // Close modal and reload
+        hideMemoryModal();
+        await loadMemories();
+        
+        // Show success message
+        showToast(isEdit ? 'Memory updated!' : 'Memory created!');
+    } catch (error) {
+        alert('Error saving memory: ' + error.message);
+        console.error(error);
+    }
+}
+
+// Delete current memory
+async function deleteCurrentMemory() {
+    if (!currentMemoryFilename) return;
+    
+    if (!confirm('Are you sure you want to delete this memory? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/memories/${currentMemoryFilename}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${currentApiKey}`,
+            },
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete memory');
+        }
+        
+        // Close modal and reload
+        hideViewMemoryModal();
+        await loadMemories();
+        
+        showToast('Memory deleted');
+    } catch (error) {
+        alert('Error deleting memory: ' + error.message);
+        console.error(error);
+    }
+}
+
+// Hide modals
+function hideMemoryModal() {
+    document.getElementById('memoryModal').style.display = 'none';
+}
+
+function hideViewMemoryModal() {
+    document.getElementById('viewMemoryModal').style.display = 'none';
+    currentMemoryFilename = null;
+}
+
+// Utility: Show toast notification
+function showToast(message) {
+    // Simple toast - you can enhance this
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Utility: Escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

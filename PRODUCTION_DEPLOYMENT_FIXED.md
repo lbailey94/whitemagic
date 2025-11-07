@@ -237,10 +237,9 @@ pytest tests/ -v
 python3 scripts/check_security_guards.py
 python3 scripts/check_dependencies.py
 
-# 5. API smoke test
-curl -X POST http://localhost:8000/api/v1/users \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","plan":"free"}'
+# 5. API smoke test (requires API key)
+curl http://localhost:8000/dashboard/account \
+  -H "Authorization: Bearer $YOUR_API_KEY"
 ```
 
 ---

@@ -150,7 +150,7 @@ let currentMemoryFilename = null; // Currently viewed memory
 
 ### Start Dashboard:
 ```bash
-cd dashboardsite
+cd dashboard
 python3 -m http.server 3000
 ```
 
@@ -194,12 +194,12 @@ API Key: wm_YDHAjDUvGkFfmVYIgO5NZ1D1NRU79-W5veu8rRoLFtU
 ## 📋 File Changes
 
 ### Modified:
-- `dashboardsite/index.html` (+150 lines)
+- `dashboard/index.html` (+150 lines)
   - Added memory grid section
   - Added search/filter UI
   - Added 2 modals (view, create/edit)
 
-- `dashboardsite/app.js` (+476 lines)
+- `dashboard/app.js` (+476 lines)
   - Memory loading function
   - Display & render functions
   - Search & filter logic
@@ -209,7 +209,7 @@ API Key: wm_YDHAjDUvGkFfmVYIgO5NZ1D1NRU79-W5veu8rRoLFtU
   - Utility functions
 
 ### Created:
-- `dashboardsite/MEMORY_BROWSER_FEATURES.md`
+- `dashboard/MEMORY_BROWSER_FEATURES.md`
   - Complete feature documentation
   - Usage examples
   - Technical details

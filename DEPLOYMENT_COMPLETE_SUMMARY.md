@@ -30,11 +30,11 @@
 ## 📂 New Files Created
 
 ```
-dashboardsite/
-├── index.html          # Main dashboard
-├── app.js              # JavaScript logic
-├── IMPROVEMENTS.md     # Enhancement roadmap
-└── README.md           # Hosting guide
+dashboard/
+├── index.html                  # Main dashboard
+├── app.js                      # JavaScript logic
+├── IMPROVEMENTS.md             # Enhancement roadmap
+└── MEMORY_BROWSER_FEATURES.md  # Complete feature docs
 
 PRIMER_FOR_NEW_USERS.md   # User guide
 PROJECT_ASSESSMENT.md      # Honest assessment
@@ -84,11 +84,11 @@ Dashboard needs to communicate with FastAPI backend. Static hosts can't run Pyth
 
 ### Test It:
 ```bash
-cd dashboardsite
-python3 -m http.server 8080
+cd dashboard
+python3 -m http.server 3000
 ```
-**URL**: http://localhost:8080  
-**API Key**: `wm_YDHAjDUvGkFfmVYIgO5NZ1D1NRU79-W5veu8rRoLFtU`
+**Visit**: http://localhost:3000  
+**API Key**: Create via dashboard or CLI (no hardcoded keys)
 
 ---
 
@@ -134,7 +134,7 @@ Revenue from cloud hosting convenience, not data mining.
 6. **Set up PostgreSQL** (replace SQLite)
 
 ### Later:
-7. Implement dashboard improvements from `dashboardsite/IMPROVEMENTS.md`
+7. Implement dashboard improvements from `dashboard/IMPROVEMENTS.md`
 8. Add Whop integration for monetization
 9. Market testing with users
 
@@ -148,7 +148,7 @@ Revenue from cloud hosting convenience, not data mining.
 1. Push to GitHub (done ✅)
 2. Visit vercel.com
 3. Import repository
-4. Set root directory: `dashboardsite`
+4. Set root directory: `dashboard`
 5. Deploy!
 
 **Backend (Railway)**:

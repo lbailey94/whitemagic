@@ -3,8 +3,7 @@
 
 # Replace yourdomain.com with your actual domain
 yourdomain.com {
-    # Reverse proxy to local API
-    reverse_proxy 127.0.0.1:8000
+    reverse_proxy api:8000
     
     # Structured JSON logging
     log {
@@ -43,11 +42,10 @@ yourdomain.com {
     # }
 }
 
-# Alternative: Subdomain setup
-# api.yourdomain.com {
-#     reverse_proxy 127.0.0.1:8000
-#     log {
-#         output file /var/log/caddy/api-access.log
-#         format json
-#     }
-# }
+dashboard.yourdomain.com {
+    reverse_proxy dashboard:80
+    log {
+        output file /var/log/caddy/dashboard-access.log
+        format json
+    }
+}

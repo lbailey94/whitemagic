@@ -131,6 +131,8 @@ curl http://localhost:8000/health
 - PostgreSQL 16 with health checks
 - Redis 7 with persistence
 - API with 4 workers
+- Static dashboard served via nginx
+- Caddy reverse proxy with automatic HTTPS
 - Automatic database migrations on startup
 - Named volumes for data persistence
 

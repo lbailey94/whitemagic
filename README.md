@@ -32,6 +32,15 @@ pip install whitemagic==2.1.0
 python -c "from whitemagic import MemoryManager; print('Ready:', MemoryManager().metadata['version'])"
 ```
 
+### Run the full stack locally
+
+```bash
+docker compose up -d
+# API:       http://localhost:8000
+# Dashboard: http://localhost:3000
+# Caddy:     http://localhost (reverse proxy for dashboard + API)
+```
+
 ## 📦 MCP Server (Windsurf/Cursor)
 
 ```bash
@@ -77,6 +86,8 @@ pip install -r requirements-plugins.txt
 ```
 
 Then follow the relevant instructions in `docs/production/OPTIONAL_INTEGRATIONS.md`.
+
+**Configurable API base:** set `window.WHITEMAGIC_API_BASE` (or the `<meta name="whitemagic-api-base">` tag) before loading `dashboard/app.js` to point the dashboard at a different backend (staging, preview, etc.).
 
 ## 🛡️ Guardrails
 

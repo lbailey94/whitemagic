@@ -13,7 +13,7 @@
 1. **✅ Package Published**: https://github.com/lbailey94/whitemagic/releases/tag/v2.1.1
 2. **✅ Repository Public**: Direct downloads working
 3. **✅ API Server Running**: http://localhost:8000
-4. **✅ Dashboard Running**: http://localhost:3000
+4. **✅ Dashboard Running**: http://localhost:3000 (account stats, API key mgmt, memory browser)
 5. **✅ SQLite Fixed**: Database compatibility resolved
 6. **✅ All Tests Passing**: 40+ tests green
 
@@ -21,11 +21,7 @@
 
 ## 🔑 Your Dashboard API Key
 
-Use this temporary test key to log into the dashboard:
-
-```
-wm_YDHAjDUvGkFfmVYIgO5NZ1D1NRU79-W5veu8rRoLFtU
-```
+Want to test quickly? Create an API key in the dashboard once you provision a user (or use the CLI). We no longer ship real keys in docs.
 
 **Dashboard URL**: http://localhost:3000
 
