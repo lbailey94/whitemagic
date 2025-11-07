@@ -1,0 +1,65 @@
+# WhiteMagic Production Stack
+# Includes: PostgreSQL + Redis + API with auto-migrations
+
+services:
+  db:
+    image: postgres:16
+    container_name: whitemagic-db
+    environment:
+      POSTGRES_DB: whitemagic
+      POSTGRES_USER: wmuser
+      POSTGRES_PASSWORD: wmpass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wmuser -d whitemagic"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: whitemagic-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    image: lbailey94/whitemagic:2.1.0
+    container_name: whitemagic-api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wmuser:wmpass@db:5432/whitemagic
+      REDIS_URL: redis://redis:6379
+    command: >
+      /bin/sh -lc "
+      alembic upgrade head &&
+      uvicorn whitemagic.api.app:app --host 0.0.0.0 --port 8000 --workers 4
+      "
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  pgdata:
+    name: whitemagic_pgdata
+  redisdata:
+    name: whitemagic_redisdata

@@ -27,7 +27,7 @@ class MCPIntegrationTests(unittest.TestCase):
         """Set up test environment."""
         cls.project_root = Path(__file__).parent.parent
         cls.mcp_dist = cls.project_root / "whitemagic-mcp" / "dist" / "index.js"
-        
+
         # Verify MCP server is built
         if not cls.mcp_dist.exists():
             raise FileNotFoundError(
@@ -39,7 +39,7 @@ class MCPIntegrationTests(unittest.TestCase):
         """Create temporary directory for each test."""
         self.temp_dir = tempfile.mkdtemp(prefix="whitemagic_test_")
         self.base_path = Path(self.temp_dir)
-        
+
         # Create memory directories
         for subdir in ["memory/short_term", "memory/long_term", "memory/archive"]:
             (self.base_path / subdir).mkdir(parents=True, exist_ok=True)
@@ -47,6 +47,7 @@ class MCPIntegrationTests(unittest.TestCase):
     def tearDown(self):
         """Clean up temporary directory."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_mcp_server_startup_and_ping(self):
@@ -54,7 +55,7 @@ class MCPIntegrationTests(unittest.TestCase):
         # Start MCP server
         env = os.environ.copy()
         env["WM_BASE_PATH"] = str(self.base_path)
-        
+
         process = subprocess.Popen(
             ["node", str(self.mcp_dist)],
             stdin=subprocess.PIPE,
@@ -62,22 +63,24 @@ class MCPIntegrationTests(unittest.TestCase):
             stderr=subprocess.PIPE,
             env=env,
             text=True,
-            bufsize=1
+            bufsize=1,
         )
-        
+
         try:
             # Wait for server to initialize
             time.sleep(2)
-            
+
             # Check if process is still running
             poll_result = process.poll()
             if poll_result is not None:
                 stderr_output = process.stderr.read()
-                self.fail(f"MCP server exited prematurely with code {poll_result}\nStderr: {stderr_output}")
-            
+                self.fail(
+                    f"MCP server exited prematurely with code {poll_result}\nStderr: {stderr_output}"
+                )
+
             # Server should be running
             self.assertIsNone(process.poll(), "MCP server should still be running")
-            
+
         finally:
             # Clean shutdown
             process.terminate()
@@ -86,7 +89,7 @@ class MCPIntegrationTests(unittest.TestCase):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
-            
+
             # Close all pipes
             if process.stdin:
                 process.stdin.close()
@@ -100,7 +103,7 @@ class MCPIntegrationTests(unittest.TestCase):
         # Start MCP server
         env = os.environ.copy()
         env["WM_BASE_PATH"] = str(self.project_root)
-        
+
         process = subprocess.Popen(
             ["node", str(self.mcp_dist)],
             stdin=subprocess.PIPE,
@@ -108,47 +111,52 @@ class MCPIntegrationTests(unittest.TestCase):
             stderr=subprocess.PIPE,
             env=env,
             text=True,
-            bufsize=1
+            bufsize=1,
         )
-        
+
         try:
             # Collect stderr output to check for import errors
             stderr_lines = []
             start_time = time.time()
-            
+
             # Wait up to 5 seconds for initialization
             while time.time() - start_time < 5:
                 if process.poll() is not None:
                     # Process exited
                     break
-                    
+
                 # Read available stderr
                 import select
+
                 readable, _, _ = select.select([process.stderr], [], [], 0.1)
                 if readable:
                     line = process.stderr.readline()
                     if line:
                         stderr_lines.append(line)
-                        
+
                         # Check for success messages
                         if "Connected to WhiteMagic" in line:
                             # Success!
                             return
-                        
+
                         # Check for import errors
                         if "ModuleNotFoundError" in line or "ImportError" in line:
-                            self.fail(f"MCP server failed to import whitemagic:\n{''.join(stderr_lines)}")
-            
+                            self.fail(
+                                f"MCP server failed to import whitemagic:\n{''.join(stderr_lines)}"
+                            )
+
             # Check if server is still running (good sign)
             poll_result = process.poll()
             if poll_result is not None and poll_result != 0:
-                self.fail(f"MCP server exited with error code {poll_result}:\n{''.join(stderr_lines)}")
-            
+                self.fail(
+                    f"MCP server exited with error code {poll_result}:\n{''.join(stderr_lines)}"
+                )
+
             # If we got here and process is running, that's success
             if process.poll() is None:
                 # Server is running, import was successful
                 pass
-            
+
         finally:
             # Clean shutdown
             process.terminate()
@@ -157,7 +165,7 @@ class MCPIntegrationTests(unittest.TestCase):
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
-            
+
             # Close all pipes
             if process.stdin:
                 process.stdin.close()
@@ -191,46 +199,38 @@ path = manager.create_memory(
 
 print(json.dumps({{'success': True, 'path': str(path)}}))
 """
-        
+
         result = subprocess.run(
-            ["python3", "-c", python_code],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["python3", "-c", python_code], capture_output=True, text=True, timeout=5
         )
-        
+
         # Check execution was successful
         self.assertEqual(result.returncode, 0, f"Python wrapper failed:\n{result.stderr}")
-        
+
         # Parse output
         try:
             output = json.loads(result.stdout.strip())
-            self.assertTrue(output['success'], "Memory creation should succeed")
-            self.assertIn('path', output, "Should return path")
+            self.assertTrue(output["success"], "Memory creation should succeed")
+            self.assertIn("path", output, "Should return path")
         except json.JSONDecodeError as e:
             self.fail(f"Invalid JSON output: {result.stdout}\nError: {e}")
-        
+
         # Verify memory file was created
         memory_files = list((self.base_path / "memory" / "short_term").glob("*.md"))
         self.assertEqual(len(memory_files), 1, "Should create exactly one memory file")
 
     def test_mcp_server_with_node_installed(self):
         """Verify Node.js is available for MCP server."""
-        result = subprocess.run(
-            ["node", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
+        result = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=5)
+
         self.assertEqual(result.returncode, 0, "Node.js should be installed")
-        
+
         # Parse version
         version = result.stdout.strip()
-        self.assertTrue(version.startswith('v'), f"Expected node version, got: {version}")
-        
+        self.assertTrue(version.startswith("v"), f"Expected node version, got: {version}")
+
         # Check minimum version (v18 or higher)
-        major_version = int(version.split('.')[0][1:])
+        major_version = int(version.split(".")[0][1:])
         self.assertGreaterEqual(major_version, 18, "Node.js v18+ required for MCP server")
 
 
@@ -247,15 +247,15 @@ class MCPServerLifecycleTests(unittest.TestCase):
         """Test that MCP server can be started, stopped, and restarted."""
         temp_dir = tempfile.mkdtemp(prefix="whitemagic_test_")
         base_path = Path(temp_dir)
-        
+
         try:
             # Create memory directories
             for subdir in ["memory/short_term", "memory/long_term", "memory/archive"]:
                 (base_path / subdir).mkdir(parents=True, exist_ok=True)
-            
+
             env = os.environ.copy()
             env["WM_BASE_PATH"] = str(self.project_root)
-            
+
             # Start and stop 3 times
             for i in range(3):
                 process = subprocess.Popen(
@@ -265,15 +265,15 @@ class MCPServerLifecycleTests(unittest.TestCase):
                     stderr=subprocess.PIPE,
                     env=env,
                     text=True,
-                    bufsize=1
+                    bufsize=1,
                 )
-                
+
                 try:
                     time.sleep(1.5)
-                    
+
                     # Verify running
                     self.assertIsNone(process.poll(), f"Server should be running (iteration {i+1})")
-                    
+
                 finally:
                     # Ensure proper cleanup
                     process.terminate()
@@ -282,7 +282,7 @@ class MCPServerLifecycleTests(unittest.TestCase):
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait()
-                    
+
                     # Close all pipes to prevent resource warnings
                     if process.stdin:
                         process.stdin.close()
@@ -290,12 +290,13 @@ class MCPServerLifecycleTests(unittest.TestCase):
                         process.stdout.close()
                     if process.stderr:
                         process.stderr.close()
-                    
+
                     # Small delay between restarts
                     time.sleep(0.5)
-        
+
         finally:
             import shutil
+
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 

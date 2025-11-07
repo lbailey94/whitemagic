@@ -199,8 +199,8 @@ Events: membership.went_valid, membership.went_invalid, payment.succeeded
 ```
 
 ### 4. Set Up Monitoring
-- Health checks (UptimeRobot)
-- Error tracking (Sentry - already integrated)
+- Health checks (UptimeRobot or similar)
+- Optional error tracking (Sentry, once you add a DSN)
 - Log aggregation (Railway/Render built-in)
 
 ### 5. Update Independent Review Team
@@ -226,7 +226,7 @@ Events: membership.went_valid, membership.went_invalid, payment.succeeded
 - **Documentation**: Swagger + ReDoc
 - **Security**: Hardened (HTTPS, key hashing, webhook verification)
 - **Testing**: 22 tests passing
-- **Monitoring**: Ready for Sentry, logs, uptime checks
+- **Monitoring**: Structured logs + uptime checks, optional Sentry hook
 
 ### Ready For
 - ✅ Production deployment

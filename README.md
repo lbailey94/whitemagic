@@ -1,13 +1,13 @@
 # WhiteMagic 🧠✨
 
-**Tiered Memory Management for AI Agents with Native MCP Support**
+**Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta-blue.svg)](https://github.com/your-org/whitemagic)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-23%2F23%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-40%2B%20passing-brightgreen.svg)](#testing)
 
-WhiteMagic is a production-ready memory management system for AI agents with native integration for Cursor, Windsurf, and Claude Desktop via MCP.
+WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI, FastAPI backend with Whop-based auth/monetization, and native MCP integration for Cursor/Windsurf/Claude.
 
 ## ✨ Features
 
@@ -21,15 +21,15 @@ WhiteMagic is a production-ready memory management system for AI agents with nat
 ## 🚀 Quick Start
 
 ```bash
-# Install
-git clone https://github.com/your-org/whitemagic.git
-cd whitemagic && pip install pydantic
+# Install from source
+git clone https://github.com/lbailey94/whitemagic.git
+cd whitemagic && pip install -e ".[api,dev]"
 
-# Use Python API
-python3 -c "from whitemagic import MemoryManager; print('Ready!')"
+# Or install the SDK directly
+pip install whitemagic==2.1.0
 
-# Use CLI
-python3 cli.py create --title "Test" --content "Hello" --type short_term
+# Quick smoke test
+python -c "from whitemagic import MemoryManager; print('Ready:', MemoryManager().metadata['version'])"
 ```
 
 ## 📦 MCP Server (Windsurf/Cursor)
@@ -57,25 +57,28 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 - [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md) - Release notes
 - [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup
 - [ROADMAP.md](ROADMAP.md) - Development roadmap
+- [docs/production/OPTIONAL_INTEGRATIONS.md](docs/production/OPTIONAL_INTEGRATIONS.md) - Optional add-ons (Sentry, log shipping, metrics)
 
 ## 🧪 Testing
 
 ```bash
-python3 -m unittest discover tests -v  # 23/23 tests passing
+python3 -m pytest -q                # full suite (API + CLI + MCP)
+python3 -m pytest tests/test_api_*  # API-only tests
+python3 -m unittest tests/test_memory_manager.py
 ```
 
 ## 📊 Stats
 
-- **2,158** lines Python
-- **772** lines TypeScript  
-- **23** tests (100% passing)
-- **1** dependency (pydantic)
+- **2,300+** lines Python
+- **770+** lines TypeScript  
+- **40+** automated tests (CLI + API + integrations)
+- **Minimal deps**: FastAPI, SQLAlchemy, Pydantic, Redis, httpx
 
 ## 🗺️ Roadmap
 
 - ✅ Phase 1A: Python API
 - ✅ Phase 1B: MCP Integration
-- 🚧 Phase 2A: Whop + REST API (next)
+- ✅ Phase 2A: Whop + REST API
 - 📅 Phase 2B: Semantic search
 - 📅 Phase 3: Extensions
 
@@ -85,5 +88,5 @@ MIT - See [LICENSE](LICENSE)
 
 ## 🔗 Links
 
-- Issues: https://github.com/your-org/whitemagic/issues
-- Discussions: https://github.com/your-org/whitemagic/discussions
+- Issues: https://github.com/lbailey94/whitemagic/issues
+- Discussions: https://github.com/lbailey94/whitemagic/discussions

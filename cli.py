@@ -30,6 +30,7 @@ from whitemagic import MemoryManager
 # CLI Command Handlers
 # ---------------------------------------------------------------------- #
 
+
 def command_create(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'create' command."""
     # Read content from various sources
@@ -67,8 +68,7 @@ def command_create(manager: MemoryManager, args: argparse.Namespace) -> int:
 def command_list(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'list' command."""
     listing = manager.list_all_memories(
-        include_archived=args.include_archived,
-        sort_by=args.sort_by
+        include_archived=args.include_archived, sort_by=args.sort_by
     )
 
     if args.json:
@@ -316,6 +316,7 @@ COMMAND_HANDLERS = {
 # Argument Parser
 # ---------------------------------------------------------------------- #
 
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
@@ -330,9 +331,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     # create
-    create_parser = subparsers.add_parser(
-        "create", help="Create a new memory entry."
-    )
+    create_parser = subparsers.add_parser("create", help="Create a new memory entry.")
     create_parser.add_argument("--title", required=True, help="Memory title.")
     content_group = create_parser.add_mutually_exclusive_group(required=True)
     content_group.add_argument(
@@ -447,9 +446,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # delete
-    delete_parser = subparsers.add_parser(
-        "delete", help="Delete or archive a memory."
-    )
+    delete_parser = subparsers.add_parser("delete", help="Delete or archive a memory.")
     delete_parser.add_argument("filename", help="Memory filename to delete.")
     delete_parser.add_argument(
         "--permanent",
@@ -520,9 +517,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # restore
-    restore_parser = subparsers.add_parser(
-        "restore", help="Restore an archived memory."
-    )
+    restore_parser = subparsers.add_parser("restore", help="Restore an archived memory.")
     restore_parser.add_argument("filename", help="Archived memory filename to restore.")
     restore_parser.add_argument(
         "--type",
@@ -553,6 +548,7 @@ def build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------- #
 # Main Entry Point
 # ---------------------------------------------------------------------- #
+
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Main CLI entry point."""

@@ -303,14 +303,9 @@ curl -X POST https://your-domain.com/webhooks/whop \
 - Request count
 - Response times
 
-### 2. Sentry Error Tracking
+### 2. Optional Error Tracking
 
-Add to environment:
-```bash
-SENTRY_DSN=https://your-sentry-dsn
-```
-
-Already configured in code (sentry-sdk installed).
+WhiteMagic doesn't bundle a third-party tracker, but you can add one easily. If you plan to use Sentry, supply `SENTRY_DSN` in your environment and install/initialize the SDK alongside the API. Until then, rely on the structured JSON logs provided by default.
 
 ### 3. Health Monitoring
 
@@ -475,7 +470,7 @@ If you encounter issues:
 1. **Check logs** (Railway/Render dashboard)
 2. **Verify environment variables**
 3. **Test locally** with same DB/Redis
-4. **Review error messages** in Sentry
+4. **Review structured JSON logs (or Sentry, if you enabled it)**
 5. **Check this guide** for troubleshooting
 
 ---

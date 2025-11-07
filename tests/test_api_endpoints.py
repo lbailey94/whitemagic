@@ -18,16 +18,16 @@ from whitemagic.api.dependencies import set_database
 async def db():
     """Create test database."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     database = Database("sqlite+aiosqlite:///:memory:")
     await database.create_tables()
     set_database(database)
-    
+
     yield database
-    
+
     await database.close()
     await engine.dispose()
 
@@ -43,14 +43,14 @@ async def test_user(db):
         session.add(user)
         await session.commit()
         await session.refresh(user)
-        
+
         # Create API key
         api_key, key_model = await create_api_key(
             session,
             user.id,
             name="Test Key",
         )
-        
+
         yield {"user": user, "api_key": api_key}
 
 
@@ -68,7 +68,7 @@ def auth_headers(test_user):
 
 class TestHealthEndpoint:
     """Tests for health check endpoint."""
-    
+
     def test_health_check(self, client):
         """Test health endpoint."""
         response = client.get("/health")
@@ -80,7 +80,7 @@ class TestHealthEndpoint:
 
 class TestMemoryEndpoints:
     """Tests for memory CRUD endpoints."""
-    
+
     @pytest.mark.asyncio
     async def test_create_memory(self, client, auth_headers):
         """Test creating a memory."""
@@ -94,14 +94,14 @@ class TestMemoryEndpoints:
             },
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["title"] == "Test Memory"
         assert "test" in data["tags"]
         assert "api" in data["tags"]
-    
+
     @pytest.mark.asyncio
     async def test_create_memory_validation(self, client, auth_headers):
         """Test memory creation validation."""
@@ -112,7 +112,7 @@ class TestMemoryEndpoints:
             headers=auth_headers,
         )
         assert response.status_code == 422
-        
+
         # Invalid memory type
         response = client.post(
             "/api/v1/memories",
@@ -124,7 +124,7 @@ class TestMemoryEndpoints:
             headers=auth_headers,
         )
         assert response.status_code == 422
-    
+
     @pytest.mark.asyncio
     async def test_list_memories(self, client, auth_headers):
         """Test listing memories."""
@@ -138,16 +138,16 @@ class TestMemoryEndpoints:
             },
             headers=auth_headers,
         )
-        
+
         # List memories
         response = client.get("/api/v1/memories", headers=auth_headers)
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["total"] >= 1
         assert len(data["memories"]) >= 1
-    
+
     @pytest.mark.asyncio
     async def test_list_memories_with_filter(self, client, auth_headers):
         """Test listing memories with type filter."""
@@ -162,13 +162,13 @@ class TestMemoryEndpoints:
             json={"title": "Long", "content": "Long term", "type": "long_term"},
             headers=auth_headers,
         )
-        
+
         # Filter by short_term
         response = client.get(
             "/api/v1/memories?type=short_term",
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert all(m["type"] == "short_term" for m in data["memories"])
@@ -176,7 +176,7 @@ class TestMemoryEndpoints:
 
 class TestSearchEndpoint:
     """Tests for search endpoint."""
-    
+
     @pytest.mark.asyncio
     async def test_search_by_query(self, client, auth_headers):
         """Test searching by query string."""
@@ -186,19 +186,19 @@ class TestSearchEndpoint:
             json={"title": "API Design", "content": "REST API patterns", "type": "long_term"},
             headers=auth_headers,
         )
-        
+
         # Search
         response = client.post(
             "/api/v1/search",
             json={"query": "API"},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["total"] >= 0  # May or may not find results depending on search impl
-    
+
     @pytest.mark.asyncio
     async def test_search_by_tags(self, client, auth_headers):
         """Test searching by tags."""
@@ -213,14 +213,14 @@ class TestSearchEndpoint:
             },
             headers=auth_headers,
         )
-        
+
         # Search by tag
         response = client.post(
             "/api/v1/search",
             json={"tags": ["python"]},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -228,7 +228,7 @@ class TestSearchEndpoint:
 
 class TestContextEndpoint:
     """Tests for context generation endpoint."""
-    
+
     @pytest.mark.asyncio
     async def test_generate_context_tier_0(self, client, auth_headers):
         """Test context generation at tier 0."""
@@ -237,13 +237,13 @@ class TestContextEndpoint:
             json={"tier": 0},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert data["tier"] == 0
         assert "context" in data
-    
+
     @pytest.mark.asyncio
     async def test_generate_context_tier_1(self, client, auth_headers):
         """Test context generation at tier 1."""
@@ -252,11 +252,11 @@ class TestContextEndpoint:
             json={"tier": 1},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["tier"] == 1
-    
+
     @pytest.mark.asyncio
     async def test_context_validation(self, client, auth_headers):
         """Test context tier validation."""
@@ -266,25 +266,25 @@ class TestContextEndpoint:
             json={"tier": 5},  # Max is 2
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 422
 
 
 class TestStatsEndpoints:
     """Tests for statistics endpoints."""
-    
+
     @pytest.mark.asyncio
     async def test_get_stats(self, client, auth_headers):
         """Test getting statistics."""
         response = client.get("/api/v1/stats", headers=auth_headers)
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
         assert "short_term_count" in data
         assert "long_term_count" in data
         assert "total_count" in data
-    
+
     @pytest.mark.asyncio
     async def test_list_tags(self, client, auth_headers):
         """Test listing tags."""
@@ -298,9 +298,9 @@ class TestStatsEndpoints:
             },
             headers=auth_headers,
         )
-        
+
         response = client.get("/api/v1/tags", headers=auth_headers)
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -310,12 +310,12 @@ class TestStatsEndpoints:
 
 class TestUserEndpoints:
     """Tests for user information endpoints."""
-    
+
     @pytest.mark.asyncio
     async def test_get_current_user(self, client, auth_headers):
         """Test getting current user info."""
         response = client.get("/api/v1/user/me", headers=auth_headers)
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -326,12 +326,12 @@ class TestUserEndpoints:
 
 class TestAuthentication:
     """Tests for API authentication."""
-    
+
     def test_missing_api_key(self, client):
         """Test request without API key."""
         response = client.get("/api/v1/memories")
         assert response.status_code == 401
-    
+
     def test_invalid_api_key(self, client):
         """Test request with invalid API key."""
         response = client.get(
@@ -339,7 +339,7 @@ class TestAuthentication:
             headers={"Authorization": "Bearer invalid_key"},
         )
         assert response.status_code == 401
-    
+
     @pytest.mark.asyncio
     async def test_valid_api_key(self, client, auth_headers):
         """Test request with valid API key."""
@@ -349,7 +349,7 @@ class TestAuthentication:
 
 class TestConsolidation:
     """Tests for consolidation endpoint."""
-    
+
     @pytest.mark.asyncio
     async def test_consolidate_dry_run(self, client, auth_headers):
         """Test consolidation in dry-run mode."""
@@ -358,7 +358,7 @@ class TestConsolidation:
             json={"dry_run": True, "min_age_days": 30},
             headers=auth_headers,
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True

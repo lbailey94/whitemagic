@@ -13,62 +13,62 @@ from typing import Any, Dict
 
 class JSONFormatter(logging.Formatter):
     """Format logs as JSON for easy parsing and analysis."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data: Dict[str, Any] = {
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'level': record.levelname,
-            'logger': record.name,
-            'message': record.getMessage(),
-            'module': record.module,
-            'function': record.funcName,
-            'line': record.lineno,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
         }
-        
+
         # Add exception info if present
         if record.exc_info:
-            log_data['exception'] = self.formatException(record.exc_info)
-        
+            log_data["exception"] = self.formatException(record.exc_info)
+
         # Add extra fields from record
-        if hasattr(record, 'user_id'):
-            log_data['user_id'] = record.user_id
-        if hasattr(record, 'request_id'):
-            log_data['request_id'] = record.request_id
-        if hasattr(record, 'api_key_id'):
-            log_data['api_key_id'] = record.api_key_id
-        if hasattr(record, 'endpoint'):
-            log_data['endpoint'] = record.endpoint
-        if hasattr(record, 'method'):
-            log_data['method'] = record.method
-        if hasattr(record, 'status_code'):
-            log_data['status_code'] = record.status_code
-        if hasattr(record, 'duration_ms'):
-            log_data['duration_ms'] = record.duration_ms
-        
+        if hasattr(record, "user_id"):
+            log_data["user_id"] = record.user_id
+        if hasattr(record, "request_id"):
+            log_data["request_id"] = record.request_id
+        if hasattr(record, "api_key_id"):
+            log_data["api_key_id"] = record.api_key_id
+        if hasattr(record, "endpoint"):
+            log_data["endpoint"] = record.endpoint
+        if hasattr(record, "method"):
+            log_data["method"] = record.method
+        if hasattr(record, "status_code"):
+            log_data["status_code"] = record.status_code
+        if hasattr(record, "duration_ms"):
+            log_data["duration_ms"] = record.duration_ms
+
         return json.dumps(log_data)
 
 
 def setup_logging(log_level: str = "INFO") -> None:
     """
     Setup structured JSON logging.
-    
+
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
     # Get root logger
     logger = logging.getLogger()
     logger.setLevel(getattr(logging, log_level.upper()))
-    
+
     # Remove existing handlers
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
-    
+
     # Create console handler with JSON formatter
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter())
     logger.addHandler(handler)
-    
+
     # Set log level for uvicorn
     logging.getLogger("uvicorn").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
@@ -89,7 +89,7 @@ def log_request(
 ):
     """
     Log API request with structured data.
-    
+
     Args:
         request_id: Unique request identifier
         method: HTTP method
@@ -99,18 +99,18 @@ def log_request(
         duration_ms: Request duration in milliseconds
     """
     extra = {
-        'request_id': request_id,
-        'method': method,
-        'endpoint': endpoint,
+        "request_id": request_id,
+        "method": method,
+        "endpoint": endpoint,
     }
-    
+
     if user_id:
-        extra['user_id'] = user_id
+        extra["user_id"] = user_id
     if status_code:
-        extra['status_code'] = status_code
+        extra["status_code"] = status_code
     if duration_ms:
-        extra['duration_ms'] = duration_ms
-    
+        extra["duration_ms"] = duration_ms
+
     logger.info(f"{method} {endpoint} {status_code or ''}", extra=extra)
 
 
@@ -122,7 +122,7 @@ def log_error(
 ):
     """
     Log error with structured data.
-    
+
     Args:
         message: Error message
         error: Exception object
@@ -131,10 +131,10 @@ def log_error(
     """
     extra = {}
     if request_id:
-        extra['request_id'] = request_id
+        extra["request_id"] = request_id
     if user_id:
-        extra['user_id'] = user_id
-    
+        extra["user_id"] = user_id
+
     if error:
         logger.error(message, exc_info=error, extra=extra)
     else:
@@ -150,7 +150,7 @@ def log_security_event(
 ):
     """
     Log security-related events.
-    
+
     Args:
         event_type: Type of security event (auth_failed, key_revoked, etc.)
         message: Event description
@@ -158,12 +158,12 @@ def log_security_event(
         api_key_id: API key ID if applicable
         request_id: Request ID if applicable
     """
-    extra = {'event_type': event_type}
+    extra = {"event_type": event_type}
     if user_id:
-        extra['user_id'] = user_id
+        extra["user_id"] = user_id
     if api_key_id:
-        extra['api_key_id'] = api_key_id
+        extra["api_key_id"] = api_key_id
     if request_id:
-        extra['request_id'] = request_id
-    
+        extra["request_id"] = request_id
+
     logger.warning(f"SECURITY: {message}", extra=extra)

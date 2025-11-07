@@ -25,4 +25,5 @@ __all__ = ["MemoryManager", "main", "build_parser", "COMMAND_HANDLERS"]
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

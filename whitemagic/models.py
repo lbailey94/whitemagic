@@ -175,7 +175,9 @@ class TagsResponse(BaseModel):
     tags: List[TagInfo] = Field(..., description="List of tags with stats")
     total_unique_tags: int = Field(..., description="Number of unique tags")
     total_tag_usages: int = Field(..., description="Sum of all tag usages")
-    total_memories_with_tags: int = Field(..., description="Number of memories with at least one tag")
+    total_memories_with_tags: int = Field(
+        ..., description="Number of memories with at least one tag"
+    )
 
 
 # API Key models (for Phase 2A)

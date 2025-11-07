@@ -19,34 +19,34 @@ from .dependencies import get_db_session
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
     Middleware to log requests and track usage.
-    
+
     Adds:
     - Request ID to all requests
     - Response time tracking
     - Usage record creation
     """
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Generate request ID
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
-        
+
         # Start timer
         start_time = time.time()
-        
+
         # Process request
         try:
             response = await call_next(request)
-            
+
             # Calculate response time
             response_time_ms = int((time.time() - start_time) * 1000)
-            
+
             # Add headers
-            response.headers['X-Request-ID'] = request_id
-            response.headers['X-Response-Time'] = f"{response_time_ms}ms"
-            
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-Response-Time"] = f"{response_time_ms}ms"
+
             # Log usage and update quota (async, don't wait)
-            if hasattr(request.state, 'user'):
+            if hasattr(request.state, "user"):
                 # User was authenticated, log usage and update quotas
                 try:
                     await self._log_usage(
@@ -56,12 +56,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                         status_code=response.status_code,
                         response_time_ms=response_time_ms,
                     )
-                    
+
                     # Update quota if request was successful
                     if 200 <= response.status_code < 300:
                         from .rate_limit import update_quota_in_db, check_quota_limits
                         from .dependencies import get_database
-                        
+
                         db = get_database()
                         async with db.get_session() as session:
                             # Check quotas before updating (will raise if exceeded)
@@ -71,15 +71,15 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 except Exception as e:
                     # Don't fail request if logging fails
                     print(f"Failed to log usage/update quota: {e}")
-            
+
             return response
-            
+
         except Exception as e:
             # Log error and re-raise
             response_time_ms = int((time.time() - start_time) * 1000)
             print(f"Request {request_id} failed after {response_time_ms}ms: {e}")
             raise
-    
+
     async def _log_usage(
         self,
         user: User,
@@ -91,7 +91,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         """Create a usage record in the database."""
         from .dependencies import get_database
         from .database import UsageRecord
-        
+
         try:
             db = get_database()
             async with db.get_session() as session:
@@ -112,44 +112,45 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware to enforce rate limits.
-    
+
     Must be applied after authentication middleware.
     Gets rate_limiter from dependencies on each request.
     """
-    
+
     def __init__(self, app: ASGIApp):
         super().__init__(app)
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Skip rate limiting for health check and docs
-        if request.url.path in ['/health', '/docs', '/redoc', '/openapi.json']:
+        if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
             return await call_next(request)
-        
+
         # Check if user is authenticated
-        if hasattr(request.state, 'user'):
+        if hasattr(request.state, "user"):
             user = request.state.user
-            
+
             try:
                 # Get rate limiter from global
                 from .rate_limit import get_rate_limiter
+
                 rate_limiter = get_rate_limiter()
-                
+
                 # Check rate limit
                 rate_limit_info = await rate_limiter.check_rate_limit(
                     user=user,
                     request=request,
                 )
-                
+
                 # Process request
                 response = await call_next(request)
-                
+
                 # Add rate limit headers
-                response.headers['X-RateLimit-Limit'] = str(rate_limit_info['limit'])
-                response.headers['X-RateLimit-Remaining'] = str(rate_limit_info['remaining'])
-                response.headers['X-RateLimit-Reset'] = str(rate_limit_info['reset'])
-                
+                response.headers["X-RateLimit-Limit"] = str(rate_limit_info["limit"])
+                response.headers["X-RateLimit-Remaining"] = str(rate_limit_info["remaining"])
+                response.headers["X-RateLimit-Reset"] = str(rate_limit_info["reset"])
+
                 return response
-                
+
             except Exception as e:
                 # Re-raise rate limit exceptions
                 raise
@@ -162,19 +163,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class CORSHeadersMiddleware(BaseHTTPMiddleware):
     """
     Custom CORS middleware for additional headers.
-    
+
     Adds security headers to all responses.
     """
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
-        
+
         # Security headers
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
         # API version header
-        response.headers['X-API-Version'] = '0.2.0'
-        
+        response.headers["X-API-Version"] = "0.2.0"
+
         return response

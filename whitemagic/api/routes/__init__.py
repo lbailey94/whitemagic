@@ -2,4 +2,4 @@
 
 from . import whop, dashboard
 
-__all__ = ['whop', 'dashboard']
+__all__ = ["whop", "dashboard"]

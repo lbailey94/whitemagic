@@ -20,7 +20,7 @@ export REDIS_URL="${REDIS_URL:-}"  # Optional for development
 export SECRET_KEY="${SECRET_KEY:-dev-secret-key-CHANGE-IN-PRODUCTION-$(openssl rand -hex 16)}"
 export ENVIRONMENT="${ENVIRONMENT:-development}"
 export WM_BASE_PATH="${WM_BASE_PATH:-./users}"
-export ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-*}"
+export ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-https://example.com}"
 
 echo "Configuration:"
 echo "  Database: $DATABASE_URL"

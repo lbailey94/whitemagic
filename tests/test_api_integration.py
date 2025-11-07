@@ -12,11 +12,11 @@ from pathlib import Path
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
-os.environ['PYTHONPATH'] = str(Path(__file__).parent)
+os.environ["PYTHONPATH"] = str(Path(__file__).parent)
 
-print("="*70)
+print("=" * 70)
 print("WHITEMAGIC - REAL INTEGRATION TEST")
-print("="*70)
+print("=" * 70)
 
 # Test 1: Can we import the modules without errors?
 print("\n[TEST 1] Import all API modules")
@@ -30,10 +30,12 @@ try:
         RateLimitMiddleware,
         CORSHeadersMiddleware,
     )
+
     print("✅ PASS: All modules imported successfully")
 except Exception as e:
     print(f"❌ FAIL: Import error: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
@@ -41,16 +43,17 @@ except Exception as e:
 print("\n[TEST 2] Create FastAPI TestClient")
 try:
     from fastapi.testclient import TestClient
-    
+
     # Set up test environment
-    os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///:memory:'
-    os.environ['SECRET_KEY'] = 'test-secret-key'
-    os.environ['ENVIRONMENT'] = 'test'
-    
+    os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+    os.environ["SECRET_KEY"] = "test-secret-key"
+    os.environ["ENVIRONMENT"] = "test"
+
     print("✅ PASS: TestClient created (startup will happen on first request)")
 except Exception as e:
     print(f"❌ FAIL: TestClient creation error: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
@@ -69,6 +72,7 @@ except TypeError as e:
 except Exception as e:
     print(f"❌ FAIL: Startup error: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
@@ -78,11 +82,12 @@ try:
     response = client.get("/health")
     assert response.status_code == 200, f"Expected 200, got {response.status_code}"
     data = response.json()
-    assert data['status'] == 'healthy', f"Expected healthy, got {data['status']}"
+    assert data["status"] == "healthy", f"Expected healthy, got {data['status']}"
     print(f"✅ PASS: Health check returned {data}")
 except Exception as e:
     print(f"❌ FAIL: Health endpoint error: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)
 
@@ -111,11 +116,13 @@ print("\n[TEST 7] Verify middleware stack")
 try:
     # Check middleware is in the app
     middleware_classes = [m.cls.__name__ for m in app.user_middleware]
-    
-    assert 'RateLimitMiddleware' in middleware_classes, "RateLimitMiddleware not registered!"
-    assert 'RequestLoggingMiddleware' in middleware_classes, "RequestLoggingMiddleware not registered!"
-    assert 'CORSHeadersMiddleware' in middleware_classes, "CORSHeadersMiddleware not registered!"
-    
+
+    assert "RateLimitMiddleware" in middleware_classes, "RateLimitMiddleware not registered!"
+    assert (
+        "RequestLoggingMiddleware" in middleware_classes
+    ), "RequestLoggingMiddleware not registered!"
+    assert "CORSHeadersMiddleware" in middleware_classes, "CORSHeadersMiddleware not registered!"
+
     print(f"✅ PASS: All middleware registered: {middleware_classes}")
 except Exception as e:
     print(f"❌ FAIL: Middleware verification error: {e}")
@@ -125,7 +132,7 @@ except Exception as e:
 print("\n[TEST 8] get_database() function")
 try:
     from whitemagic.api.dependencies import get_database
-    
+
     # It should raise before database is initialized
     try:
         db = get_database()
@@ -151,7 +158,7 @@ try:
     import sqlalchemy
     import pydantic
     import uvicorn
-    
+
     print(f"✅ PASS: Core dependencies available")
     print(f"   - FastAPI: {fastapi.__version__}")
     print(f"   - SQLAlchemy: {sqlalchemy.__version__}")
@@ -164,29 +171,29 @@ except ImportError as e:
 # Test 10: Verify the app has all expected routes
 print("\n[TEST 10] Verify API routes exist")
 try:
-    routes = [route.path for route in app.routes if hasattr(route, 'path')]
-    
+    routes = [route.path for route in app.routes if hasattr(route, "path")]
+
     expected_routes = [
-        '/health',
-        '/api/v1/memories',
-        '/api/v1/search',
-        '/api/v1/context',
-        '/dashboard/account',
+        "/health",
+        "/api/v1/memories",
+        "/api/v1/search",
+        "/api/v1/context",
+        "/dashboard/account",
     ]
-    
+
     for expected in expected_routes:
         # Check if route exists (some might have path parameters)
         found = any(expected in route for route in routes)
         assert found, f"Expected route {expected} not found!"
-    
+
     print(f"✅ PASS: All expected routes exist ({len(routes)} total routes)")
 except Exception as e:
     print(f"❌ FAIL: Route verification error: {e}")
     sys.exit(1)
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("TEST SUMMARY")
-print("="*70)
+print("=" * 70)
 print("\n✅ ALL INTEGRATION TESTS PASSED!")
 print("\nWhat was tested:")
 print("  1. ✅ Module imports work")
@@ -199,15 +206,15 @@ print("  7. ✅ All middleware registered correctly")
 print("  8. ✅ get_database() function exists")
 print("  9. ✅ Dependencies available")
 print(" 10. ✅ All API routes exist")
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("API SERVER IS FUNCTIONAL! 🚀")
-print("="*70)
+print("=" * 70)
 print("\nThe second review issues are FIXED:")
 print("  ✅ RateLimitMiddleware starts without errors")
 print("  ✅ get_database() function exists")
 print("  ✅ update_quota_in_db receives correct parameters")
 print("  ✅ check_quota_limits is called")
 print("\nReady for real pytest suite!")
-print("="*70)
+print("=" * 70)
 
 sys.exit(0)
