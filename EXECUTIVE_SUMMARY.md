@@ -34,6 +34,7 @@ WhiteMagic is a production-ready memory management platform for AI agents with:
 - ✅ Rate limiting guaranteed active
 - ✅ API keys hashed (SHA-256)
 - ✅ Third-party dependencies optional
+- ✅ Automated security guard prevents wildcard regressions
 
 ---
 

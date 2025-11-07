@@ -166,7 +166,8 @@ LOG_FORMAT=json
 # WM_SEED_ADMIN_KEY=wm_prod_<generate_secure_random_string>
 # WM_SEED_ADMIN_EMAIL=admin@yourdomain.com
 
-# Sentry (optional)
+# Sentry (optional - requires requirements-plugins.txt)
+# pip install -r requirements-plugins.txt
 # SENTRY_DSN=https://your_sentry_dsn@sentry.io/project
 ```
 

@@ -14,21 +14,19 @@ fastapi>=0.121.0
 uvicorn[standard]>=0.24.0    # ASGI server
 python-multipart>=0.0.6      # Form data parsing
 
-# Authentication & Security
-python-jose[cryptography]>=3.3.0  # JWT tokens
-passlib[bcrypt]>=1.7.4            # Password hashing
-cryptography>=41.0.0              # Cryptographic operations
-
 # Rate Limiting & Caching
 redis>=5.0.0                      # Redis client
-aioredis>=2.0.1                   # Async Redis
 
 # HTTP Client
 httpx>=0.25.0                     # Async HTTP client (for Whop API)
 
 # Observability
 python-json-logger>=2.0.7         # Structured logging
-sentry-sdk[fastapi]>=1.38.0       # Error tracking
+
+# Optional Plugins (enable as needed)
+# sentry-sdk[fastapi]>=1.38.0       # Error tracking
+# python-jose[cryptography]>=3.3.0  # JWT tokens (future auth)
+# passlib[bcrypt]>=1.7.4            # Password hashing (future auth)
 
 # Development
 pytest>=7.4.0

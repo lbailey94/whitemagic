@@ -42,4 +42,4 @@
 ✅ Security defaults safe  
 ✅ Ready for v2.1.0 release
 
-**Test Results**: 20/20 core tests passing
+**Test Results**: 18/18 core tests passing (40+ overall)

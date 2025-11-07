@@ -6,7 +6,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 
 # Install dependencies
@@ -23,7 +23,7 @@ python3 -c "from whitemagic import MemoryManager; print('✓ WhiteMagic installe
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 
 # Use in your Python code
 import sys
@@ -55,7 +55,7 @@ pip install whitemagic
 ### For CLI Usage Only
 
 ```bash
-git clone https://github.com/your-org/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 
 # Install dependencies
@@ -215,8 +215,8 @@ rm -rf /path/to/whitemagic
 
 ## Support
 
-- **Issues**: https://github.com/your-org/whitemagic/issues
-- **Discussions**: https://github.com/your-org/whitemagic/discussions
+- **Issues**: https://github.com/lbailey94/whitemagic/issues
+- **Discussions**: https://github.com/lbailey94/whitemagic/discussions
 - **Email**: support@whitemagic.dev (coming soon)
 
 ---

@@ -112,7 +112,7 @@ tests/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-org/whitemagic.git
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 
 # 2. Install dependencies
@@ -271,10 +271,10 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ## 🔗 Links
 
-- **Repository**: https://github.com/your-org/whitemagic
-- **Documentation**: https://github.com/your-org/whitemagic#readme
-- **Issues**: https://github.com/your-org/whitemagic/issues
-- **Discussions**: https://github.com/your-org/whitemagic/discussions
+- **Repository**: https://github.com/lbailey94/whitemagic
+- **Documentation**: https://github.com/lbailey94/whitemagic#readme
+- **Issues**: https://github.com/lbailey94/whitemagic/issues
+- **Discussions**: https://github.com/lbailey94/whitemagic/discussions
 - **Roadmap**: [ROADMAP.md](ROADMAP.md)
 
 ---
@@ -282,9 +282,9 @@ MIT License - See [LICENSE](LICENSE) for details
 ## 📣 Feedback Welcome!
 
 This is a beta release - we're eager for your feedback:
-- 🐛 **Bug reports**: [Open an issue](https://github.com/your-org/whitemagic/issues/new?template=bug_report.md)
-- 💡 **Feature requests**: [Start a discussion](https://github.com/your-org/whitemagic/discussions/new?category=ideas)
-- 💬 **General feedback**: [Join the discussion](https://github.com/your-org/whitemagic/discussions)
+- 🐛 **Bug reports**: [Open an issue](https://github.com/lbailey94/whitemagic/issues/new?template=bug_report.md)
+- 💡 **Feature requests**: [Start a discussion](https://github.com/lbailey94/whitemagic/discussions/new?category=ideas)
+- 💬 **General feedback**: [Join the discussion](https://github.com/lbailey94/whitemagic/discussions)
 
 ---
 

@@ -2,6 +2,8 @@
 
 WhiteMagic ships with zero external vendors enabled by default. Use this guide to plug in third-party services when you’re ready.
 
+> Tip: `pip install -r requirements-plugins.txt` installs every optional dependency referenced below in one shot.
+
 ---
 
 ## 1. Sentry (Error Tracking)
@@ -27,7 +29,7 @@ WhiteMagic detects `SENTRY_DSN` at startup and auto-initializes the FastAPI inte
 
 **How to enable:** point your container logs to the collector of choice (e.g., sidecar agent, Docker logging driver). WhiteMagic already formats logs as JSON when `LOG_FORMAT=json`, so most services ingest them without changes.
 
-Recommended services:
+Recommended services (see `requirements-plugins.txt` for optional helpers):
 - [Logtail](https://logtail.com)
 - [Papertrail](https://papertrailapp.com)
 - [Vector.dev](https://vector.dev) (self-hosted)

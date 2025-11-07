@@ -225,7 +225,7 @@ Events: membership.went_valid, membership.went_invalid, payment.succeeded
 - **Dashboard**: User account management
 - **Documentation**: Swagger + ReDoc
 - **Security**: Hardened (HTTPS, key hashing, webhook verification)
-- **Testing**: 22 tests passing
+- **Testing**: 40+ automated tests passing (18 core + API/integration suites)
 - **Monitoring**: Structured logs + uptime checks, optional Sentry hook
 
 ### Ready For

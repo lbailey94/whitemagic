@@ -499,7 +499,14 @@ docker compose logs api > api_logs_$(date +%F).log
 
 ### Optional: Error Tracking
 
-By default WhiteMagic emits structured JSON logs; forward them to your favorite collector (CloudWatch, Logtail, etc.). If you'd like richer crash analytics, set `SENTRY_DSN` and install `sentry-sdk`—the FastAPI integration will auto-initialize when the env var is present. Skip this until you need it. More optional add-ons live in [`docs/production/OPTIONAL_INTEGRATIONS.md`](docs/production/OPTIONAL_INTEGRATIONS.md).
+By default WhiteMagic emits structured JSON logs; forward them to your favorite collector (CloudWatch, Logtail, etc.). If you'd like richer crash analytics, install the plugin extras and set the env vars:
+
+```bash
+pip install -r requirements-plugins.txt    # installs sentry-sdk + other optional deps
+export SENTRY_DSN=https://...@sentry.io/<project>
+```
+
+The FastAPI integration auto-initializes when the env var is present. Skip this until you need it. More optional add-ons live in [`docs/production/OPTIONAL_INTEGRATIONS.md`](docs/production/OPTIONAL_INTEGRATIONS.md).
 
 ---
 

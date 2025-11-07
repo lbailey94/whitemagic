@@ -68,3 +68,17 @@ repos:
     rev: v2.14.0
     hooks:
       - id: hadolint-docker
+  
+  # Custom security checks
+  - repo: local
+    hooks:
+      - id: security-guards
+        name: security-guards
+        entry: python scripts/check_security_guards.py
+        language: system
+        pass_filenames: false
+      - id: dependency-guards
+        name: dependency-guards
+        entry: python scripts/check_dependencies.py
+        language: system
+        pass_filenames: false

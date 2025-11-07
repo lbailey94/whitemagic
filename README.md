@@ -58,6 +58,7 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 - [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup
 - [ROADMAP.md](ROADMAP.md) - Development roadmap
 - [docs/production/OPTIONAL_INTEGRATIONS.md](docs/production/OPTIONAL_INTEGRATIONS.md) - Optional add-ons (Sentry, log shipping, metrics)
+- [requirements-plugins.txt](requirements-plugins.txt) - Install optional integrations in one go
 
 ## 🧪 Testing
 
@@ -65,6 +66,30 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 python3 -m pytest -q                # full suite (API + CLI + MCP)
 python3 -m pytest tests/test_api_*  # API-only tests
 python3 -m unittest tests/test_memory_manager.py
+```
+
+## 🔌 Optional Integrations
+
+Need Sentry, Prometheus instrumentation, or JWT tooling? Install the plugin extras the moment you need them:
+
+```bash
+pip install -r requirements-plugins.txt
+```
+
+Then follow the relevant instructions in `docs/production/OPTIONAL_INTEGRATIONS.md`.
+
+## 🛡️ Guardrails
+
+Security checks run locally and in CI to prevent regressions (e.g., wildcard CORS defaults). You can run them manually:
+
+```bash
+# No wildcard CORS regressions
+python scripts/check_security_guards.py
+# Dependency manifest sanity
+python scripts/check_dependencies.py
+# or via pre-commit
+pre-commit run security-guards
+pre-commit run dependency-guards
 ```
 
 ## 📊 Stats

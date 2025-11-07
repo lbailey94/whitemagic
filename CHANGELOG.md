@@ -5,6 +5,22 @@ All notable changes to WhiteMagic will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [Unreleased]
+
+### Removed
+- Dropped unused optional dependencies (`python-jose`, `passlib`, `aioredis`, `sentry-sdk`) from the API extras/requirements to keep the base install vendor-neutral.
+
+### Added
+- Documented optional plugin integrations (Sentry, log shipping, analytics, metrics) in `docs/production/OPTIONAL_INTEGRATIONS.md`.
+- Added `requirements-plugins.txt` for teams that want to install opt-in third-party tooling in one command.
+- Added `scripts/check_security_guards.py` (wired into pre-commit) to prevent wildcard CORS defaults from regressing.
+- Added `scripts/check_dependencies.py` (wired into pre-commit) to ensure `requirements-api.txt` and `requirements-plugins.txt` stay in sync with no overlap.
+
+### Fixed
+- Updated `pyproject.toml` URLs to point to `github.com/lbailey94/whitemagic`.
+- Clarified test counts in the status reports to reflect 18 core tests / 40+ total.
+
 ---
 
 ## [2.1.0] - 2025-11-03
