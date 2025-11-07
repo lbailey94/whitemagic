@@ -164,9 +164,15 @@ class Quota(Base):
     storage_bytes = Column(BigInteger, nullable=False, default=0)
 
     # Reset tracking
-    last_reset_daily = Column(Date, nullable=False, default=func.current_date())
-    last_reset_monthly = Column(
-        Date, nullable=False, default=func.date_trunc("month", func.current_date())
+    last_reset_daily: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    last_reset_monthly: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
 
     # Relationships
