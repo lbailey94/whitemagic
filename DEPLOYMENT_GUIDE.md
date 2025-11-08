@@ -6,6 +6,27 @@
 
 ---
 
+## 🚀 Quick Hosting Options
+
+**Recommended for most users**: Vercel (frontend) + Railway (backend)
+
+### **Option A: Vercel + Railway** (Easiest, ~30 min)
+- **Frontend**: Deploy `dashboard/` to Vercel (static site, free tier)
+- **Backend**: Deploy to Railway (managed Postgres + Redis included)
+- **Steps**: See [NEXT_STEPS.md](NEXT_STEPS.md) for detailed instructions
+- **Best for**: Quick launch, managed infrastructure, automatic scaling
+
+### **Option B: Docker Compose** (Full control, ~45 min)
+- **All services**: Run `docker compose up -d` (API + Postgres + Redis + Dashboard + Caddy)
+- **Steps**: See [DEPLOY_NOW.md](DEPLOY_NOW.md)
+- **Best for**: Self-hosted, on-premise, full control
+
+### **Option C: Manual Setup** (Advanced, ~2 hours)
+- **Custom infrastructure**: Follow this guide for manual setup
+- **Best for**: Custom requirements, existing infrastructure
+
+---
+
 ## 🎯 What You'll Deploy
 
 - **REST API** with authentication & rate limiting

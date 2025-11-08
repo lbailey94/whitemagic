@@ -29,6 +29,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: whitemagic-mcp/package-lock.json
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: whitemagic-mcp/node_modules
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('whitemagic-mcp/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+            ${{ runner.os }}-node-
+
       - name: Install dependencies
         working-directory: whitemagic-mcp
         run: npm ci

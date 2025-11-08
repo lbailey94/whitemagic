@@ -41,6 +41,12 @@ docker compose up -d
 # Caddy:     http://localhost (reverse proxy for dashboard + API)
 ```
 
+### Recommended production hosting
+
+- **Frontend (dashboard + landing)**: Deploy the `dashboard/` directory to Vercel (static build). Set `NEXT_PUBLIC_API_URL` (or `meta[name="whitemagic-api-base"]`) to your Railway API URL.
+- **Backend (API + Postgres + Redis)**: Deploy `compose.yaml` services to Railway—one service for FastAPI, managed Postgres + Redis, and Caddy if you want TLS out of the box.  
+Follow the step-by-step instructions in [`NEXT_STEPS.md`](NEXT_STEPS.md) and [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md).
+
 ## 📦 MCP Server (Windsurf/Cursor)
 
 ```bash
@@ -62,19 +68,38 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ## 📚 Documentation
 
+**New here?** Start with [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) - your navigation guide
+
+### Core Docs
+- [docs/INDEX.md](docs/INDEX.md) - Complete documentation index
 - [INSTALL.md](INSTALL.md) - Installation guide
-- [RELEASE_NOTES_v0.1.0.md](RELEASE_NOTES_v0.1.0.md) - Release notes
-- [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup
+- [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup for Cursor/Windsurf/Claude
 - [ROADMAP.md](ROADMAP.md) - Development roadmap
-- [docs/production/OPTIONAL_INTEGRATIONS.md](docs/production/OPTIONAL_INTEGRATIONS.md) - Optional add-ons (Sentry, log shipping, metrics)
-- [requirements-plugins.txt](requirements-plugins.txt) - Install optional integrations in one go
+
+### Deployment
+- [NEXT_STEPS.md](NEXT_STEPS.md) - One-day launch checklist (npm + MCP registry + Vercel/Railway) ⭐
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Comprehensive production deployment
+- [DEPLOY_NOW.md](DEPLOY_NOW.md) - Quick 45-minute deploy
+
+### Reference
+- [TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md) - 65+ tests, 85% coverage
+- [COMPREHENSIVE_REVIEW_ASSESSMENT.md](COMPREHENSIVE_REVIEW_ASSESSMENT.md) - Latest project review
+- [docs/production/OPTIONAL_INTEGRATIONS.md](docs/production/OPTIONAL_INTEGRATIONS.md) - Optional add-ons (Sentry, metrics)
+- [requirements-plugins.txt](requirements-plugins.txt) - Install optional integrations
 
 ## 🧪 Testing
 
+**65+ automated tests, 85% coverage** - See [TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md)
+
 ```bash
-python3 -m pytest -q                # full suite (API + CLI + MCP)
-python3 -m pytest tests/test_api_*  # API-only tests
-python3 -m unittest tests/test_memory_manager.py
+# Python tests (40+ tests)
+python3 -m pytest -v
+
+# MCP tests (25+ tests)
+cd whitemagic-mcp && npm test
+
+# With coverage
+python3 -m pytest --cov=whitemagic --cov-report=html
 ```
 
 ## 🔌 Optional Integrations

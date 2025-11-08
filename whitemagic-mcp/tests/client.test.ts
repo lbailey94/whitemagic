@@ -135,28 +135,28 @@ describe('WhiteMagicClient', () => {
       const results = await client.searchMemories('Python', undefined, undefined, false);
       
       expect(results.length).toBe(2);
-      expect(results.every(r => r.title.includes('Python'))).toBe(true);
+      expect(results.every(r => r.entry.title.includes('Python'))).toBe(true);
     });
 
     it('should filter by type', async () => {
       const results = await client.searchMemories('', 'long_term', undefined, false);
       
       expect(results.length).toBe(1);
-      expect(results[0].title).toBe('Python Advanced');
+      expect(results[0].entry.title).toBe('Python Advanced');
     });
 
     it('should filter by tags', async () => {
       const results = await client.searchMemories('', undefined, ['tutorial'], false);
       
       expect(results.length).toBe(2);
-      expect(results.every(r => r.tags.includes('tutorial'))).toBe(true);
+      expect(results.every(r => r.entry.tags.includes('tutorial'))).toBe(true);
     });
 
     it('should combine filters', async () => {
       const results = await client.searchMemories('Python', 'short_term', ['tutorial'], false);
       
       expect(results.length).toBe(1);
-      expect(results[0].title).toBe('Python Tutorial');
+      expect(results[0].entry.title).toBe('Python Tutorial');
     });
   });
 
@@ -281,15 +281,15 @@ describe('WhiteMagicClient', () => {
     it('should return memory counts', async () => {
       const stats = await client.getStats();
       
-      expect(stats.short_term).toBe(2);
-      expect(stats.long_term).toBe(1);
-      expect(stats.total).toBe(3);
+      expect(stats.short_term_count).toBe(2);
+      expect(stats.long_term_count).toBe(1);
+      expect(stats.total_memories).toBe(3);
     });
 
     it('should include tag statistics', async () => {
       const stats = await client.getStats();
       
-      expect(stats.tags).toBeDefined();
+      expect(stats.total_tags).toBeDefined();
     });
   });
 
@@ -301,17 +301,17 @@ describe('WhiteMagicClient', () => {
     });
 
     it('should return all tags with counts', async () => {
-      const tags = await client.getTags(false);
+      const response = await client.getTags(false);
       
-      expect(tags.length).toBeGreaterThan(0);
+      expect(response.tags.length).toBeGreaterThan(0);
       
-      const tag1 = tags.find(t => t.tag === 'tag1');
+      const tag1 = response.tags.find((t: {tag: string, count: number}) => t.tag === 'tag1');
       expect(tag1?.count).toBe(2);
       
-      const tag2 = tags.find(t => t.tag === 'tag2');
+      const tag2 = response.tags.find((t: {tag: string, count: number}) => t.tag === 'tag2');
       expect(tag2?.count).toBe(2);
       
-      const tag3 = tags.find(t => t.tag === 'tag3');
+      const tag3 = response.tags.find((t: {tag: string, count: number}) => t.tag === 'tag3');
       expect(tag3?.count).toBe(1);
     });
   });

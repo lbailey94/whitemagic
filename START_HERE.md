@@ -67,8 +67,11 @@ curl https://yourdomain.com/docs
 
 ## 📚 Key Documents
 
-**For Deployment**:
-- `DEPLOY_NOW.md` - Detailed step-by-step
+**For Deployment** (pick ONE based on timeline):
+- `NEXT_STEPS.md` - 1-day launch (npm + MCP registry + Vercel/Railway) ⭐ **Launch ready**
+- `DEPLOY_NOW.md` - 45-min Docker Compose quickstart
+- `DEPLOYMENT_GUIDE.md` - 2-hour comprehensive production guide
+- `docs/INDEX.md` - Documentation map (find anything fast)
 - `DEPLOYMENT_GUIDE.md` - Complete 9-part guide
 - `POST_DEPLOYMENT_CHECKLIST.md` - Verification
 
@@ -81,6 +84,7 @@ curl https://yourdomain.com/docs
 - `README.md` - Project overview
 - `.env.example` - Configuration template
 - `compose.yaml` - Docker stack
+- `NEXT_STEPS.md` - Final launch checklist (npm publish + MCP submission)
 
 ---
 

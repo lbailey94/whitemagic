@@ -65,7 +65,7 @@ export interface StatsResponse {
 }
 
 export interface WhiteMagicConfig {
-  apiUrl: string;
+  apiUrl?: string;  // Optional for Python-based client
   apiKey?: string;
   basePath: string;
 }
