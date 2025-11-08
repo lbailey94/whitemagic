@@ -1,6 +1,7 @@
 # Documentation Map - Quick Reference
 
-**Which doc should I read?** Use this guide to navigate WhiteMagic's documentation.
+**Which doc should I read?** Use this guide to navigate WhiteMagic's documentation.  
+Looking for a full listing instead? See [docs/INDEX.md](docs/INDEX.md).
 
 ---
 

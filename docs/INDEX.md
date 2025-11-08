@@ -1,6 +1,7 @@
 # WhiteMagic Documentation Index
 
-Welcome to WhiteMagic! This index will help you find the right documentation quickly.
+Welcome to WhiteMagic! This index will help you find the right documentation quickly.  
+Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](../DOCUMENTATION_MAP.md) for a “which doc should I read?” flow.
 
 ---
 

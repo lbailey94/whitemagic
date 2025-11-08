@@ -53,10 +53,11 @@ If any fail, review the test output and fix issues before publishing.
 **Prerequisites**:
 - npm account (create at https://www.npmjs.com/signup)
 - Tests passing (`npm test`)
+- `package.json` version matches current release (2.1.0)
 
 **Commands**:
 ```bash
-cd whitemagic-mcp
+cd whitemagic-mcp  # run from repo root
 
 # Login to npm
 npm login

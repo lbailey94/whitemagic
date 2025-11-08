@@ -72,6 +72,7 @@ curl https://yourdomain.com/docs
 - `DEPLOY_NOW.md` - 45-min Docker Compose quickstart
 - `DEPLOYMENT_GUIDE.md` - 2-hour comprehensive production guide
 - `docs/INDEX.md` - Documentation map (find anything fast)
+- `DOCUMENTATION_MAP.md` - Decision tree for “which doc do I read?”
 - `DEPLOYMENT_GUIDE.md` - Complete 9-part guide
 - `POST_DEPLOYMENT_CHECKLIST.md` - Verification
 
