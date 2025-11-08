@@ -3,6 +3,7 @@
 **Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
 [![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.1.0-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-65%2B%20passing-brightgreen.svg)](#testing)
@@ -20,10 +21,20 @@ WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI,
 
 ## 🚀 Quick Start
 
+### Install MCP Server (Published!)
 ```bash
-# Install from source
+# Install from npm
+npm install -g whitemagic-mcp
+
+# Package: https://www.npmjs.com/package/whitemagic-mcp
+```
+
+### Local Development
+```bash
+# Clone and install
 git clone https://github.com/lbailey94/whitemagic.git
-cd whitemagic && pip install -e ".[api,dev]"
+cd whitemagic
+pip install -e ".[api,dev]"
 
 # Or install the SDK directly
 pip install whitemagic==2.1.0
