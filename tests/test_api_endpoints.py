@@ -101,6 +101,7 @@ class TestMemoryEndpoints:
         assert data["title"] == "Test Memory"
         assert "test" in data["tags"]
         assert "api" in data["tags"]
+        assert data["content"] == "This is a test memory"
 
     @pytest.mark.asyncio
     async def test_create_memory_validation(self, client, auth_headers):
@@ -147,6 +148,7 @@ class TestMemoryEndpoints:
         assert data["success"] is True
         assert data["total"] >= 1
         assert len(data["memories"]) >= 1
+        assert all("content" in memory for memory in data["memories"])
 
     @pytest.mark.asyncio
     async def test_list_memories_with_filter(self, client, auth_headers):

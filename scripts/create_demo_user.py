@@ -25,7 +25,7 @@ async def create_demo_user():
     
     # Initialize database
     db = Database(database_url=database_url)
-    await db.connect()
+    await db.create_tables()
     
     try:
         async with db.get_session() as session:
@@ -43,7 +43,7 @@ async def create_demo_user():
                 # Create new demo user
                 user = User(
                     email="demo@whitemagic.dev",
-                    plan_tier="professional",
+                    plan_tier="starter",
                 )
                 session.add(user)
                 await session.flush()
@@ -74,7 +74,7 @@ async def create_demo_user():
             return raw_key
             
     finally:
-        await db.disconnect()
+        await db.close()
 
 
 if __name__ == "__main__":

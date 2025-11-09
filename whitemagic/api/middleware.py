@@ -34,51 +34,42 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # Start timer
         start_time = time.time()
 
-        # Process request
+        user = getattr(request.state, "user", None)
+
+        # Ensure quotas are enforced before processing request
+        if user:
+            await self._enforce_quota_limits(user)
+
         try:
             response = await call_next(request)
-
-            # Calculate response time
-            response_time_ms = int((time.time() - start_time) * 1000)
-
-            # Add headers
-            response.headers["X-Request-ID"] = request_id
-            response.headers["X-Response-Time"] = f"{response_time_ms}ms"
-
-            # Log usage and update quota (async, don't wait)
-            if hasattr(request.state, "user"):
-                # User was authenticated, log usage and update quotas
-                try:
-                    await self._log_usage(
-                        user=request.state.user,
-                        endpoint=request.url.path,
-                        method=request.method,
-                        status_code=response.status_code,
-                        response_time_ms=response_time_ms,
-                    )
-
-                    # Update quota if request was successful
-                    if 200 <= response.status_code < 300:
-                        from .rate_limit import update_quota_in_db, check_quota_limits
-                        from .dependencies import get_database
-
-                        db = get_database()
-                        async with db.get_session() as session:
-                            # Check quotas before updating (will raise if exceeded)
-                            await check_quota_limits(session, request.state.user)
-                            # Update usage counters
-                            await update_quota_in_db(session, request.state.user)
-                except Exception as e:
-                    # Don't fail request if logging fails
-                    print(f"Failed to log usage/update quota: {e}")
-
-            return response
-
         except Exception as e:
-            # Log error and re-raise
             response_time_ms = int((time.time() - start_time) * 1000)
             print(f"Request {request_id} failed after {response_time_ms}ms: {e}")
             raise
+
+        # Calculate response time
+        response_time_ms = int((time.time() - start_time) * 1000)
+
+        # Add headers
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Response-Time"] = f"{response_time_ms}ms"
+
+        if user:
+            try:
+                await self._log_usage(
+                    user=user,
+                    endpoint=request.url.path,
+                    method=request.method,
+                    status_code=response.status_code,
+                    response_time_ms=response_time_ms,
+                )
+
+                if 200 <= response.status_code < 300:
+                    await self._update_request_counters(user)
+            except Exception as e:
+                print(f"Failed to log usage/update quota: {e}")
+
+        return response
 
     async def _log_usage(
         self,
@@ -107,6 +98,24 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             # Don't fail request if logging fails
             print(f"Failed to create usage record: {e}")
+
+    async def _enforce_quota_limits(self, user: User) -> None:
+        """Ensure the user is within quota limits before fulfilling the request."""
+        from .dependencies import get_database
+        from .rate_limit import check_quota_limits
+
+        db = get_database()
+        async with db.get_session() as session:
+            await check_quota_limits(session, user)
+
+    async def _update_request_counters(self, user: User) -> None:
+        """Increment per-user request counters after a successful response."""
+        from .dependencies import get_database
+        from .rate_limit import update_quota_in_db
+
+        db = get_database()
+        async with db.get_session() as session:
+            await update_quota_in_db(session, user)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -176,6 +185,6 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
 
         # API version header
-        response.headers["X-API-Version"] = "0.2.0"
+        response.headers["X-API-Version"] = "2.1.0"
 
         return response

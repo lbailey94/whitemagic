@@ -5,6 +5,7 @@ Redis-backed rate limiting using token bucket algorithm.
 Enforces per-user quotas based on plan tier.
 """
 
+import asyncio
 import time
 from typing import Optional
 from datetime import datetime, date
@@ -17,6 +18,8 @@ try:
     import redis.asyncio as redis
 except ImportError:
     redis = None
+
+from whitemagic import MemoryManager
 
 from .database import User, Quota
 
@@ -268,17 +271,20 @@ async def update_quota_in_db(
         quota = Quota(user_id=user.id)
         session.add(quota)
 
-    # Reset daily counter if needed
-    today = date.today()
-    if quota.last_reset_daily < today:
-        quota.requests_today = 0
-        quota.last_reset_daily = today
+    # Reset daily/monthly counters based on current date
+    now = datetime.utcnow()
+    today = now.date()
 
-    # Reset monthly counter if needed
+    last_daily = quota.last_reset_daily or now
+    if last_daily.date() < today:
+        quota.requests_today = 0
+        quota.last_reset_daily = now
+
     first_of_month = today.replace(day=1)
-    if quota.last_reset_monthly < first_of_month:
+    last_monthly = quota.last_reset_monthly or now
+    if last_monthly.date() < first_of_month:
         quota.requests_this_month = 0
-        quota.last_reset_monthly = first_of_month
+        quota.last_reset_monthly = now
 
     # Increment counters
     quota.requests_today += 1
@@ -326,3 +332,54 @@ async def check_quota_limits(
             f'storage (max {limits["storage_mb"]}MB)',
             limits["storage_mb"],
         )
+
+
+async def refresh_quota_usage(
+    session: AsyncSession,
+    user: User,
+    manager: MemoryManager,
+) -> None:
+    """
+    Recalculate and persist per-user memory/storage usage.
+
+    Args:
+        session: Database session
+        user: Target user
+        manager: Memory manager scoped to the user
+    """
+    result = await session.execute(select(Quota).where(Quota.user_id == user.id))
+    quota = result.scalar_one_or_none()
+
+    if not quota:
+        quota = Quota(user_id=user.id)
+        session.add(quota)
+        await session.commit()
+        await session.refresh(quota)
+
+    total_memories, storage_bytes = await asyncio.to_thread(_calculate_usage_stats, manager)
+    quota.memories_count = total_memories
+    quota.storage_bytes = storage_bytes
+
+    await session.commit()
+
+
+def _calculate_usage_stats(manager: MemoryManager) -> tuple[int, int]:
+    """Compute count and storage usage for a manager."""
+    listing = manager.list_all_memories(include_archived=True)
+    groups = ["short_term", "long_term"]
+    if "archived" in listing:
+        groups.append("archived")
+
+    total_memories = sum(len(listing.get(group, [])) for group in groups)
+    total_bytes = 0
+
+    for group in groups:
+        for entry in listing.get(group, []):
+            path_str = entry.get("path")
+            if not path_str:
+                continue
+            file_path = manager.base_dir / path_str
+            if file_path.exists():
+                total_bytes += file_path.stat().st_size
+
+    return total_memories, total_bytes

@@ -80,7 +80,7 @@ No authentication required.
 ```json
 {
   "status": "healthy",
-  "version": "0.2.0"
+  "version": "2.1.0"
 }
 ```
 

@@ -16,11 +16,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from whitemagic import MemoryManager
-
 from .database import Database, User
 from .dependencies import set_database, CurrentUser, DBSession
-from .rate_limit import RateLimiter, set_rate_limiter, get_rate_limiter
+from .memory_service import get_memory_manager
+from .rate_limit import (
+    RateLimiter,
+    set_rate_limiter,
+    get_rate_limiter,
+    refresh_quota_usage,
+)
 from .middleware import RequestLoggingMiddleware, RateLimitMiddleware, CORSHeadersMiddleware
 from .models import (
     CreateMemoryRequest,
@@ -43,28 +47,6 @@ from .models import (
     ErrorDetail,
     SuccessResponse,
 )
-
-
-# Global memory manager instances (keyed by user ID)
-_memory_managers: dict[str, MemoryManager] = {}
-
-
-def get_memory_manager(user: User) -> MemoryManager:
-    """
-    Get or create a MemoryManager for a user.
-
-    Each user gets their own isolated memory directory.
-    """
-    user_id_str = str(user.id)
-
-    if user_id_str not in _memory_managers:
-        # User-specific base directory
-        base_dir = Path(os.getenv("WM_BASE_PATH", ".")) / "users" / user_id_str
-        base_dir.mkdir(parents=True, exist_ok=True)
-
-        _memory_managers[user_id_str] = MemoryManager(base_dir=str(base_dir))
-
-    return _memory_managers[user_id_str]
 
 
 @asynccontextmanager
@@ -143,6 +125,36 @@ _maybe_init_sentry()
 # Exception handlers
 
 
+def _read_memory_body(manager, entry: dict) -> str:
+    """Return the body for a memory entry."""
+    path_str = entry.get("path")
+    if not path_str:
+        return ""
+
+    file_path = manager.base_dir / path_str
+    if not file_path.exists():
+        return ""
+
+    try:
+        _, body = manager._read_memory_file(entry)
+        return body
+    except Exception:
+        return ""
+
+
+def _memory_response(manager, entry: dict) -> MemoryResponse:
+    """Serialize a memory entry (including content) for API responses."""
+    return MemoryResponse(
+        filename=entry["filename"],
+        title=entry["title"],
+        type=entry["type"],
+        tags=entry.get("tags", []),
+        created=entry["created"],
+        path=entry["path"],
+        content=_read_memory_body(manager, entry),
+    )
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc: HTTPException):
     """Handle HTTP exceptions with consistent error format."""
@@ -213,6 +225,7 @@ app.include_router(dashboard.router)
 async def create_memory(
     request: CreateMemoryRequest,
     user: CurrentUser,
+    session: DBSession,
 ):
     """
     Create a new memory.
@@ -239,14 +252,9 @@ async def create_memory(
         if not created_memory:
             raise HTTPException(500, "Memory created but not found")
 
-        return MemoryResponse(
-            filename=created_memory["filename"],
-            title=created_memory["title"],
-            type=created_memory["type"],
-            tags=created_memory.get("tags", []),
-            created=created_memory["created"],
-            path=str(path),
-        )
+        await refresh_quota_usage(session, user, manager)
+
+        return _memory_response(manager, created_memory)
 
     except Exception as e:
         raise HTTPException(500, f"Failed to create memory: {str(e)}")
@@ -273,17 +281,7 @@ async def list_memories(
             # Combine all types
             memories = all_memories.get("short_term", []) + all_memories.get("long_term", [])
 
-        memory_responses = [
-            MemoryResponse(
-                filename=m["filename"],
-                title=m["title"],
-                type=m["type"],
-                tags=m.get("tags", []),
-                created=m["created"],
-                path=m["path"],
-            )
-            for m in memories
-        ]
+        memory_responses = [_memory_response(manager, m) for m in memories]
 
         return MemoryListResponse(
             memories=memory_responses,
@@ -312,14 +310,7 @@ async def get_memory(
         if not memory:
             raise HTTPException(404, f"Memory not found: {filename}")
 
-        return MemoryResponse(
-            filename=memory["filename"],
-            title=memory["title"],
-            type=memory["type"],
-            tags=memory.get("tags", []),
-            created=memory["created"],
-            path=memory["path"],
-        )
+        return _memory_response(manager, memory)
 
     except HTTPException:
         raise
@@ -332,6 +323,7 @@ async def update_memory(
     filename: str,
     request: UpdateMemoryRequest,
     user: CurrentUser,
+    session: DBSession,
 ):
     """Update an existing memory."""
     try:
@@ -350,8 +342,8 @@ async def update_memory(
             raise HTTPException(400, "No updates provided")
 
         await asyncio.to_thread(manager.update_memory, filename, **updates)
+        await refresh_quota_usage(session, user, manager)
 
-        # Return updated memory
         return await get_memory(filename, user)
 
     except HTTPException:
@@ -364,11 +356,13 @@ async def update_memory(
 async def delete_memory(
     filename: str,
     user: CurrentUser,
+    session: DBSession,
 ):
     """Delete a memory."""
     try:
         manager = get_memory_manager(user)
         await asyncio.to_thread(manager.delete_memory, filename)
+        await refresh_quota_usage(session, user, manager)
 
         return SuccessResponse(message=f"Memory deleted: {filename}")
 
@@ -465,6 +459,7 @@ async def generate_context(
 async def consolidate_memories(
     request: ConsolidateRequest,
     user: CurrentUser,
+    session: DBSession,
 ):
     """
     Consolidate old short-term memories to archive.
@@ -483,6 +478,9 @@ async def consolidate_memories(
         message = f"{'[DRY RUN] ' if request.dry_run else ''}Archived {result['archived']} memories"
         if result.get("auto_promoted", 0) > 0:
             message += f", promoted {result['auto_promoted']} to long-term"
+
+        if not request.dry_run:
+            await refresh_quota_usage(session, user, manager)
 
         return ConsolidateResponse(
             archived_count=result.get("archived", 0),
@@ -570,6 +568,9 @@ async def get_current_user_info(
             session.add(quota)
             await session.commit()
             await session.refresh(quota)
+
+        manager = get_memory_manager(user)
+        await refresh_quota_usage(session, user, manager)
 
         return UserResponse(
             user=UserInfo(

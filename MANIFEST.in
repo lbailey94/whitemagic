@@ -2,8 +2,6 @@
 include README.md
 include LICENSE
 include ROADMAP.md
-include PROGRESS_SUMMARY.md
-include SESSION_COMPLETE.md
 
 # Include package data
 recursive-include whitemagic *.py py.typed

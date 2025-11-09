@@ -86,6 +86,7 @@ class MemoryResponse(BaseModel):
     tags: List[str]
     created: datetime
     path: str
+    content: Optional[str] = Field(None, description="Memory body content")
 
     class Config:
         json_schema_extra = {
@@ -97,6 +98,7 @@ class MemoryResponse(BaseModel):
                 "tags": ["api", "pattern", "proven"],
                 "created": "2025-11-02T09:45:30",
                 "path": "memory/long_term/20251102_094530_api_design.md",
+                "content": "Always validate inputs at API boundaries...",
             }
         }
 

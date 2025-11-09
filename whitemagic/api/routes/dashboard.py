@@ -129,7 +129,7 @@ async def create_new_api_key(
         session,
         user.id,
         name=request.name,
-        expires_days=request.expires_days,
+        expires_in_days=request.expires_days,
     )
 
     return CreateAPIKeyResponse(
