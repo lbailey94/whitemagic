@@ -17,6 +17,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
+# Setup logging first
+from .structured_logging import setup_logging, get_logger
+
+# Configure logging
+log_level = os.getenv("LOG_LEVEL", "INFO")
+json_logs = os.getenv("JSON_LOGS", "true").lower() == "true"
+setup_logging(level=log_level, json_logs=json_logs)
+
+logger = get_logger(__name__)
+
 from .database import Database, User
 from .dependencies import set_database, CurrentUser, DBSession
 from .memory_service import get_memory_manager
@@ -55,6 +65,8 @@ from .models import (
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
     # Startup
+    logger.info("whitemagic_startup", extra={"version": get_version()})
+    
     database_url = os.getenv(
         "DATABASE_URL", "sqlite+aiosqlite:///./whitemagic.db"  # Default for development
     )
@@ -62,15 +74,18 @@ async def lifespan(app: FastAPI):
     db = Database(database_url, echo=False)
     await db.create_tables()
     set_database(db)
+    logger.info("database_initialized", extra={"url": database_url.split("@")[-1]})  # Hide credentials
 
     # Initialize rate limiter
     redis_url = os.getenv("REDIS_URL")
     rate_limiter = RateLimiter(redis_url)
     set_rate_limiter(rate_limiter)
+    logger.info("rate_limiter_initialized", extra={"redis_enabled": bool(redis_url)})
 
     yield
 
     # Shutdown
+    logger.info("whitemagic_shutdown")
     await rate_limiter.close()
     await db.close()
 
@@ -117,9 +132,9 @@ def _maybe_init_sentry() -> None:
             environment=os.getenv("ENVIRONMENT", "production"),
             release=os.getenv("SENTRY_RELEASE", "whitemagic-2.1.0"),
         )
-        print("✅ Sentry initialized")
+        logger.info("sentry_initialized")
     except ImportError:
-        print("⚠️ Sentry DSN set but sentry-sdk not installed. Skipping initialization.")
+        logger.warning("sentry_sdk_not_installed", extra={"dsn_set": True})
 
 
 _maybe_init_sentry()
@@ -234,8 +249,14 @@ async def http_exception_handler(request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc: Exception):
     """Handle unexpected exceptions."""
-    # TODO: Log to Sentry
-    print(f"Unexpected error: {exc}")
+    logger.error(
+        "unexpected_error",
+        exc_info=True,
+        extra={
+            "method": request.method,
+            "path": request.url.path
+        }
+    )
 
     return JSONResponse(
         status_code=500,

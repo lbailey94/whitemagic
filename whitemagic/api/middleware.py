@@ -15,6 +15,9 @@ from starlette.types import ASGIApp
 from .database import UsageRecord, User
 from .dependencies import get_db_session
 from .version import get_version
+from .structured_logging import get_logger, set_correlation_id
+
+logger = get_logger(__name__)
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -28,14 +31,25 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # Generate request ID
-        request_id = str(uuid.uuid4())
-        request.state.request_id = request_id
+        # Generate or extract correlation ID
+        correlation_id = request.headers.get("x-correlation-id") or str(uuid.uuid4())
+        request.state.request_id = correlation_id
+        set_correlation_id(correlation_id)
 
         # Start timer
         start_time = time.time()
 
         user = getattr(request.state, "user", None)
+
+        # Log incoming request
+        logger.info(
+            "request_started",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "user_id": str(user.id) if user else None,
+            }
+        )
 
         # Ensure quotas are enforced before processing request
         if user:
@@ -45,14 +59,36 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception as e:
             response_time_ms = int((time.time() - start_time) * 1000)
-            print(f"Request {request_id} failed after {response_time_ms}ms: {e}")
+            logger.error(
+                "request_failed",
+                exc_info=True,
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "response_time_ms": response_time_ms,
+                    "user_id": str(user.id) if user else None,
+                }
+            )
             raise
 
         # Calculate response time
         response_time_ms = int((time.time() - start_time) * 1000)
 
+        # Log successful request
+        logger.info(
+            "request_completed",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "response_time_ms": response_time_ms,
+                "user_id": str(user.id) if user else None,
+            }
+        )
+
         # Add headers
-        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Request-ID"] = correlation_id
+        response.headers["X-Correlation-ID"] = correlation_id
         response.headers["X-Response-Time"] = f"{response_time_ms}ms"
         response.headers["X-WhiteMagic-Revision"] = get_version()
 
@@ -69,7 +105,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 if 200 <= response.status_code < 300:
                     await self._update_request_counters(user)
             except Exception as e:
-                print(f"Failed to log usage/update quota: {e}")
+                logger.error(
+                    "usage_logging_failed",
+                    exc_info=True,
+                    extra={"user_id": str(user.id)}
+                )
 
         return response
 
@@ -99,7 +139,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 await session.commit()
         except Exception as e:
             # Don't fail request if logging fails
-            print(f"Failed to create usage record: {e}")
+            logger.warning(
+                "usage_record_creation_failed",
+                exc_info=True,
+                extra={"user_id": str(user.id)}
+            )
 
     async def _enforce_quota_limits(self, user: User) -> None:
         """Ensure the user is within quota limits before fulfilling the request."""
