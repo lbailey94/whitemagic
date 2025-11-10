@@ -102,9 +102,48 @@
 
 ---
 
-## 🚀 Short-Term Goals (Month 1)
+## 🚀 Short-Term Goals (Weeks 2-4)
 
-### 4. **Marketing & Community Building**
+### 4. **Phase 2B: Semantic Search & Embeddings** ⭐ **NEXT MAJOR FEATURE**
+**Time**: 1 week  
+**Status**: Ready to start after deployment
+
+**Objectives** (from ROADMAP.md):
+1. **Embedding Generation**
+   - OpenAI embeddings (cloud option)
+   - Local embeddings (sentence-transformers for privacy)
+   - Batch processing for existing memories
+   - Automatic embedding on create/update
+
+2. **Vector Storage**
+   - pgvector for self-hosted (Pro+ tier)
+   - Migration script for existing data
+   - Optional Pinecone/Weaviate for Enterprise
+
+3. **Hybrid Search**
+   - Combine keyword + semantic search
+   - Configurable weighting
+   - Re-ranking algorithms
+   - Better relevance than keyword-only
+
+**New Endpoints**:
+- `POST /api/v1/memories/search/semantic` - Semantic search
+- `GET /api/v1/embeddings/status` - Check embedding status
+- `POST /api/v1/embeddings/batch` - Batch process existing memories
+
+**Success Criteria**:
+- ✅ Semantic search returns more relevant results
+- ✅ Hybrid search outperforms keyword-only
+- ✅ <200ms query latency
+- ✅ Migration handles 10k+ memories
+- ✅ Local embeddings option for privacy
+- ✅ Cost-effective at scale
+
+**Priority**: HIGH - Differentiates from competitors
+
+---
+
+### 5. **Marketing & Community Building**
 **Time**: Ongoing  
 **Goal**: Build user base and gather feedback
 
@@ -137,7 +176,7 @@
 
 ---
 
-### 5. **Gather User Feedback**
+### 6. **Gather User Feedback**
 **Time**: Ongoing  
 **Goal**: Learn what users need
 
@@ -157,7 +196,7 @@
 
 ---
 
-### 6. **Quick Wins & Polish**
+### 7. **Quick Wins & Polish**
 **Time**: 2-3 hours each  
 **Goal**: Improve user experience
 
@@ -177,8 +216,40 @@
 
 ## 📈 Medium-Term Goals (Months 2-3)
 
-### 7. **Advanced Features**
-Based on user demand, consider:
+### 8. **Phase 3: Extensions & Integrations** ⭐ **AFTER PHASE 2B**
+**Timeline**: 2 weeks  
+**Status**: Planned
+
+**Objectives** (from ROADMAP.md):
+
+#### **VS Code Extension**
+- Sidebar: Browse memories
+- Commands: Create/search from editor
+- Auto-context injection
+- Whop login integration
+
+#### **Cursor/Windsurf Deep Integration**
+- Native MCP installation (already done! ✅)
+- Context injection on demand
+- Memory creation shortcuts  
+- Team workspace sync
+
+#### **Alternative Framework Adapters**
+- LangChain adapter
+- LlamaIndex integration
+- Direct OpenAI/Anthropic wrappers
+
+#### **Mobile Apps** (Stretch Goal)
+- iOS/Android for memory creation
+- Voice-to-memory
+- Photo/document ingestion
+
+**Priority**: MEDIUM - After semantic search proves valuable
+
+---
+
+### 9. **Advanced Features**
+Based on user demand, consider (beyond Phase 3):
 
 **High-Value Features**:
 - [ ] **Multi-user workspaces**
@@ -207,7 +278,7 @@ Based on user demand, consider:
 
 ---
 
-### 8. **Monetization** 💰
+### 10. **Enhanced Monetization** 💰
 **Time**: 1-2 weeks to implement  
 **Goal**: Sustainable revenue
 
@@ -231,7 +302,7 @@ Based on user demand, consider:
 
 ---
 
-### 9. **Scale Infrastructure**
+### 11. **Scale Infrastructure**
 **When**: User growth requires it  
 **Goal**: Handle increased traffic
 
@@ -248,7 +319,7 @@ Based on user demand, consider:
 
 ---
 
-### 10. **Documentation Improvements**
+### 12. **Documentation Improvements**
 **Time**: Ongoing  
 **Goal**: Help users help themselves
 
@@ -265,14 +336,14 @@ Based on user demand, consider:
 
 ## 🎓 Long-Term Vision (Months 4-6)
 
-### 11. **Ecosystem Expansion**
+### 13. **Ecosystem Expansion**
 - [ ] Python library on PyPI
 - [ ] Official Cursor extension
 - [ ] VS Code extension
 - [ ] Browser extension
 - [ ] Mobile app (monitoring)
 
-### 12. **Enterprise Features**
+### 14. **Enterprise Features**
 - [ ] SSO/SAML support
 - [ ] Audit logs
 - [ ] Compliance certifications
@@ -280,7 +351,7 @@ Based on user demand, consider:
 - [ ] Custom integrations
 - [ ] SLA guarantees
 
-### 13. **AI Features**
+### 15. **AI Features** (Some overlap with Phase 2B)
 - [ ] Auto-tagging with LLMs
 - [ ] Memory summarization
 - [ ] Intelligent consolidation
