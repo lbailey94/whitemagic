@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/badge/npm-2.1.0-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-65%2B%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen.svg)](#testing)
 
 WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI, FastAPI backend with Whop-based auth/monetization, and native MCP integration for Cursor/Windsurf/Claude.
 
@@ -16,8 +16,9 @@ WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI,
 - **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
 - **Smart Search**: Full-text search with tag filtering
 - **Context Generation**: 3-tier context system
-- **Type-Safe**: 100% type hints with Pydantic
+- **Type-Safe**: 100% type hints with Pydantic V2
 - **CLI + API**: Command-line and Python library
+- **Fully Tested**: 107/107 tests passing (80 Python + 27 MCP)
 
 ## 🚀 Quick Start
 
