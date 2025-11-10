@@ -2,13 +2,39 @@
 
 **Date**: November 9, 2025  
 **Current Status**: ✅ **Production Ready - All Tests Passing**  
-**Priority**: Deploy → Market → Scale
+**Priority**: Phase 2A.5 Hardening → Deploy → Market → Scale
 
 ---
 
 ## 🎯 Immediate Next Steps (Week 1)
 
-### 1. **Deploy to Production** ⭐ **TOP PRIORITY**
+### 1. **Phase 2A.5: Platform Hardening** ⭐ **TOP PRIORITY**
+**Time**: 5-7 days  
+**Goal**: Stable, versioned, auditable foundation
+
+**Why First**: Before adding semantic search complexity, we need backup/restore, versioning, structured logging, and security hardening.
+
+**Action Items**:
+- [ ] **API Versioning**: `X-WhiteMagic-Revision` header, `/openapi.json` freeze
+- [ ] **Single VERSION file**: Auto-bump PyPI, npm, Docker
+- [ ] **Docker Hardening**: Non-root user, read-only FS, `CAP_DROP=ALL`
+- [ ] **Structured Logging**: JSON logs + correlation IDs
+- [ ] **Backup/Restore**: `wm backup` and `wm restore` CLI
+- [ ] **Security**: Trivy/Grype CI, SBOM, cosign signing
+- [ ] **Health Checks**: Separate `/health` vs `/ready` endpoints
+
+**Deliverables**:
+- VERSION file + auto-versioning
+- Hardened Dockerfile
+- CI with scanning + signing
+- Backup/restore commands
+- v2.1.1 stable release
+
+**Impact**: Can confidently add features knowing we can rollback, debug (correlation IDs), and recover (backups).
+
+---
+
+### 2. **Deploy to Production** ⭐ **HIGH PRIORITY**
 **Time**: 1-2 hours  
 **Goal**: Get WhiteMagic live and accessible
 
@@ -27,7 +53,7 @@
 
 ---
 
-### 2. **Submit to MCP Registry** ⭐ **HIGH PRIORITY**
+### 3. **Submit to MCP Registry** ⭐ **HIGH PRIORITY**
 **Time**: 2 hours  
 **Goal**: Get discovered by Cursor/Windsurf users
 
@@ -69,7 +95,7 @@
 
 ---
 
-### 3. **Create Launch Materials** 📣
+### 4. **Create Launch Materials** 📣
 **Time**: 3-4 hours  
 **Goal**: Professional presentation for launch
 
@@ -104,7 +130,7 @@
 
 ## 🚀 Short-Term Goals (Weeks 2-4)
 
-### 4. **Phase 2B: Semantic Search & Embeddings** ⭐ **NEXT MAJOR FEATURE**
+### 5. **Phase 2B: Semantic Search & Memory Science** ⭐ **AFTER HARDENING**
 **Time**: 1 week  
 **Status**: Ready to start after deployment
 
@@ -143,7 +169,34 @@
 
 ---
 
-### 5. **Marketing & Community Building**
+### 6. **Phase 2C: Official SDKs & Adapters**
+**Time**: 1-2 weeks  
+**Status**: After Phase 2B
+
+**Why Critical**: Turns WhiteMagic from product → platform
+
+**SDKs**:
+- [ ] `whitemagic-js` (TypeScript, typed from OpenAPI)
+- [ ] `whitemagic-sdk` (Python, separate from core)
+- [ ] Both with: retry/backoff, pagination, batch ops, idempotency
+
+**Adapters** (20-line drop-ins):
+- [ ] LangChain memory adapter
+- [ ] OpenAI Tools function adapter
+- [ ] LlamaIndex integration
+- [ ] DSPy adapter (if requested)
+
+**Benchmarks**:
+- [ ] `wm bench` CLI command
+- [ ] Compare: no-memory vs Tier 0/1/2
+- [ ] Metrics: tokens, latency, quality rubric
+- [ ] Publish chart in README
+
+**Impact**: Ecosystem growth - others extend without touching core
+
+---
+
+### 7. **Marketing & Community Building**
 **Time**: Ongoing  
 **Goal**: Build user base and gather feedback
 
@@ -176,7 +229,7 @@
 
 ---
 
-### 6. **Gather User Feedback**
+### 8. **Gather User Feedback**
 **Time**: Ongoing  
 **Goal**: Learn what users need
 
@@ -196,7 +249,7 @@
 
 ---
 
-### 7. **Quick Wins & Polish**
+### 9. **Quick Wins & Polish**
 **Time**: 2-3 hours each  
 **Goal**: Improve user experience
 

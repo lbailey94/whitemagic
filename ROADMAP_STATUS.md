@@ -45,12 +45,69 @@
 
 ---
 
-## 🎯 What's Next: Phase 2B - Semantic Search
+## 🎯 What's Next: Phase 2A.5 - Platform Hardening
 
-### **Phase 2B: Semantic Search & Embeddings** ⏳ **NEXT**
-**Timeline**: 1 week  
-**Status**: Ready to start (after deployment)  
+### **Phase 2A.5: Platform Hardening** ⏳ **NEXT** ⭐
+**Timeline**: 1 week (5-7 days)  
+**Status**: Starting now  
+**Priority**: P0 - Critical foundation
 **Prerequisites**: Phase 2A complete ✅
+
+**Why First**: Before adding semantic search complexity, we need a stable, versioned, auditable foundation with backup/restore capabilities.
+
+#### **Objectives**
+
+1. **API Stability & Versioning**
+   - [ ] Add `X-WhiteMagic-Revision` header to all responses
+   - [ ] Publish `/openapi.json` endpoint (freeze v1 schema)
+   - [ ] Implement deprecation policy (90 days, `Deprecation:` header)
+   - [ ] Single `VERSION` file as source of truth
+   - [ ] Auto-bump PyPI, npm, Docker from VERSION
+
+2. **Security & Runtime Hygiene**
+   - [ ] Docker: non-root user, read-only FS, `CAP_DROP=ALL`
+   - [ ] Separate health vs readiness endpoints
+   - [ ] JWT key rotation schedule (documented)
+   - [ ] Trivy/Grype image scanning in CI (block on criticals)
+   - [ ] SBOM generation (CycloneDX format)
+   - [ ] Docker image signing with cosign
+
+3. **Observability**
+   - [ ] Structured JSON logging (replace print statements)
+   - [ ] Correlation IDs across requests
+   - [ ] Counters: operations, latency, errors, rate-limit hits
+   - [ ] Optional Prometheus metrics endpoint
+
+4. **Backup & Disaster Recovery**
+   - [ ] `wm backup` CLI command
+   - [ ] `wm restore` CLI command
+   - [ ] Document RPO=24h / RTO<1h
+   - [ ] Add backup verification test
+
+#### **Success Criteria**
+- [ ] `/openapi.json` returns frozen v1 schema
+- [ ] All Docker images signed and have SBOMs
+- [ ] CI blocks on critical CVEs
+- [ ] Backup/restore round-trip works
+- [ ] All logs are structured JSON with correlation IDs
+- [ ] Health endpoint (`/health`) distinct from readiness (`/ready`)
+- [ ] Can rollback from v2.2.0 → v2.1.1 without data loss
+
+#### **Deliverables**
+- [ ] VERSION file + auto-versioning script
+- [ ] Updated Dockerfile (hardened)
+- [ ] CI workflow with signing + scanning
+- [ ] `wm backup` / `wm restore` commands
+- [ ] Structured logging throughout codebase
+- [ ] Deprecation policy document
+- [ ] v2.1.1 release
+
+---
+
+### **Phase 2B: Semantic Search & Memory Science** ⏳ **AFTER 2A.5**
+**Timeline**: 2 weeks  
+**Status**: Ready to start after hardening  
+**Prerequisites**: Phase 2A.5 complete ✅
 
 #### **Objectives**
 
@@ -162,9 +219,36 @@ class MemoryEmbedding(Base):
 
 ---
 
+### **Phase 2C: Official SDKs & Adapters** ⏳ **AFTER 2B**
+**Timeline**: 1-2 weeks  
+**Status**: Planned
+
+#### **Objectives**
+- [ ] `whitemagic-js` TypeScript SDK
+- [ ] `whitemagic-sdk` Python SDK (separate from core)
+- [ ] LangChain adapter
+- [ ] OpenAI Tools adapter
+- [ ] LlamaIndex adapter
+- [ ] `wm bench` CLI for benchmarks
+
+---
+
 ## 🔮 Future Phases
 
-### **Phase 3: Extensions & Integrations** ⏳ **AFTER PHASE 2B**
+### **Phase 3: Global Workspace Architecture** ⏳ **AFTER PHASE 2C**
+**Timeline**: 3-4 weeks  
+**Status**: Planned
+
+#### **Core Components**
+- [ ] Global Workspace Router ("Thalamus") - central arbitration
+- [ ] Policy Gating ("Basal Ganglia") - guards dangerous ops
+- [ ] Bicameral Consensus - two heads (prover + scout)
+- [ ] Episodic Memory Capsules - event-based with TTLs
+- [ ] Meta-Tuner - nightly hyperparameter optimization
+
+---
+
+### **Phase 4: Extensions & Integrations** ⏳ **AFTER PHASE 3**
 **Timeline**: 2 weeks  
 **Status**: Planned
 
