@@ -40,8 +40,10 @@ def generate_api_key(environment: str = "prod") -> Tuple[str, str, str]:
         >>> prefix
         'wm_prod_aB3xY9kL'
     """
-    # Generate cryptographically secure random string
-    random_part = secrets.token_urlsafe(24)[:32]  # 32 chars from base64
+    # Generate cryptographically secure random string (alphanumeric only, no underscores)
+    # Use secrets.choice to avoid underscores and hyphens from token_urlsafe
+    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    random_part = ''.join(secrets.choice(alphabet) for _ in range(32))
 
     # Construct full key
     full_key = f"wm_{environment}_{random_part}"
