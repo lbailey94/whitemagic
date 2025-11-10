@@ -14,6 +14,7 @@ from starlette.types import ASGIApp
 
 from .database import UsageRecord, User
 from .dependencies import get_db_session
+from .version import get_version
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
