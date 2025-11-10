@@ -5,7 +5,7 @@ WhiteMagic data models using Pydantic for validation and serialization.
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 from .constants import (
     VALID_MEMORY_TYPES,
@@ -32,28 +32,30 @@ class Memory(BaseModel):
     restored_at: Optional[datetime] = Field(None, description="Restore timestamp")
     promoted_from: Optional[str] = Field(None, description="Filename if promoted from short-term")
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v):
         if v not in VALID_MEMORY_TYPES:
             raise ValueError(f"type must be one of: {VALID_MEMORY_TYPES}")
         return v
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def validate_status(cls, v):
         if v not in VALID_STATUSES:
             raise ValueError(f"status must be one of: {VALID_STATUSES}")
         return v
 
-    @validator("tags")
+    @field_validator("tags")
+    @classmethod
     def validate_tags(cls, v):
         if not isinstance(v, list):
             raise ValueError("tags must be a list")
         return [str(tag) for tag in v]  # Ensure all tags are strings
 
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None,
-        }
+    model_config = ConfigDict(
+        json_encoders={datetime: lambda v: v.isoformat() if v else None}
+    )
 
 
 class MemoryCreate(BaseModel):
@@ -64,13 +66,15 @@ class MemoryCreate(BaseModel):
     type: str = Field(default=MEMORY_TYPE_SHORT_TERM, description="Memory type")
     tags: List[str] = Field(default_factory=list, description="List of tags")
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v):
         if v not in VALID_MEMORY_TYPES:
             raise ValueError(f"type must be one of: {VALID_MEMORY_TYPES}")
         return v
 
-    @validator("tags")
+    @field_validator("tags")
+    @classmethod
     def validate_tags(cls, v):
         if len(v) > 20:
             raise ValueError("Maximum 20 tags allowed")
@@ -86,7 +90,8 @@ class MemoryUpdate(BaseModel):
     add_tags: Optional[List[str]] = Field(None, description="Add these tags")
     remove_tags: Optional[List[str]] = Field(None, description="Remove these tags")
 
-    @validator("tags", "add_tags", "remove_tags")
+    @field_validator("tags", "add_tags", "remove_tags")
+    @classmethod
     def validate_tag_lists(cls, v):
         if v is not None:
             return [tag.strip() for tag in v if tag.strip()]
@@ -102,7 +107,8 @@ class MemorySearchQuery(BaseModel):
     limit: int = Field(default=20, ge=1, le=100, description="Max results to return")
     include_archived: bool = Field(default=False, description="Include archived memories")
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_type(cls, v):
         if v is not None and v not in VALID_MEMORY_TYPES:
             raise ValueError(f"type must be one of: {VALID_MEMORY_TYPES}")
@@ -197,7 +203,8 @@ class APIKey(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
 
-    @validator("plan")
+    @field_validator("plan")
+    @classmethod
     def validate_plan(cls, v):
         if v not in VALID_PLANS:
             raise ValueError(f"plan must be one of: {VALID_PLANS}")
@@ -210,7 +217,8 @@ class APIKeyCreate(BaseModel):
     label: Optional[str] = Field(None, max_length=100, description="Key label")
     plan: str = Field(..., description="Plan level")
 
-    @validator("plan")
+    @field_validator("plan")
+    @classmethod
     def validate_plan(cls, v):
         if v not in VALID_PLANS:
             raise ValueError(f"plan must be one of: {VALID_PLANS}")
@@ -222,7 +230,8 @@ class RestoreRequest(BaseModel):
 
     memory_type: str = Field(default=MEMORY_TYPE_SHORT_TERM, description="Target memory type")
 
-    @validator("memory_type")
+    @field_validator("memory_type")
+    @classmethod
     def validate_type(cls, v):
         if v not in VALID_MEMORY_TYPES:
             raise ValueError(f"memory_type must be one of: {VALID_MEMORY_TYPES}")

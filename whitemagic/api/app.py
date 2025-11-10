@@ -391,8 +391,11 @@ async def search_memories(
             query=request.query,
             tags=request.tags,
             memory_type=request.type,
-            limit=request.limit,
         )
+        
+        # Apply limit after search
+        if request.limit:
+            results = results[:request.limit]
 
         search_results = [
             SearchResultItem(

@@ -275,20 +275,23 @@ async def update_quota_in_db(
     now = datetime.utcnow()
     today = now.date()
 
+    # Check if daily reset needed
     last_daily = quota.last_reset_daily or now
-    if last_daily.date() < today:
+    # Handle both date and datetime objects
+    last_daily_date = last_daily.date() if hasattr(last_daily, 'date') else last_daily
+    if last_daily_date < today:
         quota.requests_today = 0
         quota.last_reset_daily = now
 
-    first_of_month = today.replace(day=1)
+    # Check if monthly reset needed
     last_monthly = quota.last_reset_monthly or now
-    if last_monthly.date() < first_of_month:
+    if last_monthly.month != now.month or last_monthly.year != now.year:
         quota.requests_this_month = 0
         quota.last_reset_monthly = now
 
-    # Increment counters
-    quota.requests_today += 1
-    quota.requests_this_month += 1
+    # Increment counters (handle None values)
+    quota.requests_today = (quota.requests_today or 0) + 1
+    quota.requests_this_month = (quota.requests_this_month or 0) + 1
 
     await session.commit()
 

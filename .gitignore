@@ -73,3 +73,7 @@ whitemagic-mcp/dist/*.map
 # Logs
 *.log
 logs/
+.venv/
+test_output.txt
+users/
+*.db

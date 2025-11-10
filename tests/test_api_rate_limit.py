@@ -5,6 +5,7 @@ Tests rate limiting logic and quota enforcement.
 """
 
 import pytest
+import pytest_asyncio
 from datetime import date
 
 from whitemagic.api.rate_limit import (
@@ -19,7 +20,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from whitemagic.api.database import Base
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session():
     """Create test database session."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
@@ -36,7 +37,7 @@ async def db_session():
     await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_user(db_session):
     """Create a test user."""
     user = User(
@@ -183,9 +184,9 @@ class TestQuotaManagement:
     async def test_update_quota_resets_daily(self, db_session, test_user):
         """Test that daily quota resets on new day."""
         # Create quota from yesterday
-        from datetime import timedelta
+        from datetime import timedelta, datetime
 
-        yesterday = date.today() - timedelta(days=1)
+        yesterday = datetime.utcnow() - timedelta(days=1)
 
         quota = Quota(
             user_id=test_user.id,
@@ -200,7 +201,8 @@ class TestQuotaManagement:
 
         await db_session.refresh(quota)
         assert quota.requests_today == 1  # Reset to 1
-        assert quota.last_reset_daily == date.today()
+        # last_reset_daily is datetime, compare dates using UTC
+        assert quota.last_reset_daily.date() == datetime.utcnow().date()
 
     @pytest.mark.asyncio
     async def test_check_quota_limits_memory_count(self, db_session, test_user):

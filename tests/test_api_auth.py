@@ -5,6 +5,7 @@ Tests API key generation, validation, and management.
 """
 
 import pytest
+import pytest_asyncio
 from datetime import datetime, timedelta
 from uuid import uuid4
 
@@ -23,7 +24,7 @@ from whitemagic.api.auth import (
 )
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_engine():
     """Create in-memory SQLite database for testing."""
     engine = create_async_engine(
@@ -39,7 +40,7 @@ async def db_engine():
     await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session(db_engine):
     """Create a database session for testing."""
     async_session = async_sessionmaker(
@@ -53,7 +54,7 @@ async def db_session(db_engine):
         await session.rollback()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def sample_user(db_session):
     """Create a sample user for testing."""
     user = User(
@@ -94,8 +95,8 @@ class TestAPIKeyGeneration:
         key, key_hash, prefix = generate_api_key("dev")
 
         assert prefix.startswith("wm_dev_")
-        assert prefix.endswith("...")
-        assert len(prefix) == 19  # "wm_dev_" + 8 chars + "..."
+        assert len(prefix) == 16  # First 16 chars of key (no ellipsis)
+        assert prefix == key[:16]
 
     def test_generate_api_key_uniqueness(self):
         """Test that multiple calls generate different keys."""

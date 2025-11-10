@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 # Base response models
@@ -88,8 +88,8 @@ class MemoryResponse(BaseModel):
     path: str
     content: Optional[str] = Field(None, description="Memory body content")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "filename": "20251102_094530_api_design.md",
@@ -101,6 +101,7 @@ class MemoryResponse(BaseModel):
                 "content": "Always validate inputs at API boundaries...",
             }
         }
+    )
 
 
 class MemoryListResponse(BaseModel):
@@ -110,8 +111,8 @@ class MemoryListResponse(BaseModel):
     memories: List[MemoryResponse]
     total: int
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "total": 2,
@@ -127,6 +128,7 @@ class MemoryListResponse(BaseModel):
                 ],
             }
         }
+    )
 
 
 # Search-related models
@@ -168,8 +170,8 @@ class SearchResponse(BaseModel):
     total: int
     query: Optional[str]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "total": 1,
@@ -187,6 +189,7 @@ class SearchResponse(BaseModel):
                 ],
             }
         }
+    )
 
 
 # Context generation models
@@ -208,8 +211,8 @@ class ContextResponse(BaseModel):
     tier: int
     memories_included: int
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "tier": 1,
@@ -217,6 +220,7 @@ class ContextResponse(BaseModel):
                 "context": "## Short-Term Memories\n\n- **API Design** (tags: api, pattern)\n...",
             }
         }
+    )
 
 
 # User and API key models
@@ -303,8 +307,8 @@ class StatsResponse(BaseModel):
     total_tags: int
     most_used_tags: List[tuple]
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "success": True,
                 "short_term_count": 5,
@@ -314,6 +318,7 @@ class StatsResponse(BaseModel):
                 "most_used_tags": [("api", 5), ("pattern", 3)],
             }
         }
+    )
 
 
 class TagsResponse(BaseModel):

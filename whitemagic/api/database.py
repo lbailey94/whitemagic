@@ -110,8 +110,8 @@ class UsageRecord(Base):
 
     __tablename__ = "usage_records"
 
-    # Primary key
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    # Primary key - use Integer for SQLite compatibility
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Foreign keys
     user_id = Column(

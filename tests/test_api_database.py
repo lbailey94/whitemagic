@@ -6,6 +6,7 @@ Uses SQLite in-memory database for speed.
 """
 
 import pytest
+import pytest_asyncio
 from datetime import datetime, date
 from uuid import uuid4
 
@@ -15,7 +16,7 @@ from sqlalchemy import select
 from whitemagic.api.database import Base, User, APIKey, UsageRecord, Quota, Database
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_engine():
     """Create in-memory SQLite database for testing."""
     engine = create_async_engine(
@@ -31,7 +32,7 @@ async def db_engine():
     await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session(db_engine):
     """Create a database session for testing."""
     async_session = async_sessionmaker(
@@ -45,7 +46,7 @@ async def db_session(db_engine):
         await session.rollback()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def sample_user(db_session):
     """Create a sample user for testing."""
     user = User(
@@ -205,7 +206,9 @@ class TestUsageRecordModel:
         assert usage.method == "POST"
         assert usage.status_code == 201
         assert usage.response_time_ms == 45
-        assert usage.date == date.today()
+        # UsageRecord uses UTC date from database
+        from datetime import datetime
+        assert usage.date == datetime.utcnow().date()
 
     @pytest.mark.asyncio
     async def test_usage_record_with_api_key(self, db_session, sample_user):
@@ -255,7 +258,9 @@ class TestQuotaModel:
         assert quota.requests_this_month == 5000
         assert quota.memories_count == 50
         assert quota.storage_bytes == 1024 * 1024
-        assert quota.last_reset_daily == date.today()
+        # last_reset_daily is now datetime, use UTC
+        from datetime import datetime as dt
+        assert quota.last_reset_daily.date() == dt.utcnow().date()
 
     @pytest.mark.asyncio
     async def test_quota_user_relationship(self, db_session, sample_user):
