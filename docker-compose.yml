@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  whitemagic:
+    build: .
+    user: "1000:1000"
+    cap_drop: [ALL]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/whitemagic.db
+      - JSON_LOGS=true
+      - LOG_LEVEL=INFO
+    ports: ["8000:8000"]
+    volumes:
+      - whitemagic-data:/data
+      - /tmp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+volumes:
+  whitemagic-data:

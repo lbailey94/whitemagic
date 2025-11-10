@@ -53,9 +53,7 @@ class Memory(BaseModel):
             raise ValueError("tags must be a list")
         return [str(tag) for tag in v]  # Ensure all tags are strings
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat() if v else None}
-    )
+    # Pydantic V2 handles datetime serialization automatically
 
 
 class MemoryCreate(BaseModel):
