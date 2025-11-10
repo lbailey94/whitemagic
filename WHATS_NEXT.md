@@ -2,7 +2,7 @@
 
 **Date**: November 9, 2025  
 **Current Status**: ✅ **Production Ready - All Tests Passing**  
-**Priority**: Phase 2A.5 Hardening → Deploy → Market → Scale
+**Priority**: Phase 2A.5 Hardening → Phase 2B → Deploy → Market → Scale
 
 ---
 
@@ -34,7 +34,46 @@
 
 ---
 
-### 2. **Deploy to Production** ⭐ **HIGH PRIORITY**
+### 2. **Phase 2B: Semantic Search & Memory Science** ⭐ **HIGH PRIORITY**
+**Time**: 1 week  
+**Status**: Ready to start after Phase 2A.5
+
+**Objectives** (from ROADMAP.md):
+1. **Embedding Generation**
+   - OpenAI embeddings (cloud option)
+   - Local embeddings (sentence-transformers for privacy)
+   - Batch processing for existing memories
+   - Automatic embedding on create/update
+
+2. **Vector Storage**
+   - pgvector for self-hosted (Pro+ tier)
+   - Migration script for existing data
+   - Optional Pinecone/Weaviate for Enterprise
+
+3. **Hybrid Search**
+   - Combine keyword + semantic search
+   - Configurable weighting
+   - Re-ranking algorithms
+   - Better relevance than keyword-only
+
+**New Endpoints**:
+- `POST /api/v1/memories/search/semantic` - Semantic search
+- `GET /api/v1/embeddings/status` - Check embedding status
+- `POST /api/v1/embeddings/batch` - Batch process existing memories
+
+**Success Criteria**:
+- ✅ Semantic search returns more relevant results
+- ✅ Hybrid search outperforms keyword-only
+- ✅ <200ms query latency
+- ✅ Migration handles 10k+ memories
+- ✅ Local embeddings option for privacy
+- ✅ Cost-effective at scale
+
+**Priority**: HIGH - Differentiates from competitors
+
+---
+
+### 3. **Deploy to Production** ⭐ **HIGH PRIORITY**
 **Time**: 1-2 hours  
 **Goal**: Get WhiteMagic live and accessible
 

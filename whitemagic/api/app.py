@@ -11,7 +11,8 @@ from typing import Optional
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from fastapi import FastAPI, HTTPException, status
+from datetime import datetime
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from .database import Database, User
 from .dependencies import set_database, CurrentUser, DBSession
 from .memory_service import get_memory_manager
+from .version import get_version, get_version_dict
 from .rate_limit import (
     RateLimiter,
     set_rate_limiter,
@@ -77,7 +79,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="WhiteMagic API",
     description="Memory scaffolding for AI agents with tiered context generation",
-    version="2.1.0",
+    version=get_version(),
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -121,6 +123,66 @@ def _maybe_init_sentry() -> None:
 
 
 _maybe_init_sentry()
+
+
+# ============================================================================
+# Health & System Endpoints
+# ============================================================================
+
+@app.get("/health", tags=["System"])
+async def health_check():
+    """
+    Health check endpoint (liveness probe).
+    
+    Returns 200 if the service is running.
+    Does not check external dependencies.
+    """
+    return {
+        "status": "healthy",
+        "version": get_version(),
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+
+
+@app.get("/ready", tags=["System"])
+async def readiness_check(db: DBSession):
+    """
+    Readiness check endpoint (readiness probe).
+    
+    Returns 200 if the service can handle requests.
+    Checks database connectivity.
+    """
+    try:
+        from sqlalchemy import text
+        await db.execute(text("SELECT 1"))
+        return {
+            "status": "ready",
+            "version": get_version(),
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service not ready: {str(e)}"
+        )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi_schema():
+    """
+    Get frozen OpenAPI v1 schema.
+    
+    This endpoint returns the complete API schema.
+    Clients can use this for code generation.
+    """
+    return app.openapi()
+
+
+@app.get("/version", tags=["System"])
+async def get_version_info():
+    """Get version information"""
+    return get_version_dict()
+
 
 # Exception handlers
 
@@ -184,15 +246,6 @@ async def general_exception_handler(request, exc: Exception):
             )
         ).model_dump(),
     )
-
-
-# Health check endpoint
-
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "version": "2.1.0"}
 
 
 # Dashboard endpoint (serve HTML)

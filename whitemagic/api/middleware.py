@@ -53,6 +53,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # Add headers
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Response-Time"] = f"{response_time_ms}ms"
+        response.headers["X-WhiteMagic-Revision"] = get_version()
 
         if user:
             try:
