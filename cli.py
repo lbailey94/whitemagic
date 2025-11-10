@@ -24,6 +24,7 @@ from typing import Optional, Sequence
 
 # Import from whitemagic package
 from whitemagic import MemoryManager
+from whitemagic.backup import BackupManager
 
 
 # ---------------------------------------------------------------------- #
@@ -297,6 +298,143 @@ def command_normalize_tags(manager: MemoryManager, args: argparse.Namespace) -> 
     return 0
 
 
+def command_backup(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'backup' command - create system backup."""
+    backup_mgr = BackupManager(Path(args.base_dir))
+    
+    output_path = Path(args.output) if args.output else None
+    
+    try:
+        result = backup_mgr.create_backup(
+            output_path=output_path,
+            incremental=args.incremental,
+            compress=not args.no_compress
+        )
+        
+        if args.json:
+            print(json.dumps(result, indent=2, default=str))
+            return 0
+        
+        if result["success"]:
+            manifest = result["manifest"]
+            print(f"✓ Backup created successfully!")
+            print(f"  Path: {result['backup_path']}")
+            print(f"  Files: {manifest['stats']['total_files']}")
+            print(f"  Size: {manifest['stats']['total_size_mb']:.2f} MB")
+            print(f"  Manifest: {result['manifest_path']}")
+            return 0
+        else:
+            print(f"✗ Backup failed: {result.get('error')}", file=sys.stderr)
+            return 1
+    
+    except Exception as e:
+        print(f"✗ Backup error: {str(e)}", file=sys.stderr)
+        return 1
+
+
+def command_restore_backup(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'restore-backup' command - restore from system backup."""
+    backup_mgr = BackupManager(Path(args.base_dir))
+    backup_path = Path(args.backup_path)
+    
+    if not backup_path.exists():
+        print(f"✗ Backup file not found: {backup_path}", file=sys.stderr)
+        return 1
+    
+    try:
+        result = backup_mgr.restore_backup(
+            backup_path=backup_path,
+            target_dir=Path(args.target_dir) if args.target_dir else None,
+            verify=not args.no_verify,
+            dry_run=args.dry_run
+        )
+        
+        if args.json:
+            print(json.dumps(result, indent=2, default=str))
+            return 0
+        
+        if result["success"]:
+            if result.get("dry_run"):
+                print(f"=== DRY RUN: Would restore {result['total_files']} files ===\n")
+                for file_path in result["files_to_restore"][:10]:
+                    print(f"  {file_path}")
+                if len(result["files_to_restore"]) > 10:
+                    print(f"  ... and {len(result['files_to_restore']) - 10} more")
+            else:
+                print(f"✓ Backup restored successfully!")
+                print(f"  Restored files: {result['total_files']}")
+                print(f"  Target: {result['target_dir']}")
+                print(f"  Pre-restore backup: {result['pre_restore_backup']}")
+            return 0
+        else:
+            print(f"✗ Restore failed: {result.get('error')}", file=sys.stderr)
+            return 1
+    
+    except Exception as e:
+        print(f"✗ Restore error: {str(e)}", file=sys.stderr)
+        return 1
+
+
+def command_list_backups(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'list-backups' command - list available backups."""
+    backup_mgr = BackupManager(Path(args.base_dir))
+    
+    try:
+        backups = backup_mgr.list_backups()
+        
+        if args.json:
+            print(json.dumps(backups, indent=2, default=str))
+            return 0
+        
+        if not backups:
+            print("No backups found.")
+            return 0
+        
+        print(f"=== AVAILABLE BACKUPS ({len(backups)}) ===\n")
+        for backup in backups:
+            print(f"  {backup['name']}")
+            print(f"    Created: {backup['created']}")
+            print(f"    Size: {backup['size_mb']:.2f} MB")
+            if backup['has_manifest'] and backup['manifest']:
+                print(f"    Files: {backup['manifest']['stats']['total_files']}")
+            print()
+        
+        return 0
+    
+    except Exception as e:
+        print(f"✗ Error listing backups: {str(e)}", file=sys.stderr)
+        return 1
+
+
+def command_verify_backup(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'verify-backup' command - verify backup integrity."""
+    backup_mgr = BackupManager(Path(args.base_dir))
+    backup_path = Path(args.backup_path)
+    
+    try:
+        result = backup_mgr.verify_backup(backup_path)
+        
+        if args.json:
+            print(json.dumps(result, indent=2, default=str))
+            return 0
+        
+        if result["valid"]:
+            print(f"✓ Backup verification passed!")
+            print(f"  Path: {result['backup_path']}")
+            print(f"  Files: {result['file_count']}")
+            print(f"  Has manifest: {result['has_manifest']}")
+            if result['has_manifest']:
+                print(f"  Manifest valid: {result['manifest_valid']}")
+            return 0
+        else:
+            print(f"✗ Backup verification failed: {result.get('error')}", file=sys.stderr)
+            return 1
+    
+    except Exception as e:
+        print(f"✗ Verification error: {str(e)}", file=sys.stderr)
+        return 1
+
+
 # Command dispatch table
 COMMAND_HANDLERS = {
     "create": command_create,
@@ -309,6 +447,10 @@ COMMAND_HANDLERS = {
     "list-tags": command_list_tags,
     "restore": command_restore,
     "normalize-tags": command_normalize_tags,
+    "backup": command_backup,
+    "restore-backup": command_restore_backup,
+    "list-backups": command_list_backups,
+    "verify-backup": command_verify_backup,
 }
 
 
@@ -540,6 +682,86 @@ def build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="Output normalization results as JSON.",
+    )
+    
+    # backup
+    backup_parser = subparsers.add_parser(
+        "backup",
+        help="Create a system backup of all WhiteMagic memories.",
+    )
+    backup_parser.add_argument(
+        "-o", "--output",
+        help="Output path for backup file (default: backups/backup_TIMESTAMP.tar.gz).",
+    )
+    backup_parser.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Create incremental backup (only changed files).",
+    )
+    backup_parser.add_argument(
+        "--no-compress",
+        action="store_true",
+        help="Skip compression (faster but larger).",
+    )
+    backup_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output backup result as JSON.",
+    )
+    
+    # restore-backup
+    restore_backup_parser = subparsers.add_parser(
+        "restore-backup",
+        help="Restore WhiteMagic system from a backup.",
+    )
+    restore_backup_parser.add_argument(
+        "backup_path",
+        help="Path to backup file to restore.",
+    )
+    restore_backup_parser.add_argument(
+        "--target-dir",
+        help="Target directory for restore (default: current base directory).",
+    )
+    restore_backup_parser.add_argument(
+        "--no-verify",
+        action="store_true",
+        help="Skip backup verification before restoring.",
+    )
+    restore_backup_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be restored without actually restoring.",
+    )
+    restore_backup_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output restore result as JSON.",
+    )
+    
+    # list-backups
+    list_backups_parser = subparsers.add_parser(
+        "list-backups",
+        help="List all available backup files.",
+    )
+    list_backups_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output backups list as JSON.",
+    )
+    
+    # verify-backup
+    verify_backup_parser = subparsers.add_parser(
+        "verify-backup",
+        help="Verify backup file integrity.",
+    )
+    verify_backup_parser.add_argument(
+        "backup_path",
+        help="Path to backup file to verify.",
+    )
+    verify_backup_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output verification result as JSON.",
     )
 
     return parser
