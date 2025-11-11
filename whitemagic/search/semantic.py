@@ -101,25 +101,60 @@ class SemanticSearcher:
         Load memory content from file.
         
         Args:
-            memory_path: Path to memory file
+            memory_path: Path to memory file (.md or .json)
             
         Returns:
             Dictionary with memory metadata and content
         """
         import json
         
-        with open(memory_path, 'r') as f:
-            data = json.load(f)
-        
-        return {
-            "id": memory_path.stem,
-            "title": data.get("title", ""),
-            "content": data.get("content", ""),
-            "type": data.get("type", "short_term"),
-            "tags": data.get("tags", []),
-            "created_at": data.get("created_at"),
-            "updated_at": data.get("updated_at")
-        }
+        # Handle both .md and .json formats
+        if memory_path.suffix == '.md':
+            # Markdown format with frontmatter
+            content = memory_path.read_text()
+            
+            # Parse frontmatter if present
+            if content.startswith('---\n'):
+                parts = content.split('---\n', 2)
+                if len(parts) >= 3:
+                    import yaml
+                    try:
+                        metadata = yaml.safe_load(parts[1])
+                        content_text = parts[2].strip()
+                    except:
+                        # Fallback if yaml fails
+                        metadata = {}
+                        content_text = content
+                else:
+                    metadata = {}
+                    content_text = content
+            else:
+                metadata = {}
+                content_text = content
+            
+            return {
+                "id": memory_path.stem,
+                "title": metadata.get("title", memory_path.stem.replace('_', ' ').title()),
+                "content": content_text,
+                "type": metadata.get("type", "short_term"),
+                "tags": metadata.get("tags", []),
+                "created_at": metadata.get("created_at"),
+                "updated_at": metadata.get("updated_at")
+            }
+        else:
+            # JSON format
+            with open(memory_path, 'r') as f:
+                data = json.load(f)
+            
+            return {
+                "id": memory_path.stem,
+                "title": data.get("title", ""),
+                "content": data.get("content", ""),
+                "type": data.get("type", "short_term"),
+                "tags": data.get("tags", []),
+                "created_at": data.get("created_at"),
+                "updated_at": data.get("updated_at")
+            }
     
     async def semantic_search(
         self,
@@ -154,23 +189,33 @@ class SemanticSearcher:
             if memory_type and memory_type != memory_type_dir:
                 continue
             
-            memory_dir = self.manager.base_dir / memory_type_dir
-            if not memory_dir.exists():
-                continue
+            # Check both direct path and memory/ subdirectory
+            possible_dirs = [
+                self.manager.base_dir / memory_type_dir,
+                self.manager.base_dir / "memory" / memory_type_dir
+            ]
             
-            for memory_file in memory_dir.glob("*.json"):
-                try:
-                    memory = await self._get_memory_content(memory_file)
-                    
-                    # Filter by tags if specified
-                    if tags:
-                        if not any(tag in memory["tags"] for tag in tags):
-                            continue
-                    
-                    memories.append(memory)
-                except Exception:
-                    # Skip corrupted files
+            for memory_dir in possible_dirs:
+                if not memory_dir.exists():
                     continue
+                
+                # Support both .json and .md files
+                for pattern in ["*.json", "*.md"]:
+                    for memory_file in memory_dir.glob(pattern):
+                        try:
+                            memory = await self._get_memory_content(memory_file)
+                            
+                            # Filter by tags if specified
+                            if tags:
+                                if not any(tag in memory["tags"] for tag in tags):
+                                    continue
+                            
+                            memories.append(memory)
+                        except Exception as e:
+                            # Skip corrupted files but log for debugging
+                            import logging
+                            logging.debug(f"Skipping {memory_file}: {e}")
+                            continue
         
         # Generate embeddings for all memories and calculate similarity
         results = []
@@ -231,8 +276,13 @@ class SemanticSearcher:
             # Simple relevance score based on rank
             score = 1.0 - (i * 0.05)  # Decreases by 0.05 per rank
             
+            # Get memory ID - handle different formats
+            memory_id = memory.get("filename") or memory.get("id") or str(memory.get("path", "unknown"))
+            if hasattr(memory_id, 'stem'):
+                memory_id = memory_id.stem
+            
             results.append(SearchResult(
-                memory_id=memory["filename"],
+                memory_id=str(memory_id),
                 title=memory.get("title", ""),
                 content=memory.get("content", ""),
                 type=memory.get("type", "short_term"),
