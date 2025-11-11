@@ -286,11 +286,12 @@ if dashboard_dir.exists():
 
 
 # Include Whop routes
-from .routes import whop, dashboard, search
+from .routes import whop, dashboard, search, exec as exec_routes
 
 app.include_router(whop.router)
 app.include_router(dashboard.router)
 app.include_router(search.router, prefix="/api/v1")
+app.include_router(exec_routes.router, prefix="/api/v1")
 
 
 # Memory endpoints

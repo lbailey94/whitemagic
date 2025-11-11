@@ -1,11 +1,7 @@
 """Terminal execution API endpoints."""
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from ...terminal import (
-    TerminalMCPTools,
-    Profile,
-    ExecutionMode
-)
+from ...terminal import TerminalMCPTools, Profile, ExecutionMode
 from ...terminal.models import ExecutionRequest, ExecutionResponse
 from ..dependencies import CurrentUser
 
@@ -20,7 +16,7 @@ async def execute_read(
     user: CurrentUser
 ):
     """Execute read-only command."""
-    if request.mode \!= ExecutionMode.READ:
+    if request.mode != ExecutionMode.READ:
         raise HTTPException(400, "Only READ mode allowed on this endpoint")
     
     result = _terminal_tools.exec_read(
