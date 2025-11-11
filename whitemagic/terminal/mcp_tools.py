@@ -26,8 +26,8 @@ class TerminalMCPTools:
         """Execute read-only command (MCP tool)."""
         full_cmd = cmd + (" " + " ".join(args) if args else "")
         
-        # Check allowlist
-        if not self.allowlist.is_allowed(cmd):
+        # Check allowlist (pass args)
+        if not self.allowlist.is_allowed(cmd, args):
             return {
                 "error": "Command not allowed",
                 "command": full_cmd,
