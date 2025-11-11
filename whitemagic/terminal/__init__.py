@@ -4,6 +4,7 @@ from .executor import Executor, ExecutionResult
 from .allowlist import Allowlist, Profile
 from .audit import AuditLogger, AuditLog
 from .mcp_tools import TerminalMCPTools, TOOLS
+from .models import ExecutionMode, ExecutionRequest, ExecutionResponse
 
 __all__ = [
     "Executor",
@@ -14,6 +15,9 @@ __all__ = [
     "AuditLog",
     "TerminalMCPTools",
     "TOOLS",
+    "ExecutionMode",
+    "ExecutionRequest",
+    "ExecutionResponse",
 ]
 
 __version__ = "0.1.0"
