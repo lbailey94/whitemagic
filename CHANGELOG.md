@@ -10,6 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.2] - 2025-11-11
+
+### 📦 Version Consistency Release
+
+This release updates version numbers across all files to properly include Phase 2A.5 work. The v2.1.1 tag predated Phase 2A.5 implementation, so v2.1.2 is the official release containing all platform hardening features.
+
+### Changed
+- **Version consistency**: Updated VERSION, pyproject.toml, package.json, README.md, SECURITY.md to 2.1.2
+- **npm package**: Published whitemagic-mcp@2.1.2 to npm registry
+- **Git tag**: Created v2.1.2 tag with full Phase 2A.5 release notes
+
+### Note
+This release contains the same code as the Phase 2A.5 completion (commits from Nov 10, 2025). The version bump ensures proper semantic versioning and that the git tag reflects all Phase 2A.5 work.
+
+For full Phase 2A.5 details, see v2.1.1 release notes below or `PHASE_2A5_COMPLETE.md`.
+
+---
+
 ## [2.1.1] - 2025-11-10
 
 ### 🛡️ Platform Hardening Release - Phase 2A.5 Complete
