@@ -1,0 +1,131 @@
+name: Docker Security Scan
+
+on:
+  push:
+    branches: [main, develop, 'release/*']
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+  schedule:
+    - cron: '0 8 * * 2'  # Weekly on Tuesdays at 8 AM UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan-dockerfile:
+    name: Scan Dockerfile
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Hadolint (Dockerfile linter)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+      
+      - name: Run Checkov (Infrastructure as Code scanner)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile
+          soft_fail: false
+
+  build-and-scan:
+    name: Build & Scan Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: whitemagic:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: whitemagic:test
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Trivy (Table format for PR comments)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: whitemagic:test
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Run Docker Scout
+        uses: docker/scout-action@v1
+        if: github.event_name == 'pull_request'
+        with:
+          command: cves
+          image: whitemagic:test
+          only-severities: critical,high
+          exit-code: true
+
+  verify-security-config:
+    name: Verify Security Configuration
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Verify security script exists
+        run: |
+          if [ ! -f scripts/verify_docker_security.sh ]; then
+            echo "❌ Security verification script not found"
+            exit 1
+          fi
+          echo "✅ Security verification script found"
+      
+      - name: Build Docker image
+        run: docker build -t whitemagic:2.1.1 .
+      
+      - name: Run security verification
+        run: bash scripts/verify_docker_security.sh
+      
+      - name: Verify docker-compose security settings
+        run: |
+          if ! grep -q "cap_drop: \[ALL\]" docker-compose.yml; then
+            echo "❌ Missing cap_drop in docker-compose.yml"
+            exit 1
+          fi
+          if ! grep -q "read_only: true" docker-compose.yml; then
+            echo "⚠️  WARNING: read_only not enabled (OK for SQLite)"
+          fi
+          if ! grep -q "no-new-privileges" docker-compose.yml; then
+            echo "❌ Missing no-new-privileges in docker-compose.yml"
+            exit 1
+          fi
+          echo "✅ Docker Compose security settings verified"

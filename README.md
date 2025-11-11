@@ -8,6 +8,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen.svg)](#testing)
 
+[![CodeQL](https://github.com/lbailey94/whitemagic/workflows/CodeQL%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/codeql.yml)
+[![Docker Security](https://github.com/lbailey94/whitemagic/workflows/Docker%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/docker-security.yml)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
+
 WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI, FastAPI backend with Whop-based auth/monetization, and native MCP integration for Cursor/Windsurf/Claude.
 
 ## ✨ Features
