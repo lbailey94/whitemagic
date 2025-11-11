@@ -15,6 +15,7 @@ from pathlib import Path
 
 from ..core import MemoryManager
 from ..embeddings import EmbeddingProvider, EmbeddingConfig, get_embedding_provider
+from ..embeddings.storage import EmbeddingCache
 
 
 class SearchMode(str, Enum):
@@ -50,7 +51,8 @@ class SemanticSearcher:
         self,
         memory_manager: MemoryManager,
         embedding_provider: Optional[EmbeddingProvider] = None,
-        embedding_config: Optional[EmbeddingConfig] = None
+        embedding_config: Optional[EmbeddingConfig] = None,
+        cache: Optional[EmbeddingCache] = None
     ):
         """
         Initialize semantic searcher.
@@ -59,6 +61,7 @@ class SemanticSearcher:
             memory_manager: WhiteMagic memory manager instance
             embedding_provider: Optional embedding provider (if None, creates from config)
             embedding_config: Optional config (if None, loads from env)
+            cache: Optional embedding cache (Tier 2)
         """
         self.manager = memory_manager
         
@@ -71,6 +74,9 @@ class SemanticSearcher:
             # Load from environment
             config = EmbeddingConfig.from_env()
             self.embedder = get_embedding_provider(config)
+        
+        # Set up caching (optional)
+        self.cache = cache
     
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """
