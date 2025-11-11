@@ -26,6 +26,7 @@ from .base import EmbeddingProvider
 from .config import EmbeddingConfig
 from .openai_provider import OpenAIEmbeddings
 from .local_provider import LocalEmbeddings
+from .storage import EmbeddingCache
 
 
 def get_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
