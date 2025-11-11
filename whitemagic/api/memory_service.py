@@ -30,8 +30,4 @@ def get_memory_manager(user) -> MemoryManager:
     """
     user_id_str = str(user.id)
     base_path = str(Path(os.getenv("WM_BASE_PATH", ".")).resolve())
-    
-    return _create_manager(user_id_str, base_path)
-
-    base_path = str(Path(os.getenv("WM_BASE_PATH", ".")).resolve())
     return _create_manager(user_id_str, base_path)

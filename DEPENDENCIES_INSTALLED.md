@@ -11,6 +11,7 @@ WhiteMagic now ships with a *minimal* required stack and an opt-in plugins bundl
 | Framework | fastapi | 0.120.4 | REST API framework |
 | Framework | uvicorn[standard] | 0.38.0 | ASGI server |
 | Framework | python-multipart | 0.0.20 | Form parsing |
+| Search | numpy | 2.1.2 | Semantic search embeddings |
 | ORM / DB | sqlalchemy | 2.0.44 | Async ORM |
 | DB driver | asyncpg | 0.30.0 | PostgreSQL driver |
 | Migrations | alembic | 1.17.1 | Schema migrations |

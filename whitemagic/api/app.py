@@ -130,7 +130,7 @@ def _maybe_init_sentry() -> None:
             integrations=[FastApiIntegration()],
             traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0")),
             environment=os.getenv("ENVIRONMENT", "production"),
-            release=os.getenv("SENTRY_RELEASE", "whitemagic-2.2.0"),
+            release=os.getenv("SENTRY_RELEASE", f"whitemagic-{get_version()}"),
         )
         logger.info("sentry_initialized")
     except ImportError:
@@ -276,7 +276,7 @@ async def dashboard_home():
     dashboard_path = Path(__file__).parent.parent.parent / "dashboard" / "index.html"
     if dashboard_path.exists():
         return FileResponse(dashboard_path)
-    return {"message": "WhiteMagic API", "version": "2.2.0", "docs": "/docs"}
+    return {"message": "WhiteMagic API", "version": get_version(), "docs": "/docs"}
 
 
 # Mount static files for dashboard

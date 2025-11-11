@@ -10,10 +10,10 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime, timedelta
-# from .models import ConsolidationEntry
-from .fileio import file_lock, atomic_write
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Sequence
+
+from .fileio import file_lock, atomic_write
 
 from .constants import (
     DEFAULT_MEMORY_DIR,
