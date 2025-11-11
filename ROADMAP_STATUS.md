@@ -1,40 +1,52 @@
-# WhiteMagic Development Roadmap - Current Status
+# WhiteMagic Platform Roadmap
 
+**Version**: 2.2.0  
+**Current Phase**: Phase 2 Complete 
+**Status**: Production Ready  
 **Last Updated**: November 11, 2025  
-**Version**: 2.1.2  
-**Current Phase**: Phase 2B - Semantic Search (Day 1 Complete)
 
 ---
 
-## 📍 Where We Are
+## Current Status
 
-### ✅ **Foundation - COMPLETE** (October-November 2025)
+**Active Work**: Phase 2 Complete - Ready for Independent Review
+
+### Recently Completed (v2.2.0)
+- Phase 2B: Semantic Search (3 modes, embeddings, API)
+- Phase 2C: Terminal Tool (safe execution, CLI, audit)
+- 2,700 lines of production code
+- 13 passing tests (100% terminal coverage)
+- 8 comprehensive documentation guides
+
+## Where We Are
+
+### Foundation - COMPLETE (October-November 2025)
 - Tiered prompt system (Tier 0/1/2)
 - Memory management (short-term, long-term, archive)
 - CLI with 10 commands
 - 18+ comprehensive tests
 - Complete documentation
 
-### ✅ **Phase 1A - COMPLETE** (Python API + REST Foundation)
-- Importable Python package (`whitemagic/`)
+### Phase 1A - COMPLETE (Python API + REST Foundation)
+- Importable Python package (whitemagic/)
 - REST API with 23 endpoints
 - Docker deployment
 - API documentation (Swagger UI)
 - 80+ tests passing (100% success rate)
 - Pydantic V2 compatible
 
-### ✅ **Phase 1B - COMPLETE** (MCP Server)
-- **Status**: ✅ **PUBLISHED TO NPM** (November 8, 2025)
-- **Package**: https://www.npmjs.com/package/whitemagic-mcp
-- **Version**: 2.1.0
+### Phase 1B - COMPLETE (MCP Server)
+- Status: PUBLISHED TO NPM (November 8, 2025)
+- Package: https://www.npmjs.com/package/whitemagic-mcp
+- Version: 2.1.0
 - Node.js MCP server implementation
 - 7 tools + 4 resources
 - Works with Cursor, Windsurf, Claude Desktop
 - 27/27 tests passing (100% success rate)
 - One-command installation
 
-### ✅ **Phase 2A - COMPLETE** (Whop Integration & REST API)
-- **Status**: ✅ **PRODUCTION READY** (November 2, 2025)
+### Phase 2A - COMPLETE (Whop Integration & REST API)
+- Status: PRODUCTION READY (November 2, 2025)
 - Whop webhook integration
 - API key system (wm_prod_xxx format)
 - Rate limiting (4 plan tiers: Free, Starter, Pro, Enterprise)
@@ -43,9 +55,9 @@
 - Legal compliance (ToS, Privacy Policy)
 - 100+ tests
 
-### ✅ **Phase 2A.5 - COMPLETE** (Platform Hardening)
-- **Status**: ✅ **COMPLETE** (November 10, 2025)
-- **Version**: 2.1.1 / 2.1.2
+### Phase 2A.5 - COMPLETE (Platform Hardening)
+- Status: COMPLETE (November 10, 2025)
+- Version: 2.1.1 / 2.1.2
 - API Versioning & Headers
 - Structured Logging (JSON + correlation IDs)
 - Docker Hardening (277MB, A+ security)
@@ -56,15 +68,18 @@
 
 ---
 
-## 🎯 Current Work: Phase 2B - Semantic Search
+## Next Up: Phase 3 - Context Hygiene
 
-### **Phase 2B: Semantic Search & Memory Science** ⏳ **IN PROGRESS** ⭐
-**Timeline**: 1-2 weeks (8-10 days)  
-**Status**: Day 1 complete, Day 2 starting  
-**Priority**: P1 - High (Product Differentiation)
-**Prerequisites**: Phase 2A.5 complete ✅
+### Phase 3: Context Hygiene 
+**Timeline**: 2 weeks  
+**Status**: Planned
 
-#### **Progress (Day 1/10 Complete)**
+- Pointer summaries (reduce token bloat)
+- Deduplication engine
+- Context decay (TTLs for memories)
+- context/preview endpoint
+- Batch operations with caching
+- Cost tracking per session
 
 ✅ **Day 1: Embedding Generation** (November 11, 2025)
 - [x] Dependencies installed (openai, pgvector, numpy, scipy)
