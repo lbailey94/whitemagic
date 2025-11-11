@@ -28,7 +28,7 @@ class TestExecutor:
         executor = Executor(timeout=5)
         result = executor.execute("false")
         
-        assert result.exit_code \!= 0
+        assert result.exit_code != 0
     
     def test_timeout(self):
         executor = Executor(timeout=1)
