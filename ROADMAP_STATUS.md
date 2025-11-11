@@ -1,8 +1,8 @@
 # WhiteMagic Development Roadmap - Current Status
 
-**Last Updated**: November 9, 2025  
-**Version**: 2.1.0  
-**Current Phase**: Ready for Phase 2B
+**Last Updated**: November 11, 2025  
+**Version**: 2.1.2  
+**Current Phase**: Phase 2B - Semantic Search (Day 1 Complete)
 
 ---
 
@@ -43,26 +43,41 @@
 - Legal compliance (ToS, Privacy Policy)
 - 100+ tests
 
+### ✅ **Phase 2A.5 - COMPLETE** (Platform Hardening)
+- **Status**: ✅ **COMPLETE** (November 10, 2025)
+- **Version**: 2.1.1 / 2.1.2
+- API Versioning & Headers
+- Structured Logging (JSON + correlation IDs)
+- Docker Hardening (277MB, A+ security)
+- Backup/Restore CLI (4 commands)
+- Security CI (9 automated scanners)
+- 65/65 tests passing (100% success rate)
+- Security Score: A+
+
 ---
 
-## 🎯 What's Next: Phase 2A.5 - Platform Hardening
+## 🎯 Current Work: Phase 2B - Semantic Search
 
-### **Phase 2A.5: Platform Hardening** ⏳ **NEXT** ⭐
-**Timeline**: 1 week (5-7 days)  
-**Status**: Starting now  
-**Priority**: P0 - Critical foundation
-**Prerequisites**: Phase 2A complete ✅
+### **Phase 2B: Semantic Search & Memory Science** ⏳ **IN PROGRESS** ⭐
+**Timeline**: 1-2 weeks (8-10 days)  
+**Status**: Day 1 complete, Day 2 starting  
+**Priority**: P1 - High (Product Differentiation)
+**Prerequisites**: Phase 2A.5 complete ✅
 
-**Why First**: Before adding semantic search complexity, we need a stable, versioned, auditable foundation with backup/restore capabilities.
+#### **Progress (Day 1/10 Complete)**
 
-#### **Objectives**
+✅ **Day 1: Embedding Generation** (November 11, 2025)
+- [x] Dependencies installed (openai, pgvector, numpy, scipy)
+- [x] Embeddings module structure created
+- [x] Base provider interface (abstract)
+- [x] OpenAI embeddings provider implemented
+- [x] Configuration management (Pydantic + env vars)
+- [x] Factory function for provider selection
+- [x] All imports working
 
-1. **API Stability & Versioning**
-   - [ ] Add `X-WhiteMagic-Revision` header to all responses
-   - [ ] Publish `/openapi.json` endpoint (freeze v1 schema)
-   - [ ] Implement deprecation policy (90 days, `Deprecation:` header)
-   - [ ] Single `VERSION` file as source of truth
-   - [ ] Auto-bump PyPI, npm, Docker from VERSION
+⏳ **Day 2-10: Remaining Work**
+
+1. **Embedding Generation** (Day 1-2)
 
 2. **Security & Runtime Hygiene**
    - [ ] Docker: non-root user, read-only FS, `CAP_DROP=ALL`
@@ -104,31 +119,122 @@
 
 ---
 
-### **Phase 2B: Semantic Search & Memory Science** ⏳ **AFTER 2A.5**
-**Timeline**: 2 weeks  
-**Status**: Ready to start after hardening  
-**Prerequisites**: Phase 2A.5 complete ✅
+## 🔮 Next Up: Phase 2C - Terminal Tool
+
+### **Phase 2C: Structured Terminal Execution** ⏳ **AFTER 2B** ⭐⭐⭐
+**Timeline**: 4-5 weeks  
+**Status**: Planned - High Impact Feature  
+**Priority**: P0 - Strategic (enables code-mode agents)
+**Prerequisites**: Phase 2B complete
+
+**Why This Matters**: The industry is pivoting to code-mode agents (Claude computer control, Anthropic research). Terminal execution + memory = complete agentic platform.
 
 #### **Objectives**
 
-1. **Embedding Generation**
-   - [ ] OpenAI embeddings API integration
-   - [ ] Local embeddings (sentence-transformers)
-   - [ ] Batch processing script for existing memories
-   - [ ] Auto-embed on memory create/update
-   - [ ] Cost analysis and optimization
+**Week 1: Core Execution**
+- [ ] POST /exec API with read-only mode
+- [ ] OCI containerized runner
+- [ ] Command allowlist with profiles
+- [ ] MCP exec_read tool
+- [ ] Basic audit logging
+- [ ] Correlation IDs for runs
 
-2. **Vector Storage**
-   - [ ] pgvector extension for PostgreSQL
-   - [ ] Vector index creation
-   - [ ] Migration script for existing data
-   - [ ] Optional: Pinecone/Weaviate for Enterprise tier
+**Week 2: Write Mode + Safety**
+- [ ] Patch preview/apply flow
+- [ ] MCP exec_write tool  
+- [ ] TUI approver (wm ui)
+- [ ] Idempotency keys
+- [ ] Network isolation flags
+- [ ] Auto-commit approved patches
 
-3. **Hybrid Search**
-   - [ ] Combine keyword + semantic results
-   - [ ] Configurable weighting (keyword vs semantic)
-   - [ ] Re-ranking algorithm
-   - [ ] Performance benchmarks
+**Week 3: Developer Experience**
+- [ ] whitemagic-js SDK with exec.read()
+- [ ] whitemagic-py SDK with typed clients
+- [ ] Templates (agent + SDK, maintenance bot)
+- [ ] Allowlist profiles (dev/ci/prod)
+- [ ] wm bench for performance comparison
+
+**Week 4: Safety + Tooling**
+- [ ] Security audit and documentation
+- [ ] VS Code/Cursor snippets
+- [ ] Safety testing (fuzzing, edge cases)
+- [ ] Cost/resource monitoring
+- [ ] Comprehensive error handling
+
+**Week 5: Polish + Ease-of-Use**
+- [ ] wm init wizard
+- [ ] wm tui browser (Textual/Rich)
+- [ ] Importers (Obsidian, Markdown, JSONL)
+- [ ] One-click backup/restore
+- [ ] Video tutorials + documentation
+
+#### **Key Features**
+
+**Structured Execution**:
+```python
+POST /exec
+{
+  "cmd": "rg",
+  "args": ["TODO", "--json"],
+  "cwd": "/project",
+  "mode": "read",  # "read", "write", "net"
+  "timeout_ms": 30000
+}
+```
+
+**Safety First**:
+- Read-only by default
+- Writes require patch preview + approval
+- OCI containerization (non-root, dropped caps)
+- Command allowlist (rg, fd, jq, sd, git, python, node)
+- Network isolated unless mode:"net"
+- Hard block dangerous commands (rm -rf, dd, mkfs)
+
+**Developer UX**:
+- TUI approver shows diffs before applying
+- Auto-commit with signed message
+- Correlation IDs link runs to memory ops
+- Full audit trail (run ID → diff → user)
+- Templates for common agent patterns
+
+#### **Success Criteria**
+- [ ] Can run read commands safely
+- [ ] Write mode requires approval
+- [ ] Patches preview before apply
+- [ ] Full containerization working
+- [ ] SDKs have typed interfaces
+- [ ] Templates reduce prompt bloat
+- [ ] Security audit passes
+- [ ] Documentation complete
+
+#### **Deliverables**
+- [ ] whitemagic/terminal/ module
+- [ ] /exec, /fs, /git API endpoints
+- [ ] MCP terminal tools
+- [ ] OCI runner with sandboxing
+- [ ] TUI approver (wm ui)
+- [ ] whitemagic-js/whitemagic-py SDKs
+- [ ] Agent templates
+- [ ] wm bench utility
+- [ ] Complete documentation
+- [ ] Video tutorials
+
+See `docs/TERMINAL_TOOL_DESIGN.md` for detailed specification.
+
+---
+
+## 📚 Future Phases
+
+### **Phase 2D: Context Hygiene** ⏳ **AFTER 2C**
+**Timeline**: 2 weeks  
+**Status**: Planned
+
+- [ ] Pointer summaries (reduce token bloat)
+- [ ] Deduplication engine
+- [ ] Context decay (TTLs for memories)
+- [ ] context/preview endpoint
+- [ ] Batch operations with caching
+- [ ] Cost tracking per session
 
 #### **New API Endpoints**
 
