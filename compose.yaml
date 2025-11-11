@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: lbailey94/whitemagic:2.1.0
+    build: .
     container_name: whitemagic-api
     depends_on:
       db:

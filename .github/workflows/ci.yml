@@ -174,4 +174,4 @@ jobs:
       
       - name: Run MCP tests
         working-directory: whitemagic-mcp
-        run: npm test || echo "No MCP tests yet"
+        run: npm test
