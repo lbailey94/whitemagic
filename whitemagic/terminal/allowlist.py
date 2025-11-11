@@ -39,22 +39,50 @@ class Allowlist:
     def __init__(self, profile: Profile = Profile.AGENT):
         self.profile = profile
     
-    def is_allowed(self, cmd: str) -> bool:
-        """Check if command is allowed."""
-        # Always block dangerous commands
+    def is_allowed(self, cmd: str, args: Optional[List[str]] = None) -> bool:
+        """Check if command is allowed.
+        
+        Args:
+            cmd: Command name (e.g., "git")
+            args: Command arguments (e.g., ["status"])
+        
+        Returns:
+            True if command is allowed, False otherwise
+        """
+        # Normalize command: join cmd + args for matching
+        full_cmd = cmd
+        if args:
+            full_cmd = cmd + " " + " ".join(args)
+        
+        # Always block dangerous commands (check base command)
         if any(cmd.startswith(blocked) for blocked in self.BLOCKED):
             return False
         
         # Profile-specific logic
         if self.profile == Profile.PROD:
-            return cmd in self.READ_ONLY
+            # Prod: only explicit READ_ONLY commands
+            return full_cmd in self.READ_ONLY or cmd in self.READ_ONLY
         
         if self.profile == Profile.AGENT:
-            return cmd in self.READ_ONLY or cmd in self.WRITE_OPS
+            # Agent: READ_ONLY + WRITE_OPS
+            return (full_cmd in self.READ_ONLY or cmd in self.READ_ONLY or 
+                    full_cmd in self.WRITE_OPS or cmd in self.WRITE_OPS)
         
-        # Dev and CI allow most things
+        # Dev and CI allow most things (not blocked)
         return True
     
-    def requires_approval(self, cmd: str) -> bool:
-        """Check if command requires approval."""
-        return cmd in self.WRITE_OPS
+    def requires_approval(self, cmd: str, args: Optional[List[str]] = None) -> bool:
+        """Check if command requires approval.
+        
+        Args:
+            cmd: Command name
+            args: Command arguments
+        
+        Returns:
+            True if approval required, False otherwise
+        """
+        full_cmd = cmd
+        if args:
+            full_cmd = cmd + " " + " ".join(args)
+        
+        return full_cmd in self.WRITE_OPS or cmd in self.WRITE_OPS
