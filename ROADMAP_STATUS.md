@@ -325,17 +325,16 @@ class MemoryEmbedding(Base):
 
 ---
 
-### **Phase 2C: Official SDKs & Adapters** ⏳ **AFTER 2B**
+### **Phase 2E: Official SDKs & Adapters** ⏳ **AFTER 2D**
 **Timeline**: 1-2 weeks  
 **Status**: Planned
 
-#### **Objectives**
-- [ ] `whitemagic-js` TypeScript SDK
-- [ ] `whitemagic-sdk` Python SDK (separate from core)
-- [ ] LangChain adapter
-- [ ] OpenAI Tools adapter
+- [ ] whitemagic-js TypeScript SDK (enhanced)
+- [ ] whitemagic-py Python SDK  
+- [ ] LangChain memory adapter
+- [ ] OpenAI Tools integration
 - [ ] LlamaIndex adapter
-- [ ] `wm bench` CLI for benchmarks
+- [ ] AutoGPT memory backend
 
 ---
 
