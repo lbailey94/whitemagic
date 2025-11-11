@@ -33,14 +33,5 @@ def get_memory_manager(user) -> MemoryManager:
     
     return _create_manager(user_id_str, base_path)
 
-    if user_id_str not in _memory_managers:
-        base_path = Path(os.getenv("WM_BASE_PATH", ".")).resolve()
-        user_dir = base_path / "users" / user_id_str
-        user_dir.mkdir(parents=True, exist_ok=True)
-
-        _memory_managers[user_id_str] = MemoryManager(base_dir=str(user_dir))
-
-    return _memory_managers[user_id_str]
-
     base_path = str(Path(os.getenv("WM_BASE_PATH", ".")).resolve())
     return _create_manager(user_id_str, base_path)
