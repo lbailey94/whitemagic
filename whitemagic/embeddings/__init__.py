@@ -72,6 +72,7 @@ __all__ = [
     "EmbeddingConfig",
     "OpenAIEmbeddings",
     "LocalEmbeddings",
+    "EmbeddingCache",
     "get_embedding_provider"
 ]
 
