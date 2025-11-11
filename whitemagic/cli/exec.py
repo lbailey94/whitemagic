@@ -31,7 +31,7 @@ def run(command, cwd, profile):
     if result['stderr']:
         click.secho(result['stderr'], fg='yellow', err=True, nl=False)
     
-    if result['exit_code'] \!= 0:
+    if result['exit_code'] != 0:
         raise SystemExit(result['exit_code'])
 
 @exec_cli.command()
