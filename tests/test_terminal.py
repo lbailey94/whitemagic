@@ -112,7 +112,6 @@ class TestTerminalMCPTools:
         result = prod_tools.exec_read("ls")
         assert result["exit_code"] == 0
 
-@pytest.mark.asyncio
 class TestModels:
     """Test Pydantic models."""
     

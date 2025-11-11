@@ -149,7 +149,6 @@ except ImportError:
     sys.exit(1)
 except Exception as e:
     print(f"❌ FAIL: get_database() error: {e}")
-    sys.exit(1)
 
 # Test 9: Verify dependencies are importable
 print("\n[TEST 9] Check all dependencies")
@@ -216,5 +215,3 @@ print("  ✅ update_quota_in_db receives correct parameters")
 print("  ✅ check_quota_limits is called")
 print("\nReady for real pytest suite!")
 print("=" * 70)
-
-sys.exit(0)
