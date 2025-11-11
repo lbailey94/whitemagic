@@ -19,14 +19,19 @@ Example:
     ... )
 """
 
+from importlib import metadata
 from pathlib import Path
 
 
 def _load_version() -> str:
-    """Return the package version from the VERSION file if available."""
+    """Return the installed package version with a source-tree fallback."""
     version_file = Path(__file__).resolve().parent.parent / "VERSION"
     if version_file.exists():
         return version_file.read_text().strip()
+    try:
+        return metadata.version("whitemagic")
+    except metadata.PackageNotFoundError:
+        pass
     return "unknown"
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Union
@@ -53,13 +54,28 @@ def file_lock(filepath: Union[str, Path], timeout: float = 5.0) -> Generator[Non
         lock_file.parent.mkdir(parents=True, exist_ok=True)
         lock_file.touch(exist_ok=True)
         file_handle = open(lock_file, "a+")
+        start = time.time()
+        acquired = False
         try:
-            msvcrt.locking(file_handle.fileno(), msvcrt.LK_LOCK, 1)
+            while True:
+                try:
+                    msvcrt.locking(file_handle.fileno(), msvcrt.LK_LOCK, 1)
+                    acquired = True
+                    break
+                except OSError:
+                    if timeout is not None and (time.time() - start) >= timeout:
+                        raise TimeoutError(
+                            f"Timed out acquiring lock for {filepath}"
+                        ) from None
+                    time.sleep(0.05)
             yield
         finally:
-            try:
-                msvcrt.locking(file_handle.fileno(), msvcrt.LK_UNLCK, 1)
-            finally:
+            if acquired:
+                try:
+                    msvcrt.locking(file_handle.fileno(), msvcrt.LK_UNLCK, 1)
+                finally:
+                    file_handle.close()
+            else:
                 file_handle.close()
         return
 
