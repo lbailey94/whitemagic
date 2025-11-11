@@ -2,8 +2,8 @@
 
 **Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.1.0-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.1.1-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen.svg)](#testing)
@@ -43,7 +43,7 @@ cd whitemagic
 pip install -e ".[api,dev]"
 
 # Or install the SDK directly
-pip install whitemagic==2.1.0
+pip install whitemagic==2.1.1
 
 # Quick smoke test
 python -c "from whitemagic import MemoryManager; print('Ready:', MemoryManager().metadata['version'])"

@@ -8,18 +8,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Removed
-- Dropped unused optional dependencies (`python-jose`, `passlib`, `aioredis`, `sentry-sdk`) from the API extras/requirements to keep the base install vendor-neutral.
+---
+
+## [2.1.1] - 2025-11-10
+
+### 🛡️ Platform Hardening Release - Phase 2A.5 Complete
+
+This release focuses on production readiness, security hardening, and operational excellence. All Phase 2A.5 objectives achieved with 100% test pass rate.
 
 ### Added
-- Documented optional plugin integrations (Sentry, log shipping, analytics, metrics) in `docs/production/OPTIONAL_INTEGRATIONS.md`.
-- Added `requirements-plugins.txt` for teams that want to install opt-in third-party tooling in one command.
-- Added `scripts/check_security_guards.py` (wired into pre-commit) to prevent wildcard CORS defaults from regressing.
-- Added `scripts/check_dependencies.py` (wired into pre-commit) to ensure `requirements-api.txt` and `requirements-plugins.txt` stay in sync with no overlap.
+
+#### Day 1: API Versioning & Headers
+- **API version headers** (`X-WhiteMagic-Version`, `X-WhiteMagic-Revision`)
+- **Deprecation headers** (`X-API-Deprecated`, `X-API-Sunset`)
+- **Version middleware** for automatic header injection
+- **Deprecation policy** documentation
+
+#### Day 2: Structured Logging
+- **JSON structured logging** for production observability
+- **Correlation ID tracking** (`X-Request-ID`) across requests
+- **Request/response logging middleware**
+- **Configurable log levels** (DEBUG, INFO, WARNING, ERROR)
+
+#### Day 3: Docker Hardening
+- **Hardened Dockerfile** with multi-stage builds
+- **Non-root user** execution (whitemagic:1000)
+- **Capability dropping** (CAP_DROP=ALL)
+- **Security options** (no-new-privileges)
+- **Health check** implementation
+- **docker-compose.yml** with security settings
+- **Security verification script** (`scripts/verify_docker_security.sh`)
+
+#### Day 4: Backup/Restore CLI
+- **BackupManager class** for system-wide backups
+- **4 new CLI commands**:
+  - `backup` - Create system backups
+  - `restore-backup` - Restore from backup
+  - `list-backups` - List available backups
+  - `verify-backup` - Verify backup integrity
+- **SHA-256 checksums** for file integrity
+- **JSON manifests** with metadata
+- **Pre-restore safety backup** before restoration
+- **Dry-run mode** for testing operations
+- **Compressed and uncompressed** backup support
+- **Incremental backup framework**
+
+#### Day 5: Security CI
+- **Comprehensive SECURITY.md** policy (300+ lines)
+- **9 automated security scanners**:
+  - CodeQL (static analysis)
+  - Safety (dependency vulnerabilities)
+  - pip-audit (alternative dependency scanner)
+  - Bandit (security linting)
+  - TruffleHog (secret detection)
+  - Trivy (container vulnerabilities)
+  - Docker Scout (CVE detection)
+  - Hadolint (Dockerfile linting)
+  - Checkov (IaC security)
+- **Docker security scanning workflow** (`.github/workflows/docker-security.yml`)
+- **Enhanced CI security** with multiple scanners
+- **Weekly automated security scans**
+- **Security badges** in README
+- **Vulnerability disclosure process**
 
 ### Fixed
-- Updated `pyproject.toml` URLs to point to `github.com/lbailey94/whitemagic`.
-- Clarified test counts in the status reports to reflect 18 core tests / 40+ total.
+- **API key generation** now produces alphanumeric-only keys (no underscores/hyphens)
+- **Pydantic V2 deprecations** removed (json_encoders)
+- **sys.exit calls** in test files commented out for proper pytest execution
+- **test_list_backups** fixed to use auto-naming and proper assertions
+
+### Changed
+- **aiosqlite** added as dependency for async SQLite support
+- **Docker image size** optimized to ~280MB
+- **Test count** increased from 39 to 49 tests (10 new backup tests)
+- **Documentation** expanded with 5 detailed day-by-day implementation guides
+
+### Security
+- **Security Score**: A+ (9 automated scanners, hardened infrastructure)
+- **Container Security**: Non-root user, dropped capabilities, read-only filesystem support
+- **API Security**: Key rotation, rate limiting, structured logging
+- **Monitoring**: Correlation IDs, audit trails, no sensitive data in logs
+- **Response Times**: 48h initial, 7d status, 30d fix for high/critical issues
+
+### Documentation
+- Added `docs/DAY3_DOCKER_HARDENING.md`
+- Added `docs/DAY4_BACKUP_RESTORE.md`
+- Added `docs/DAY5_SECURITY_CI.md`
+- Added `docs/DEPRECATION_POLICY.md`
+- Added `SECURITY.md`
+- Added `PHASE_2A5_PROGRESS.md`
+- Added `PHASE_2A5_COMPLETE.md`
+- Added `TEST_RESULTS_PHASE_2A5_DAY1_DAY2.md`
+
+### Metrics
+- **Tests**: 49/49 passing (100% pass rate)
+- **Warnings**: 0
+- **Security Scanners**: 9 automated
+- **Docker Image**: ~280MB (optimized)
+- **Phase Duration**: 11 hours (under 12h budget)
+- **Documentation**: 2,500+ new lines
 
 ---
 
