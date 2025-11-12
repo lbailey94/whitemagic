@@ -37,7 +37,12 @@ from .rate_limit import (
     get_rate_limiter,
     refresh_quota_usage,
 )
-from .middleware import RequestLoggingMiddleware, RateLimitMiddleware, CORSHeadersMiddleware
+from .middleware import (
+    AuthMiddleware,
+    RequestLoggingMiddleware,
+    CORSHeadersMiddleware,
+    RateLimitMiddleware,
+)
 from .models import (
     CreateMemoryRequest,
     UpdateMemoryRequest,
@@ -109,10 +114,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add custom middleware
-app.add_middleware(CORSHeadersMiddleware)
-app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(RateLimitMiddleware)
+# Add custom middleware (NOTE: Last added runs first!)
+# Order: Auth -> Rate Limiting -> Logging -> CORS -> Route Handler
+app.add_middleware(CORSHeadersMiddleware)  # Runs 4th (adds CORS headers)
+app.add_middleware(RequestLoggingMiddleware)  # Runs 3rd (logs with user context)
+app.add_middleware(RateLimitMiddleware)  # Runs 2nd (enforces limits with user)
+app.add_middleware(AuthMiddleware)  # Runs 1st (sets request.state.user)
 
 # Optional Sentry integration
 @lru_cache(maxsize=1)

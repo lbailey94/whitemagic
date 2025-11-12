@@ -21,8 +21,27 @@ class AuditLogger:
     """Log command executions."""
     
     def __init__(self, log_dir: Optional[Path] = None):
-        self.log_dir = log_dir or Path.home() / ".whitemagic" / "audit"
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        preferred = log_dir or Path.home() / ".whitemagic" / "audit"
+        self.log_dir = self._ensure_writable(preferred)
+
+        if self.log_dir is None:
+            fallback_dir = Path.cwd() / ".whitemagic_audit"
+            self.log_dir = self._ensure_writable(fallback_dir)
+
+        if self.log_dir is None:
+            raise PermissionError("Unable to create writable audit log directory")
+
+    def _ensure_writable(self, directory: Path) -> Optional[Path]:
+        """Attempt to create directory and verify it is writable."""
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            test_file = directory / ".write_test"
+            with open(test_file, "w") as tmp:
+                tmp.write("ok")
+            test_file.unlink(missing_ok=True)
+            return directory
+        except PermissionError:
+            return None
     
     def log(
         self,

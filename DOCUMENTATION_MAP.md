@@ -19,14 +19,11 @@ Looking for a full listing instead? See [docs/INDEX.md](docs/INDEX.md).
 
 ## 🚀 **I Want to Deploy**
 
-### **Quick Deploy** (45 minutes)
-→ **[DEPLOY_NOW.md](DEPLOY_NOW.md)** - Step-by-step checklist
-
 ### **Production Deploy** (2 hours)
 → **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Comprehensive guide with Docker/PostgreSQL/Redis/Caddy
 
-### **Ready to Launch?** (1 day)
-→ **[NEXT_STEPS.md](NEXT_STEPS.md)** - npm publish + MCP registry + Vercel/Railway deployment
+### **Local Development**
+→ **[INSTALL.md](INSTALL.md)** - Local setup and configuration
 
 ### **Choose Your Hosting**
 - **Vercel (frontend)**: Static dashboard hosting
@@ -73,7 +70,7 @@ npm install && npm test  # 25+ automated tests
 ## 🧪 **I Want to Test**
 
 ### **Test Coverage Summary**
-→ **[TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md)** - 65+ tests, 85% coverage
+→ **[docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md)** - 196 Python + 27 MCP tests
 
 ### **Run Tests**
 ```bash
@@ -106,13 +103,10 @@ python scripts/check_dependencies.py     # Manifest consistency
 ## 💼 **I Want Business Info**
 
 ### **Project Assessment**
-→ **[COMPREHENSIVE_REVIEW_ASSESSMENT.md](COMPREHENSIVE_REVIEW_ASSESSMENT.md)** - Detailed review (Nov 8, 2025)
+→ **[docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md](docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md)** - Detailed review (Nov 8, 2025)
 
 ### **For Non-Technical Users**
 → **[PRIMER_FOR_NEW_USERS.md](PRIMER_FOR_NEW_USERS.md)** - What is WhiteMagic?
-
-### **Monetization Strategy**
-→ **[NEXT_STEPS.md § Monetization Tiers](NEXT_STEPS.md)** - Pricing recommendations
 
 ---
 
@@ -153,10 +147,9 @@ python scripts/check_dependencies.py     # Manifest consistency
 - [INSTALL.md](INSTALL.md) - Installation
 - [START_HERE.md](START_HERE.md) - Quick reference card
 
-### **Deployment** (Choose ONE based on your timeline)
-- [DEPLOY_NOW.md](DEPLOY_NOW.md) - 45 min quick deploy ⭐ **Start here**
-- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - 2 hour comprehensive deploy
-- [NEXT_STEPS.md](NEXT_STEPS.md) - 1 day launch checklist (npm + registries)
+### **Deployment**
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Production deployment guide
+- [INSTALL.md](INSTALL.md) - Local development setup
 
 ### **Configuration**
 - [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup
@@ -164,8 +157,8 @@ python scripts/check_dependencies.py     # Manifest consistency
 - [compose.yaml](compose.yaml) - Docker services
 
 ### **Assessment & Status**
-- [COMPREHENSIVE_REVIEW_ASSESSMENT.md](COMPREHENSIVE_REVIEW_ASSESSMENT.md) - Latest review ⭐ **Most current**
-- [TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md) - Testing stats
+- [docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md](docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md) - Latest review ⭐ **Most current**
+- [docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md) - Testing stats
 - [ROADMAP.md](ROADMAP.md) - Development plan
 
 ### **Reference**
@@ -185,14 +178,11 @@ python scripts/check_dependencies.py     # Manifest consistency
 → **Install and try it locally**  
   └─ [INSTALL.md](INSTALL.md) → [guides/QUICKSTART.md](docs/guides/QUICKSTART.md)
 
-→ **Deploy to production TODAY**  
-  └─ [DEPLOY_NOW.md](DEPLOY_NOW.md) (45 min)
+→ **Deploy to production**  
+  └─ [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
-→ **Plan a production deployment**  
-  └─ [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) (2 hours)
-
-→ **Publish npm + launch**  
-  └─ [NEXT_STEPS.md](NEXT_STEPS.md) (1 day)
+→ **Set up local development**  
+  └─ [INSTALL.md](INSTALL.md)
 
 → **Configure MCP in my IDE**  
   └─ [whitemagic-mcp/README.md](whitemagic-mcp/README.md)
@@ -201,10 +191,10 @@ python scripts/check_dependencies.py     # Manifest consistency
   └─ [guides/SYSTEM_OVERVIEW.md](docs/guides/SYSTEM_OVERVIEW.md)
 
 → **See test coverage**  
-  └─ [TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md)
+  └─ [docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md)
 
 → **Get business overview**  
-  └─ [COMPREHENSIVE_REVIEW_ASSESSMENT.md](COMPREHENSIVE_REVIEW_ASSESSMENT.md)
+  └─ [docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md](docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md)
 
 → **Navigate all docs**  
   └─ [docs/INDEX.md](docs/INDEX.md)
@@ -215,9 +205,9 @@ python scripts/check_dependencies.py     # Manifest consistency
 
 - **Total markdown files**: 187
 - **Active core docs**: ~15
-- **Deployment guides**: 3 (quick/comprehensive/launch)
+- **Deployment guides**: 2 (production/local)
 - **Archived docs**: 147 (in `docs/archive/`)
-- **Last major update**: November 8, 2025
+- **Last major update**: November 12, 2025
 
 ---
 
@@ -225,15 +215,15 @@ python scripts/check_dependencies.py     # Manifest consistency
 
 | Document | Status | Last Updated |
 |----------|--------|--------------|
-| README.md | ✅ Current | Nov 8, 2025 |
-| DEPLOYMENT_GUIDE.md | ✅ Current | Nov 8, 2025 |
-| NEXT_STEPS.md | ✅ Current | Nov 8, 2025 |
-| TEST_COVERAGE_SUMMARY.md | ✅ Current | Nov 8, 2025 |
+| README.md | ✅ Current | Nov 12, 2025 |
+| DEPLOYMENT_GUIDE.md | ✅ Current | Nov 12, 2025 |
+| INSTALL.md | ✅ Current | Nov 12, 2025 |
+| docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md | ✅ Current | Nov 12, 2025 |
 | whitemagic-mcp/README.md | ✅ Current | Nov 8, 2025 |
 | docs/INDEX.md | ✅ Current | Nov 8, 2025 |
 
-All deployment docs verified and synchronized as of November 8, 2025.
+All deployment docs verified and synchronized as of November 12, 2025.
 
 ---
 
-**Start here**: [README.md](README.md) → [NEXT_STEPS.md](NEXT_STEPS.md) → **Ship it!** 🚀
+**Start here**: [README.md](README.md) → [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) → **Ship it!** 🚀

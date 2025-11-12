@@ -52,6 +52,7 @@ api = [
     "redis>=5.0.0",
     "httpx>=0.25.0",
     "python-json-logger>=2.0.7",
+    "pyyaml>=6.0.0",  # Required for semantic search markdown frontmatter parsing
 ]
 
 embeddings = [

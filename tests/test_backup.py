@@ -18,15 +18,15 @@ class TestBackupManager:
         """Test BackupManager initialization."""
         backup_mgr = BackupManager(tmp_path)
         assert backup_mgr.base_dir == tmp_path
-        assert backup_mgr.whitemagic_dir == tmp_path / "whitemagic"
+        assert backup_mgr.memory_dir == tmp_path / "memory"
         assert backup_mgr.backup_dir == tmp_path / "backups"
         assert backup_mgr.backup_dir.exists()
     
     def test_create_backup(self, tmp_path):
         """Test backup creation."""
         # Setup: create test memory files
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         test_file = short_term_dir / "test_memory.md"
@@ -43,8 +43,9 @@ class TestBackupManager:
         assert Path(result["manifest_path"]).exists()
         
         # Verify manifest
+        from whitemagic.constants import VERSION
         manifest = result["manifest"]
-        assert manifest["version"] == "2.1.1"
+        assert manifest["version"] == VERSION
         assert manifest["stats"]["total_files"] == 1
         assert "timestamp" in manifest
     
@@ -52,9 +53,9 @@ class TestBackupManager:
         """Test listing backups."""
         backup_mgr = BackupManager(tmp_path)
         
-        # Create whitemagic dir with a file
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        # Create memory dir with a file
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         # Add a test file so backup isn't completely empty
@@ -80,8 +81,8 @@ class TestBackupManager:
     def test_verify_backup(self, tmp_path):
         """Test backup verification."""
         # Setup
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         test_file = short_term_dir / "test.md"
@@ -110,8 +111,8 @@ class TestBackupManager:
     def test_restore_backup_dry_run(self, tmp_path):
         """Test restore dry run."""
         # Setup
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         test_file = short_term_dir / "test.md"
@@ -136,8 +137,8 @@ class TestBackupManager:
     def test_restore_backup_full(self, tmp_path):
         """Test full backup restore."""
         # Setup original data
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         test_file = short_term_dir / "test.md"
@@ -168,15 +169,15 @@ class TestBackupManager:
         assert "pre_restore_backup" in restore_result
         
         # Verify restored content
-        restored_file = restore_dir / "whitemagic" / "short_term" / "test.md"
+        restored_file = restore_dir / "memory" / "short_term" / "test.md"
         assert restored_file.exists()
         assert restored_file.read_text() == original_content
     
     def test_backup_with_no_compress(self, tmp_path):
         """Test uncompressed backup."""
         # Setup
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         test_file = short_term_dir / "test.md"
@@ -194,8 +195,8 @@ class TestBackupManager:
     def test_manifest_checksums(self, tmp_path):
         """Test that manifest includes file checksums."""
         # Setup
-        whitemagic_dir = tmp_path / "whitemagic"
-        short_term_dir = whitemagic_dir / "short_term"
+        memory_dir = tmp_path / "memory"
+        short_term_dir = memory_dir / "short_term"
         short_term_dir.mkdir(parents=True)
         
         test_file = short_term_dir / "test.md"

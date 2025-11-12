@@ -13,11 +13,80 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from .database import UsageRecord, User
-from .dependencies import get_db_session
+from .dependencies import get_db_session, get_database
+from .auth import validate_api_key, AuthenticationError
 from .version import get_version
 from .structured_logging import get_logger, set_correlation_id
 
 logger = get_logger(__name__)
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to authenticate requests early in the pipeline.
+    
+    This runs BEFORE logging and rate limiting middleware so that
+    request.state.user is available for those middleware to use.
+    
+    Public endpoints (health checks, etc.) don't require authentication.
+    """
+    
+    # Paths that don't require authentication
+    PUBLIC_PATHS = {
+        "/health",
+        "/ready",
+        "/version",
+        "/",
+        "/docs",
+        "/openapi.json",
+        "/redoc",
+    }
+    
+    # Path prefixes that don't require authentication
+    PUBLIC_PREFIXES = (
+        "/static/",
+        "/webhooks/",
+    )
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Skip auth for public paths and prefixes
+        if request.url.path in self.PUBLIC_PATHS or request.url.path.startswith(self.PUBLIC_PREFIXES):
+            request.state.user = None
+            return await call_next(request)
+        
+        # Try to authenticate the request
+        user = None
+        api_key = None
+        
+        # Extract API key from Authorization header
+        auth_header = request.headers.get("authorization", "")
+        if auth_header:
+            # Support both "Bearer token" and just "token" formats
+            if auth_header.lower().startswith("bearer "):
+                api_key = auth_header[7:]  # Remove "Bearer " prefix
+            else:
+                api_key = auth_header
+        
+        # Validate and get user if API key provided
+        if api_key:
+            try:
+                db = get_database()
+                async with db.get_session() as session:
+                    result = await validate_api_key(session, api_key, update_last_used=False)
+                    if result:
+                        user, _ = result
+                        logger.debug(f"Authenticated user {user.id} via middleware")
+            except AuthenticationError as e:
+                logger.warning(f"Authentication failed: {e}")
+                user = None
+            except Exception as e:
+                logger.error(f"Unexpected auth error: {e}")
+                user = None
+        
+        # Store user in request state for downstream middleware/routes
+        request.state.user = user
+        
+        return await call_next(request)
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -176,13 +245,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # Skip rate limiting for health check and docs
-        if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
+        # Public paths that skip rate limiting
+        PUBLIC_PATHS = {"/health", "/ready", "/version", "/", "/docs", "/redoc", "/openapi.json"}
+        PUBLIC_PREFIXES = ("/static/", "/webhooks/")
+        
+        if request.url.path in PUBLIC_PATHS or request.url.path.startswith(PUBLIC_PREFIXES):
             return await call_next(request)
 
-        # Check if user is authenticated
-        if hasattr(request.state, "user"):
-            user = request.state.user
+        # Check if user is authenticated (and not None)
+        user = getattr(request.state, "user", None)
+        if user is not None:
 
             try:
                 # Get rate limiter from global
@@ -210,8 +282,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 # Re-raise rate limit exceptions
                 raise
         else:
-            # No user authenticated, skip rate limiting
-            # (will fail later in auth dependency)
+            # No authenticated user - skip rate limiting for this request
+            # Protected endpoints will fail later in auth dependency
             return await call_next(request)
 
 
@@ -223,6 +295,7 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        from .version import get_version
         response = await call_next(request)
 
         # Security headers
@@ -231,6 +304,6 @@ class CORSHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
 
         # API version header
-        response.headers["X-API-Version"] = "2.1.0"
+        response.headers["X-API-Version"] = get_version()
 
         return response

@@ -26,10 +26,10 @@ class BackupManager:
         Initialize the backup manager.
         
         Args:
-            base_dir: Base directory containing whitemagic folder
+            base_dir: Base directory containing memory folder
         """
         self.base_dir = Path(base_dir)
-        self.whitemagic_dir = self.base_dir / "whitemagic"
+        self.memory_dir = self.base_dir / "memory"
         self.backup_dir = self.base_dir / "backups"
         self.backup_dir.mkdir(exist_ok=True)
     
@@ -160,11 +160,30 @@ class BackupManager:
         logger.info(f"Creating pre-restore backup: {pre_restore_backup}")
         self.create_backup(output_path=pre_restore_backup)
         
-        # Extract backup
+        # Extract backup with path validation
         restored_files = []
         with tarfile.open(backup_path, "r:*") as tar:
             members = tar.getmembers()
             for member in members:
+                # Security: Validate tar member paths to prevent path traversal
+                member_path = Path(member.name)
+                
+                # Check for path traversal attempts
+                if member.name.startswith('/') or '../' in member.name:
+                    logger.warning(f"Skipping unsafe tar member: {member.name}")
+                    continue
+                
+                # Check for absolute paths
+                if member_path.is_absolute():
+                    logger.warning(f"Skipping absolute path in tar: {member.name}")
+                    continue
+                
+                # Resolve and verify target path is within target_dir
+                target_path = (target_dir / member_path).resolve()
+                if not str(target_path).startswith(str(target_dir.resolve())):
+                    logger.warning(f"Skipping path outside target: {member.name}")
+                    continue
+                
                 tar.extract(member, target_dir)
                 restored_files.append(member.name)
         
@@ -280,15 +299,15 @@ class BackupManager:
         
         # Core directories to backup
         dirs_to_backup = [
-            self.whitemagic_dir / "short_term",
-            self.whitemagic_dir / "long_term",
-            self.whitemagic_dir / "archived",
+            self.memory_dir / "short_term",
+            self.memory_dir / "long_term",
+            self.memory_dir / "archive",
         ]
         
-        # Include memory_index.json if it exists
-        index_file = self.whitemagic_dir / "memory_index.json"
-        if index_file.exists():
-            files.append(index_file)
+        # Include metadata.json (the actual memory catalog file)
+        metadata_file = self.memory_dir / "metadata.json"
+        if metadata_file.exists():
+            files.append(metadata_file)
         
         # Collect all memory files
         for directory in dirs_to_backup:
@@ -310,6 +329,7 @@ class BackupManager:
         timestamp: str
     ) -> Dict[str, Any]:
         """Create backup manifest with metadata."""
+        from .constants import VERSION
         total_size = sum(f.stat().st_size for f in files)
         
         # Calculate checksums for verification
@@ -324,7 +344,7 @@ class BackupManager:
             }
         
         return {
-            "version": "2.1.1",
+            "version": VERSION,
             "timestamp": timestamp,
             "created_at": datetime.now().isoformat(),
             "backup_path": str(backup_path),

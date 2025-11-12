@@ -1,4 +1,4 @@
-# WhiteMagic v2.1.0 Production Deployment Guide
+# WhiteMagic v2.1.3 Production Deployment Guide
 
 **Status**: ✅ PRODUCTION READY  
 **Difficulty**: Easy (30-45 minutes)  
@@ -13,7 +13,7 @@
 ### **Option A: Vercel + Railway** (Easiest, ~30 min)
 - **Frontend**: Deploy `dashboard/` to Vercel (static site, free tier)
 - **Backend**: Deploy to Railway (managed Postgres + Redis included)
-- **Steps**: See [NEXT_STEPS.md](NEXT_STEPS.md) for detailed instructions
+- **Steps**: See [START_HERE.md](START_HERE.md) for the release checklist
 - **Best for**: Quick launch, managed infrastructure, automatic scaling
 
 ### **Option B: Docker Compose** (Full control, ~45 min)
@@ -109,15 +109,15 @@ git commit -m "chore: apply pre-commit formatting"
 grep -E 'version\s*=\s*"2\.1\.0"' pyproject.toml
 
 # Create release candidate (test run)
-git tag v2.1.0-rc1 -m "Release candidate 1"
-git push origin v2.1.0-rc1
+git tag v2.1.3-rc1 -m "Release candidate 1"
+git push origin v2.1.3-rc1
 
 # Watch GitHub Actions: https://github.com/lbailey94/whitemagic/actions
 # Verify: PyPI test upload, Docker image builds
 
 # If successful, create official release
-git tag v2.1.0 -m "Release v2.1.0"
-git push origin v2.1.0
+git tag v2.1.3 -m "Release v2.1.3"
+git push origin v2.1.3
 ```
 
 **Result**: 
@@ -171,7 +171,7 @@ For bare metal or VPS without Docker:
 
 ```bash
 # 1. Install from PyPI
-pip install whitemagic==2.1.0
+pip install whitemagic==2.1.3
 
 # 2. Set up database
 export DATABASE_URL=postgresql+asyncpg://user:pass@localhost/whitemagic
@@ -193,7 +193,7 @@ uvicorn whitemagic.api.app:app --host 0.0.0.0 --port 8000 --workers 4
 # 1. Clone and checkout tag
 git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
-git checkout v2.1.0
+git checkout v2.1.3
 
 # 2. Install dependencies
 pip install -r requirements-api.txt
@@ -302,7 +302,7 @@ curl -H "Authorization: Bearer $ADMIN_KEY" \
 ```bash
 # 1. Basic health
 curl http://localhost:8000/health
-# Expected: {"status":"healthy","version":"2.1.0"}
+# Expected: {"status":"healthy","version":"2.1.3"}
 
 # 2. API docs
 open http://localhost:8000/docs
@@ -494,7 +494,7 @@ curl -X POST http://localhost:8000/api/v1/webhooks/whop \
 ```bash
 # Health check (basic)
 GET /health
-# Response: {"status":"healthy","version":"2.1.0"}
+# Response: {"status":"healthy","version":"2.1.3"}
 
 # Readiness (with DB check)
 GET /health/ready
@@ -539,8 +539,8 @@ Print this and check off each item:
 
 ```
 CI/CD & Infrastructure
-□ PyPI package exists for tag v2.1.0
-□ Docker image exists: lbailey94/whitemagic:2.1.0
+□ PyPI package exists for tag v2.1.3
+□ Docker image exists: lbailey94/whitemagic:2.1.3
 □ GitHub Pages live at: lbailey94.github.io/whitemagic
 □ Pre-commit hooks installed locally
 

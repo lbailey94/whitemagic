@@ -187,6 +187,26 @@ async def test_api_endpoint():
     pass
 ```
 
+### Important: Rate Limiter Test Fixture
+
+**`tests/conftest.py` contains an autouse fixture that mocks the rate limiter** for all tests. This prevents "Rate limiter not initialized" errors in unit tests that don't go through the full app lifespan.
+
+**Why this exists**:
+- FastAPI's rate limiter requires Redis initialization via the `lifespan` context
+- Unit tests that directly call endpoints bypass this initialization
+- The mock allows isolated testing without Redis dependency
+
+**What it does**:
+- Automatically patches the global rate limiter for all tests
+- Returns mock "allowed" responses for rate limit checks
+- Ensures tests remain fast and don't require Redis
+
+**When to update**:
+- If you modify `whitemagic/api/rate_limit.py`, ensure the mock in `tests/conftest.py` stays compatible
+- If adding new rate limiter features, update the mock return values accordingly
+
+See `tests/conftest.py` for implementation details.
+
 ---
 
 ## Submitting Changes

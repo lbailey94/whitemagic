@@ -1,6 +1,6 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: 2.1.2  
+**Current Version**: 2.1.3  
 **Status**: Phase 2A In Progress (API & Whop Integration)  
 **Updated**: November 3, 2025
 

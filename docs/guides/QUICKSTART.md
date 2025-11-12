@@ -70,13 +70,19 @@ cp .env.example .env
 uvicorn whitemagic.api.app:app --reload
 ```
 
-Grab an API key via the CLI:
+### Create an API key
+
+The repo ships a helper script that bootstraps a demo user and prints a key:
 
 ```bash
-whitemagic create-key --name "local dev"
+python scripts/create_demo_user.py
 ```
 
-Use it with `curl`:
+Copy the key that’s printed and paste it wherever you need authentication.  
+If you prefer the dashboard flow, run `docker compose up -d api dashboard` and log
+in at `http://localhost:3000` with the same key.
+
+Use the key with `curl`:
 
 ```bash
 curl -H "Authorization: Bearer wm_dev_xxx" http://localhost:8000/api/v1/memories

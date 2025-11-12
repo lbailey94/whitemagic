@@ -1,4 +1,4 @@
-# 🚀 START HERE - WhiteMagic v2.1.2 Deployment
+# 🚀 START HERE - WhiteMagic v2.1.3 Deployment
 
 **Everything is ready. Follow these steps in order.**
 
@@ -27,11 +27,11 @@ pre-commit install
 ### Step 3: Release (5 min)
 ```bash
 # Verify version
-grep -E 'version\s*=\s*"2\.1\.2"' pyproject.toml
+grep -E 'version\s*=\s*"2\.1\.3"' pyproject.toml
 
 # Tag and push
-git tag v2.1.2 -m "Release v2.1.2"
-git push origin v2.1.2
+git tag v2.1.3 -m "Release v2.1.3"
+git push origin v2.1.3
 
 # Watch: github.com/lbailey94/whitemagic/actions
 ```
@@ -40,7 +40,7 @@ git push origin v2.1.2
 ```bash
 # On production server
 git clone https://github.com/lbailey94/whitemagic.git
-cd whitemagic && git checkout v2.1.2
+cd whitemagic && git checkout v2.1.3
 
 # Configure
 cp .env.example .env
@@ -69,24 +69,22 @@ curl https://yourdomain.com/docs
 ## 📚 Key Documents
 
 **For Deployment** (pick ONE based on timeline):
-- `NEXT_STEPS.md` - 1-day launch (npm + MCP registry + Vercel/Railway) ⭐ **Launch ready**
-- `DEPLOY_NOW.md` - 45-min Docker Compose quickstart
 - `DEPLOYMENT_GUIDE.md` - 2-hour comprehensive production guide
-- `docs/INDEX.md` - Documentation map (find anything fast)
-- `DOCUMENTATION_MAP.md` - Decision tree for “which doc do I read?”
-- `DEPLOYMENT_GUIDE.md` - Complete 9-part guide
-- `POST_DEPLOYMENT_CHECKLIST.md` - Verification
+- `docs/USER_GUIDE.md` - End-to-end product overview (CLI → API → MCP)
+- `docs/CHEATSHEET.md` - One-page command reference
+- `docs/TROUBLESHOOTING.md` - Common failure modes and fixes
+- `DOCUMENTATION_MAP.md` / `docs/INDEX.md` - Navigation aids for everything else
 
-**Status**:
-- `PROJECT_STATUS.md` - Current status snapshot
-- `REVIEW_FIXES_APPLIED.md` - Latest fixes
+**Status & Release Notes**:
 - `CHANGELOG.md` - Version history
+- `docs/reviews/v2.1.3/REVIEW_FIXES_APPLIED.md` - Latest fixes shipped
+- `docs/reviews/v2.1.3/POST_FIX_COMPREHENSIVE_REVIEW.md` - Most recent audit
 
 **Reference**:
 - `README.md` - Project overview
 - `.env.example` - Configuration template
 - `compose.yaml` - Docker stack
-- `NEXT_STEPS.md` - Final launch checklist (npm publish + MCP submission)
+- `docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md` - Current automated test counts
 
 ---
 
@@ -103,7 +101,7 @@ Before you start, verify:
 
 ## 🎯 What Gets Deployed
 
-When you push tag v2.1.0:
+When you push tag v2.1.3:
 1. GitHub Actions runs tests
 2. Package published to PyPI
 3. Docker image built and pushed
@@ -114,9 +112,9 @@ When you push tag v2.1.0:
 
 ## 📞 Need Help?
 
-- Detailed: Read `DEPLOY_NOW.md`
+- Detailed: Read `DEPLOYMENT_GUIDE.md`
 - Issues: github.com/lbailey94/whitemagic/issues
-- Status: See `PROJECT_STATUS.md`
+- Status: See `docs/reviews/v2.1.3/REVIEW_FIXES_APPLIED.md`
 
 ---
 

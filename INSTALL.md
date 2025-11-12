@@ -1,4 +1,4 @@
-# Installation Guide · WhiteMagic v2.1.2
+# Installation Guide · WhiteMagic v2.1.3
 
 Whether you want to kick the tires locally or deploy the full stack, use the flow that matches your goal.
 

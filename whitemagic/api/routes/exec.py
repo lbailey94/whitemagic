@@ -7,19 +7,20 @@ from ..dependencies import CurrentUser
 
 router = APIRouter(prefix="/exec", tags=["Terminal"])
 
-# Global instance (can be configured per-user later)
-_terminal_tools = TerminalMCPTools(profile=Profile.AGENT)
+# Separate instances for read-only and full access
+_terminal_tools_readonly = TerminalMCPTools(profile=Profile.PROD)
+_terminal_tools_full = TerminalMCPTools(profile=Profile.AGENT)
 
 @router.post("/read", response_model=ExecutionResponse)
 async def execute_read(
     request: ExecutionRequest,
     user: CurrentUser
 ):
-    """Execute read-only command."""
+    """Execute read-only command using PROD profile (strict read-only allowlist)."""
     if request.mode != ExecutionMode.READ:
         raise HTTPException(400, "Only READ mode allowed on this endpoint")
     
-    result = _terminal_tools.exec_read(
+    result = _terminal_tools_readonly.exec_read(
         cmd=request.cmd,
         args=request.args,
         cwd=request.cwd,

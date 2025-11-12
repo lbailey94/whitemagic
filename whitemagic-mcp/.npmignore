@@ -1,10 +1,27 @@
+# Source files (compiled to dist/)
 src/
-tests/
 tsconfig.json
+
+# Tests and coverage
+tests/
 *.test.ts
+jest.config.js
+coverage/
+
+# Development files
 node_modules/
 .git/
 .gitignore
 *.log
-coverage/
 .DS_Store
+.env
+.env.*
+
+# Documentation (except README and CHANGELOG)
+docs/
+*.md
+!README.md
+!CHANGELOG.md
+
+# Build artifacts
+*.tsbuildinfo

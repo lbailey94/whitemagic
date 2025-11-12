@@ -63,9 +63,17 @@ class JSONFormatter(logging.Formatter):
         if hasattr(record, 'user_id'):
             log_obj["user_id"] = record.user_id
         
-        # Add extra fields from record
-        if hasattr(record, 'extra') and isinstance(record.extra, dict):
-            log_obj.update(record.extra)
+        # Add extra fields from record.__dict__ (Python logging merges 'extra' here)
+        # Skip standard logging attributes to avoid duplication
+        standard_attrs = {
+            'name', 'msg', 'args', 'created', 'filename', 'funcName', 'levelname',
+            'levelno', 'lineno', 'module', 'msecs', 'message', 'pathname', 'process',
+            'processName', 'relativeCreated', 'thread', 'threadName', 'exc_info',
+            'exc_text', 'stack_info', 'user_id'  # user_id handled separately above
+        }
+        for key, value in record.__dict__.items():
+            if key not in standard_attrs and not key.startswith('_'):
+                log_obj[key] = value
         
         # Add exception info if present
         if record.exc_info:
