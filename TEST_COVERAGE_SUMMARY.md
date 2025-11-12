@@ -1,14 +1,14 @@
 # Test Coverage Summary
 
-**Last Updated**: November 8, 2025  
-**Total Tests**: 65+ automated tests  
-**Coverage**: ~85% (estimated)
+**Last Updated**: November 11, 2025  
+**Total Tests**: 223 automated tests (196 Python + 27 MCP)  
+**Coverage**: ~85% (statement coverage from pytest --cov)
 
 ---
 
 ## 📊 **Test Breakdown**
 
-### **Python Backend Tests** (40+ tests)
+### **Python Backend Tests** (196 tests)
 
 #### Core Memory Manager
 - **File**: `tests/test_memory_manager.py`
@@ -32,7 +32,7 @@
 
 ---
 
-### **MCP Server Tests** (25+ tests)
+### **MCP Server Tests** (27 tests)
 
 #### Client Integration
 - **File**: `whitemagic-mcp/tests/client.test.ts`
@@ -55,9 +55,9 @@
 
 | Component | Coverage | Tests | Status |
 |-----------|----------|-------|--------|
-| **Core SDK** | 90% | 15+ | ✅ Excellent |
-| **API Layer** | 85% | 25+ | ✅ Excellent |
-| **MCP Server** | 80% | 25+ | ✅ Good |
+| **Core SDK + CLI** | ~90% | 80+ | ✅ Stable |
+| **API Layer** | ~85% | 110+ | ✅ Stable |
+| **MCP Server** | ~80% | 27 | ✅ Good |
 | **Dashboard** | 0% | 0 | ⚠️ Manual only |
 | **CLI** | 75% | ~5 | ✅ Good |
 

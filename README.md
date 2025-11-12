@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/badge/npm-2.1.2-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-65%2B%20passing-brightgreen.svg)](#testing)
 
 [![CodeQL](https://github.com/lbailey94/whitemagic/workflows/CodeQL%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/codeql.yml)
 [![Docker Security](https://github.com/lbailey94/whitemagic/workflows/Docker%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/docker-security.yml)
@@ -23,7 +23,7 @@ WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI,
 - **Context Generation**: 3-tier context system
 - **Type-Safe**: 100% type hints with Pydantic V2
 - **CLI + API**: Command-line and Python library
-- **Fully Tested**: 107/107 tests passing (80 Python + 27 MCP)
+- **Automated Tests**: 65+ specs across Python + MCP suites
 
 ## 🚀 Quick Start
 
@@ -106,11 +106,12 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ## 🧪 Testing
 
-**65+ automated tests, 85% coverage** - See [TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md)
+**223 automated tests (196 Python + 27 MCP)** - See [TEST_COVERAGE_SUMMARY.md](TEST_COVERAGE_SUMMARY.md)
 
 ```bash
-# Python tests (40+ tests)
-python3 -m pytest -v
+# Python tests (install with extras first)
+pip install -e ".[api,dev]"  # dev extra now pulls in openai for semantic-search tests
+python3 -m pytest tests -v
 
 # MCP tests (25+ tests)
 cd whitemagic-mcp && npm test
@@ -144,6 +145,9 @@ python scripts/check_dependencies.py
 pre-commit run security-guards
 pre-commit run dependency-guards
 ```
+
+- **Rate limiting** requires Redis. Leave `REDIS_URL` unset in development to disable limits; set it (e.g., Railway Redis) before production so quotas actually apply.
+- The terminal execution API is **disabled by default**. Only set `WM_ENABLE_EXEC_API=true` after you deploy it behind strong isolation/monitoring—it shells into your host.
 
 ## 📊 Stats
 

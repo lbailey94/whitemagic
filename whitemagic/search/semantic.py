@@ -139,7 +139,7 @@ class SemanticSearcher:
                 content_text = content
             
             return {
-                "id": memory_path.stem,
+                "id": memory_path.name,
                 "title": metadata.get("title", memory_path.stem.replace('_', ' ').title()),
                 "content": content_text,
                 "type": metadata.get("type", "short_term"),
@@ -153,7 +153,7 @@ class SemanticSearcher:
                 data = json.load(f)
             
             return {
-                "id": memory_path.stem,
+                "id": memory_path.name,
                 "title": data.get("title", ""),
                 "content": data.get("content", ""),
                 "type": data.get("type", "short_term"),
@@ -192,6 +192,8 @@ class SemanticSearcher:
         # Get all memories (with filters)
         memories = []
         for memory_type_dir in ["short_term", "long_term"]:
+            if memory_type and memory_type_dir != memory_type:
+                continue
             if memory_type and memory_type != memory_type_dir:
                 continue
             
@@ -210,6 +212,7 @@ class SemanticSearcher:
                     for memory_file in memory_dir.glob(pattern):
                         try:
                             memory = await self._get_memory_content(memory_file)
+                            memory["type"] = memory_type_dir
                             
                             # Filter by tags if specified
                             if tags:
@@ -283,16 +286,22 @@ class SemanticSearcher:
             score = 1.0 - (i * 0.05)  # Decreases by 0.05 per rank
             
             # Get memory ID - handle different formats
-            memory_id = memory.get("filename") or memory.get("id") or str(memory.get("path", "unknown"))
+            entry = memory.get("entry") or {}
+            memory_id = memory.get("filename") or entry.get("filename") or memory.get("id") or str(memory.get("path", "unknown"))
             if hasattr(memory_id, 'stem'):
                 memory_id = memory_id.stem
-            
+
+            title = memory.get("title") or entry.get("title", "")
+            content = memory.get("content") or entry.get("content", "")
+            tags = memory.get("tags") or entry.get("tags", [])
+            memory_kind = memory.get("type") or entry.get("type", "short_term")
+
             results.append(SearchResult(
                 memory_id=str(memory_id),
-                title=memory.get("title", ""),
-                content=memory.get("content", ""),
-                type=memory.get("type", "short_term"),
-                tags=memory.get("tags", []),
+                title=title,
+                content=content,
+                type=memory_kind,
+                tags=tags,
                 score=max(0.1, score),
                 match_type="keyword",
                 created_at=memory.get("created_at"),

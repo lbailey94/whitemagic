@@ -1,217 +1,121 @@
-# Quick Start Guide
+# Quickstart · Build Your First Memory in 5 Minutes
 
-Get started with the Tiered Prompt + Memory System in 5 minutes.
+This guide assumes Python 3.10+ and a POSIX shell. Windows PowerShell works with equivalent commands.
 
-## 1. Understanding the System
+---
 
-**Three Tiers of Prompts:**
-- **Tier 0** (`TIER_0_CORE.md`): Minimal, ~200 tokens - for quick queries
-- **Tier 1** (`TIER_1_STANDARD.md`): Standard, ~500 tokens - for normal work
-- **Tier 2** (`UNIFIED_CAPABILITY_PROMPT.md`): Full, ~1000+ tokens - for complex tasks
+## 1. Install & Set Up
 
-**Memory System:**
-- **Short-term** (`memory/short_term/`): Recent context, 7-day retention
-- **Long-term** (`memory/long_term/`): Distilled insights, permanent
-
-## 2. Basic Usage
-
-### For AI Models
-
-**Start a session:**
 ```bash
-# Choose your tier based on task complexity
-cat TIER_1_STANDARD.md
-python3 memory_manager.py context 1
+python3 -m venv .venv
+source .venv/bin/activate
+pip install "whitemagic[api]"
 ```
 
-**During work:**
-- Log insights as you discover them
-- Note what works and what doesn't
+Verify the CLI:
 
-**End session:**
-```python
-from memory_manager import MemoryManager
-mm = MemoryManager()
-
-mm.create_memory(
-    title="Your insight here",
-    content="Detailed explanation...",
-    memory_type="short_term",
-    tags=["domain", "type"]
-)
+```bash
+whitemagic --help
 ```
 
-### For Users
+---
 
-**List memories:**
-```bash
-python3 memory_manager.py list
-```
+## 2. Create Your First Memory
 
-**Search:**
 ```bash
-python3 memory_manager.py search --query "debugging"
-```
-
-**Create memory:**
-```bash
-python3 memory_manager.py create \
-  --title "Title" \
-  --content "Detailed explanation..." \
+whitemagic create \
+  --title "Debugging tip" \
+  --content "Reproduce the bug with logging before guessing." \
   --type short_term \
-  --tag tag1 \
-  --tag tag2
+  --tag debugging --tag habit
 ```
 
-**Weekly maintenance:**
-```bash
-python3 memory_manager.py consolidate
-```
+Memories are stored under `memory/short_term` by default. Each file is Markdown with YAML frontmatter—open them in any editor.
 
-## 3. Example Workflow
+---
 
-**Simple Query (Tier 0):**
-```bash
-# Load minimal prompt + context
-cat TIER_0_CORE.md
-python3 memory_manager.py context 0
-
-# Work...
-# No memory needed for simple queries
-```
-
-**Standard Task (Tier 1):**
-```bash
-# Load standard prompt + context
-cat TIER_1_STANDARD.md
-python3 memory_manager.py context 1
-
-# Work following Plan→Do→Check→Act
-# Create short-term memories for discoveries
-python3 memory_manager.py create \
-  --title "Discovery" \
-  --content "Details..." \
-  --type short_term \
-  --tag research
-
-# If insight is valuable, promote to long-term
-python3 memory_manager.py create \
-  --title "Heuristic" \
-  --content "Details..." \
-  --type long_term \
-  --tag heuristic
-```
-
-**Complex Project (Tier 2):**
-```bash
-# Load full protocol + comprehensive context
-cat UNIFIED_CAPABILITY_PROMPT.md
-python3 memory_manager.py context 2
-
-# Engage full multi-role workflow
-# Create multiple memories during process
-# Consolidate learnings at end
-```
-
-## 4. Pro Tips
-
-1. **Match tier to complexity** - Don't overload simple tasks
-2. **Tag consistently** - Use the taxonomy in MEMORY_SYSTEM_README.md
-3. **Log as you go** - Don't wait until end
-4. **Search before creating** - Avoid duplicates
-5. **Consolidate weekly** - Keep short-term manageable
-
-## 5. Common Commands
+## 3. Browse & Search
 
 ```bash
-# List all memories
-python3 memory_manager.py list
+# list memories grouped by tier
+whitemagic list
 
-# List including archived entries
-python3 memory_manager.py list --include-archived
-
-# List sorted by most recently accessed
-python3 memory_manager.py list --sort-by accessed
-
-# Search memories
-python3 memory_manager.py search --query "keyword"
-python3 memory_manager.py search --tag debugging --tag heuristic
-
-# Create a memory from a file
-python3 memory_manager.py create \
-  --title "Heuristic" \
-  --content-file notes/heuristic.md \
-  --type long_term \
-  --tag heuristic
-
-# Stream content from STDIN (useful for piping)
-echo "New discovery" | python3 memory_manager.py create \
-  --title "Pipeline Insight" \
-  --stdin \
-  --type short_term
-
-# Update a memory
-python3 memory_manager.py update example_memory.md \
-  --add-tag new-tag \
-  --content "Updated content"
-
-# Delete a memory (archives by default)
-python3 memory_manager.py delete example_memory.md
-
-# Permanently delete a memory
-python3 memory_manager.py delete example_memory.md --permanent
-
-# Restore an archived memory
-python3 memory_manager.py restore example_memory.md
-python3 memory_manager.py restore example_memory.md --type long_term
-
-# List all tags with statistics
-python3 memory_manager.py list-tags
-
-# Normalize legacy tags (migration tool)
-python3 memory_manager.py normalize-tags  # Dry-run (safe)
-python3 memory_manager.py normalize-tags --no-dry-run  # Apply changes
-
-# Get context for a tier
-python3 memory_manager.py context 0  # Tier 0
-python3 memory_manager.py context 1  # Tier 1
-python3 memory_manager.py context 2  # Tier 2
-
-# Consolidate old memories (dry-run first if unsure)
-python3 memory_manager.py consolidate --dry-run
-python3 memory_manager.py consolidate
+# search by keyword + tag filter
+whitemagic search --query "logging" --tag debugging
 ```
 
-## 6. File Structure
+Add `--json` to either command for machine-readable output.
 
-```
-whitemagic/
-├── TIER_0_CORE.md              # Tier 0 prompt
-├── TIER_1_STANDARD.md          # Tier 1 prompt
-├── UNIFIED_CAPABILITY_PROMPT.md # Tier 2 prompt
-├── memory_manager.py           # Memory tool
-├── memory/
-│   ├── short_term/             # Recent memories
-│   │   └── example_short_term.md
-│   ├── long_term/              # Distilled insights
-│   │   └── example_long_term.md
-│   ├── archive/                # Soft-deleted short-term memories
-│   └── metadata.json           # Index
-├── MEMORY_SYSTEM_README.md     # Full documentation
-└── QUICKSTART.md              # This file
+---
+
+## 4. Generate Context for Your Agent
+
+```bash
+whitemagic context --tier 1
 ```
 
-## 7. Next Steps
+Tier presets:
+- `0` – tiny (2 short-term memories)
+- `1` – balanced (5 short-term + 2 long-term)
+- `2` – full (10 short-term + 5 long-term)
 
-- Read `MEMORY_SYSTEM_README.md` for detailed docs
-- Check example memory files for format
-- Experiment with different tiers
-- Build your knowledge base over time
+Pipe the output directly into your IDE’s custom instructions or an MCP tool.
 
-## Need Help?
+---
 
-See `MEMORY_SYSTEM_README.md` for:
-- Full API documentation
-- Advanced usage patterns
-- Troubleshooting
-- Best practices
+## 5. Run the API (Optional)
+
+```bash
+cp .env.example .env
+uvicorn whitemagic.api.app:app --reload
+```
+
+Grab an API key via the CLI:
+
+```bash
+whitemagic create-key --name "local dev"
+```
+
+Use it with `curl`:
+
+```bash
+curl -H "Authorization: Bearer wm_dev_xxx" http://localhost:8000/api/v1/memories
+```
+
+Remember to set `REDIS_URL` if you want rate limiting.
+
+---
+
+## 6. Connect an IDE via MCP
+
+```bash
+cd whitemagic-mcp
+npm install
+npm run build
+```
+
+Point Cursor/Windsurf/Claude Desktop at `dist/index.js`, exporting `WM_BASE_PATH` (and optionally `WM_API_URL`/`WM_API_KEY`).
+
+---
+
+## 7. Clean Up Short-Term Noise
+
+```bash
+# preview what would move to archive
+whitemagic consolidate --dry-run
+
+# actually archive & auto-promote tagged insights
+whitemagic consolidate
+```
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+| --- | --- |
+| CLI can’t find config | Run commands inside the directory that contains the `memory/` folder, or set `WM_BASE_PATH`. |
+| API refuses to start | Ensure SQLite file is writable (`whitemagic_dev.db` by default) and Redis is reachable if you set `REDIS_URL`. |
+| MCP server exits immediately | Check that Node ≥18 is installed and that the Python virtualenv is active when launching the MCP server. |
+
+Need more depth? See `docs/guides/MEMORY_SYSTEM_README.md` for architecture details or `docs/production/DEPLOYMENT_GUIDE.md` to ship the full stack.

@@ -79,7 +79,7 @@
 
 **Action Items**:
 - [ ] Choose deployment option (Vercel + Railway recommended)
-- [ ] Follow [DEPLOYMENT_GUIDE_v2.1.0_FINAL.md](DEPLOYMENT_GUIDE_v2.1.0_FINAL.md)
+- [ ] Follow [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 - [ ] Deploy dashboard to Vercel
 - [ ] Deploy API to Railway
 - [ ] Verify health endpoints
@@ -561,7 +561,7 @@ Everything else (MCP registry, marketing, features) becomes easier and more impa
 
 Based on where you are now (all tests passing, production ready):
 
-1. [ ] **Read** [DEPLOYMENT_GUIDE_v2.1.0_FINAL.md](DEPLOYMENT_GUIDE_v2.1.0_FINAL.md)
+1. [ ] **Read** [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 2. [ ] **Choose** deployment option (Vercel + Railway recommended)
 3. [ ] **Create** Vercel account (if needed)
 4. [ ] **Create** Railway account (if needed)
@@ -578,4 +578,4 @@ Based on where you are now (all tests passing, production ready):
 
 **Last Updated**: November 9, 2025  
 **Status**: Ready to deploy  
-**Next**: [DEPLOYMENT_GUIDE_v2.1.0_FINAL.md](DEPLOYMENT_GUIDE_v2.1.0_FINAL.md)
+**Next**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)

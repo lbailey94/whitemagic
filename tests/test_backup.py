@@ -220,7 +220,7 @@ class TestCLIIntegration:
     
     def test_cli_backup_help(self):
         """Test that CLI backup help is available."""
-        from cli import build_parser
+        from whitemagic.cli_app import build_parser
         
         parser = build_parser()
         

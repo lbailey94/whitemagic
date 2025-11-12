@@ -1,4 +1,6 @@
-# WhiteMagic v2.1.0 - Final Status Report
+# WhiteMagic v2.1.0 - Final Status Report *(archived)*
+
+> ⚠️ This report reflects the November 6, 2025 review. For the latest assessment (including security findings that downgraded the project to C+), see `COMPREHENSIVE_REVIEW_ASSESSMENT.md`.
 
 **Date**: November 6, 2025  
 **Status**: 🎉 **PRODUCTION READY**
@@ -33,7 +35,7 @@
 
 **Security**:
 - ✅ No wildcard CORS anywhere
-- ✅ Rate limiting guaranteed active
+- ✅ Rate limiting available once `REDIS_URL` is configured (verifiable via `X-RateLimit-*` headers)
 - ✅ API keys hashed (SHA-256)
 - ✅ Environment secrets documented
 

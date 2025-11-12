@@ -16,7 +16,8 @@
 
 ### Usage Guides
 - **[TERMINAL_TOOL_USAGE.md](./TERMINAL_TOOL_USAGE.md)** - Complete terminal tool guide
-- **[DEPLOYMENT_GUIDE_v2.1.0_FINAL.md](../DEPLOYMENT_GUIDE_v2.1.0_FINAL.md)** - Deployment instructions
+- **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** - Current production deployment guide (Docker, Railway, Vercel)
+- *(Archived)* `DEPLOYMENT_GUIDE_v2.1.0_FINAL.md` now lives under `docs/archive/deprecated/` if you need the historical record.
 
 ### API Reference
 - **FastAPI Docs**: `/docs` endpoint when server running

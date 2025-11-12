@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 
 def check_versions():
-    """Verify all version numbers are 2.1.0."""
+    """Verify all version numbers are 2.1.2."""
     print("Checking version consistency...")
 
     import whitemagic
@@ -26,18 +26,18 @@ def check_versions():
     errors = []
 
     # Check package version
-    if whitemagic.__version__ != "2.1.0":
-        errors.append(f"whitemagic.__version__ is {whitemagic.__version__}, expected 2.1.0")
+    if whitemagic.__version__ != "2.1.2":
+        errors.append(f"whitemagic.__version__ is {whitemagic.__version__}, expected 2.1.2")
 
     # Check API version
-    if whitemagic.api.__version__ != "2.1.0":
-        errors.append(f"whitemagic.api.__version__ is {whitemagic.api.__version__}, expected 2.1.0")
+    if whitemagic.api.__version__ != "2.1.2":
+        errors.append(f"whitemagic.api.__version__ is {whitemagic.api.__version__}, expected 2.1.2")
 
     # Check markdown files
     files_to_check = {
-        "README.md": "2.1.0",
-        "DOCUMENTATION.md": "2.1.0",
-        "ROADMAP.md": "2.1.0",
+        "README.md": "2.1.2",
+        "DOCUMENTATION.md": "2.1.2",
+        "ROADMAP.md": "2.1.2",
     }
 
     for filename, expected_version in files_to_check.items():
@@ -53,7 +53,7 @@ def check_versions():
             print(f"  - {error}")
         return False
 
-    print("✅ All versions are 2.1.0")
+    print("✅ All versions are 2.1.2")
     return True
 
 
@@ -208,7 +208,7 @@ def main():
     if failed == 0:
         print("🎉 ALL FIXES VERIFIED SUCCESSFULLY!")
         print("\nThe following improvements were confirmed:")
-        print("  1. ✅ Version numbers standardized to 2.1.0")
+        print("  1. ✅ Version numbers standardized to 2.1.2")
         print("  2. ✅ Database pool config handles SQLite correctly")
         print("  3. ✅ API module properly structured and importable")
         print("  4. ✅ Documentation reorganized into logical structure")

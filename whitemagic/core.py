@@ -843,12 +843,18 @@ class MemoryManager:
         if not dry_run:
             self._save_metadata()
 
+        archived_files = (
+            archive_targets
+            if not dry_run
+            else [item["entry"]["filename"] for item in old_entries]
+        )
+
         return {
-            "archived": len(archive_targets),
+            "archived": len(archived_files),
             "auto_promoted": len(auto_promoted_files),
             "dry_run": dry_run,
             "promoted_files": auto_promoted_files,
-            "archived_files": archive_targets,
+            "archived_files": archived_files,
         }
 
     # ------------------------------------------------------------------ #

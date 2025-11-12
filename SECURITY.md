@@ -63,7 +63,7 @@ While we don't have a formal bug bounty program, we will:
 - ✅ SHA-256 key hashing (never store plaintext)
 - ✅ Key rotation support
 - ✅ Per-key permissions and metadata
-- ✅ Rate limiting per user/key
+- ✅ Rate limiting per user/key **(Redis required)**
 
 ### **API Security**
 - ✅ Input validation on all endpoints
@@ -71,7 +71,7 @@ While we don't have a formal bug bounty program, we will:
 - ✅ XSS protection headers
 - ✅ CORS configuration
 - ✅ Request size limits
-- ✅ Rate limiting middleware
+- ✅ Rate limiting middleware (no-op unless `REDIS_URL` configured)
 
 ### **Infrastructure Security**
 - ✅ Docker container hardening (non-root user, dropped capabilities)

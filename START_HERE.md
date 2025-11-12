@@ -1,4 +1,4 @@
-# 🚀 START HERE - WhiteMagic v2.1.0 Deployment
+# 🚀 START HERE - WhiteMagic v2.1.2 Deployment
 
 **Everything is ready. Follow these steps in order.**
 
@@ -27,11 +27,11 @@ pre-commit install
 ### Step 3: Release (5 min)
 ```bash
 # Verify version
-grep -E 'version\s*=\s*"2\.1\.0"' pyproject.toml
+grep -E 'version\s*=\s*"2\.1\.2"' pyproject.toml
 
 # Tag and push
-git tag v2.1.0 -m "Release v2.1.0"
-git push origin v2.1.0
+git tag v2.1.2 -m "Release v2.1.2"
+git push origin v2.1.2
 
 # Watch: github.com/lbailey94/whitemagic/actions
 ```
@@ -40,7 +40,7 @@ git push origin v2.1.0
 ```bash
 # On production server
 git clone https://github.com/lbailey94/whitemagic.git
-cd whitemagic && git checkout v2.1.0
+cd whitemagic && git checkout v2.1.2
 
 # Configure
 cp .env.example .env
@@ -49,6 +49,7 @@ nano .env
 #   ALLOWED_ORIGINS=https://yourdomain.com (NO WILDCARDS!)
 #   WHOP_API_KEY=your_key
 #   WHOP_WEBHOOK_SECRET=your_secret
+#   REDIS_URL=redis://... (rate limiting only works when this is set)
 
 # Deploy
 docker compose up -d
@@ -77,7 +78,7 @@ curl https://yourdomain.com/docs
 - `POST_DEPLOYMENT_CHECKLIST.md` - Verification
 
 **Status**:
-- `FINAL_STATUS.md` - Complete status report
+- `PROJECT_STATUS.md` - Current status snapshot
 - `REVIEW_FIXES_APPLIED.md` - Latest fixes
 - `CHANGELOG.md` - Version history
 
@@ -115,7 +116,7 @@ When you push tag v2.1.0:
 
 - Detailed: Read `DEPLOY_NOW.md`
 - Issues: github.com/lbailey94/whitemagic/issues
-- Status: See `FINAL_STATUS.md`
+- Status: See `PROJECT_STATUS.md`
 
 ---
 

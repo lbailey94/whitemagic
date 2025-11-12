@@ -1,6 +1,6 @@
 # WhiteMagic Documentation Index
 
-**Version**: 2.1.0  
+**Version**: 2.1.2  
 **Last Updated**: November 3, 2025
 
 ---
@@ -281,4 +281,4 @@ Documentation improvements are always welcome!
 ---
 
 **Last Updated**: November 3, 2025  
-**Version**: 2.1.0
+**Version**: 2.1.2

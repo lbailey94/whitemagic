@@ -9,7 +9,7 @@
 ## ✅ Latest Fixes Complete
 
 ### Critical Security Fixes
-1. **Redis Dependency** - Rate limiting now guaranteed
+1. **Redis Dependency** - Rate limiting only active when `REDIS_URL` is set
 2. **CORS Defaults** - No wildcards, safe by default
 3. **Documentation** - All accurate and consistent
 
@@ -75,7 +75,7 @@ curl https://yourdomain.com/health
 ### Monetization
 - ✅ Whop integration ready
 - ✅ API key provisioning
-- ✅ Rate limiting & quotas
+- ✅ Rate limiting & quotas (requires Redis)
 - ✅ Webhook handlers
 
 ---

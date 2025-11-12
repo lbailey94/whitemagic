@@ -62,9 +62,9 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](../DOCUMENT
 ## 📋 **Status & Reviews**
 
 ### Current State
-- **[COMPREHENSIVE_REVIEW_ASSESSMENT.md](../COMPREHENSIVE_REVIEW_ASSESSMENT.md)** ⭐ **Latest** - Full project review (Nov 8, 2025)
-- **[FINAL_STATUS.md](../FINAL_STATUS.md)** - Deployment readiness
-- **[INDEPENDENT_REVIEW_IMPLEMENTED.md](../INDEPENDENT_REVIEW_IMPLEMENTED.md)** - Review fixes applied
+- **[COMPREHENSIVE_REVIEW_ASSESSMENT.md](../COMPREHENSIVE_REVIEW_ASSESSMENT.md)** ⭐ **Latest** - Full project review
+- **[PROJECT_STATUS.md](../PROJECT_STATUS.md)** - Live status + next actions
+- **[INDEPENDENT_REVIEW_IMPLEMENTED.md](../INDEPENDENT_REVIEW_IMPLEMENTED.md)** - Review fixes applied (Phase 2A)
 
 ### Historical Reviews
 - **[reviews/COMPREHENSIVE_REVIEW.md](reviews/COMPREHENSIVE_REVIEW.md)**

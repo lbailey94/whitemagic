@@ -286,12 +286,22 @@ if dashboard_dir.exists():
 
 
 # Include Whop routes
-from .routes import whop, dashboard, search, exec as exec_routes
+from .routes import whop, dashboard, search
 
 app.include_router(whop.router)
 app.include_router(dashboard.router)
 app.include_router(search.router, prefix="/api/v1")
-app.include_router(exec_routes.router, prefix="/api/v1")
+
+EXEC_API_ENABLED = os.getenv("WM_ENABLE_EXEC_API", "false").lower() == "true"
+if EXEC_API_ENABLED:
+    from .routes import exec as exec_routes
+
+    app.include_router(exec_routes.router, prefix="/api/v1")
+else:
+    logger.warning(
+        "terminal_exec_api_disabled",
+        extra={"enabled": False, "env_var": "WM_ENABLE_EXEC_API"},
+    )
 
 
 # Memory endpoints

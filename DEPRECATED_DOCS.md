@@ -1,6 +1,7 @@
 # Deprecated Documentation
 
-**Last Updated**: November 8, 2025
+**Last Updated**: November 11, 2025  
+**Note**: All documents listed below have been moved to `docs/archive/deprecated/`. Update your bookmarks to point at the new location if you still need the historical record.
 
 The following documents are **deprecated** or **superseded** by more current documentation. They are kept for historical reference but should not be used for new deployments.
 

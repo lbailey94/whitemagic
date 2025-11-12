@@ -55,7 +55,7 @@ If any fail, review the test output and fix issues before publishing.
 **Status**: 🎉 **PUBLISHED ON NOVEMBER 8, 2025**
 
 **Package URL**: https://www.npmjs.com/package/whitemagic-mcp  
-**Version**: 2.1.0  
+**Version**: 2.1.2  
 **Install**: `npm install -g whitemagic-mcp`
 
 **Published Files**:
@@ -148,6 +148,8 @@ If any fail, review the test output and fix issues before publishing.
    ALLOWED_ORIGINS=https://whitemagic-dashboard.vercel.app
    SECRET_KEY=<generate random key>
    ```
+   - Leave `WM_ENABLE_EXEC_API` unset/false unless you have a hardened sandbox.
+   - Expect the API to start without rate limiting if `REDIS_URL` is missing—verify `X-RateLimit-*` headers before inviting users.
 5. Deploy!
 
 **Result**: API live at `https://whitemagic-api.up.railway.app`

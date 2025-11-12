@@ -65,7 +65,7 @@
 ```bash
 ✅ CORS: Safe default (https://yourdomain.com)
 ✅ Redis: Health-checked dependency
-✅ Rate limiting: Guaranteed active
+✅ Rate limiting: Configure `REDIS_URL` and verify `X-RateLimit-*` headers
 ✅ API keys: Hashed (SHA-256)
 ✅ Secrets: Environment variables
 ✅ No wildcards: Anywhere

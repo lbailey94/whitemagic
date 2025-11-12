@@ -1,4 +1,4 @@
-# WhiteMagic v2.1.0 - Executive Summary
+# WhiteMagic v2.1.2 - Executive Summary
 
 **Status**: ✅ READY FOR PRODUCTION DEPLOYMENT  
 **Date**: November 6, 2025
@@ -31,10 +31,11 @@ WhiteMagic is a production-ready memory management platform for AI agents with:
 
 - ✅ No CORS wildcards anywhere
 - ✅ Safe defaults in all configurations
-- ✅ Rate limiting guaranteed active
+- ✅ Rate limiting available when Redis (`REDIS_URL`) is configured
 - ✅ API keys hashed (SHA-256)
 - ✅ Third-party dependencies optional
 - ✅ Automated security guard prevents wildcard regressions
+- ⚠️ Terminal execution API disabled by default (`WM_ENABLE_EXEC_API=false`) because it shells into the host; enable only in hardened environments.
 
 ---
 
@@ -55,7 +56,7 @@ WhiteMagic is a production-ready memory management platform for AI agents with:
 ## Deployment Options
 
 1. **Docker Compose** - One command, full stack
-2. **PyPI** - `pip install whitemagic==2.1.0`
+2. **PyPI** - `pip install whitemagic==2.1.2`
 3. **Source** - Clone and run
 
 **Time to Deploy**: 45 minutes  
@@ -117,4 +118,4 @@ All issues resolved. All tests passing. Documentation complete. Ready to ship.
 
 ---
 
-**Recommendation**: Deploy v2.1.0 to production today.
+**Recommendation**: Address the outstanding security/doc issues (see `CRITICAL_SECURITY_AND_FIXES.md`) before tagging the next production release.
