@@ -100,14 +100,26 @@ async function loadAccountInfo() {
     
     const data = await response.json();
     
-    // Update account info
+    // Update account info (hero section and sidebar)
     document.getElementById('accountEmail').textContent = data.account.email;
+    document.getElementById('sidebarEmail').textContent = data.account.email;
+    
+    const planColors = {
+        'free': 'bg-mint text-emerald-800',
+        'starter': 'bg-lavender text-white',
+        'plus': 'bg-lavender text-white',
+        'pro': 'bg-peach text-orange-800',
+        'enterprise': 'bg-pale-blue text-blue-800'
+    };
+    const planClass = planColors[data.account.plan_tier] || 'bg-lavender text-white';
+    
     document.getElementById('accountPlan').innerHTML = 
-        `<span class="inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-green-100 text-green-800">${data.account.plan_tier}</span>`;
+        `<span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold ${planClass}">${data.account.plan_tier}</span>`;
+    document.getElementById('sidebarPlan').innerHTML = data.account.plan_tier;
+    document.getElementById('sidebarPlan').className = `inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${planClass}`;
+    
     document.getElementById('accountCreated').textContent = 
         new Date(data.account.created_at).toLocaleDateString();
-    document.getElementById('accountSubscription').textContent = 
-        data.account.has_subscription ? 'Active' : 'None';
     
     // Update usage stats
     const usage = data.usage;
@@ -137,6 +149,17 @@ async function loadAccountInfo() {
     document.getElementById('progressStorage').style.width = 
         `${Math.min(usage.usage_percent.storage, 100)}%`;
     
+    // Calculate overall usage percentage (max of all quotas)
+    const overallUsage = Math.max(
+        usage.usage_percent.requests_month,
+        usage.usage_percent.memories,
+        usage.usage_percent.storage
+    );
+    
+    // Update hero section
+    document.getElementById('overallUsagePercent').textContent = Math.round(overallUsage) + '%';
+    document.getElementById('heroRequestCount').textContent = usage.requests_this_month.toLocaleString();
+    
     // Update progress bar colors based on usage
     updateProgressBarColors('progressRequestsToday', usage.usage_percent.requests_today);
     updateProgressBarColors('progressRequestsMonth', usage.usage_percent.requests_month);
@@ -152,15 +175,32 @@ async function loadAccountInfo() {
 
 function updateProgressBarColors(elementId, percent) {
     const element = document.getElementById(elementId);
-    element.classList.remove('bg-indigo-600', 'bg-yellow-500', 'bg-red-600');
+    element.classList.remove('bg-lavender', 'bg-yellow-500', 'bg-red-600');
     
     if (percent >= 90) {
         element.classList.add('bg-red-600');
     } else if (percent >= 75) {
         element.classList.add('bg-yellow-500');
     } else {
-        element.classList.add('bg-indigo-600');
+        element.classList.add('bg-lavender');
     }
+}
+
+// Sidebar functions
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('open');
+}
+
+function showSection(section) {
+    // Update active link
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    event.target.closest('.sidebar-link').classList.add('active');
+    
+    // Future: Show different content sections
+    console.log('Showing section:', section);
 }
 
 async function loadApiKeys() {
@@ -626,10 +666,10 @@ async function loadUsageChart(days = 7) {
     
     // Update button states
     document.getElementById('chart7d').className = days === 7 
-        ? 'px-3 py-1 text-sm rounded-md bg-indigo-100 text-indigo-700 font-medium'
+        ? 'px-3 py-1 text-sm rounded-md bg-purple-100 accent-lavender font-medium'
         : 'px-3 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100';
     document.getElementById('chart30d').className = days === 30
-        ? 'px-3 py-1 text-sm rounded-md bg-indigo-100 text-indigo-700 font-medium'
+        ? 'px-3 py-1 text-sm rounded-md bg-purple-100 accent-lavender font-medium'
         : 'px-3 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100';
     
     // Show loading state
@@ -663,8 +703,8 @@ async function loadUsageChart(days = 7) {
                 datasets: [{
                     label: 'API Requests',
                     data: data,
-                    borderColor: 'rgb(99, 102, 241)',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderColor: 'rgb(124, 58, 237)',  // Lavender
+                    backgroundColor: 'rgba(167, 139, 250, 0.2)',  // Light lavender fill
                     tension: 0.4,
                     fill: true,
                 }]
