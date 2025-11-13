@@ -4,7 +4,11 @@
   "description": "WhiteMagic MCP Server - Tiered Prompt & Memory System for AI Agents",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "whitemagic-mcp-setup": "dist/cli/setup.js"
+  },
   "scripts": {
+    "setup": "tsx src/cli/setup.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
