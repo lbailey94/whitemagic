@@ -23,7 +23,7 @@ WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI,
 
 1. **Install**: `pip install whitemagic==2.1.3`
 2. **Try CLI**: `whitemagic create "My first memory" --content "Hello WhiteMagic!"`
-3. **Connect to IDE**: See [MCP Quick Setup](docs/guides/QUICK_SETUP_MCP.md)
+3. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
 
 → **Full guides**: [User Guide](docs/USER_GUIDE.md) | [Quickstart](docs/guides/QUICKSTART.md) | [Cheat Sheet](docs/CHEATSHEET.md)
 
@@ -78,7 +78,19 @@ memory = client.create_memory({
 
 ---
 
-### Install MCP Server (Published!)
+### Auto-Configure Your IDE (New!)
+```bash
+npx whitemagic-mcp-setup
+# Interactive wizard configures:
+# - Cursor, Windsurf, Claude Desktop, or VS Code
+# - API key & storage path
+# - Connection testing
+# Ready in < 2 minutes!
+```
+
+📖 **Full guide**: [MCP CLI Setup](docs/MCP_CLI_SETUP.md)
+
+### Install MCP Server Manually
 ```bash
 # Install from npm
 npm install -g whitemagic-mcp
