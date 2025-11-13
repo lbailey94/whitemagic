@@ -6,11 +6,14 @@
 
 // Configuration - prioritize explicit overrides
 const metaApiBase = document.querySelector('meta[name="whitemagic-api-base"]');
+const isLocal = window.location.hostname === 'localhost' || 
+                window.location.hostname === '127.0.0.1' ||
+                window.location.hostname.startsWith('192.168.');
 const API_BASE_URL = window.WHITEMAGIC_API_BASE
     || (metaApiBase && metaApiBase.content.trim())
-    || (window.location.hostname === 'localhost'
-        ? 'http://localhost:8000'
-        : 'https://api.whitemagic.dev');
+    || (isLocal ? 'http://localhost:8000' : 'https://api.whitemagic.dev');
+
+console.log('API Base URL:', API_BASE_URL);
 
 // State
 let currentApiKey = localStorage.getItem('whitemagic_api_key') || '';
@@ -64,11 +67,13 @@ function logout() {
 function showLogin() {
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('dashboardContent').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'none';
 }
 
 function showDashboard() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('dashboardContent').style.display = 'block';
+    document.getElementById('sidebar').style.display = 'block';
 }
 
 // Load dashboard data
@@ -192,14 +197,20 @@ function toggleSidebar() {
     sidebar.classList.toggle('open');
 }
 
-function showSection(section) {
+function showSection(section, event) {
     // Update active link
-    document.querySelectorAll('.sidebar-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    event.target.closest('.sidebar-link').classList.add('active');
+    if (event) {
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        const link = event.target.closest('.sidebar-link');
+        if (link) {
+            link.classList.add('active');
+        }
+    }
     
     // Future: Show different content sections
+    // For now, all sections show the same dashboard view
     console.log('Showing section:', section);
 }
 
