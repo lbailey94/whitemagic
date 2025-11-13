@@ -42,6 +42,42 @@ WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI,
 
 ## 🚀 Quick Start
 
+### Official SDKs (New in v2.1.4!)
+
+**TypeScript/JavaScript**
+```bash
+npm install @whitemagic/client
+```
+```typescript
+import { WhiteMagicClient } from '@whitemagic/client';
+
+const client = new WhiteMagicClient({ apiKey: process.env.WHITEMAGIC_API_KEY });
+const memory = await client.memories.create({
+  title: 'My memory',
+  content: 'Stored via SDK',
+  type: 'short_term'
+});
+```
+
+**Python**
+```bash
+pip install whitemagic-client
+```
+```python
+from whitemagic_client import WhiteMagicClient
+
+client = WhiteMagicClient(api_key='your-key')
+memory = client.create_memory({
+    'title': 'My memory',
+    'content': 'Stored via SDK',
+    'type': 'short_term'
+})
+```
+
+📖 **Full SDK Documentation**: [TypeScript](docs/sdk/typescript.md) | [Python](docs/sdk/python.md)
+
+---
+
 ### Install MCP Server (Published!)
 ```bash
 # Install from npm
