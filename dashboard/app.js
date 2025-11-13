@@ -142,6 +142,12 @@ async function loadAccountInfo() {
     updateProgressBarColors('progressRequestsMonth', usage.usage_percent.requests_month);
     updateProgressBarColors('progressMemories', usage.usage_percent.memories);
     updateProgressBarColors('progressStorage', usage.usage_percent.storage);
+    
+    // Check if upgrade banner should be shown
+    checkUpgradeBanner(data.account, usage);
+    
+    // Load usage chart
+    loadUsageChart(7);
 }
 
 function updateProgressBarColors(elementId, percent) {
@@ -609,4 +615,113 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Usage Chart
+let usageChartInstance = null;
+let currentChartDays = 7;
+
+async function loadUsageChart(days = 7) {
+    currentChartDays = days;
+    
+    // Update button states
+    document.getElementById('chart7d').className = days === 7 
+        ? 'px-3 py-1 text-sm rounded-md bg-indigo-100 text-indigo-700 font-medium'
+        : 'px-3 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100';
+    document.getElementById('chart30d').className = days === 30
+        ? 'px-3 py-1 text-sm rounded-md bg-indigo-100 text-indigo-700 font-medium'
+        : 'px-3 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100';
+    
+    // Show loading state
+    document.getElementById('chartLoading').style.display = 'flex';
+    
+    try {
+        // Generate mock data for now (replace with real API call)
+        const labels = [];
+        const data = [];
+        const today = new Date();
+        
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            // Mock data - replace with actual API call
+            data.push(Math.floor(Math.random() * 50) + 10);
+        }
+        
+        // Destroy existing chart
+        if (usageChartInstance) {
+            usageChartInstance.destroy();
+        }
+        
+        // Create new chart
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        usageChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'API Requests',
+                    data: data,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading chart:', error);
+    } finally {
+        document.getElementById('chartLoading').style.display = 'none';
+    }
+}
+
+// Check if user should see upgrade banner
+function checkUpgradeBanner(account, usage) {
+    const banner = document.getElementById('upgradeBanner');
+    const message = document.getElementById('upgradeMessage');
+    
+    // Show banner if free tier and using > 70% of any quota
+    if (account.plan_tier === 'free') {
+        const maxUsage = Math.max(
+            usage.usage_percent.requests_today,
+            usage.usage_percent.requests_month,
+            usage.usage_percent.memories,
+            usage.usage_percent.storage
+        );
+        
+        if (maxUsage >= 70) {
+            banner.style.display = 'block';
+            
+            if (maxUsage >= 90) {
+                message.textContent = `You're at ${Math.round(maxUsage)}% of your free tier limits. Upgrade to continue.`;
+            } else if (maxUsage >= 80) {
+                message.textContent = `You're using ${Math.round(maxUsage)}% of your free tier quota. Consider upgrading.`;
+            } else {
+                message.textContent = `You're using ${Math.round(maxUsage)}% of your free tier. Unlock more with Pro!`;
+            }
+        }
+    }
 }
