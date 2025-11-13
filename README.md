@@ -42,14 +42,14 @@ WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI,
 
 ## 🚀 Quick Start
 
-### Official SDKs (New in v2.1.4!)
+### Official SDKs (New in v2.1.4!) 📦
 
-**TypeScript/JavaScript**
+**TypeScript/JavaScript** - [npm](https://www.npmjs.com/package/whitemagic-client)
 ```bash
-npm install @whitemagic/client
+npm install whitemagic-client
 ```
 ```typescript
-import { WhiteMagicClient } from '@whitemagic/client';
+import { WhiteMagicClient } from 'whitemagic-client';
 
 const client = new WhiteMagicClient({ apiKey: process.env.WHITEMAGIC_API_KEY });
 const memory = await client.memories.create({
@@ -59,7 +59,7 @@ const memory = await client.memories.create({
 });
 ```
 
-**Python**
+**Python** - [PyPI](https://pypi.org/project/whitemagic-client/)
 ```bash
 pip install whitemagic-client
 ```

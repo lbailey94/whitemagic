@@ -5,16 +5,18 @@ Official SDKs for WhiteMagic - Memory infrastructure for AI agents.
 ## Available SDKs
 
 ### TypeScript/JavaScript SDK
-**Package**: `@whitemagic/client`  
-**Status**: ✅ Ready (v2.1.4)  
-**Install**: `npm install @whitemagic/client`
+**Package**: `whitemagic-client`  
+**Status**: ✅ Published (v2.1.4)  
+**Install**: `npm install whitemagic-client`  
+**npm**: https://www.npmjs.com/package/whitemagic-client
 
 [TypeScript SDK Documentation](./typescript.md)
 
 ### Python SDK
 **Package**: `whitemagic-client`  
-**Status**: ✅ Ready (v2.1.4)  
-**Install**: `pip install whitemagic-client`
+**Status**: ✅ Published (v2.1.4)  
+**Install**: `pip install whitemagic-client`  
+**PyPI**: https://pypi.org/project/whitemagic-client/
 
 [Python SDK Documentation](./python.md)
 
@@ -25,7 +27,7 @@ Official SDKs for WhiteMagic - Memory infrastructure for AI agents.
 ### TypeScript
 
 ```typescript
-import { WhiteMagicClient } from '@whitemagic/client';
+import { WhiteMagicClient } from 'whitemagic-client';
 
 const client = new WhiteMagicClient({
   apiKey: process.env.WHITEMAGIC_API_KEY
@@ -91,13 +93,13 @@ Both SDKs provide:
 ### TypeScript SDK
 - [x] Code complete
 - [x] Built successfully
-- [ ] Published to npm *(pending npm account setup)*
+- [x] **Published to npm** ✅ (Nov 12, 2025)
 - [ ] CI/CD for auto-publish
 
 ### Python SDK
 - [x] Code complete
-- [ ] Tested
-- [ ] Published to PyPI *(pending PyPI account setup)*
+- [x] Tested
+- [x] **Published to PyPI** ✅ (Nov 12, 2025)
 - [ ] CI/CD for auto-publish
 
 ---
