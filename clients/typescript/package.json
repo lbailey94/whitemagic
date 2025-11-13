@@ -1,5 +1,5 @@
 {
-  "name": "@whitemagic/client",
+  "name": "whitemagic-client",
   "version": "2.1.4",
   "description": "Official TypeScript/JavaScript SDK for WhiteMagic - Memory infrastructure for AI agents",
   "main": "dist/index.js",
