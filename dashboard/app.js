@@ -29,6 +29,42 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Authentication
+function retrieveApiKey(event) {
+    event.preventDefault();
+    const email = document.getElementById('email').value;
+    
+    // Call API to retrieve/generate API key
+    fetch(`${API_BASE_URL}/api/v1/api-keys/retrieve`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email }),
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.detail || 'Failed to retrieve API key');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Show the API key to the user
+        alert(`✅ Your API Key:\n\n${data.api_key}\n\n⚠️ SAVE THIS KEY! It won't be shown again.\n\nYou'll be signed in automatically.`);
+        
+        // Auto-login with the new key
+        currentApiKey = data.api_key;
+        localStorage.setItem('whitemagic_api_key', data.api_key);
+        showDashboard();
+        loadDashboardData();
+    })
+    .catch(error => {
+        alert(`❌ ${error.message}\n\nIf you haven't subscribed yet, visit: https://whop.com/whitemagic`);
+        console.error(error);
+    });
+}
+
 function login(event) {
     event.preventDefault();
     const apiKey = document.getElementById('apiKey').value;
@@ -56,6 +92,16 @@ function login(event) {
         alert('Authentication failed. Please check your API key.');
         console.error(error);
     });
+}
+
+function showEmailForm() {
+    document.getElementById('emailForm').style.display = 'block';
+    document.getElementById('apiKeyForm').style.display = 'none';
+}
+
+function showApiKeyForm() {
+    document.getElementById('emailForm').style.display = 'none';
+    document.getElementById('apiKeyForm').style.display = 'block';
 }
 
 function logout() {

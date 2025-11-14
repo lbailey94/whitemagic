@@ -293,11 +293,12 @@ if dashboard_dir.exists():
 
 
 # Include Whop routes
-from .routes import whop, dashboard, search
+from .routes import whop, dashboard, search, api_keys
 
 app.include_router(whop.router)
 app.include_router(dashboard.router)
 app.include_router(search.router, prefix="/api/v1")
+app.include_router(api_keys.router, prefix="/api/v1")
 
 EXEC_API_ENABLED = os.getenv("WM_ENABLE_EXEC_API", "false").lower() == "true"
 if EXEC_API_ENABLED:
