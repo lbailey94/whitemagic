@@ -1,6 +1,8 @@
-# Installation Guide · WhiteMagic v2.1.3
+# Installation Guide · WhiteMagic v2.1.5
 
-Whether you want to kick the tires locally or deploy the full stack, use the flow that matches your goal.
+**WhiteMagic is 100% free to use locally.** No signup, no API keys, no limits. Just install and go.
+
+This guide covers local installation for the free tier. For cloud deployment (coming soon with Stripe), see production docs.
 
 ---
 

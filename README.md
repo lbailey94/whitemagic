@@ -2,7 +2,7 @@
 
 **Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
-[![Version](https://img.shields.io/badge/version-2.1.3-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![Version](https://img.shields.io/badge/version-2.1.5-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
 [![npm](https://img.shields.io/badge/npm-2.1.3-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -15,13 +15,26 @@
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
 
-WhiteMagic ships a production-ready memory OS for AI agents: a Python SDK + CLI, FastAPI backend with Whop-based auth/monetization, and native MCP integration for Cursor/Windsurf/Claude.
+WhiteMagic is a production-ready memory OS for AI agents. **Free to use locally** with full features, or upgrade to cloud-hosted for team collaboration and sync. Includes Python SDK + CLI, FastAPI backend, and native MCP integration for Cursor/Windsurf/Claude.
+
+## 🎁 Free Forever (Local)
+- ✅ Full feature set
+- ✅ No signup required
+- ✅ Local SQLite storage
+- ✅ MCP server included
+- ✅ Perfect for individuals
+
+## ☁️ Cloud Tiers (Coming Soon)
+- **Starter** ($10/month): 10k requests, 100 memories, cloud sync
+- **Pro** ($30/month): Unlimited requests, unlimited memories, priority support
+
+*Cloud integration powered by Stripe - Simple, secure signup*
 
 ---
 
 ## 🚦 Getting Started (3 Steps)
 
-1. **Install**: `pip install whitemagic==2.1.3`
+1. **Install**: `pip install whitemagic` or `git clone https://github.com/lbailey94/whitemagic`
 2. **Try CLI**: `whitemagic create "My first memory" --content "Hello WhiteMagic!"`
 3. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
 
@@ -106,7 +119,7 @@ cd whitemagic
 pip install -e ".[api,dev]"
 
 # Or install the SDK directly
-pip install whitemagic==2.1.3
+pip install whitemagic
 
 # Quick smoke test
 python -c "from whitemagic import MemoryManager; print('Ready:', MemoryManager().metadata['version'])"
@@ -121,11 +134,18 @@ docker compose up -d
 # Caddy:     http://localhost (reverse proxy for dashboard + API)
 ```
 
-### Recommended production hosting
+### Cloud Deployment (Production)
 
-- **Frontend (dashboard + landing)**: Deploy the `dashboard/` directory to Vercel (static build). Set `NEXT_PUBLIC_API_URL` (or `meta[name="whitemagic-api-base"]`) to your Railway API URL.
-- **Backend (API + Postgres + Redis)**: Deploy `compose.yaml` services to Railway—one service for FastAPI, managed Postgres + Redis, and Caddy if you want TLS out of the box.  
-Follow the step-by-step instructions in [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md).
+**Live Services:**
+- 🌐 **API**: https://api.whitemagic.dev (Railway)
+- 📊 **Dashboard**: https://app.whitemagic.dev (Vercel)
+
+**Stack:**
+- **Backend**: Railway (FastAPI + PostgreSQL + Redis)
+- **Frontend**: Vercel (Static dashboard)
+- **Payments**: Stripe (Coming soon)
+
+For deployment guides, see `docs/archive/deployment/` or contact for enterprise setup.
 
 ## 📦 MCP Server (Windsurf/Cursor)
 
@@ -148,23 +168,16 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ## 📚 Documentation
 
-**New here?** Start with [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) - your navigation guide
-
 ### Core Docs
-- [docs/INDEX.md](docs/INDEX.md) - Complete documentation index
 - [INSTALL.md](INSTALL.md) - Installation guide
 - [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup for Cursor/Windsurf/Claude
 - [ROADMAP.md](ROADMAP.md) - Development roadmap
-
-### Deployment
-- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Comprehensive production deployment
-- [INSTALL.md](INSTALL.md) - Local development setup
+- [CHANGELOG.md](CHANGELOG.md) - Version history
 
 ### Reference
-- [docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md) - 196 Python + 27 MCP tests
-- [docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md](docs/reviews/v2.1.3/COMPREHENSIVE_REVIEW_ASSESSMENT.md) - Latest project review
-- [docs/production/OPTIONAL_INTEGRATIONS.md](docs/production/OPTIONAL_INTEGRATIONS.md) - Optional add-ons (Sentry, metrics)
-- [requirements-plugins.txt](requirements-plugins.txt) - Install optional integrations
+- [docs/reviews/v2.1.3/](docs/reviews/v2.1.3/) - Quality assurance reports
+- [docs/production/](docs/production/) - Production deployment guides
+- [docs/archive/](docs/archive/) - Historical documentation
 
 ## 🧪 Testing
 
@@ -239,11 +252,14 @@ pre-commit run dependency-guards
 
 ## 🗺️ Roadmap
 
-- ✅ Phase 1A: Python API
-- ✅ Phase 1B: MCP Integration
-- ✅ Phase 2A: Whop + REST API
-- 📅 Phase 2B: Semantic search
-- 📅 Phase 3: Extensions
+- ✅ v2.1: Core Features (Python API, MCP, REST API)
+- ✅ v2.1.4: SDKs (TypeScript + Python clients)
+- ✅ v2.1.5: Infrastructure (Railway + Vercel deployment)
+- 🚧 v2.2: Stripe Integration (Cloud tiers, subscriptions)
+- 📅 v2.3: Semantic Search (Vector embeddings, AI-powered search)
+- 📅 v3.0: Team Features (Shared memories, collaboration)
+
+See [ROADMAP.md](ROADMAP.md) for detailed plans.
 
 ## 📄 License
 
