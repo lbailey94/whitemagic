@@ -1,5 +1,5 @@
 """WhiteMagic API Routes."""
 
-from . import whop, dashboard
+from . import dashboard, api_keys
 
-__all__ = ["whop", "dashboard"]
+__all__ = ["dashboard", "api_keys"]

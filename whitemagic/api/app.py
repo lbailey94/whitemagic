@@ -292,10 +292,9 @@ if dashboard_dir.exists():
     app.mount("/static", StaticFiles(directory=str(dashboard_dir)), name="static")
 
 
-# Include Whop routes
-from .routes import whop, dashboard, search, api_keys
+# Include routes
+from .routes import dashboard, search, api_keys
 
-app.include_router(whop.router)
 app.include_router(dashboard.router)
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(api_keys.router, prefix="/api/v1")

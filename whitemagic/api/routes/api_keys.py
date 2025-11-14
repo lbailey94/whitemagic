@@ -1,7 +1,7 @@
 """
 WhiteMagic API - API Key Management Routes
 
-Public endpoint for users to retrieve their API key after Whop subscription.
+Public endpoint for users to retrieve/generate their API key.
 """
 
 from fastapi import APIRouter, HTTPException
