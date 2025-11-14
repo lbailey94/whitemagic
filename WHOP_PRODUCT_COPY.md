@@ -14,31 +14,51 @@
 Get started with WhiteMagic's powerful memory and context system for your AI applications. Perfect for developers exploring agentic AI workflows.
 
 ### Features
-- ✅ **100 API requests/day** - Test and prototype
+- ✅ **100 API requests/day** - Test and prototype (10/min rate)
 - ✅ **1,000 requests/month** - Build proof-of-concepts
-- ✅ **50 memories** - Store critical context
+- ✅ **50 memories** - Tiered storage (short-term, long-term, archive)
 - ✅ **10 MB storage** - Keep essential data
-- ✅ **Full API access** - All endpoints unlocked
+- ✅ **Full REST API access** - All endpoints unlocked
+- ✅ **Official SDKs** - Python & TypeScript/JavaScript clients
+- ✅ **MCP Integration** - 7 tools + 4 resources for Cursor/Windsurf/Claude
+- ✅ **Smart search** - Full-text + semantic search with tags
+- ✅ **3-tier context system** - Automatic context generation (minimal/balanced/deep)
+- ✅ **CLI tools** - Complete command-line interface
+- ✅ **Terminal execution** - Read-only command execution via API
+- ✅ **Local or cloud** - Download free GitHub version or use hosted API
 - ✅ **Community support** - Discord & GitHub
 - ✅ **Complete documentation** - Learn at your pace
 - ✅ **No credit card required** - Sign up instantly
 
 ### Full Description
-WhiteMagic is the intelligent memory layer for AI agents. Our Free plan gives you everything you need to explore how persistent context and memory make AI applications smarter, faster, and more capable.
+WhiteMagic is the intelligent memory infrastructure for AI agents. Our Free plan gives you everything you need to explore how persistent context and tiered memory make AI applications smarter, faster, and more capable.
+
+**Core Capabilities:**
+- **Tiered Memory System**: Short-term (working memory), long-term (persistent knowledge), archive (soft deletes)
+- **MCP Native**: Works directly in Cursor, Windsurf, Claude Desktop, VS Code via Model Context Protocol with 7 tools + 4 resources
+- **Smart Search**: Full-text search + semantic vector search with tag filtering
+- **Context Intelligence**: 3-tier context generation (Tier 0: minimal, Tier 1: balanced, Tier 2: deep dive)
+- **Official SDKs**: Production-ready Python & TypeScript/JavaScript clients
+- **CLI + Terminal**: Complete command-line interface with read-only terminal execution
+- **Local + Cloud**: Run locally for free from GitHub OR use hosted cloud API
 
 **What You Can Build:**
-- Chatbots that remember conversations
-- AI assistants with long-term memory
-- Research tools that maintain context
-- Personal knowledge bases for AI
-- Prototypes and MVPs
+- Chatbots that remember conversations across sessions
+- AI assistants with true long-term memory
+- Research tools that maintain context between queries
+- Personal knowledge bases for AI agents
+- Context-aware development tools in your IDE
+- Prototypes and MVPs with persistent memory
 
 **Perfect For:**
 - Individual developers learning agentic AI
 - Students and educators
 - Weekend projects and hackathons
 - Open source contributors
+- IDE users (Cursor, Windsurf, Claude Desktop, VS Code)
 - Anyone exploring memory-enhanced AI
+- Prototyping before committing to paid plans
+- Local development (free GitHub version available)
 
 **No Strings Attached:**
 Start building immediately. No credit card. No sales calls. Just pure developer experience.
@@ -55,7 +75,7 @@ A: Absolutely! Upgrade anytime as your usage grows. All your memories and data m
 A: Your requests will be rate-limited, but your data stays safe. Upgrade instantly to keep building.
 
 **Q: Do I get all API features?**
-A: Yes! Free tier includes full API access, SDKs, and documentation. No feature gatekeeping.
+A: Yes! Free tier includes full REST API access, MCP integration (7 tools + 4 resources), official SDKs (Python & TypeScript), CLI tools, semantic search, terminal execution, and complete documentation. The only limits are request quotas and storage—all features are unlocked.
 
 ---
 
@@ -68,19 +88,42 @@ A: Yes! Free tier includes full API access, SDKs, and documentation. No feature 
 Scale your AI agents with higher limits and priority support. Perfect for indie developers and small teams shipping AI-powered products.
 
 ### Features
-- ✅ **5,000 API requests/day** - Handle real traffic
-- ✅ **50,000 requests/month** - Serve hundreds of users
-- ✅ **500 memories** - Complex context graphs
-- ✅ **100 MB storage** - Rich data and embeddings
-- ✅ **10 req/min rate limit** - Smooth performance
-- ✅ **Priority email support** - 24-hour response time
-- ✅ **Usage analytics** - Track performance
-- ✅ **SDK early access** - Latest features first
-- ✅ **Discord priority channel** - Direct dev support
+- ✅ **5,000 API requests/day** - Handle production load (60/min rate)
+- ✅ **100,000 requests/month** - Real applications
+- ✅ **500 memories** - Substantial tiered storage
+- ✅ **100 MB storage** - Room to grow
+- ✅ **Full REST API + MCP** - All features unlocked
+- ✅ **Official SDKs** - Python & TypeScript/JavaScript
+- ✅ **Semantic search** - Vector embeddings + full-text
+- ✅ **Context intelligence** - 3-tier system
+- ✅ **Terminal execution** - Read + limited write operations
+- ✅ **Priority support** - Faster response times
+- ✅ **Rate limit headers** - Monitor your usage
+- ✅ **Usage dashboard** - Track metrics and quotas
+- ✅ **Production SLA** - 99.5% uptime guarantee
+- ✅ **Local + Cloud** - Hybrid deployment options
 - ✅ **Commercial use allowed** - Ship products
+- ✅ **Direct dev support** - Discord priority channel
 
 ### Full Description
-The Plus plan is designed for developers who've proven their concept and are ready to serve real users. Whether you're building a SaaS product, a research tool, or a customer-facing AI assistant, Plus gives you the reliability and scale you need.
+Plus is designed for developers shipping real AI products. You get 50x more requests than Free, priority support, and production-grade SLAs.
+
+**Enhanced Capabilities:**
+- **Higher Throughput**: 60 requests/min vs 10/min on Free
+- **More Storage**: 500 memories + 100 MB (10x Free tier)
+- **Priority Support**: Faster response times via Discord and email
+- **Production SLA**: 99.5% uptime guarantee
+- **Advanced Features**: Terminal write operations, enhanced context generation
+- **Usage Dashboard**: Monitor metrics, quotas, and usage patterns
+- **Hybrid Deployment**: Run locally with cloud fallback
+
+**What You Get:**
+- All MCP tools + resources (7 tools, 4 resources)
+- Full semantic search with vector embeddings
+- Official SDKs for rapid development
+- Production-ready infrastructure
+- Rate limit headers for monitoring
+- Same features as Free, just scaled for production reliability and scale you need.
 
 **Why Developers Choose Plus:**
 - **Predictable costs**: $10/month covers most indie apps
@@ -97,11 +140,13 @@ The Plus plan is designed for developers who've proven their concept and are rea
 - Educational AI tutors with student profiles
 
 **Perfect For:**
-- Solo developers shipping products
-- Small startups and indie hackers
-- Agencies building client projects
+- Indie developers shipping AI products
+- Small teams building AI features
 - Side projects generating revenue
-- Developers transitioning from hobby to business
+- Startups in early stages
+- Production IDE extensions (Cursor, Windsurf plugins)
+- AI-powered SaaS products
+- Anyone who outgrew the Free tier
 
 **What's Different from Free:**
 - 50× more monthly requests
@@ -139,29 +184,43 @@ A: Absolutely. Cancel anytime, no questions asked. Your data stays accessible fo
 Power production AI applications with massive scale, dedicated support, and advanced features. Built for teams and businesses serving thousands of users.
 
 ### Features
-- ✅ **50,000 API requests/day** - Handle serious traffic
-- ✅ **500,000 requests/month** - Serve thousands of users
-- ✅ **5,000 memories** - Massive context graphs
+- ✅ **50,000 API requests/day** - Handle serious traffic (300/min rate)
+- ✅ **1,000,000 requests/month** - Serve thousands of users
+- ✅ **5,000 memories** - Massive tiered context graphs
 - ✅ **1 GB storage** - Rich embeddings and data
-- ✅ **100 req/min rate limit** - High performance
-- ✅ **Priority support** - <12hr response time
+- ✅ **Full REST API + MCP** - 7 tools + 4 resources
+- ✅ **Official SDKs** - Python & TypeScript with priority support
+- ✅ **Advanced semantic search** - Vector embeddings + hybrid search
+- ✅ **Terminal execution** - Full read/write command execution
+- ✅ **Context intelligence** - All 3 tiers with optimization
+- ✅ **Priority support** - <12hr response time SLA
 - ✅ **Dedicated Slack/Discord channel** - Real-time help
-- ✅ **Advanced analytics** - Deep insights
-- ✅ **Custom SDK support** - We help integrate
-- ✅ **Beta feature access** - Test cutting-edge features
-- ✅ **SLA guarantee** - 99.9% uptime commitment
+- ✅ **Advanced analytics dashboard** - Deep usage insights
+- ✅ **Custom integration support** - We help you integrate
+- ✅ **Beta feature access** - Test cutting-edge features early
+- ✅ **99.9% uptime SLA** - Production-grade reliability
 - ✅ **Migration assistance** - We help you scale up
-- ✅ **Architecture review** - Optimize your usage
+- ✅ **Architecture review** - Optimize your implementation
+- ✅ **Hybrid deployment** - Cloud + on-premise options
 
 ### Full Description
 Pro is built for production AI applications serving real businesses and users. When reliability, performance, and support matter, Pro delivers enterprise capabilities at a fraction of the cost.
 
 **Why Businesses Choose Pro:**
-- **Proven reliability**: 99.9% uptime SLA
-- **Serious scale**: 500K requests serves thousands of users
-- **Expert support**: Direct access to our engineering team
-- **Advanced features**: Beta access to cutting-edge capabilities
+- **Proven reliability**: 99.9% uptime SLA with monitoring
+- **Serious scale**: 1M requests/month serves thousands of users
+- **Expert support**: Direct access to our engineering team (<12hr SLA)
+- **Advanced features**: Beta access + terminal execution + hybrid deployment
+- **Technical depth**: MCP integration, semantic search, custom SDKs
 - **Peace of mind**: We're invested in your success
+
+**Technical Capabilities:**
+- **MCP Deep Integration**: Full 7 tools + 4 resources for IDE workflows
+- **Semantic Search**: Vector embeddings with hybrid keyword+semantic fusion
+- **Terminal Execution**: Full read/write command execution via API
+- **Context Optimization**: AI-powered context generation across all 3 tiers
+- **Hybrid Deployment**: Cloud API + local fallback for compliance
+- **SDK Priority Support**: Direct integration help from our team
 
 **What Pro Unlocks:**
 - High-traffic AI applications
@@ -229,22 +288,28 @@ A: We'll work with you to design a custom Enterprise plan that fits your exact n
 White-glove service, unlimited scale, and custom features for organizations building AI products at enterprise scale. Let's design your perfect solution.
 
 ### Features
-- ✅ **Custom request limits** - Scale without limits
-- ✅ **Unlimited memories** - No artificial caps
-- ✅ **Unlimited storage** - Store everything
-- ✅ **Custom rate limits** - Optimized for your needs
-- ✅ **Dedicated account manager** - Your success partner
-- ✅ **24/7 priority support** - <2hr critical response
-- ✅ **Private Slack channel** - Direct to engineering
-- ✅ **Custom SLA** - Tailored to your requirements
+- ✅ **Unlimited API requests** - Scale without limits
+- ✅ **Unlimited memories** - No artificial caps on tiered storage
+- ✅ **Unlimited storage** - Store everything you need
+- ✅ **Custom rate limits** - Optimized for your traffic patterns
+- ✅ **Full REST API + MCP** - All 7 tools + 4 resources
+- ✅ **Official SDKs** - Python & TypeScript with custom support
+- ✅ **Advanced semantic search** - Custom embeddings + hybrid search
+- ✅ **Terminal execution** - Full read/write with security controls
+- ✅ **Context intelligence** - Custom tier configurations
+- ✅ **Dedicated account manager** - Your strategic partner
+- ✅ **24/7 priority support** - <2hr critical, <30min P0 response
+- ✅ **Private Slack channel** - Direct to engineering team
+- ✅ **Custom SLA** - 99.99%+ uptime tailored to requirements
 - ✅ **On-premise deployment** - Host on your infrastructure
 - ✅ **Custom integrations** - We build what you need
-- ✅ **White-label options** - Rebrand as your own
-- ✅ **Training & onboarding** - For your entire team
+- ✅ **White-label options** - Rebrand as your own service
+- ✅ **Team training & onboarding** - For entire engineering org
 - ✅ **Architecture design** - We architect your solution
-- ✅ **Security review** - SOC 2, HIPAA, custom compliance
-- ✅ **Custom feature development** - Unique capabilities
+- ✅ **Security & compliance** - SOC 2, HIPAA, GDPR, custom
+- ✅ **Custom feature development** - Build unique capabilities
 - ✅ **Quarterly business reviews** - Strategic partnership
+- ✅ **Hybrid/multi-cloud** - Deploy across AWS, GCP, Azure
 
 ### Full Description
 Enterprise isn't a product tier—it's a partnership. We work with you to design, deploy, and optimize AI memory infrastructure that meets your exact requirements, compliance needs, and business goals.
@@ -258,13 +323,16 @@ Enterprise isn't a product tier—it's a partnership. We work with you to design
 - Applications where AI memory is mission-critical
 
 **What's Possible with Enterprise:**
-- **Custom Deployment**: Your AWS, GCP, Azure, or on-premise
-- **White-Label**: Rebrand WhiteMagic as your own service
-- **Custom Features**: We build capabilities for your use case
-- **Dedicated Infrastructure**: Isolated environments for security
-- **Advanced Compliance**: HIPAA, SOC 2, GDPR, custom requirements
-- **Integration Services**: We integrate with your existing systems
-- **Training Programs**: Onboard your entire engineering team
+- **Custom Deployment**: Your AWS, GCP, Azure, on-premise, or hybrid
+- **White-Label**: Rebrand WhiteMagic as your own memory service
+- **Custom Features**: We build MCP tools, SDK methods, API endpoints for your use case
+- **Dedicated Infrastructure**: Isolated environments with custom security controls
+- **Advanced Compliance**: HIPAA, SOC 2, GDPR, FedRAMP, custom requirements
+- **Integration Services**: Custom connectors, webhooks, SSO, existing system integration
+- **Training Programs**: MCP workshops, SDK training, architecture best practices
+- **Custom Embeddings**: Use your own embedding models and vector stores
+- **Terminal Security**: Custom command allowlists and approval workflows
+- **Multi-Region**: Deploy across regions for compliance and performance
 
 **Enterprise Support Includes:**
 - Named account manager (your main contact)
