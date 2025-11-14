@@ -16,11 +16,12 @@ except ImportError:
     httpx = None
 
 
-# Plan ID mapping (configure these in production)
+# Plan ID mapping - Whop Product IDs to WhiteMagic plan tiers
 WHOP_PLAN_MAPPING = {
-    "plan_starter": "starter",
-    "plan_pro": "pro",
-    "plan_enterprise": "enterprise",
+    "prod_Zb6K8XcWXCFZr": "free",       # Free - $0/month
+    "prod_nnlWEMbmNWbP3": "starter",    # Plus - $10/month (maps to "starter" tier internally)
+    "prod_cb3r3jr2rTM18": "pro",        # Pro - $30/month
+    "prod_CD0XTEYLhXBws": "enterprise",  # Enterprise - $999/month
 }
 
 
