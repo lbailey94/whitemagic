@@ -17,7 +17,7 @@ For CLI usage, use cli.py:
 from whitemagic import MemoryManager
 
 # Import CLI for backward compatibility
-from cli import main, build_parser, COMMAND_HANDLERS
+from whitemagic.cli_app import main, build_parser, COMMAND_HANDLERS
 
 # Re-export for anyone importing from this module
 __all__ = ["MemoryManager", "main", "build_parser", "COMMAND_HANDLERS"]
@@ -25,4 +25,5 @@ __all__ = ["MemoryManager", "main", "build_parser", "COMMAND_HANDLERS"]
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

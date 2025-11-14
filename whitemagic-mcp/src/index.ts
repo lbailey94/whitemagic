@@ -15,6 +15,16 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { WhiteMagicClient } from './client.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Read version from package.json
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(
+  readFileSync(join(__dirname, '../package.json'), 'utf-8')
+);
 
 // Configuration from environment
 const config = {
@@ -29,7 +39,7 @@ const client = new WhiteMagicClient(config);
 const server = new Server(
   {
     name: 'whitemagic-memory',
-    version: '1.0.0',
+    version: packageJson.version,
   },
   {
     capabilities: {

@@ -5,7 +5,7 @@ Dependency injection for authentication, database sessions, etc.
 """
 
 from typing import Annotated
-from fastapi import Depends, HTTPException, Header
+from fastapi import Depends, HTTPException, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +33,7 @@ def get_database() -> Database:
 async def get_db_session() -> AsyncSession:
     """
     FastAPI dependency to get a database session.
-    
+
     Usage:
         @app.get("/endpoint")
         async def my_endpoint(session: AsyncSession = Depends(get_db_session)):
@@ -41,7 +41,7 @@ async def get_db_session() -> AsyncSession:
     """
     if _database is None:
         raise RuntimeError("Database not initialized. Call set_database() first.")
-    
+
     async with _database.get_session() as session:
         try:
             yield session
@@ -63,32 +63,32 @@ async def get_api_key_from_header(
 ) -> str:
     """
     Extract API key from Authorization header.
-    
+
     Supports two formats:
     1. Authorization: Bearer wm_prod_xxxxx...
     2. Authorization: wm_prod_xxxxx...
-    
+
     Args:
         authorization: Raw Authorization header
         credentials: Parsed Bearer token from HTTPBearer
-    
+
     Returns:
         API key string
-    
+
     Raises:
         HTTPException: If no API key provided
     """
     # Try Bearer token first (from HTTPBearer)
     if credentials:
         return credentials.credentials
-    
+
     # Try raw Authorization header
     if authorization:
         # Remove "Bearer " prefix if present
         if authorization.startswith("Bearer "):
             return authorization[7:]
         return authorization
-    
+
     # No API key provided
     raise HTTPException(
         status_code=401,
@@ -98,12 +98,15 @@ async def get_api_key_from_header(
 
 
 async def get_current_user(
+    request: Request,
     api_key: Annotated[str, Depends(get_api_key_from_header)],
     session: AsyncSession = Depends(get_db_session),
 ) -> User:
     """
     FastAPI dependency to get the current authenticated user.
-    
+
+    Sets request.state.user for middleware access (rate limiting, logging).
+
     Usage:
         @app.get("/api/v1/memories")
         async def list_memories(
@@ -111,30 +114,35 @@ async def get_current_user(
         ):
             # user is automatically authenticated
             ...
-    
+
     Args:
+        request: FastAPI request object (auto-injected)
         api_key: API key from Authorization header (auto-injected)
         session: Database session (auto-injected)
-    
+
     Returns:
         Authenticated User object
-    
+
     Raises:
         HTTPException: If authentication fails
     """
     try:
         result = await validate_api_key(session, api_key, update_last_used=True)
-        
+
         if not result:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid or expired API key",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         user, _ = result
+
+        # Set user on request state for middleware access
+        request.state.user = user
+
         return user
-        
+
     except AuthenticationError as e:
         raise HTTPException(
             status_code=401,

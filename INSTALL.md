@@ -1,225 +1,134 @@
-# Installation Guide - WhiteMagic v0.1.0
+# Installation Guide · WhiteMagic v2.1.3
 
-## Quick Install
-
-### Method 1: Clone and Run (Recommended for v0.1.0)
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/whitemagic.git
-cd whitemagic
-
-# Install dependencies
-pip install pydantic
-
-# Add to your Python path
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-
-# Verify installation
-python3 -c "from whitemagic import MemoryManager; print('✓ WhiteMagic installed')"
-```
-
-### Method 2: Direct Python Path
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/whitemagic.git
-
-# Use in your Python code
-import sys
-sys.path.insert(0, '/path/to/whitemagic')
-from whitemagic import MemoryManager
-```
-
-### Method 3: Pip Install (Coming Soon)
-
-```bash
-# Will be available on PyPI soon
-pip install whitemagic
-```
+Whether you want to kick the tires locally or deploy the full stack, use the flow that matches your goal.
 
 ---
 
-## Requirements
+## 1. Install from PyPI (CLI + SDK)
 
-- **Python**: 3.10 or higher
-- **Dependencies**: 
-  - `pydantic >= 2.0.0` (required)
-- **Optional**:
-  - `Node.js 18+` (for MCP server)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install "whitemagic[api]"  # CLI + API extras
+
+# sanity check
+whitemagic --help
+```
+
+What you get:
+- `whitemagic` CLI (create/list/search/context/consolidate/etc.)
+- `from whitemagic import MemoryManager` for scripting
+- Optional FastAPI extras (enabled via `[api]`)
 
 ---
 
-## Installation for Different Use Cases
+## 2. Install for Development
 
-### For CLI Usage Only
+**Important**: If you have `whitemagic` installed globally or in another environment, uninstall it first to avoid import conflicts:
 
 ```bash
-git clone https://github.com/your-org/whitemagic.git
+pip uninstall whitemagic -y
+```
+
+Then install from source in editable mode:
+
+```bash
+git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
-
-# Install dependencies
-pip install pydantic
-
-# Use the CLI
-python3 cli.py --help
-python3 cli.py create --title "Test" --content "Hello"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[api,dev]"  # dev extra now includes test-only deps like openai
 ```
 
-### For Python Library
+Useful extras:
+- `pip install -r requirements-plugins.txt` to pull optional integrations (Sentry, Prometheus, etc.)
+- `pre-commit install` to match repository linting
 
-```python
-# After cloning and adding to PYTHONPATH
-from whitemagic import MemoryManager
+---
 
-manager = MemoryManager(base_dir="/path/to/project")
-manager.create_memory(
-    title="My Memory",
-    content="Content here",
-    memory_type="short_term",
-    tags=["example"]
-)
-```
-
-### For MCP Server (Windsurf/Cursor/Claude Desktop)
+## 3. Run the CLI
 
 ```bash
-# 1. Install WhiteMagic (as above)
+# create a short-term memory
+whitemagic create --title "First memory" --content "It works!" --type short_term --tag demo
 
-# 2. Build MCP server
+# list memories
+whitemagic list
+
+# search with tag filters
+whitemagic search --query "works" --tag demo
+
+# generate tiered context
+whitemagic context --tier 1
+```
+
+All CLI subcommands accept `--help` for detailed options.
+
+---
+
+## 4. Run the API (FastAPI + SQLite)
+
+```bash
+cp .env.example .env
+uvicorn whitemagic.api.app:app --reload
+```
+
+Default endpoints:
+- API docs: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
+Remember: rate limiting is **disabled** unless you set `REDIS_URL`. Point it at Redis (Railway, Docker, etc.) before production.
+
+---
+
+## 5. Run the MCP Server (Cursor/Windsurf/Claude)
+
+```bash
 cd whitemagic-mcp
 npm install
 npm run build
+```
 
-# 3. Configure your IDE
-# See whitemagic-mcp/README.md for detailed instructions
+Example Cursor config (`~/.codeium/windsurf/mcp_config.json`):
 
-# For Windsurf:
-nano ~/.codeium/windsurf/mcp_config.json
-
-# Add:
+```json
 {
   "mcpServers": {
     "whitemagic": {
       "command": "node",
-      "args": ["/path/to/whitemagic/whitemagic-mcp/dist/index.js"],
+      "args": ["/absolute/path/to/whitemagic-mcp/dist/index.js"],
       "env": {
-        "WM_BASE_PATH": "/path/to/your/project"
+        "WM_BASE_PATH": "/absolute/path/to/whitemagic"
       }
     }
   }
 }
-
-# 4. Restart your IDE
 ```
+
+Set `WM_API_URL` + `WM_API_KEY` if you prefer the REST API over local file mode.
 
 ---
 
-## Verification
+## 6. Verification Checklist
 
-### Test Python Package
-
-```bash
-python3 -c "from whitemagic import MemoryManager, __version__; print(f'WhiteMagic v{__version__}')"
-```
-
-### Test CLI
-
-```bash
-python3 cli.py list
-```
-
-### Test MCP Server
-
-```bash
-cd whitemagic-mcp
-WM_BASE_PATH=/path/to/project node dist/index.js
-# Should see: "Connected to WhiteMagic" and "MCP Server ready"
-```
-
-### Run Tests
-
-```bash
-# Unit tests
-python3 -m unittest discover tests -v
-
-# MCP integration tests
-python3 -m unittest tests.test_mcp_integration -v
-```
+| Task | Command |
+| --- | --- |
+| CLI works | `whitemagic list` |
+| Python SDK import | `python -c "from whitemagic import MemoryManager; print('Ready')" ` |
+| API smoke test | `curl http://localhost:8000/health` |
+| Tests (Python) | `pytest tests -q` |
+| Tests (MCP) | `cd whitemagic-mcp && npm test` |
 
 ---
 
-## Troubleshooting
+## 7. Troubleshooting
 
-### "ModuleNotFoundError: No module named 'whitemagic'"
+| Symptom | Fix |
+| --- | --- |
+| `whitemagic: command not found` | Activate your virtualenv or reinstall with `pip install .`. |
+| `ModuleNotFoundError: whitemagic` | Ensure the package is installed (`pip install "whitemagic[api]"`) or add the repo root to `PYTHONPATH`. |
+| Rate-limit headers missing | Set `REDIS_URL` and restart the API. Without Redis the limiter is a no-op. |
+| MCP server can’t find Python | Double-check `WM_BASE_PATH` and that the Python environment you installed into is on `PATH`. |
+| `/api/v1/exec` missing | It’s disabled by default for safety. Set `WM_ENABLE_EXEC_API=true` **only** inside a locked-down environment. |
 
-**Solution**: Add WhiteMagic to your Python path:
-```bash
-export PYTHONPATH="${PYTHONPATH}:/path/to/whitemagic"
-```
-
-Or in Python:
-```python
-import sys
-sys.path.insert(0, '/path/to/whitemagic')
-```
-
-### "ModuleNotFoundError: No module named 'pydantic'"
-
-**Solution**: Install pydantic:
-```bash
-pip install pydantic
-```
-
-### MCP Server: "Python stderr: ModuleNotFoundError"
-
-**Solution**: Ensure `WM_BASE_PATH` points to the WhiteMagic directory:
-```json
-{
-  "env": {
-    "WM_BASE_PATH": "/absolute/path/to/whitemagic"
-  }
-}
-```
-
-### CLI Not Working
-
-**Solution**: Use Python explicitly:
-```bash
-python3 cli.py [command]
-```
-
----
-
-## Uninstallation
-
-```bash
-# If installed via pip (future)
-pip uninstall whitemagic
-
-# If cloned
-rm -rf /path/to/whitemagic
-# Remove from PYTHONPATH if added
-```
-
----
-
-## Next Steps
-
-- Read [README.md](README.md) for feature overview
-- Check [whitemagic-mcp/README.md](whitemagic-mcp/README.md) for MCP setup
-- See [ROADMAP.md](ROADMAP.md) for upcoming features
-- Run tests to verify everything works
-
----
-
-## Support
-
-- **Issues**: https://github.com/your-org/whitemagic/issues
-- **Discussions**: https://github.com/your-org/whitemagic/discussions
-- **Email**: support@whitemagic.dev (coming soon)
-
----
-
-**Version**: 0.1.0  
-**Last Updated**: November 2, 2025
+Need help beyond this guide? Open an issue on GitHub or ping the discussion board. Happy hacking!

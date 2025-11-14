@@ -53,9 +53,7 @@ class InvalidTierError(WhiteMagicError):
     def __init__(self, tier: int, valid_tiers: set):
         self.tier = tier
         self.valid_tiers = valid_tiers
-        super().__init__(
-            f"Invalid tier {tier}. Must be one of: {', '.join(map(str, valid_tiers))}"
-        )
+        super().__init__(f"Invalid tier {tier}. Must be one of: {', '.join(map(str, valid_tiers))}")
 
 
 class MemoryAlreadyArchivedError(WhiteMagicError):
@@ -132,18 +130,14 @@ class RateLimitExceededError(APIError):
     """Raised when rate limit is exceeded."""
 
     def __init__(self, limit: int, window: str = "minute"):
-        super().__init__(
-            f"Rate limit exceeded: {limit} requests per {window}", status_code=429
-        )
+        super().__init__(f"Rate limit exceeded: {limit} requests per {window}", status_code=429)
 
 
 class QuotaExceededError(APIError):
     """Raised when storage or usage quota is exceeded."""
 
     def __init__(self, quota_type: str, limit: int):
-        super().__init__(
-            f"{quota_type} quota exceeded: {limit} limit reached", status_code=402
-        )
+        super().__init__(f"{quota_type} quota exceeded: {limit} limit reached", status_code=402)
 
 
 class InvalidAPIKeyError(AuthenticationError):

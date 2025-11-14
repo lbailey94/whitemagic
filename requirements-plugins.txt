@@ -1,0 +1,11 @@
+# WhiteMagic Optional Integrations (install as needed)
+
+# Error tracking
+sentry-sdk[fastapi]>=1.38.0
+
+# Future authentication / JWT support
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Metrics (prometheus instrumentation)
+prometheus-fastapi-instrumentator>=6.0.0

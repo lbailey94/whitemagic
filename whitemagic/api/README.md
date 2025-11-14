@@ -80,7 +80,7 @@ No authentication required.
 ```json
 {
   "status": "healthy",
-  "version": "0.2.0"
+  "version": "2.1.0"
 }
 ```
 
@@ -429,7 +429,7 @@ CMD ["uvicorn", "whitemagic.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 - [ ] Set strong `DATABASE_URL` with SSL
 - [ ] Configure `ALLOWED_ORIGINS` for CORS
-- [ ] Set up error tracking (Sentry)
+- [ ] (Optional) Set up error tracking (Sentry)
 - [ ] Enable rate limiting (Redis)
 - [ ] Configure logging
 - [ ] Set up database backups

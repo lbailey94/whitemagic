@@ -274,6 +274,18 @@ npm run build
 npm run dev
 ```
 
+### Testing
+```bash
+# Run tests
+npm test
+
+# Watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
+```
+
 ### Lint
 ```bash
 npm run lint

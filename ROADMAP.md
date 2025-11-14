@@ -1,19 +1,32 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: v2.0.1 (Production-Ready CLI)  
-**Status**: Proceeding to Phase 1A  
-**Updated**: November 1, 2025
+**Current Version**: 2.1.3 ✅ (Released Nov 12, 2025)  
+**Next Version**: 2.1.4 (Developer Experience & SDK)  
+**Status**: Foundation Complete, Moving to Ecosystem & Monetization  
+**Updated**: November 12, 2025
 
 ---
 
-## Project Vision
+## 📖 Detailed Roadmap
 
-Transform WhiteMagic from a production-quality CLI tool into a comprehensive memory scaffolding platform with:
-- Native Python API (importable library)
-- REST API (multi-language support)
-- MCP server (native IDE integration)
-- Monetization via Whop (sustainable business)
-- Semantic search (embeddings)
+**For comprehensive version-by-version roadmap (v2.1.4 → v3.0), see:**
+**[ROADMAP_v2.1.4_to_v3.0.md](./ROADMAP_v2.1.4_to_v3.0.md)**
+
+This document contains the strategic vision, release timeline, feature details, pricing strategy, and success metrics for the next 6 months of development.
+
+---
+
+## Project Vision (Updated)
+
+WhiteMagic is **memory infrastructure for AI agents and developers**:
+- ✅ Native Python API (importable library)
+- ✅ REST API with auth, quotas, rate limits
+- ✅ MCP server (IDE integration - Cursor, Windsurf, Claude)
+- ✅ Semantic search with embeddings
+- 🚧 Multi-tier monetization via Whop
+- 🚧 Graph-based memory relationships
+- 🚧 Team workspaces & collaboration
+- 🚧 Multi-modal memory (images, PDFs, audio)
 
 ---
 
@@ -126,12 +139,12 @@ whitemagic/
 
 ### Deliverables
 
-- [ ] Python package (`whitemagic/`)
-- [ ] REST API with all endpoints
-- [ ] Docker deployment (`Dockerfile`, `docker-compose.yml`)
-- [ ] API documentation (Swagger UI at `/docs`)
-- [ ] 30+ tests (18 existing + 12+ new API tests)
-- [ ] Migration guide for v2.0.1 users
+- [x] Python package (`whitemagic/`)
+- [x] REST API with all endpoints
+- [x] Docker deployment (`Dockerfile`, `docker-compose.yml`)
+- [x] API documentation (Swagger UI at `/docs`)
+- [x] 30+ tests (23 core + 11 new API tests)
+- [x] Migration guide for v2.0.1 users
 - [ ] Performance benchmarks (API vs CLI)
 
 ### Success Criteria
@@ -148,7 +161,7 @@ whitemagic/
 ## Phase 1B: MCP Server
 
 **Timeline**: 3-4 days  
-**Status**: ⏳ PENDING (after Phase 1A)  
+**Status**: ✅ COMPLETE  
 **Quality Bar**: 100% test coverage
 
 ### Objectives
@@ -253,11 +266,11 @@ whitemagic-mcp/
 
 ### Deliverables
 
-- [ ] MCP server (Node.js/TypeScript)
-- [ ] Works with Cursor/Windsurf/Claude Desktop
+- [x] MCP server (Node.js/TypeScript)
+- [x] Works with Cursor/Windsurf/Claude Desktop
 - [ ] Docker deployment
-- [ ] Installation guide with screenshots
-- [ ] Integration tests
+- [x] Installation guide with screenshots
+- [x] Integration tests
 - [ ] Demo video
 
 ### Success Criteria
@@ -638,35 +651,55 @@ model Usage {
 
 ---
 
-## Next Actions
+## ✅ v2.1.3 Complete (November 12, 2025)
 
-### Immediate (Phase 1A: Day 1-2)
+**Major Achievements**:
+- ✅ Production REST API with auth, quotas, rate limits
+- ✅ MCP server with 27 tests passing
+- ✅ 196 Python tests passing
+- ✅ Docker Compose setup
+- ✅ Security hardening (exec API, version management)
+- ✅ Documentation cleanup
+- ✅ Independent review fixes applied
 
-1. ✅ Create this ROADMAP.md
-2. ⏳ Refactor `memory_manager.py` → `whitemagic/` package
-3. ⏳ Create Pydantic models
-4. ⏳ Write Python API tests
-5. ⏳ Ensure CLI backward compatibility
-
-### This Week (Phase 1A: Day 3-7)
-
-6. ⏳ Implement FastAPI endpoints
-7. ⏳ Add authentication middleware
-8. ⏳ Write API integration tests
-9. ⏳ Create Dockerfile & docker-compose
-10. ⏳ Generate API documentation
-11. ⏳ Run full test suite (target: 30+ tests)
-12. ⏳ Create Phase 1A completion summary
-
-### Next Week (Phase 1B)
-
-13. ⏳ Implement MCP server
-14. ⏳ Test with Cursor/Windsurf
-15. ⏳ Write MCP documentation
-16. ⏳ Create demo video
+**Release Notes**: See `INDEPENDENT_REVIEW_FIXES_v2.1.3.md`
 
 ---
 
-**Maintained by**: Cascade AI Assistant  
-**Last Updated**: November 1, 2025  
-**Review Cadence**: After each phase completion
+## 🚧 v2.1.4 In Progress (Target: December 6, 2025)
+
+**Theme**: Developer Experience & SDK
+
+### Week 1 (Nov 18-22)
+- [ ] MCP CLI auto-setup helper (all IDE support)
+- [ ] OpenAPI TypeScript client generation
+- [ ] Commit post-release fixes (Docker V2, MCP noise)
+
+### Week 2 (Nov 25-29)
+- [ ] OpenAPI Python client generation
+- [ ] Publish `@whitemagic/client` to npm
+- [ ] Publish `whitemagic-client` to PyPI
+- [ ] Basic usage dashboard in `/dashboard/account`
+
+### Week 3 (Dec 2-6)
+- [ ] Testing & bug fixes
+- [ ] Documentation updates
+- [ ] Release notes
+- [ ] Tag v2.1.4 and deploy
+
+**See**: `ROADMAP_v2.1.4_to_v3.0.md` for complete release plan through v3.0
+
+---
+
+## Next Immediate Actions
+
+1. ✅ Create comprehensive roadmap (`ROADMAP_v2.1.4_to_v3.0.md`)
+2. ⏳ Commit post-release fixes to v2.1.4 branch
+3. ⏳ Start MCP CLI auto-setup implementation
+4. ⏳ Set up client generation pipeline
+
+---
+
+**Maintained by**: WhiteMagic Team (3 developers)  
+**Last Updated**: November 12, 2025  
+**Review Cadence**: Weekly during active development

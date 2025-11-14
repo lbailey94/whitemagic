@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Set
 
 # Version
-VERSION = "2.1.0"  # Phases 1A & 1B complete
+VERSION = "2.1.3"
 
 # Memory types
 MEMORY_TYPE_SHORT_TERM = "short_term"

@@ -6,36 +6,28 @@ A lightweight external memory system that provides persistent learning across AI
 
 ```
 whitemagic/
-├── TIER_0_CORE.md              # Minimal prompt (~200 tokens)
-├── TIER_1_STANDARD.md          # Standard workflow (~500 tokens)
-├── UNIFIED_CAPABILITY_PROMPT.md # Full protocol (Tier 2, ~1000+ tokens)
-├── memory_manager.py           # Memory management tool
-├── memory/
-│   ├── short_term/             # Recent memories (7-day retention)
-│   ├── long_term/              # Consolidated insights
-│   ├── archive/                # Soft-deleted short-term memories with audit trail
-│   └── metadata.json           # Memory index, settings, and consolidation log
-└── MEMORY_SYSTEM_README.md     # This file
+├── memory/                        # Default storage root (configurable via WM_BASE_PATH)
+│   ├── short_term/                # Recent memories (7-day retention)
+│   ├── long_term/                 # Consolidated insights
+│   ├── archive/                   # Soft-deleted files kept for provenance
+│   └── metadata.json              # Index + consolidation log
+├── cli.py                         # Powers the `whitemagic` console script
+└── docs/guides/MEMORY_SYSTEM_README.md
 ```
 
 ## How It Works
 
 ### Tier System
 
-**Tier 0 (Core)**: ~200 tokens
-- Essential principles only
-- For quick queries and simple tasks
-- Minimal memory context (last 2 short-term memories)
+The CLI/API can generate prompt context at three presets—pick the level that matches the task:
 
-**Tier 1 (Standard)**: ~500 tokens
-- Structured Plan→Do→Check→Act workflow
-- Hypothesis-driven research mode
-- Standard memory context (5 short-term, 2 long-term)
+| Tier | CLI Flag | Contents |
+| --- | --- | --- |
+| 0 | `whitemagic context --tier 0` | Titles + previews from the two most recent short-term memories |
+| 1 | `--tier 1` | 5 short-term + 2 long-term memories (balanced view) |
+| 2 | `--tier 2` | 10 short-term + 5 long-term memories (deep dive) |
 
-**Tier 2 (Full Protocol)**: ~1000+ tokens
-- Complete multi-role, multi-phase system
-- Comprehensive memory architecture
-- Full context (10 short-term, 5 long-term)
+Use the output as-is or inject it into your IDE/MCP workflow.
 
 ### Memory Types
 
@@ -60,60 +52,47 @@ whitemagic/
 
 ### For AI Models
 
-**1. Starting a Session**
-```markdown
-Load appropriate tier based on task complexity:
-- Simple query → Tier 0 + minimal context
-- Standard task → Tier 1 + standard context
-- Complex/high-stakes → Tier 2 + full context
-
-Generate context with: `python3 memory_manager.py context <tier>`
-```
-
-**2. During Work**
-```markdown
-Log key insights and decisions as you work:
-- "This approach worked because..."
-- "Edge case discovered: ..."
-- "Heuristic learned: If X, then Y"
-```
-
-**3. Ending a Session**
-```markdown
-Export learnings using memory_manager:
-- Create short-term memory for immediate context
-- Create long-term memory for reusable insights
-- Tag appropriately for future retrieval
-```
+1. **Pull context before you start.**
+   ```bash
+   whitemagic context --tier 1 > session-context.md
+   ```
+2. **Log discoveries as you work.**
+   ```bash
+   whitemagic create --title "Async bug fix" \
+     --content "Always await gather()" \
+     --type short_term --tag async --tag python
+   ```
+3. **Promote reusable insights.**
+   ```bash
+   whitemagic create --title "Heuristic: log before patching" \
+     --content "Instrumentation beats guesswork..." \
+     --type long_term --tag debugging --tag heuristic
+   ```
 
 ### For Users (CLI)
 
 **Create a memory:**
 ```bash
-python3 memory_manager.py create \
-  --title "Title" \
-  --content "Content here" \
-  --type short_term \
-  --tag tag1 \
-  --tag tag2
+whitemagic create --title "Title" --content "Content here" \
+  --type short_term --tag tag1 --tag tag2
 ```
 
 **List all memories:**
 ```bash
-python3 memory_manager.py list
-python3 memory_manager.py list --include-archived  # include archive entries
+whitemagic list
+whitemagic list --include-archived
 ```
 
 **Search memories:**
 ```bash
-python3 memory_manager.py search --query "keyword"
-python3 memory_manager.py search --tag debugging --tag heuristic
+whitemagic search --query "keyword"
+whitemagic search --tag debugging --tag heuristic
 ```
 
 **Consolidate old memories:**
 ```bash
-python3 memory_manager.py consolidate --dry-run   # preview actions
-python3 memory_manager.py consolidate             # perform consolidation
+whitemagic consolidate --dry-run   # preview
+whitemagic consolidate             # perform
 ```
 Archives short-term memories older than 7 days into long-term storage.
 Memories tagged with `heuristic`, `pattern`, `proven`, `decision`, or `insight`
@@ -122,15 +101,15 @@ folder rather than deleted, and a consolidation log is appended to metadata.
 
 **Generate context summary:**
 ```bash
-python3 memory_manager.py context 1  # For Tier 1 prompt
-python3 memory_manager.py context 2 --output context.md  # write to file
+whitemagic context --tier 1
+whitemagic context --tier 2 --output context.md
 ```
 Outputs are token-aware and omit YAML front matter.
 
 ### Python API
 
 ```python
-from memory_manager import MemoryManager
+from whitemagic import MemoryManager
 
 manager = MemoryManager()
 

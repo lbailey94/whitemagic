@@ -23,14 +23,17 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 # Request/Response Models
 
+
 class CreateAPIKeyRequest(BaseModel):
     """Request to create a new API key."""
+
     name: str
     expires_days: Optional[int] = None
 
 
 class CreateAPIKeyResponse(BaseModel):
     """Response with new API key."""
+
     success: bool
     api_key: str  # Only shown once!
     key_id: str
@@ -41,6 +44,7 @@ class CreateAPIKeyResponse(BaseModel):
 
 class APIKeyInfo(BaseModel):
     """API key information (without secret)."""
+
     id: str
     key_prefix: str
     name: str
@@ -52,6 +56,7 @@ class APIKeyInfo(BaseModel):
 
 class ListAPIKeysResponse(BaseModel):
     """Response with list of API keys."""
+
     success: bool
     keys: list[APIKeyInfo]
     total: int
@@ -59,12 +64,14 @@ class ListAPIKeysResponse(BaseModel):
 
 class RevokeAPIKeyResponse(BaseModel):
     """Response after revoking API key."""
+
     success: bool
     message: str
 
 
 class RotateAPIKeyResponse(BaseModel):
     """Response after rotating API key."""
+
     success: bool
     new_api_key: str  # Only shown once!
     key_id: str
@@ -74,6 +81,7 @@ class RotateAPIKeyResponse(BaseModel):
 
 class AccountInfo(BaseModel):
     """User account information."""
+
     email: str
     plan_tier: str
     whop_user_id: Optional[str]
@@ -84,6 +92,7 @@ class AccountInfo(BaseModel):
 
 class UsageStatistics(BaseModel):
     """Usage statistics for current user."""
+
     requests_today: int
     requests_this_month: int
     memories_count: int
@@ -95,12 +104,14 @@ class UsageStatistics(BaseModel):
 
 class AccountResponse(BaseModel):
     """Response with account info."""
+
     success: bool
     account: AccountInfo
     usage: UsageStatistics
 
 
 # Endpoints
+
 
 @router.post("/api-keys", response_model=CreateAPIKeyResponse)
 async def create_new_api_key(
@@ -110,7 +121,7 @@ async def create_new_api_key(
 ):
     """
     Create a new API key.
-    
+
     The raw API key is only shown once and cannot be retrieved later.
     """
     # Create the API key
@@ -118,9 +129,9 @@ async def create_new_api_key(
         session,
         user.id,
         name=request.name,
-        expires_days=request.expires_days,
+        expires_in_days=request.expires_days,
     )
-    
+
     return CreateAPIKeyResponse(
         success=True,
         api_key=raw_key,  # Full key with prefix
@@ -138,16 +149,14 @@ async def list_api_keys(
 ):
     """
     List all API keys for current user.
-    
+
     Returns metadata only (not the actual keys).
     """
     result = await session.execute(
-        select(APIKey)
-        .where(APIKey.user_id == user.id)
-        .order_by(APIKey.created_at.desc())
+        select(APIKey).where(APIKey.user_id == user.id).order_by(APIKey.created_at.desc())
     )
     api_keys = result.scalars().all()
-    
+
     keys_info = [
         APIKeyInfo(
             id=str(key.id),
@@ -160,7 +169,7 @@ async def list_api_keys(
         )
         for key in api_keys
     ]
-    
+
     return ListAPIKeysResponse(
         success=True,
         keys=keys_info,
@@ -176,7 +185,7 @@ async def revoke_key(
 ):
     """
     Revoke (deactivate) an API key.
-    
+
     The key can no longer be used for authentication.
     """
     # Find the key
@@ -187,13 +196,13 @@ async def revoke_key(
         )
     )
     api_key = result.scalar_one_or_none()
-    
+
     if not api_key:
         raise HTTPException(404, "API key not found")
-    
+
     # Revoke it
     await revoke_api_key(session, api_key.id)
-    
+
     return RevokeAPIKeyResponse(
         success=True,
         message=f"API key '{api_key.name}' has been revoked",
@@ -208,7 +217,7 @@ async def rotate_key(
 ):
     """
     Rotate an API key.
-    
+
     Creates a new key and revokes the old one.
     The new raw key is only shown once.
     """
@@ -220,13 +229,13 @@ async def rotate_key(
         )
     )
     old_key = result.scalar_one_or_none()
-    
+
     if not old_key:
         raise HTTPException(404, "API key not found")
-    
+
     # Rotate it
     raw_key, new_key = await rotate_api_key(session, old_key.id)
-    
+
     return RotateAPIKeyResponse(
         success=True,
         new_api_key=raw_key,
@@ -243,33 +252,41 @@ async def get_account_info(
 ):
     """
     Get account information and usage statistics.
-    
+
     Returns user details, plan limits, and current usage.
     """
     # Get or create quota
-    result = await session.execute(
-        select(Quota).where(Quota.user_id == user.id)
-    )
+    result = await session.execute(select(Quota).where(Quota.user_id == user.id))
     quota = result.scalar_one_or_none()
-    
+
     if not quota:
         # Create initial quota
         quota = Quota(user_id=user.id)
         session.add(quota)
         await session.commit()
         await session.refresh(quota)
-    
+
     # Get plan limits
-    limits = PLAN_LIMITS.get(user.plan_tier, PLAN_LIMITS['free'])
-    
+    limits = PLAN_LIMITS.get(user.plan_tier, PLAN_LIMITS["free"])
+
     # Calculate usage percentages
     usage_percent = {
-        'requests_today': (quota.requests_today / limits['daily'] * 100) if limits['daily'] > 0 else 0,
-        'requests_month': (quota.requests_this_month / limits['monthly'] * 100) if limits['monthly'] > 0 else 0,
-        'memories': (quota.memories_count / limits['memories'] * 100) if limits['memories'] > 0 else 0,
-        'storage': (quota.storage_bytes / (limits['storage_mb'] * 1024 * 1024) * 100) if limits['storage_mb'] > 0 else 0,
+        "requests_today": (
+            (quota.requests_today / limits["daily"] * 100) if limits["daily"] > 0 else 0
+        ),
+        "requests_month": (
+            (quota.requests_this_month / limits["monthly"] * 100) if limits["monthly"] > 0 else 0
+        ),
+        "memories": (
+            (quota.memories_count / limits["memories"] * 100) if limits["memories"] > 0 else 0
+        ),
+        "storage": (
+            (quota.storage_bytes / (limits["storage_mb"] * 1024 * 1024) * 100)
+            if limits["storage_mb"] > 0
+            else 0
+        ),
     }
-    
+
     account_info = AccountInfo(
         email=user.email,
         plan_tier=user.plan_tier,
@@ -278,7 +295,7 @@ async def get_account_info(
         created_at=user.created_at,
         limits=limits,
     )
-    
+
     usage_stats = UsageStatistics(
         requests_today=quota.requests_today,
         requests_this_month=quota.requests_this_month,
@@ -288,7 +305,7 @@ async def get_account_info(
         limits=limits,
         usage_percent=usage_percent,
     )
-    
+
     return AccountResponse(
         success=True,
         account=account_info,

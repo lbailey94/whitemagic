@@ -56,7 +56,10 @@ export class WhiteMagicClient extends EventEmitter {
       });
 
       this.pythonProcess.on('exit', (code) => {
-        console.log(`Python process exited with code ${code}`);
+        // Only log in non-test environments to avoid "Cannot log after tests are done" warnings
+        if (process.env.NODE_ENV !== 'test') {
+          console.log(`Python process exited with code ${code}`);
+        }
         this.emit('disconnected');
       });
 

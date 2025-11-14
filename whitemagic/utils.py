@@ -10,7 +10,7 @@ from typing import List, Tuple, Dict, Any
 def now_iso() -> str:
     """
     Get current timestamp in ISO format.
-    
+
     Returns:
         ISO-formatted timestamp string
     """
@@ -20,11 +20,11 @@ def now_iso() -> str:
 def slugify(text: str, max_length: int = 50) -> str:
     """
     Convert text to a URL-safe slug.
-    
+
     Args:
         text: Text to slugify
         max_length: Maximum slug length
-        
+
     Returns:
         Slugified text
     """
@@ -37,17 +37,17 @@ def slugify(text: str, max_length: int = 50) -> str:
 def normalize_tags(tags: List[str], normalize: bool = True) -> List[str]:
     """
     Normalize tags to lowercase and remove duplicates.
-    
+
     Args:
         tags: List of tags to normalize
         normalize: If True, convert to lowercase
-        
+
     Returns:
         List of normalized tags (no duplicates, ordered)
     """
     if not normalize:
         return [tag.strip() for tag in tags if tag.strip()]
-    
+
     normalized = []
     seen = set()
     for tag in tags:
@@ -61,43 +61,43 @@ def normalize_tags(tags: List[str], normalize: bool = True) -> List[str]:
 def clean_markdown(text: str) -> str:
     """
     Clean markdown formatting for context generation.
-    
+
     Removes headers, bold, italics, links, etc. to get plain text.
-    
+
     Args:
         text: Markdown text
-        
+
     Returns:
         Cleaned plain text
     """
     stripped = text.strip()
-    
+
     # Remove headers
     stripped = re.sub(r"^#{1,6}\s*", "", stripped, flags=re.MULTILINE)
-    
+
     # Remove bold/italic
     stripped = stripped.replace("**", "")
     stripped = stripped.replace("*", "")
     stripped = stripped.replace("__", "")
     stripped = stripped.replace("_", "")
-    
+
     # Remove inline code
     stripped = re.sub(r"`[^`]+`", "", stripped)
-    
+
     # Collapse whitespace
     stripped = re.sub(r"\s+", " ", stripped)
-    
+
     return stripped.strip()
 
 
 def truncate_text(text: str, max_chars: int) -> str:
     """
     Truncate text to maximum characters, adding ellipsis if needed.
-    
+
     Args:
         text: Text to truncate
         max_chars: Maximum characters
-        
+
     Returns:
         Truncated text
     """
@@ -109,11 +109,11 @@ def truncate_text(text: str, max_chars: int) -> str:
 def summarize_text(text: str, max_words: int) -> str:
     """
     Summarize text to maximum words, adding ellipsis if needed.
-    
+
     Args:
         text: Text to summarize
         max_words: Maximum words
-        
+
     Returns:
         Summarized text
     """
@@ -126,13 +126,13 @@ def summarize_text(text: str, max_words: int) -> str:
 def create_preview(text: str, max_chars: int = 240) -> str:
     """
     Create a preview snippet from text.
-    
+
     Removes line breaks, collapses whitespace, and truncates.
-    
+
     Args:
         text: Text to preview
         max_chars: Maximum characters
-        
+
     Returns:
         Preview text
     """
@@ -145,7 +145,7 @@ def create_preview(text: str, max_chars: int = 240) -> str:
 def split_frontmatter(raw: str) -> Tuple[Dict[str, Any], str]:
     """
     Split markdown file into frontmatter and body.
-    
+
     Expected format:
     ```
     ---
@@ -153,10 +153,10 @@ def split_frontmatter(raw: str) -> Tuple[Dict[str, Any], str]:
     ---
     body content
     ```
-    
+
     Args:
         raw: Raw file content
-        
+
     Returns:
         Tuple of (frontmatter dict, body text)
     """
@@ -173,15 +173,15 @@ def split_frontmatter(raw: str) -> Tuple[Dict[str, Any], str]:
 def parse_frontmatter(block: str) -> Dict[str, Any]:
     """
     Parse YAML-style frontmatter block.
-    
+
     Simple parser that handles:
     - key: value
     - key: [item1, item2]
     - tags: tag1, tag2
-    
+
     Args:
         block: Frontmatter block text
-        
+
     Returns:
         Dictionary of parsed values
     """
@@ -190,12 +190,12 @@ def parse_frontmatter(block: str) -> Dict[str, Any]:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        
+
         if ":" in stripped:
             key, value = stripped.split(":", 1)
             key = key.strip()
             value = value.strip()
-            
+
             # Parse lists
             if value.startswith("[") and value.endswith("]"):
                 items = value[1:-1].split(",")
@@ -216,7 +216,7 @@ def parse_frontmatter(block: str) -> Dict[str, Any]:
             # String value
             else:
                 data[key] = value.strip("'\"")
-    
+
     return data
 
 
@@ -228,24 +228,24 @@ def create_frontmatter(
 ) -> str:
     """
     Create YAML-style frontmatter block.
-    
+
     Args:
         title: Memory title
         timestamp: Creation timestamp
         tags: List of tags
         extra_fields: Additional fields to include
-        
+
     Returns:
         Formatted frontmatter block with delimiters
     """
     lines = ["---"]
     lines.append(f"title: {title}")
     lines.append(f"created: {timestamp.isoformat(timespec='seconds')}Z")
-    
+
     if tags:
         tags_str = ", ".join(tags)
         lines.append(f"tags: {tags_str}")
-    
+
     if extra_fields:
         for key, value in extra_fields.items():
             if key not in ("title", "created", "tags"):
@@ -256,7 +256,7 @@ def create_frontmatter(
                     lines.append(f"{key}: {value.isoformat(timespec='seconds')}Z")
                 else:
                     lines.append(f"{key}: {value}")
-    
+
     lines.append("---")
     return "\n".join(lines)
 
@@ -264,19 +264,19 @@ def create_frontmatter(
 def parse_datetime(value: Any) -> datetime:
     """
     Parse various datetime formats into datetime object.
-    
+
     Args:
         value: Datetime value (string, datetime, or timestamp)
-        
+
     Returns:
         datetime object
-        
+
     Raises:
         ValueError: If format is invalid
     """
     if isinstance(value, datetime):
         return value
-    
+
     if isinstance(value, str):
         # Remove 'Z' suffix if present
         value = value.rstrip("Z")
@@ -284,17 +284,17 @@ def parse_datetime(value: Any) -> datetime:
             return datetime.fromisoformat(value)
         except ValueError:
             pass
-    
+
     raise ValueError(f"Cannot parse datetime from: {value}")
 
 
 def format_size(bytes_size: int) -> str:
     """
     Format byte size in human-readable format.
-    
+
     Args:
         bytes_size: Size in bytes
-        
+
     Returns:
         Formatted string (e.g., "1.5 MB")
     """

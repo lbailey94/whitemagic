@@ -1,0 +1,43 @@
+{
+  "name": "whitemagic-client",
+  "version": "2.1.4",
+  "description": "Official TypeScript/JavaScript SDK for WhiteMagic - Memory infrastructure for AI agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "whitemagic",
+    "memory",
+    "ai",
+    "agents",
+    "sdk",
+    "api-client",
+    "mcp"
+  ],
+  "author": "WhiteMagic Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lbailey94/whitemagic.git",
+    "directory": "clients/typescript"
+  },
+  "homepage": "https://github.com/lbailey94/whitemagic#readme",
+  "bugs": {
+    "url": "https://github.com/lbailey94/whitemagic/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.45.0",
+    "openapi-typescript": "^7.10.1",
+    "typescript": "^5.3.0"
+  }
+}

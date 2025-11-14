@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Sequence
 
+from .fileio import file_lock, atomic_write
+
 from .constants import (
     DEFAULT_MEMORY_DIR,
     DEFAULT_SHORT_TERM_DIR,
@@ -72,7 +74,7 @@ from .utils import (
 class MemoryManager:
     """
     Manage AI memory across short-term, long-term, and archived storage.
-    
+
     Features:
     - Robust metadata catalogue with persistence and audit logging
     - Soft-delete (archive) flow for consolidated short-term memories
@@ -80,7 +82,7 @@ class MemoryManager:
     - Token-aware context generation
     - Tag normalization and management
     - Full CRUD operations with validation
-    
+
     Example:
         >>> manager = MemoryManager(base_dir="/path/to/project")
         >>> memory = manager.create_memory(
@@ -114,7 +116,7 @@ class MemoryManager:
     def __init__(self, base_dir: Path | str = ".") -> None:
         """
         Initialize the Memory Manager.
-        
+
         Args:
             base_dir: Base directory for the memory system
         """
@@ -133,12 +135,12 @@ class MemoryManager:
         self.metadata: Dict[str, Any] = self._load_metadata()
         raw_index = self.metadata.get("memory_index", [])
         self._index: Dict[str, Dict[str, Any]] = {}
-        
+
         for item in raw_index if isinstance(raw_index, list) else []:
             normalised = self._normalise_index_entry(item)
             if normalised:
                 self._index[normalised["filename"]] = normalised
-        
+
         self._prune_missing_files()
 
     # ------------------------------------------------------------------ #
@@ -148,7 +150,7 @@ class MemoryManager:
     def _load_metadata(self) -> Dict[str, Any]:
         """
         Load metadata from metadata.json file.
-        
+
         Returns:
             Dictionary with metadata and memory index
         """
@@ -166,18 +168,16 @@ class MemoryManager:
         metadata.update({k: v for k, v in data.items() if k != "memory_index"})
         metadata["memory_index"] = data.get("memory_index", [])
         metadata["consolidation_log"] = data.get("consolidation_log", [])
-        
+
         return metadata
 
-    def _normalise_index_entry(
-        self, entry: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def _normalise_index_entry(self, entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Validate and normalize an index entry.
-        
+
         Args:
             entry: Raw index entry from metadata
-            
+
         Returns:
             Normalized entry or None if invalid
         """
@@ -200,9 +200,7 @@ class MemoryManager:
         if "accessed" in entry:
             normalised["accessed"] = str(entry["accessed"])
         if "tags" in entry:
-            normalised["tags"] = (
-                entry["tags"] if isinstance(entry["tags"], list) else []
-            )
+            normalised["tags"] = entry["tags"] if isinstance(entry["tags"], list) else []
         if "status" in entry:
             normalised["status"] = str(entry["status"])
         if "archived_at" in entry:
@@ -217,13 +215,13 @@ class MemoryManager:
     def _directory_for_type(self, memory_type: str) -> Path:
         """
         Get the directory path for a given memory type.
-        
+
         Args:
             memory_type: Memory type (short_term, long_term, or archive)
-            
+
         Returns:
             Path to the directory
-            
+
         Raises:
             InvalidMemoryTypeError: If memory type is invalid
         """
@@ -233,7 +231,7 @@ class MemoryManager:
             return self.long_term_dir
         if memory_type == "archive":
             return self.archive_dir
-        
+
         raise InvalidMemoryTypeError(memory_type, VALID_MEMORY_TYPES | {"archive"})
 
     def _save_metadata(self) -> None:
@@ -244,19 +242,20 @@ class MemoryManager:
         serialised_entries = []
         for entry in self._index.values():
             ready = dict(entry)
-            
+
             # Ensure lists are properly formatted
             if "tags" in ready and isinstance(ready["tags"], list):
                 ready["tags"] = list(ready["tags"])
-            
+
             serialised_entries.append(ready)
 
         # Update metadata
         self.metadata["memory_index"] = serialised_entries
 
-        # Write to file
-        with open(self.metadata_file, "w", encoding="utf-8") as handle:
-            json.dump(self.metadata, handle, indent=2)
+        # Write to file with locking and atomic write
+        with file_lock(self.metadata_file):
+            content = json.dumps(self.metadata, indent=2)
+            atomic_write(self.metadata_file, content)
 
     def _prune_missing_files(self) -> None:
         """
@@ -268,16 +267,14 @@ class MemoryManager:
             if not file_path.exists():
                 removed.append(filename)
                 del self._index[filename]
-        
+
         if removed:
             self._save_metadata()
 
-    def _touch_entry(
-        self, filename: str, *, accessed: bool = False, updated: bool = False
-    ) -> None:
+    def _touch_entry(self, filename: str, *, accessed: bool = False, updated: bool = False) -> None:
         """
         Update access or modification timestamps for a memory entry.
-        
+
         Args:
             filename: Memory filename
             accessed: If True, update accessed timestamp
@@ -288,7 +285,7 @@ class MemoryManager:
             return
 
         timestamp = now_iso()
-        
+
         if accessed:
             entry["last_accessed"] = timestamp
         if updated:
@@ -301,10 +298,10 @@ class MemoryManager:
     def _normalize_tags(self, tags: List[str]) -> List[str]:
         """
         Normalize tags to lowercase for consistency.
-        
+
         Args:
             tags: List of tags to normalize
-            
+
         Returns:
             List of normalized tags (lowercase, stripped, no duplicates)
         """
@@ -314,15 +311,13 @@ class MemoryManager:
     # Internal Helpers
     # ------------------------------------------------------------------ #
 
-    def _read_memory_file(
-        self, entry: Dict[str, Any]
-    ) -> Tuple[Dict[str, Any], str]:
+    def _read_memory_file(self, entry: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
         """
         Read a memory file and split into frontmatter and body.
-        
+
         Args:
             entry: Memory index entry
-            
+
         Returns:
             Tuple of (frontmatter dict, body text)
         """
@@ -334,19 +329,19 @@ class MemoryManager:
     def _unique_archive_path(self, filename: str) -> Path:
         """
         Generate a unique path in the archive directory.
-        
+
         If filename exists, append a counter.
-        
+
         Args:
             filename: Desired filename
-            
+
         Returns:
             Unique path in archive directory
         """
         candidate = self.archive_dir / filename
         if not candidate.exists():
             return candidate
-        
+
         # Add counter if file exists
         base = candidate.stem
         ext = candidate.suffix
@@ -357,15 +352,13 @@ class MemoryManager:
                 return candidate
             counter += 1
 
-    def _serialise_for_listing(
-        self, entry: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _serialise_for_listing(self, entry: Dict[str, Any]) -> Dict[str, Any]:
         """
         Serialize an index entry for API/listing output.
-        
+
         Args:
             entry: Memory index entry
-            
+
         Returns:
             Serialized dictionary
         """
@@ -387,15 +380,15 @@ class MemoryManager:
     ) -> List[Dict[str, Any]]:
         """
         Get filtered and sorted entries from the index.
-        
+
         Args:
             memory_type: Filter by type (None = all)
             include_archived: Include archived memories
             sort_by: Sort field (created, updated, or accessed)
-            
+
         Returns:
             List of matching entries
-            
+
         Raises:
             InvalidSortOptionError: If sort_by is invalid
         """
@@ -407,12 +400,12 @@ class MemoryManager:
             # Filter by type
             if memory_type and entry.get("type") != memory_type:
                 continue
-            
+
             # Filter by status
             status = entry.get("status", STATUS_ACTIVE)
             if status == STATUS_ARCHIVED and not include_archived:
                 continue
-            
+
             filtered.append(entry)
 
         # Sort by requested field
@@ -422,7 +415,7 @@ class MemoryManager:
             filtered.sort(key=lambda e: e.get("last_updated", ""), reverse=True)
         else:  # default to SORT_BY_CREATED
             filtered.sort(key=lambda e: e.get("created", ""), reverse=True)
-        
+
         return filtered
 
     # ------------------------------------------------------------------ #
@@ -439,17 +432,17 @@ class MemoryManager:
     ) -> Path:
         """
         Create a new memory entry.
-        
+
         Args:
             title: Memory title
             content: Memory content (markdown)
             memory_type: Type of memory (short_term or long_term)
             tags: List of tags
             extra_fields: Additional frontmatter fields
-            
+
         Returns:
             Path to the created memory file
-            
+
         Raises:
             InvalidMemoryTypeError: If memory_type is invalid
         """
@@ -459,7 +452,7 @@ class MemoryManager:
         # Normalize tags
         tags_list = [tag.strip() for tag in (tags or []) if tag and tag.strip()]
         normalized_tags = self._normalize_tags(tags_list)
-        
+
         # Create filename
         timestamp = datetime.now()
         filename = f"{timestamp.strftime('%Y%m%d_%H%M%S')}_{slugify(title)}{MEMORY_FILE_EXTENSION}"
@@ -475,7 +468,7 @@ class MemoryManager:
             tags=normalized_tags,
             extra_fields=extra_fields or {},
         )
-        
+
         # Write file
         body = content.strip() + "\n"
         with open(filepath, "w", encoding="utf-8") as handle:
@@ -508,12 +501,12 @@ class MemoryManager:
     ) -> List[Dict[str, Any]]:
         """
         Read recent memories of a given type.
-        
+
         Args:
             memory_type: Type of memory to read
             limit: Maximum number of memories to return
             include_archived: Include archived memories
-            
+
         Returns:
             List of memory payloads with entry, frontmatter, and body
         """
@@ -548,14 +541,14 @@ class MemoryManager:
     ) -> List[Dict[str, Any]]:
         """
         Search memories by query, type, and tags.
-        
+
         Args:
             query: Search query string
             memory_type: Filter by memory type
             tags: Filter by tags (AND logic)
             include_archived: Include archived memories
             include_content: Search in content (slower but more thorough)
-            
+
         Returns:
             List of search results with entry, preview, and score
         """
@@ -577,7 +570,7 @@ class MemoryManager:
             if query_lower:
                 title_match = query_lower in entry.get("title", "").lower()
                 tag_match = any(query_lower in tag for tag in entry_tags)
-                
+
                 if include_content:
                     frontmatter_dict, body = self._read_memory_file(entry)
                     content = f"{frontmatter_dict}\n{body}"
@@ -625,13 +618,13 @@ class MemoryManager:
     def generate_context_summary(self, tier: int) -> str:
         """
         Generate a context summary for a given tier.
-        
+
         Args:
             tier: Context tier (0, 1, or 2)
-            
+
         Returns:
             Formatted context string
-            
+
         Raises:
             InvalidTierError: If tier is invalid
         """
@@ -650,9 +643,7 @@ class MemoryManager:
             if not config or config.get("limit", 0) <= 0:
                 continue
 
-            payload = self.read_recent_memories(
-                memory_type, limit=config["limit"]
-            )
+            payload = self.read_recent_memories(memory_type, limit=config["limit"])
             if not payload:
                 continue
 
@@ -679,17 +670,15 @@ class MemoryManager:
         self._save_metadata()
         return summary
 
-    def _format_body_for_context(
-        self, body: str, *, mode: str, max_chars: int
-    ) -> str:
+    def _format_body_for_context(self, body: str, *, mode: str, max_chars: int) -> str:
         """
         Format memory body for context generation.
-        
+
         Args:
             body: Memory body text
             mode: Format mode (summary, detailed, full)
             max_chars: Maximum characters
-            
+
         Returns:
             Formatted body text
         """
@@ -716,25 +705,30 @@ class MemoryManager:
         *,
         auto_promote_tags: Optional[Sequence[str]] = None,
         dry_run: bool = False,
+        min_age_days: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Consolidate old short-term memories.
-        
+
         Archives memories older than retention period and optionally
         auto-promotes memories with special tags to long-term.
-        
+
         Args:
             auto_promote_tags: Tags that trigger auto-promotion
             dry_run: If True, don't actually consolidate
-            
+            min_age_days: Minimum age in days for consolidation (overrides default retention period)
+
         Returns:
             Dict with consolidation results
         """
-        retention_days = int(self.metadata.get("short_term_retention_days", DEFAULT_SHORT_TERM_RETENTION_DAYS))
+        # Use provided min_age_days or fall back to metadata/default
+        retention_days = (
+            min_age_days
+            if min_age_days is not None
+            else int(self.metadata.get("short_term_retention_days", DEFAULT_SHORT_TERM_RETENTION_DAYS))
+        )
         cutoff = datetime.now() - timedelta(days=retention_days)
-        promotion_tags = {
-            tag.lower() for tag in (auto_promote_tags or self.PROMOTION_TAGS)
-        }
+        promotion_tags = {tag.lower() for tag in (auto_promote_tags or self.PROMOTION_TAGS)}
 
         old_entries = []
         for entry in self._entries(MEMORY_TYPE_SHORT_TERM):
@@ -746,10 +740,7 @@ class MemoryManager:
             modified = datetime.fromtimestamp(file_path.stat().st_mtime)
             if modified <= cutoff:
                 frontmatter_dict, body = self._read_memory_file(entry)
-                tags = {
-                    tag.lower()
-                    for tag in frontmatter_dict.get("tags", entry.get("tags", []))
-                }
+                tags = {tag.lower() for tag in frontmatter_dict.get("tags", entry.get("tags", []))}
                 should_promote = bool(promotion_tags & tags)
                 old_entries.append(
                     {
@@ -788,12 +779,9 @@ class MemoryManager:
             body = item["body"]
 
             consolidated_lines.append(
-                f"## {entry.get('title', entry['filename'])} "
-                f"({entry['filename']})"
+                f"## {entry.get('title', entry['filename'])} " f"({entry['filename']})"
             )
-            consolidated_lines.append(
-                f"- Created: {entry.get('created', '')[:19]}"
-            )
+            consolidated_lines.append(f"- Created: {entry.get('created', '')[:19]}")
             tags = ", ".join(frontmatter_dict.get("tags", entry.get("tags", []))) or "none"
             consolidated_lines.append(f"- Tags: {tags}")
             consolidated_lines.append("")
@@ -802,9 +790,7 @@ class MemoryManager:
 
             if item["promote"] and not dry_run:
                 promotion_content = (
-                    body.strip()
-                    + "\n\n---\n\n*Auto-promoted from short-term on "
-                    f"{now_iso()}.*"
+                    body.strip() + "\n\n---\n\n*Auto-promoted from short-term on " f"{now_iso()}.*"
                 )
                 promoted_path = self.create_memory(
                     title=entry.get("title", entry["filename"]),
@@ -857,28 +843,32 @@ class MemoryManager:
         if not dry_run:
             self._save_metadata()
 
+        archived_files = (
+            archive_targets
+            if not dry_run
+            else [item["entry"]["filename"] for item in old_entries]
+        )
+
         return {
-            "archived": len(archive_targets),
+            "archived": len(archived_files),
             "auto_promoted": len(auto_promoted_files),
             "dry_run": dry_run,
             "promoted_files": auto_promoted_files,
-            "archived_files": archive_targets,
+            "archived_files": archived_files,
         }
 
     # ------------------------------------------------------------------ #
     # Update Operations
     # ------------------------------------------------------------------ #
 
-    def delete_memory(
-        self, filename: str, *, permanent: bool = False
-    ) -> Dict[str, Any]:
+    def delete_memory(self, filename: str, *, permanent: bool = False) -> Dict[str, Any]:
         """
         Delete or archive a memory.
-        
+
         Args:
             filename: Memory filename
             permanent: If True, delete permanently; else archive
-            
+
         Returns:
             Dict with success status and action taken
         """
@@ -887,13 +877,13 @@ class MemoryManager:
             return {"success": False, "error": f"Memory '{filename}' not found in index"}
 
         file_path = self.base_dir / entry["path"]
-        
+
         # If file doesn't exist, just remove from index
         if not file_path.exists():
             self._index.pop(filename, None)
             self._save_metadata()
             return {"success": True, "action": "removed_from_index", "filename": filename}
-        
+
         if permanent:
             # Permanent deletion
             file_path.unlink()
@@ -904,7 +894,7 @@ class MemoryManager:
             # Archive it
             if entry.get("status") == STATUS_ARCHIVED:
                 return {"success": False, "error": f"Memory '{filename}' is already archived"}
-            
+
             archive_path = self._unique_archive_path(filename)
             file_path.rename(archive_path)
             entry["status"] = STATUS_ARCHIVED
@@ -912,7 +902,12 @@ class MemoryManager:
             entry["path"] = str(archive_path.relative_to(self.base_dir))
             self._touch_entry(filename, updated=True)
             self._save_metadata()
-            return {"success": True, "action": "archived", "filename": filename, "path": str(archive_path)}
+            return {
+                "success": True,
+                "action": "archived",
+                "filename": filename,
+                "path": str(archive_path),
+            }
 
     def update_memory(
         self,
@@ -926,7 +921,7 @@ class MemoryManager:
     ) -> Dict[str, Any]:
         """
         Update a memory's metadata or content.
-        
+
         Args:
             filename: The memory filename to update
             title: New title (if provided)
@@ -934,26 +929,26 @@ class MemoryManager:
             tags: Replace all tags with these (if provided)
             add_tags: Add these tags to existing
             remove_tags: Remove these tags from existing
-        
+
         Returns:
             Dict with success status and updated path
         """
         entry = self._index.get(filename)
         if not entry:
             return {"success": False, "error": f"Memory '{filename}' not found"}
-        
+
         file_path = self.base_dir / entry["path"]
         if not file_path.exists():
             return {"success": False, "error": f"Memory file not found at {file_path}"}
-        
+
         # Read current content
         frontmatter_dict, body = self._read_memory_file(entry)
-        
+
         # Update title
         if title:
             entry["title"] = title
             frontmatter_dict["title"] = title
-        
+
         # Update tags with proper normalization
         if tags is not None:
             # Replace all tags (normalized)
@@ -965,7 +960,7 @@ class MemoryManager:
                 tag_map = {tag.lower(): tag.lower() for tag in entry.get("tags", [])}
             else:
                 tag_map = {tag: tag for tag in entry.get("tags", [])}
-            
+
             # Add new tags
             if add_tags:
                 for tag in self._normalize_tags(list(add_tags)):
@@ -973,38 +968,40 @@ class MemoryManager:
                         tag_map[tag] = tag
                     else:
                         tag_map[tag] = tag
-            
+
             # Remove tags (comparing normalized keys)
             if remove_tags:
                 for tag in self._normalize_tags(list(remove_tags)):
                     tag_map.pop(tag if not self.NORMALIZE_TAGS else tag.lower(), None)
-            
+
             current_tags = list(tag_map.values())
-        
+
         entry["tags"] = current_tags
         frontmatter_dict["tags"] = current_tags
-        
+
         # Update content if provided
         if content is not None:
             body = content.strip() + "\n"
-        
+
         # Write back to file
         created_dt = parse_datetime(entry["created"])
         new_frontmatter = create_frontmatter(
             title=frontmatter_dict.get("title", entry["title"]),
             timestamp=created_dt,
             tags=current_tags,
-            extra_fields={k: v for k, v in frontmatter_dict.items() if k not in ["title", "created", "tags"]},
+            extra_fields={
+                k: v for k, v in frontmatter_dict.items() if k not in ["title", "created", "tags"]
+            },
         )
-        
+
         with open(file_path, "w", encoding="utf-8") as handle:
             handle.write(new_frontmatter)
             handle.write("\n")
             handle.write(body)
-        
+
         self._touch_entry(filename, updated=True)
         self._save_metadata()
-        
+
         return {"success": True, "filename": filename, "path": str(file_path)}
 
     def restore_memory(
@@ -1012,37 +1009,37 @@ class MemoryManager:
     ) -> Dict[str, Any]:
         """
         Restore an archived memory back to active status.
-        
+
         Args:
             filename: Memory filename to restore
             memory_type: Target memory type (short_term or long_term)
-            
+
         Returns:
             Dict with success status and restored path
         """
         entry = self._index.get(filename)
         if not entry:
             return {"success": False, "error": f"Memory '{filename}' not found"}
-        
+
         if entry.get("status") != STATUS_ARCHIVED:
             return {"success": False, "error": f"Memory '{filename}' is not archived"}
-        
+
         if memory_type not in VALID_MEMORY_TYPES:
             return {"success": False, "error": f"Invalid memory_type: {memory_type}"}
-        
+
         # Move file from archive to target directory
         source_path = self.base_dir / entry["path"]
         target_dir = self._directory_for_type(memory_type)
         target_path = target_dir / filename
-        
+
         if not source_path.exists():
             return {"success": False, "error": f"Archived file not found at {source_path}"}
-        
+
         if target_path.exists():
             return {"success": False, "error": f"File already exists at {target_path}"}
-        
+
         source_path.rename(target_path)
-        
+
         # Update metadata
         entry["status"] = STATUS_ACTIVE
         entry["type"] = memory_type
@@ -1050,48 +1047,50 @@ class MemoryManager:
         entry["restored_at"] = now_iso()
         self._touch_entry(filename, updated=True)
         self._save_metadata()
-        
+
         return {
             "success": True,
             "filename": filename,
             "memory_type": memory_type,
-            "path": str(target_path)
+            "path": str(target_path),
         }
 
     def normalize_legacy_tags(self, *, dry_run: bool = True) -> Dict[str, Any]:
         """
         Normalize all existing tags to lowercase (migration tool).
-        
+
         This is useful for cleaning up legacy data that predates the
         tag normalization feature.
-        
+
         Args:
             dry_run: If True, only report what would be changed
-            
+
         Returns:
             Dict with affected memories and changes
         """
         changes = []
-        
+
         for filename, entry in list(self._index.items()):
             original_tags = entry.get("tags", [])
             if not original_tags:
                 continue
-            
+
             normalized_tags = self._normalize_tags(original_tags)
-            
+
             if original_tags != normalized_tags:
-                changes.append({
-                    "filename": filename,
-                    "title": entry.get("title", ""),
-                    "before": original_tags,
-                    "after": normalized_tags
-                })
-                
+                changes.append(
+                    {
+                        "filename": filename,
+                        "title": entry.get("title", ""),
+                        "before": original_tags,
+                        "after": normalized_tags,
+                    }
+                )
+
                 if not dry_run:
                     # Update in memory
                     entry["tags"] = normalized_tags
-                    
+
                     # Update file
                     file_path = self.base_dir / entry["path"]
                     if file_path.exists():
@@ -1101,22 +1100,21 @@ class MemoryManager:
                             title=entry.get("title", ""),
                             timestamp=created_dt,
                             tags=normalized_tags,
-                            extra_fields={k: v for k, v in frontmatter_dict.items() 
-                                        if k not in ["title", "created", "tags"]},
+                            extra_fields={
+                                k: v
+                                for k, v in frontmatter_dict.items()
+                                if k not in ["title", "created", "tags"]
+                            },
                         )
                         with open(file_path, "w", encoding="utf-8") as handle:
                             handle.write(new_frontmatter)
                             handle.write("\n")
                             handle.write(body)
-        
+
         if not dry_run and changes:
             self._save_metadata()
-        
-        return {
-            "dry_run": dry_run,
-            "affected_memories": len(changes),
-            "changes": changes
-        }
+
+        return {"dry_run": dry_run, "affected_memories": len(changes), "changes": changes}
 
     # ------------------------------------------------------------------ #
     # Listing & Stats
@@ -1127,22 +1125,26 @@ class MemoryManager:
     ) -> Dict[str, Any]:
         """
         List all memories grouped by type.
-        
+
         Args:
             include_archived: Include archived memories
             sort_by: Sort field (created, updated, or accessed)
-            
+
         Returns:
             Dict with memories grouped by type and metadata
         """
         data = {
             "short_term": [
                 self._serialise_for_listing(entry)
-                for entry in self._entries(MEMORY_TYPE_SHORT_TERM, include_archived=False, sort_by=sort_by)
+                for entry in self._entries(
+                    MEMORY_TYPE_SHORT_TERM, include_archived=False, sort_by=sort_by
+                )
             ],
             "long_term": [
                 self._serialise_for_listing(entry)
-                for entry in self._entries(MEMORY_TYPE_LONG_TERM, include_archived=False, sort_by=sort_by)
+                for entry in self._entries(
+                    MEMORY_TYPE_LONG_TERM, include_archived=False, sort_by=sort_by
+                )
             ],
         }
 
@@ -1172,16 +1174,16 @@ class MemoryManager:
     def list_all_tags(self, *, include_archived: bool = False) -> Dict[str, Any]:
         """
         Get a list of all unique tags with usage counts.
-        
+
         Args:
             include_archived: Include tags from archived memories
-        
+
         Returns:
             Dict with tag statistics
         """
         tag_counts: Dict[str, int] = {}
         tag_types: Dict[str, set] = {}  # Track which memory types use each tag
-        
+
         for entry in self._entries(None, include_archived=include_archived):
             memory_type = entry.get("type", "unknown")
             for tag in entry.get("tags", []):
@@ -1189,16 +1191,19 @@ class MemoryManager:
                 if tag not in tag_types:
                     tag_types[tag] = set()
                 tag_types[tag].add(memory_type)
-        
+
         # Sort by count descending
         sorted_tags = sorted(tag_counts.items(), key=lambda x: (-x[1], x[0]))
-        
+
         # Calculate unique memories with tags
-        memories_with_tags = len([
-            entry for entry in self._entries(None, include_archived=include_archived)
-            if entry.get("tags")
-        ])
-        
+        memories_with_tags = len(
+            [
+                entry
+                for entry in self._entries(None, include_archived=include_archived)
+                if entry.get("tags")
+            ]
+        )
+
         return {
             "tags": [
                 {

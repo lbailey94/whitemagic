@@ -1,0 +1,51 @@
+# Caddy reverse proxy configuration for WhiteMagic API
+# Provides automatic HTTPS with Let's Encrypt
+
+# Replace yourdomain.com with your actual domain
+yourdomain.com {
+    reverse_proxy api:8000
+    
+    # Structured JSON logging
+    log {
+        output file /var/log/caddy/whitemagic-access.log
+        format json
+    }
+    
+    # Security headers
+    header {
+        # Enable HSTS
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        
+        # Prevent MIME sniffing
+        X-Content-Type-Options "nosniff"
+        
+        # XSS protection
+        X-XSS-Protection "1; mode=block"
+        
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+    
+    # Rate limiting (optional - adjust as needed)
+    # @ratelimit {
+    #     path /api/*
+    # }
+    # rate_limit @ratelimit {
+    #     zone api {
+    #         key {remote_host}
+    #         events 100
+    #         window 1m
+    #     }
+    # }
+}
+
+dashboard.yourdomain.com {
+    reverse_proxy dashboard:80
+    log {
+        output file /var/log/caddy/dashboard-access.log
+        format json
+    }
+}

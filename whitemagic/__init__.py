@@ -19,7 +19,23 @@ Example:
     ... )
 """
 
-__version__ = "2.1.0"
+from importlib import metadata
+from pathlib import Path
+
+
+def _load_version() -> str:
+    """Return the installed package version with a source-tree fallback."""
+    version_file = Path(__file__).resolve().parent.parent / "VERSION"
+    if version_file.exists():
+        return version_file.read_text().strip()
+    try:
+        return metadata.version("whitemagic")
+    except metadata.PackageNotFoundError:
+        pass
+    return "unknown"
+
+
+__version__ = _load_version()
 __author__ = "WhiteMagic Team"
 
 # Core exports
