@@ -1,5 +1,9 @@
 """Interactive setup wizard for WhiteMagic."""
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*urllib3.*")
+
 from typing import Optional
 
 from rich.console import Console
