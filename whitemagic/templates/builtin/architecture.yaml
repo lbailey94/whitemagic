@@ -1,0 +1,48 @@
+name: architecture
+description: Document software architecture, components, and design decisions
+type: long_term
+tags_required:
+  - architecture
+tags_suggested:
+  - design
+  - patterns
+  - component
+fields:
+  component_name:
+    type: string
+    required: true
+    description: Name of the component or system
+  purpose:
+    type: string
+    required: true
+    description: What this component does and why it exists
+  responsibilities:
+    type: list
+    required: true
+    description: Key responsibilities and behaviors
+  key_patterns:
+    type: list
+    description: Design patterns, algorithms, or techniques used
+  integration_points:
+    type: list
+    description: How this integrates with other components
+  security_considerations:
+    type: list
+    description: Security implications and mitigations
+content_template: |
+  # {component_name}
+  
+  ## Purpose
+  {purpose}
+  
+  ## Responsibilities
+  {responsibilities}
+  
+  ## Key Patterns
+  {key_patterns}
+  
+  ## Integration Points
+  {integration_points}
+  
+  ## Security Considerations
+  {security_considerations}

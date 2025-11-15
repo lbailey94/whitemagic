@@ -1,0 +1,40 @@
+name: session
+description: Capture work session goals, progress, and outcomes
+type: short_term
+tags_required:
+  - session
+tags_suggested:
+  - progress
+  - work
+fields:
+  session_goal:
+    type: string
+    required: true
+    description: What you're trying to accomplish
+  work_completed:
+    type: list
+    required: true
+    description: What was actually done
+  blockers:
+    type: list
+    description: Issues or obstacles encountered
+  next_steps:
+    type: list
+    description: What to do next session
+  discoveries:
+    type: list
+    description: Unexpected findings or insights
+content_template: |
+  # Session: {session_goal}
+  
+  ## Work Completed
+  {work_completed}
+  
+  ## Blockers
+  {blockers}
+  
+  ## Next Steps
+  {next_steps}
+  
+  ## Discoveries
+  {discoveries}

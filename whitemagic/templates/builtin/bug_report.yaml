@@ -1,0 +1,53 @@
+name: bug_report
+description: Document bugs, root causes, and fixes
+type: short_term
+tags_required:
+  - bug
+tags_suggested:
+  - fix
+  - testing
+  - regression
+fields:
+  bug_title:
+    type: string
+    required: true
+    description: Short description of the bug
+  symptoms:
+    type: string
+    required: true
+    description: How the bug manifests
+  root_cause:
+    type: string
+    description: Why the bug occurred
+  fix_applied:
+    type: string
+    description: How it was fixed
+  affected_files:
+    type: list
+    description: Files that were changed
+  regression_test:
+    type: string
+    description: Test added to prevent recurrence
+  related_issues:
+    type: list
+    description: Related bugs or issues
+content_template: |
+  # Bug: {bug_title}
+  
+  ## Symptoms
+  {symptoms}
+  
+  ## Root Cause
+  {root_cause}
+  
+  ## Fix Applied
+  {fix_applied}
+  
+  ## Affected Files
+  {affected_files}
+  
+  ## Regression Test
+  {regression_test}
+  
+  ## Related Issues
+  {related_issues}

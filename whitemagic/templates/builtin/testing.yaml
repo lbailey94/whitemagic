@@ -1,0 +1,45 @@
+name: testing
+description: Document testing approaches, results, and lessons learned
+type: short_term
+tags_required:
+  - testing
+tags_suggested:
+  - verification
+  - qa
+  - regression
+fields:
+  feature_tested:
+    type: string
+    required: true
+    description: What feature or component was tested
+  test_type:
+    type: string
+    description: Type of testing (unit, integration, manual, etc)
+  test_results:
+    type: string
+    required: true
+    description: Summary of test results
+  pass_count:
+    type: string
+    description: Number of tests passing
+  fail_count:
+    type: string
+    description: Number of tests failing
+  issues_found:
+    type: list
+    description: Bugs or issues discovered
+  lessons_learned:
+    type: list
+    description: Key takeaways from testing
+content_template: |
+  # Testing: {feature_tested}
+  
+  **Type**: {test_type}
+  **Results**: {test_results}
+  **Pass/Fail**: {pass_count} / {fail_count}
+  
+  ## Issues Found
+  {issues_found}
+  
+  ## Lessons Learned
+  {lessons_learned}
