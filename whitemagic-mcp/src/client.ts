@@ -119,6 +119,10 @@ export class WhiteMagicClient extends EventEmitter {
     return await this.call('search_memories', { query, type, tags, include_archived: includeArchived });
   }
 
+  async readMemory(filename: string, includeMetadata: boolean = true): Promise<Memory> {
+    return await this.call('read_memory', { filename, include_metadata: includeMetadata });
+  }
+
   async listMemories(includeArchived: boolean = false, sortBy: string = 'created'): Promise<{
     short_term: Memory[];
     long_term: Memory[];

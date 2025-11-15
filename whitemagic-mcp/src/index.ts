@@ -207,6 +207,50 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: 'read_memory',
+        description: 'Read full content of a specific memory',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filename: {
+              type: 'string',
+              description: 'Memory filename (e.g., "20251115_setup_wizard.md")',
+            },
+            include_metadata: {
+              type: 'boolean',
+              description: 'Include metadata (tags, dates, etc)',
+              default: true,
+            },
+          },
+          required: ['filename'],
+        },
+      },
+      {
+        name: 'list_memories',
+        description: 'List all memories with metadata (useful for browsing)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['short_term', 'long_term'],
+              description: 'Filter by memory type',
+            },
+            include_archived: {
+              type: 'boolean',
+              description: 'Include archived memories',
+              default: false,
+            },
+            sort_by: {
+              type: 'string',
+              enum: ['created', 'modified', 'title'],
+              description: 'Sort order',
+              default: 'created',
+            },
+          },
+        },
+      },
+      {
         name: 'get_context',
         description: 'Generate tier-appropriate context for AI prompts',
         inputSchema: {
@@ -362,6 +406,50 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: JSON.stringify(results, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'read_memory': {
+        const memory = await client.readMemory(
+          args.filename as string,
+          args.include_metadata !== false
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(memory, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'list_memories': {
+        const listing = await client.listMemories(
+          args.include_archived as boolean,
+          args.sort_by as string || 'created'
+        );
+        // Filter by type if specified
+        if (args.type) {
+          const filtered = args.type === 'short_term' 
+            ? { short_term: listing.short_term }
+            : { long_term: listing.long_term };
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(filtered, null, 2),
+              },
+            ],
+          };
+        }
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(listing, null, 2),
             },
           ],
         };
