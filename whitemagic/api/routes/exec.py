@@ -24,6 +24,8 @@ async def execute_read(
         cmd=request.cmd,
         args=request.args,
         cwd=request.cwd,
+        env=request.env,
+        stdin=request.stdin,
         correlation_id=request.correlation_id
     )
     
@@ -77,6 +79,8 @@ async def execute_command_full(
             mode=payload.mode,
             cwd=payload.cwd,
             timeout_ms=payload.timeout_ms,
+            env=payload.env,
+            stdin=payload.stdin,
             correlation_id=payload.correlation_id,
         )
         

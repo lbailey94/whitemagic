@@ -1,4 +1,5 @@
 """Core execution engine."""
+import os
 import subprocess
 import time
 from typing import Optional, List, Dict, Any
@@ -24,7 +25,9 @@ class Executor:
         cmd: str,
         args: Optional[List[str]] = None,
         cwd: Optional[str] = None,
-        timeout_ms: Optional[int] = None
+        timeout_ms: Optional[int] = None,
+        env: Optional[Dict[str, str]] = None,
+        stdin: Optional[str] = None
     ) -> ExecutionResult:
         """Execute command.
         
@@ -33,6 +36,8 @@ class Executor:
             args: Command arguments
             cwd: Working directory
             timeout_ms: Timeout in milliseconds (overrides default)
+            env: Environment variables to merge with process env
+            stdin: Input to pipe to command
         """
         start = time.time()
         full_cmd = [cmd] + (args or [])
@@ -40,10 +45,17 @@ class Executor:
         # Convert timeout_ms to seconds, or use default
         timeout_sec = (timeout_ms / 1000.0) if timeout_ms is not None else self.timeout
         
+        # Merge environment variables
+        process_env = os.environ.copy()
+        if env:
+            process_env.update(env)
+        
         try:
             result = subprocess.run(
                 full_cmd,
                 cwd=cwd,
+                env=process_env,
+                input=stdin,
                 capture_output=True,
                 text=True,
                 timeout=timeout_sec

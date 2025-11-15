@@ -25,9 +25,20 @@ class TerminalMCPTools:
         cmd: str,
         args: Optional[List[str]] = None,
         cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+        stdin: Optional[str] = None,
         correlation_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Execute read-only command (MCP tool)."""
+        """Execute read-only command (MCP tool).
+        
+        Args:
+            cmd: Command to execute
+            args: Command arguments
+            cwd: Working directory
+            env: Environment variables to pass to command
+            stdin: Input to pipe to command
+            correlation_id: Correlation ID for audit logging
+        """
         full_cmd = cmd + (" " + " ".join(args) if args else "")
         
         # Check allowlist (pass args)
@@ -38,8 +49,8 @@ class TerminalMCPTools:
                 "allowed": False
             }
         
-        # Execute
-        result = self.executor.execute(cmd, args, cwd)
+        # Execute with env and stdin support
+        result = self.executor.execute(cmd, args, cwd, env=env, stdin=stdin)
         
         # Audit
         if self.audit:
@@ -68,12 +79,24 @@ class TerminalMCPTools:
         mode: ExecutionMode = ExecutionMode.READ,
         cwd: Optional[str] = None,
         timeout_ms: Optional[int] = None,
+        env: Optional[Dict[str, str]] = None,
+        stdin: Optional[str] = None,
         correlation_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Execute command with mode support (read or write).
         
         Write mode requires approval before execution.
+        
+        Args:
+            cmd: Command to execute
+            args: Command arguments
+            mode: Execution mode (READ or WRITE)
+            cwd: Working directory
+            timeout_ms: Timeout in milliseconds
+            env: Environment variables to pass to command
+            stdin: Input to pipe to command
+            correlation_id: Correlation ID for audit logging
         """
         args = args or []
         full_cmd = cmd + (" " + " ".join(args) if args else "")
@@ -105,8 +128,15 @@ class TerminalMCPTools:
                     "approved": False
                 }
         
-        # Execute
-        result = self.executor.execute(cmd, args, cwd, timeout_ms=timeout_ms)
+        # Execute with env and stdin support
+        result = self.executor.execute(
+            cmd, 
+            args, 
+            cwd, 
+            timeout_ms=timeout_ms,
+            env=env,
+            stdin=stdin
+        )
         
         # Audit
         if self.audit:

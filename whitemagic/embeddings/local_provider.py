@@ -4,6 +4,7 @@ Local embeddings provider (stub).
 TODO: Implement when sentence-transformers dependency conflicts are resolved.
 """
 
+import asyncio
 from typing import List
 import logging
 from .base import EmbeddingProvider
@@ -52,13 +53,26 @@ class LocalEmbeddings(EmbeddingProvider):
         logger.info(f"Model loaded: {model} ({self._dimensions} dimensions)")
     
     async def embed(self, text: str) -> List[float]:
-        """Generate embedding for single text."""
-        embedding = self._model.encode(text, convert_to_numpy=True)
+        """Generate embedding for single text.
+        
+        Runs in background thread to avoid blocking event loop during CPU-intensive encoding.
+        """
+        embedding = await asyncio.to_thread(
+            self._model.encode, text, convert_to_numpy=True
+        )
         return embedding.tolist()
     
     async def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for multiple texts (batched for efficiency)."""
-        embeddings = self._model.encode(texts, convert_to_numpy=True, show_progress_bar=len(texts) > 10)
+        """Generate embeddings for multiple texts (batched for efficiency).
+        
+        Runs in background thread to avoid blocking event loop during CPU-intensive encoding.
+        """
+        embeddings = await asyncio.to_thread(
+            self._model.encode, 
+            texts, 
+            convert_to_numpy=True, 
+            show_progress_bar=len(texts) > 10
+        )
         return embeddings.tolist()
     
     @property

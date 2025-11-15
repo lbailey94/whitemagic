@@ -5,8 +5,13 @@ WhiteMagic constants and configuration.
 from pathlib import Path
 from typing import Dict, Set
 
-# Version
-VERSION = "2.1.3"
+# Version - read from VERSION file (single source of truth)
+try:
+    _version_file = Path(__file__).parent.parent / "VERSION"
+    VERSION = _version_file.read_text().strip()
+except Exception:
+    # Fallback for edge cases (shouldn't happen in normal usage)
+    VERSION = "2.1.5"
 
 # Memory types
 MEMORY_TYPE_SHORT_TERM = "short_term"

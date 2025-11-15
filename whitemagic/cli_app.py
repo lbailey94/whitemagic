@@ -366,9 +366,9 @@ def command_backup(manager: MemoryManager, args: argparse.Namespace) -> int:
     output_path = Path(args.output) if args.output else None
     
     try:
+        # Note: Incremental backups removed until properly implemented (v2.1.7)
         result = backup_mgr.create_backup(
             output_path=output_path,
-            incremental=args.incremental,
             compress=not args.no_compress
         )
         
@@ -1170,11 +1170,9 @@ def build_parser() -> argparse.ArgumentParser:
         "-o", "--output",
         help="Output path for backup file (default: backups/backup_TIMESTAMP.tar.gz).",
     )
-    backup_parser.add_argument(
-        "--incremental",
-        action="store_true",
-        help="Create incremental backup (only changed files).",
-    )
+    # TODO v2.1.7: Implement incremental backups
+    # Incremental flag removed until manifest diffing is implemented
+    # See: docs/development/SECURITY_REVIEW_NOV14_2025.md #3
     backup_parser.add_argument(
         "--no-compress",
         action="store_true",
