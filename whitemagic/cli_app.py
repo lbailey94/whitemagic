@@ -935,12 +935,30 @@ def command_config_path(manager: MemoryManager, args: argparse.Namespace) -> int
     return 0
 
 
+def command_stats(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'stats' command - show memory statistics dashboard."""
+    from whitemagic.stats import generate_stats, print_stats_dashboard
+    
+    stats = generate_stats(manager)
+    
+    if args.json:
+        # Convert Counter objects to dicts for JSON serialization
+        stats["by_type"] = dict(stats["by_type"])
+        stats["by_status"] = dict(stats["by_status"])
+        print(json.dumps(stats, indent=2, default=str))
+    else:
+        print_stats_dashboard(stats)
+    
+    return 0
+
+
 # Import template commands
 from whitemagic.cli_templates import (
     command_template_list,
     command_template_show,
     command_template_create,
 )
+from whitemagic.cli_relationships import command_relate, command_related
 
 # Command dispatch table
 COMMAND_HANDLERS = {
@@ -970,6 +988,9 @@ COMMAND_HANDLERS = {
     "template-list": command_template_list,
     "template-show": command_template_show,
     "template-create": command_template_create,
+    "relate": command_relate,
+    "related": command_related,
+    "stats": command_stats,
 }
 
 
@@ -1480,6 +1501,44 @@ def build_parser() -> argparse.ArgumentParser:
         "--tags",
         nargs="+",
         help="Additional tags (template tags included automatically).",
+    )
+    
+    # relate
+    relate_parser = subparsers.add_parser(
+        "relate",
+        help="Link two memories with a relationship.",
+    )
+    relate_parser.add_argument("source", help="Source memory filename.")
+    relate_parser.add_argument("target", help="Target memory filename.")
+    relate_parser.add_argument(
+        "--type",
+        choices=["depends_on", "implements", "supersedes", "informed_by", "relates_to", "contradicts"],
+        default="relates_to",
+        help="Relationship type.",
+    )
+    relate_parser.add_argument("--description", help="Optional description.")
+    
+    # related
+    related_parser = subparsers.add_parser(
+        "related",
+        help="Show relationships for a memory.",
+    )
+    related_parser.add_argument("filename", help="Memory filename.")
+    related_parser.add_argument(
+        "--type",
+        choices=["depends_on", "implements", "supersedes", "informed_by", "relates_to", "contradicts"],
+        help="Filter by relationship type.",
+    )
+    
+    # stats
+    stats_parser = subparsers.add_parser(
+        "stats",
+        help="Show memory statistics dashboard.",
+    )
+    stats_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
     )
 
     return parser
