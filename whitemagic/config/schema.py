@@ -87,6 +87,50 @@ class TerminalConfig(BaseModel):
     )
 
 
+class MemoryLifecycleConfig(BaseModel):
+    """Memory lifecycle and retention configuration."""
+    
+    scratch_retention_days: int = Field(
+        default=1,
+        ge=0,
+        description="Days to keep scratch memories (0 = disabled)"
+    )
+    working_retention_days: Optional[int] = Field(
+        default=90,
+        ge=1,
+        description="Days to keep working memories before auto-archive (None = manual)"
+    )
+    auto_archive_enabled: bool = Field(
+        default=True,
+        description="Enable automatic archival of old working memories"
+    )
+    archive_retention_forever: bool = Field(
+        default=True,
+        description="Keep archived memories forever"
+    )
+
+
+class TierConfig(BaseModel):
+    """User tier configuration."""
+    
+    tier: Literal["personal", "power", "team", "regulated"] = Field(
+        default="power",
+        description="User tier: personal/power/team/regulated"
+    )
+    draft_review_enabled: bool = Field(
+        default=False,
+        description="Enable draft-review workflow (team tier)"
+    )
+    audit_required: bool = Field(
+        default=False,
+        description="Require audit logging for all operations (regulated tier)"
+    )
+    strict_isolation: bool = Field(
+        default=False,
+        description="Enforce per-case/project isolation (regulated tier)"
+    )
+
+
 class APIConfig(BaseModel):
     """API server configuration."""
     
@@ -121,6 +165,14 @@ class WhiteMagicConfig(BaseModel):
     memory_path: str = Field(
         default="~/.whitemagic/memory",
         description="Path to memory storage directory"
+    )
+    tier: TierConfig = Field(
+        default_factory=TierConfig,
+        description="User tier configuration"
+    )
+    lifecycle: MemoryLifecycleConfig = Field(
+        default_factory=MemoryLifecycleConfig,
+        description="Memory lifecycle configuration"
     )
     embeddings: EmbeddingsConfig = Field(
         default_factory=EmbeddingsConfig,

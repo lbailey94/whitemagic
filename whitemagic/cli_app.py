@@ -747,6 +747,22 @@ def command_embeddings_install(manager: MemoryManager, args: argparse.Namespace)
         return 1
 
 
+def command_setup(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'setup' command - tier-aware interactive setup wizard."""
+    from whitemagic.setup import SetupWizard
+    
+    wizard = SetupWizard()
+    try:
+        config = wizard.run()
+        return 0
+    except KeyboardInterrupt:
+        print("\n\nSetup cancelled.")
+        return 130
+    except Exception as e:
+        print(f"\n✗ Setup failed: {e}", file=sys.stderr)
+        return 1
+
+
 def command_setup_embeddings(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'setup-embeddings' command - interactive setup wizard."""
     import os
@@ -923,6 +939,7 @@ COMMAND_HANDLERS = {
     "exec": command_exec,
     "search-semantic": command_search_semantic,
     "embeddings-install": command_embeddings_install,
+    "setup": command_setup,
     "setup-embeddings": command_setup_embeddings,
     "config-get": command_config_get,
     "config-set": command_config_set,
@@ -1325,6 +1342,12 @@ def build_parser() -> argparse.ArgumentParser:
     embeddings_install_parser.add_argument(
         "--model",
         help="Model name to install (default: from config or all-MiniLM-L6-v2).",
+    )
+    
+    # setup
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Interactive setup wizard for first-run configuration.",
     )
     
     # setup-embeddings
