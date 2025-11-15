@@ -299,23 +299,28 @@ app.include_router(dashboard.router)
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(api_keys.router, prefix="/api/v1")
 
-EXEC_API_ENABLED = os.getenv("WM_ENABLE_EXEC_API", "true").lower() == "true"
+EXEC_API_ENABLED = os.getenv("WM_ENABLE_EXEC_API", "false").lower() == "true"
 if EXEC_API_ENABLED:
     from .routes import exec as exec_routes
 
     app.include_router(exec_routes.router, prefix="/api/v1")
     logger.warning(
-        "Terminal execution API is enabled. PROD profile (read-only) is default.",
+        "terminal_exec_api_enabled",
         extra={
             "enabled": True,
             "default_profile": "PROD",
+            "security_warning": "Terminal execution API is ENABLED. Only enable in controlled environments!",
             "disable_with": "WM_ENABLE_EXEC_API=false"
         }
     )
 else:
     logger.info(
         "terminal_exec_api_disabled",
-        extra={"enabled": False, "enable_with": "WM_ENABLE_EXEC_API=true"},
+        extra={
+            "enabled": False, 
+            "enable_with": "WM_ENABLE_EXEC_API=true",
+            "security_note": "Terminal execution API is DISABLED by default for security. Enable only if needed."
+        },
     )
 
 

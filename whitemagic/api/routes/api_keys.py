@@ -36,19 +36,31 @@ async def retrieve_api_key(
     session: DBSession,
 ):
     """
-    Retrieve or generate API key for a user by email.
+    🚨 SECURITY WARNING: This endpoint is DISABLED for security reasons.
     
-    This endpoint allows users who subscribed via Whop to get their API key.
+    VULNERABILITY: No authentication allows anyone with an email to generate API keys.
+    IMPACT: Account takeover + remote code execution (when combined with exec API).
     
-    Flow:
+    PROPER FLOW NEEDED:
     1. User subscribes on Whop
-    2. Webhook creates user account
-    3. User visits dashboard and enters email
-    4. This endpoint generates a new API key for them
+    2. Webhook creates user account + sends signed token to user's email
+    3. User clicks email link with single-use, time-limited token
+    4. This endpoint validates token signature + expiry before generating key
     
-    Note: We generate a NEW key each time since existing keys are hashed
-    and cannot be retrieved.
+    TODO v2.1.7:
+    - Implement signed token generation in Whop webhook
+    - Send token via email (requires email service)
+    - Validate token signature + single-use + expiry here
+    - Rate limit to 1 key generation per hour per user
+    
+    For now: Use Whop dashboard or manual admin provisioning.
     """
+    raise HTTPException(
+        503,
+        detail="API key retrieval temporarily disabled for security hardening. "
+               "Please contact support for manual key provisioning. "
+               "ETA for secure self-service: v2.1.7 (December 2025)"
+    )
     # Look up user by email
     result = await session.execute(
         select(User).where(User.email == request.email)
