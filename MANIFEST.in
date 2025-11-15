@@ -26,3 +26,4 @@ exclude check-windsurf-logs.sh
 prune whitemagic-mcp
 prune memory
 prune .git
+prune docs/development
