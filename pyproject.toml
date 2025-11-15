@@ -59,6 +59,38 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# === MODULAR INSTALLATION OPTIONS ===
+# WhiteMagic is designed to be modular - install only what you need!
+#
+# Minimal: pip install whitemagic                    (~50MB, core memory management only)
+# + Local AI: pip install whitemagic[embeddings]     (+2.5GB, privacy-first semantic search)
+# + Terminal: pip install whitemagic[terminal]       (+5MB, safe command execution)
+# + Full Offline: pip install whitemagic[offline]    (everything local, no cloud)
+# + Development: pip install whitemagic[dev]         (testing, linting, formatting)
+#
+# Or combine: pip install whitemagic[offline,terminal,dev]
+
+# Local AI & Semantic Search (privacy-first, offline)
+embeddings = [
+    "sentence-transformers>=2.2.0",  # ~2.5GB with torch
+    "torch>=2.0.0",                   # Deep learning framework
+    "scipy>=1.10.0",                  # Enhanced search algorithms
+]
+
+# Terminal Tool (safe command execution for AI agents)
+terminal = [
+    # Terminal tool has no extra dependencies - included in core!
+    # This extra exists for documentation purposes
+]
+
+# Full Offline Suite (everything local, zero cloud dependencies)
+offline = [
+    "sentence-transformers>=2.2.0",
+    "torch>=2.0.0",
+    "scipy>=1.10.0",
+]
+
+# Development Tools (testing, linting, formatting)
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -66,30 +98,12 @@ dev = [
     "black>=23.0.0",
     "mypy>=1.0.0",
     "ruff>=0.1.6",
-    "openai>=1.0.0",
 ]
 
+# Legacy API extra (kept for backwards compatibility, all deps now in core)
 api = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "python-multipart>=0.0.6",
-    "numpy>=1.24.0",
-    "sqlalchemy>=2.0.0",
-    "aiosqlite>=0.19.0",
-    "asyncpg>=0.29.0",
-    "alembic>=1.13.0",
-    "redis>=5.0.0",
-    "httpx>=0.25.0",
-    "python-json-logger>=2.0.7",
-    "pyyaml>=6.0.0",  # Required for semantic search markdown frontmatter parsing
-]
-
-embeddings = [
-    # Local embeddings support (privacy-first, offline)
-    "sentence-transformers>=2.2.0",
-    "torch>=2.0.0",
-    # For enhanced local embeddings (optional)
-    "scipy>=1.10.0",
+    # All API dependencies are now in core for deployment simplicity
+    # This extra exists for backwards compatibility only
 ]
 
 [project.urls]

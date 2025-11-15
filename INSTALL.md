@@ -1,50 +1,119 @@
-# Installation Guide · WhiteMagic v2.1.5
+# Installation Guide · WhiteMagic v2.1.6
 
-**WhiteMagic is 100% free to use locally.** No signup, no API keys, no limits. Just install and go.
+**WhiteMagic is modular by design.** Start minimal (~50MB), add features as needed.
 
-This guide covers local installation for the free tier. For cloud deployment (coming soon with Stripe), see production docs.
+## 🎯 Choose Your Installation
+
+### Quick Comparison
+
+| Installation | Size | Use Case | Command |
+|-------------|------|----------|----------|
+| **Minimal** | ~50MB | Core memory management | `pip install whitemagic` |
+| **+ Local AI** | ~2.5GB | Privacy-first semantic search | `pip install whitemagic[embeddings]` |
+| **+ Terminal** | +5MB | Safe command execution | `pip install whitemagic[terminal]` |
+| **Full Offline** | ~2.5GB | Everything local, zero cloud | `pip install whitemagic[offline]` |
+| **Development** | ~2.5GB | Local features + dev tools | `pip install -r requirements.txt` |
 
 ---
 
-## 1. Install from PyPI (CLI + SDK)
+## 1. Minimal Installation (Recommended Start)
+
+**Perfect for**: First-time users, cloud deployments (Railway/Vercel), minimal footprint
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "whitemagic[api]"  # CLI + API extras
+pip install whitemagic
 
-# sanity check
-whitemagic --help
+# Verify it works
+whitemagic --version
+whitemagic list
 ```
 
-What you get:
-- `whitemagic` CLI (create/list/search/context/consolidate/etc.)
-- `from whitemagic import MemoryManager` for scripting
-- Optional FastAPI extras (enabled via `[api]`)
+**What you get** (~50MB):
+- ✅ Core memory management (create, list, search, update, delete)
+- ✅ File-based storage (`~/.whitemagic/memory/`)
+- ✅ Configuration system (`~/.whitemagic/config.yaml`)
+- ✅ Terminal Tool (safe command execution)
+- ✅ Rich CLI formatting (tables, colors, progress bars)
+- ✅ MCP server support
+- ✅ REST API server
+- ✅ OpenAI embeddings support (API key required)
+
+**What you don't get**:
+- ❌ Local embeddings (sentence-transformers, torch)
+- ❌ Offline semantic search
 
 ---
 
-## 2. Install for Development
+## 2. Add Local AI (Privacy-First)
 
-**Important**: If you have `whitemagic` installed globally or in another environment, uninstall it first to avoid import conflicts:
+**Perfect for**: Users who want semantic search without API keys, 100% offline
 
 ```bash
-pip uninstall whitemagic -y
+pip install whitemagic[embeddings]
+
+# Or combine with other extras
+pip install whitemagic[embeddings,terminal]
 ```
 
-Then install from source in editable mode:
+**Adds** (+2.5GB):
+- ✅ Local embedding models (sentence-transformers)
+- ✅ Offline semantic search (no API keys needed)
+- ✅ Privacy-first: all data stays on your machine
+- ✅ Model: `all-MiniLM-L6-v2` (88MB compressed, 384 dimensions)
+
+**Install your first model**:
+```bash
+whitemagic embeddings-install
+# Downloads ~88MB model, expands to ~230MB
+# Cached at ~/.cache/huggingface/hub/
+```
+
+**Try semantic search**:
+```bash
+whitemagic search-semantic "terminal tool architecture"
+```
+
+---
+
+## 3. Full Offline Suite
+
+**Perfect for**: Maximum privacy, air-gapped systems, offline development
+
+```bash
+pip install whitemagic[offline]
+```
+
+Same as `[embeddings]` but explicitly labeled for offline use.
+
+---
+
+## 4. Development Setup
+
+**Perfect for**: Contributors, testing, building features
 
 ```bash
 git clone https://github.com/lbailey94/whitemagic.git
 cd whitemagic
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[api,dev]"  # dev extra now includes test-only deps like openai
+
+# Install everything: core + embeddings + dev tools
+pip install -r requirements.txt
+
+# Or explicitly
+pip install -e ".[embeddings,dev]"
+
+# Optional: pre-commit hooks
+pre-commit install
 ```
 
-Useful extras:
-- `pip install -r requirements-plugins.txt` to pull optional integrations (Sentry, Prometheus, etc.)
-- `pre-commit install` to match repository linting
+**What you get**:
+- ✅ Everything from `[offline]`
+- ✅ Testing tools (pytest, coverage)
+- ✅ Code quality (black, mypy, ruff)
+- ✅ Editable install (`-e`) for live code changes
 
 ---
 
