@@ -1171,6 +1171,53 @@ class MemoryManager:
         }
         return data
 
+    def get_memory(self, filename: str, *, include_metadata: bool = True) -> Dict[str, Any]:
+        """
+        Get full content of a specific memory by filename.
+
+        Args:
+            filename: Memory filename (e.g., "20251115_setup_wizard.md")
+            include_metadata: Include metadata fields (tags, dates, etc)
+
+        Returns:
+            Dict with memory content and optionally metadata
+
+        Raises:
+            FileNotFoundError: If memory not found
+        """
+        # Find entry in index
+        entry = None
+        for e in self._entries(None, include_archived=True):
+            if e.get("filename") == filename:
+                entry = e
+                break
+        
+        if not entry:
+            raise FileNotFoundError(f"Memory not found: {filename}")
+        
+        # Read full content
+        frontmatter, body = self._read_memory_file(entry)
+        
+        if include_metadata:
+            return {
+                "filename": entry.get("filename"),
+                "title": entry.get("title"),
+                "type": entry.get("type"),
+                "status": entry.get("status", STATUS_ACTIVE),
+                "created": entry.get("created"),
+                "updated": entry.get("updated"),
+                "accessed": entry.get("accessed"),
+                "tags": entry.get("tags", []),
+                "content": body,
+                "frontmatter": frontmatter,
+            }
+        else:
+            return {
+                "filename": entry.get("filename"),
+                "title": entry.get("title"),
+                "content": body,
+            }
+
     def list_all_tags(self, *, include_archived: bool = False) -> Dict[str, Any]:
         """
         Get a list of all unique tags with usage counts.

@@ -920,6 +920,13 @@ def command_config_path(manager: MemoryManager, args: argparse.Namespace) -> int
     return 0
 
 
+# Import template commands
+from whitemagic.cli_templates import (
+    command_template_list,
+    command_template_show,
+    command_template_create,
+)
+
 # Command dispatch table
 COMMAND_HANDLERS = {
     "create": command_create,
@@ -945,6 +952,9 @@ COMMAND_HANDLERS = {
     "config-set": command_config_set,
     "config-show": command_config_show,
     "config-path": command_config_path,
+    "template-list": command_template_list,
+    "template-show": command_template_show,
+    "template-create": command_template_create,
 }
 
 
@@ -1405,6 +1415,51 @@ def build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="Output as JSON.",
+    )
+    
+    # template-list
+    template_list_parser = subparsers.add_parser(
+        "template-list",
+        help="List available memory templates.",
+    )
+    template_list_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
+    )
+    
+    # template-show
+    template_show_parser = subparsers.add_parser(
+        "template-show",
+        help="Show template details.",
+    )
+    template_show_parser.add_argument(
+        "name",
+        help="Template name to show.",
+    )
+    template_show_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
+    )
+    
+    # template-create
+    template_create_parser = subparsers.add_parser(
+        "template-create",
+        help="Create a memory from a template interactively.",
+    )
+    template_create_parser.add_argument(
+        "template",
+        help="Template name to use.",
+    )
+    template_create_parser.add_argument(
+        "--title",
+        help="Memory title (prompted if not provided).",
+    )
+    template_create_parser.add_argument(
+        "--tags",
+        nargs="+",
+        help="Additional tags (template tags included automatically).",
     )
 
     return parser

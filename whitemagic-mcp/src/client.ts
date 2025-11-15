@@ -240,6 +240,13 @@ def handle_request(cmd):
             )
             return {'success': True, 'result': listing}
         
+        elif method == 'read_memory':
+            memory = manager.get_memory(
+                filename=params['filename'],
+                include_metadata=params.get('include_metadata', True)
+            )
+            return {'success': True, 'result': memory}
+        
         elif method == 'delete_memory':
             result = manager.delete_memory(
                 params['filename'],
