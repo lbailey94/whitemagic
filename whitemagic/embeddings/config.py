@@ -50,10 +50,15 @@ class EmbeddingConfig(BaseModel):
     @classmethod
     def from_env(cls) -> "EmbeddingConfig":
         """
-        Load configuration from environment variables.
+        Load configuration from config file, with environment variable overrides.
+        
+        Priority (highest to lowest):
+            1. Environment variables (WM_EMBEDDING_*)
+            2. Config file (~/.whitemagic/config.yaml)
+            3. Defaults
         
         Environment variables:
-            - WM_EMBEDDING_PROVIDER: Provider name (default: local)
+            - WM_EMBEDDING_PROVIDER: Provider name
             - OPENAI_API_KEY: OpenAI API key (only for openai provider)
             - WM_EMBEDDING_MODEL: Model identifier
             - WM_EMBEDDING_DIMENSIONS: Vector dimensions
@@ -62,16 +67,37 @@ class EmbeddingConfig(BaseModel):
             - WM_EMBEDDING_TIMEOUT: Timeout in seconds
             
         Returns:
-            EmbeddingConfig instance with values from environment
+            EmbeddingConfig instance with values from config file + env overrides
         """
-        # Determine default model based on provider
-        provider = os.getenv("WM_EMBEDDING_PROVIDER", "local")
-        default_model = "all-MiniLM-L6-v2" if provider == "local" else "text-embedding-3-small"
+        # Try to load from config file first
+        try:
+            from whitemagic.config import get_config_manager
+            config_mgr = get_config_manager()
+            config = config_mgr.load()
+            
+            # Start with config file values
+            provider = config.embeddings.provider
+            model = config.embeddings.model
+            cache_enabled = config.embeddings.cache_enabled
+        except Exception:
+            # Fallback to defaults if config not available
+            provider = "local"
+            model = "all-MiniLM-L6-v2"
+            cache_enabled = True
+        
+        # Environment variables override config file
+        provider = os.getenv("WM_EMBEDDING_PROVIDER", provider)
+        
+        # Set default model based on provider if not explicitly set
+        if model == "all-MiniLM-L6-v2" and provider != "local":
+            model = "text-embedding-3-small"
+        
+        model = os.getenv("WM_EMBEDDING_MODEL", model)
         
         return cls(
             provider=provider,
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            model=os.getenv("WM_EMBEDDING_MODEL", default_model),
+            model=model,
             dimensions=int(os.getenv("WM_EMBEDDING_DIMENSIONS", "1536")),
             batch_size=int(os.getenv("WM_EMBEDDING_BATCH_SIZE", "100")),
             max_retries=int(os.getenv("WM_EMBEDDING_MAX_RETRIES", "3")),

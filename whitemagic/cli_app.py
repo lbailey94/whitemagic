@@ -556,6 +556,104 @@ def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) ->
         return 1
 
 
+def command_embeddings_install(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'embeddings-install' command - install embedding model with progress."""
+    from rich.console import Console
+    from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
+    
+    console = Console()
+    
+    # Get model name
+    model = args.model
+    
+    # Load model name from config if not specified
+    if not model:
+        try:
+            from whitemagic.config import get_config_manager
+            config_mgr = get_config_manager()
+            config = config_mgr.load()
+            model = config.embeddings.model
+        except Exception:
+            model = "all-MiniLM-L6-v2"
+    
+    console.print(f"\n📦 Installing embedding model: [bold]{model}[/bold]")
+    
+    # Estimate size based on model
+    estimated_mb = 90 if "MiniLM" in model else 420 if "mpnet" in model else 340
+    console.print(f"   Estimated size: ~{estimated_mb}MB (one-time download)\n")
+    
+    try:
+        from sentence_transformers import SentenceTransformer
+        from pathlib import Path
+        
+        # Check if already cached
+        cache_dir = Path.home() / ".cache" / "torch" / "sentence_transformers"
+        model_cache = cache_dir / model.replace("/", "_")
+        
+        if model_cache.exists():
+            console.print(f"✓ Model already installed at: {model_cache}\n")
+            return 0
+        
+        # Download with progress simulation
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task(f"Downloading {model}...", total=100)
+            
+            # The actual download happens inside SentenceTransformer
+            # We simulate progress since sentence-transformers doesn't provide callbacks
+            import threading
+            
+            download_complete = False
+            model_obj = None
+            error = None
+            
+            def download_model():
+                nonlocal model_obj, error, download_complete
+                try:
+                    model_obj = SentenceTransformer(model)
+                    download_complete = True
+                except Exception as e:
+                    error = e
+                    download_complete = True
+            
+            # Start download in background
+            thread = threading.Thread(target=download_model)
+            thread.start()
+            
+            # Simulate progress while waiting
+            import time
+            while not download_complete:
+                for i in range(0, 101, 5):
+                    if download_complete:
+                        progress.update(task, completed=100)
+                        break
+                    progress.update(task, completed=i)
+                    time.sleep(0.2)
+            
+            thread.join()
+            
+            if error:
+                raise error
+            
+            progress.update(task, completed=100)
+        
+        console.print(f"\n✓ Model installed successfully!")
+        console.print(f"✓ Cached at: {model_cache}")
+        console.print(f"\nYou can now use semantic search:")
+        console.print(f"  [bold]whitemagic search-semantic 'your query'[/bold]\n")
+        
+        return 0
+        
+    except Exception as e:
+        console.print(f"\n✗ Installation failed: {e}", style="bold red")
+        return 1
+
+
 def command_setup_embeddings(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'setup-embeddings' command - interactive setup wizard."""
     import os
@@ -731,6 +829,7 @@ COMMAND_HANDLERS = {
     "verify-backup": command_verify_backup,
     "exec": command_exec,
     "search-semantic": command_search_semantic,
+    "embeddings-install": command_embeddings_install,
     "setup-embeddings": command_setup_embeddings,
     "config-get": command_config_get,
     "config-set": command_config_set,
@@ -1125,6 +1224,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="Output results as JSON.",
+    )
+    
+    # embeddings-install
+    embeddings_install_parser = subparsers.add_parser(
+        "embeddings-install",
+        help="Install embedding model with progress bar.",
+    )
+    embeddings_install_parser.add_argument(
+        "--model",
+        help="Model name to install (default: from config or all-MiniLM-L6-v2).",
     )
     
     # setup-embeddings
