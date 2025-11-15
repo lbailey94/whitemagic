@@ -39,12 +39,12 @@ WhiteMagic is a tiered memory management system for AI agents. It provides:
 
 ### Quick Install
 ```bash
-pip install whitemagic==2.1.3
+pip install whitemagic==2.1.5
 ```
 
 ### With API Support
 ```bash
-pip install whitemagic[api]==2.1.3
+pip install whitemagic[api]==2.1.5
 ```
 
 ### Development Install
@@ -57,10 +57,10 @@ pip install -e ".[api,dev]"
 ### Verify Installation
 ```bash
 whitemagic --version
-# Expected: WhiteMagic CLI v2.1.3
+# Expected: WhiteMagic CLI v2.1.5
 
-python -c "from whitemagic import VERSION; print(VERSION)"
-# Expected: 2.1.3
+python -c "from whitemagic import __version__; print(__version__)"
+# Expected: 2.1.5
 ```
 
 ---
@@ -466,7 +466,7 @@ asyncio.run(main())
 
 ```bash
 # Build image
-docker build -t whitemagic:2.1.3 .
+docker build -t whitemagic:2.1.5 .
 
 # Run with environment
 docker run -d \
@@ -475,7 +475,8 @@ docker run -d \
   -e DATABASE_URL=postgresql://user:pass@db:5432/whitemagic \
   -e REDIS_URL=redis://redis:6379 \
   -e WM_LOG_LEVEL=INFO \
-  whitemagic:2.1.3
+  -e WM_ENABLE_EXEC_API=false \
+  whitemagic:2.1.5
 ```
 
 ### Docker Compose Setup
@@ -485,7 +486,7 @@ version: '3.8'
 
 services:
   api:
-    image: whitemagic:2.1.3
+    image: whitemagic:2.1.5
     ports:
       - "8000:8000"
     environment:
@@ -691,6 +692,6 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for complete guide.
 
 ---
 
-**Last Updated**: November 12, 2025  
-**Version**: 2.1.3  
+**Last Updated**: November 14, 2025  
+**Version**: 2.1.5  
 **Status**: Production Ready

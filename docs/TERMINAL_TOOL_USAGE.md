@@ -131,6 +131,16 @@ curl -X POST http://localhost:8000/api/v1/exec/read \
     "cwd": "/workspace",
     "mode": "read"
   }'
+
+# Execute write command (requires confirmation header)
+curl -X POST http://localhost:8000/api/v1/exec \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Confirm-Write-Operation: confirmed" \
+  -d '{
+    "cmd": "git",
+    "args": ["commit", "-m", "Update docs"],
+    "mode": "write"
+  }'
 ```
 
 ### Python SDK

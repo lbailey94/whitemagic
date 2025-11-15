@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 Welcome to WhiteMagic! This index will help you find the right documentation quickly.  
-Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](../DOCUMENTATION_MAP.md) for a “which doc should I read?” flow.
+Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/development/DOCUMENTATION_MAP.md) for a “which doc should I read?” flow.
 
 ---
 
@@ -9,10 +9,36 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](../DOCUMENT
 
 **New to WhiteMagic?** Start with these:
 
-1. **[README.md](../README.md)** - Project overview, features, installation
-2. **[INSTALL.md](../INSTALL.md)** - Detailed installation guide
-3. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 5-minute tutorial
-4. **[COMPREHENSIVE_REVIEW_ASSESSMENT.md](../COMPREHENSIVE_REVIEW_ASSESSMENT.md)** - Current project state & roadmap
+1. **[START_HERE.md](../START_HERE.md)** - **⭐ Best first read** - Quick orientation & path selection
+2. **[README.md](../README.md)** - Project overview, features, installation
+3. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 5-minute hands-on tutorial
+4. **[USER_GUIDE.md](USER_GUIDE.md)** - Complete beginner to advanced guide
+
+---
+
+## 🎯 **Strategic Documentation**
+
+**Understand the vision and architecture**:
+
+1. **[VISION.md](VISION.md)** - **Philosophy, theory, and strategic direction**
+   - Why "white magic"? The name's meaning
+   - Core theory: Memory → Intelligence
+   - Multi-timescale memory architecture
+   - Market context & growth projections
+   - 2026-2027 roadmap
+
+2. **[ARCHITECTURE.md](ARCHITECTURE.md)** - **Technical design and system overview**
+   - Component structure
+   - Data flow patterns
+   - API design principles
+   - Security model
+   - Deployment architecture
+
+3. **[VISION_TO_REALITY.md](VISION_TO_REALITY.md)** - **Gap analysis & priorities**
+   - What's implemented vs what's planned
+   - Strategic opportunities
+   - Action plan (30/90/180 days)
+   - Lessons from deployment
 
 ---
 
@@ -34,7 +60,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](../DOCUMENT
 ### Essential Reading
 - **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** - Complete deployment guide  
   ⭐ **Most comprehensive** - Docker, PostgreSQL, Redis, Caddy
-- **[DEPLOY_NOW.md](../DEPLOY_NOW.md)** - Quick deployment checklist  
+- **[DEPLOY_NOW.md](archive/v2.1.3-prep/DEPLOY_NOW.md)** - Quick deployment checklist (archived)  
   ⏱️ **~45 minutes** from zero to production
 - **[START_HERE.md](../START_HERE.md)** - Quick reference card
 
@@ -49,28 +75,13 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](../DOCUMENT
 
 ### Planning & Design
 - **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones
+- **[RELEASE_PLAN_v2.1.5_to_v2.1.9.md](RELEASE_PLAN_v2.1.5_to_v2.1.9.md)** - 3-week progressive release plan
 - **[REST API Design](development/REST_API_DESIGN.md)** - API architecture
-- **[Whop Integration](development/WHOP_INTEGRATION.md)** - Monetization setup
-- **[Phase 2A Plan](development/PHASE_2A_PLAN.md)** - Current phase details
-
-### Implementation Status
-- **[Phase 2A Complete](phases/PHASE_2A_COMPLETE.md)** - Completed features
 - **[Bugfix Report](development/BUGFIX_REPORT.md)** - Known issues & fixes
 
----
-
-## 📋 **Status & Reviews**
-
-### Current State
-- **[COMPREHENSIVE_REVIEW_ASSESSMENT.md](../COMPREHENSIVE_REVIEW_ASSESSMENT.md)** ⭐ **Latest** - Full project review
-- **[PROJECT_STATUS.md](../PROJECT_STATUS.md)** - Live status + next actions
-- **[INDEPENDENT_REVIEW_IMPLEMENTED.md](../INDEPENDENT_REVIEW_IMPLEMENTED.md)** - Review fixes applied (Phase 2A)
-
-### Historical Reviews
-- **[reviews/COMPREHENSIVE_REVIEW.md](reviews/COMPREHENSIVE_REVIEW.md)**
-- **[reviews/INDEPENDENT_REVIEW_RESPONSE.md](reviews/INDEPENDENT_REVIEW_RESPONSE.md)**
-- **[reviews/SECOND_REVIEW_RESPONSE.md](reviews/SECOND_REVIEW_RESPONSE.md)**
-- **[reviews/REVIEWER_ASSESSMENT_AND_FIXES.md](reviews/REVIEWER_ASSESSMENT_AND_FIXES.md)**
+### Historical Context
+- **[archive/phases/](archive/phases/)** - Completed phase documentation
+- **[archive/reviews/](archive/reviews/)** - Historical review documents
 
 ---
 
@@ -112,13 +123,16 @@ Historical documents (for reference only):
 → [README.md](../README.md#installation) → [INSTALL.md](../INSTALL.md)
 
 **Deploy to production**
-→ [DEPLOY_NOW.md](../DEPLOY_NOW.md) → [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)
+→ [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)
 
 **Set up MCP in Cursor/Windsurf**
 → [whitemagic-mcp/README.md](../whitemagic-mcp/README.md)
 
-**Understand the architecture**
-→ [guides/SYSTEM_OVERVIEW.md](guides/SYSTEM_OVERVIEW.md)
+**Understand the vision and philosophy**
+→ [VISION.md](VISION.md) → [ARCHITECTURE.md](ARCHITECTURE.md)
+
+**Understand the technical architecture**
+→ [ARCHITECTURE.md](ARCHITECTURE.md) → [guides/SYSTEM_OVERVIEW.md](guides/SYSTEM_OVERVIEW.md)
 
 **Add optional integrations (Sentry, etc.)**
 → [production/OPTIONAL_INTEGRATIONS.md](production/OPTIONAL_INTEGRATIONS.md)
@@ -126,11 +140,8 @@ Historical documents (for reference only):
 **See what's changed**
 → [CHANGELOG.md](../CHANGELOG.md)
 
-**Assess project maturity**
-→ [COMPREHENSIVE_REVIEW_ASSESSMENT.md](../COMPREHENSIVE_REVIEW_ASSESSMENT.md)
-
-**Learn about monetization**
-→ [development/WHOP_INTEGRATION.md](development/WHOP_INTEGRATION.md)
+**See the roadmap**
+→ [ROADMAP.md](../ROADMAP.md) → [RELEASE_PLAN_v2.1.5_to_v2.1.9.md](RELEASE_PLAN_v2.1.5_to_v2.1.9.md)
 
 ---
 
@@ -145,10 +156,11 @@ Historical documents (for reference only):
 
 ## 📊 **Documentation Stats**
 
-- **Total docs**: 187 markdown files
-- **Active docs**: ~40 (core + guides + production)
-- **Archived docs**: ~147 (historical reference)
-- **Last updated**: November 8, 2025
+- **Total docs**: 190+ markdown files
+- **Active docs**: ~40 (core + guides + production + strategic)
+- **Archived docs**: ~150 (historical reference, properly organized)
+- **Cleanup**: v2.1.5 - Archived phases/, reviews/, daily logs, obsolete docs
+- **Last updated**: November 14, 2025
 
 ---
 

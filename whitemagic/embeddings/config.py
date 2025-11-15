@@ -13,8 +13,8 @@ class EmbeddingConfig(BaseModel):
     """Configuration for embedding providers."""
     
     provider: str = Field(
-        default="openai",
-        description="Provider name: 'openai' or 'local'"
+        default="local",
+        description="Provider name: 'local' (default, privacy-first) or 'openai'"
     )
     
     openai_api_key: Optional[str] = Field(
@@ -23,8 +23,8 @@ class EmbeddingConfig(BaseModel):
     )
     
     model: str = Field(
-        default="text-embedding-3-small",
-        description="Model identifier"
+        default="all-MiniLM-L6-v2",
+        description="Model identifier (local: sentence-transformers model, openai: embedding model)"
     )
     
     dimensions: int = Field(
@@ -53,8 +53,8 @@ class EmbeddingConfig(BaseModel):
         Load configuration from environment variables.
         
         Environment variables:
-            - WM_EMBEDDING_PROVIDER: Provider name (default: openai)
-            - OPENAI_API_KEY: OpenAI API key
+            - WM_EMBEDDING_PROVIDER: Provider name (default: local)
+            - OPENAI_API_KEY: OpenAI API key (only for openai provider)
             - WM_EMBEDDING_MODEL: Model identifier
             - WM_EMBEDDING_DIMENSIONS: Vector dimensions
             - WM_EMBEDDING_BATCH_SIZE: Batch size
@@ -64,10 +64,14 @@ class EmbeddingConfig(BaseModel):
         Returns:
             EmbeddingConfig instance with values from environment
         """
+        # Determine default model based on provider
+        provider = os.getenv("WM_EMBEDDING_PROVIDER", "local")
+        default_model = "all-MiniLM-L6-v2" if provider == "local" else "text-embedding-3-small"
+        
         return cls(
-            provider=os.getenv("WM_EMBEDDING_PROVIDER", "openai"),
+            provider=provider,
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            model=os.getenv("WM_EMBEDDING_MODEL", "text-embedding-3-small"),
+            model=os.getenv("WM_EMBEDDING_MODEL", default_model),
             dimensions=int(os.getenv("WM_EMBEDDING_DIMENSIONS", "1536")),
             batch_size=int(os.getenv("WM_EMBEDDING_BATCH_SIZE", "100")),
             max_retries=int(os.getenv("WM_EMBEDDING_MAX_RETRIES", "3")),

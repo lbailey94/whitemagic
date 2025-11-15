@@ -23,11 +23,22 @@ class Executor:
         self,
         cmd: str,
         args: Optional[List[str]] = None,
-        cwd: Optional[str] = None
+        cwd: Optional[str] = None,
+        timeout_ms: Optional[int] = None
     ) -> ExecutionResult:
-        """Execute command."""
+        """Execute command.
+        
+        Args:
+            cmd: Command to execute
+            args: Command arguments
+            cwd: Working directory
+            timeout_ms: Timeout in milliseconds (overrides default)
+        """
         start = time.time()
         full_cmd = [cmd] + (args or [])
+        
+        # Convert timeout_ms to seconds, or use default
+        timeout_sec = (timeout_ms / 1000.0) if timeout_ms is not None else self.timeout
         
         try:
             result = subprocess.run(
@@ -35,7 +46,7 @@ class Executor:
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=self.timeout
+                timeout=timeout_sec
             )
             
             duration = (time.time() - start) * 1000
@@ -51,7 +62,7 @@ class Executor:
             return ExecutionResult(
                 exit_code=-1,
                 stdout="",
-                stderr=f"Timeout after {self.timeout}s",
+                stderr=f"Timeout after {timeout_sec}s",
                 duration_ms=(time.time() - start) * 1000,
                 command=" ".join(full_cmd)
             )

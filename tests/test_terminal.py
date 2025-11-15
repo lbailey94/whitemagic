@@ -1,7 +1,15 @@
 """Tests for terminal execution."""
-import pytest
-from pathlib import Path
+import os
+import sys
 import tempfile
+from pathlib import Path
+
+import pytest
+
+# Ensure local package is used even if another version is installed
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 from whitemagic.terminal import (
     Executor,
@@ -51,13 +59,13 @@ class TestAllowlist:
         al = Allowlist(Profile.AGENT)
         
         assert al.is_allowed("ls")
-        assert al.is_allowed("git status")
+        assert al.is_allowed("git", ["status"])
         assert al.is_allowed("cat")
     
     def test_write_operations(self):
         al = Allowlist(Profile.AGENT)
         
-        assert al.requires_approval("git commit")
+        assert al.requires_approval("git", ["commit"])
         assert al.requires_approval("npm install")
     
     def test_profiles(self):
@@ -66,11 +74,17 @@ class TestAllowlist:
         
         # Prod is stricter
         assert prod.is_allowed("ls")
-        assert not prod.is_allowed("git commit")
+        assert not prod.is_allowed("git", ["commit"])
         
         # Dev is more permissive
         assert dev.is_allowed("ls")
-        assert dev.is_allowed("git commit")
+        assert dev.is_allowed("git", ["commit"])
+    
+    def test_prod_blocks_git_write(self):
+        prod = Allowlist(Profile.PROD)
+        
+        assert not prod.is_allowed("git", ["commit"])
+        assert prod.is_allowed("git", ["status"])
 
 class TestAuditLogger:
     """Test AuditLogger class."""
@@ -111,6 +125,25 @@ class TestTerminalMCPTools:
         # Read-only should work
         result = prod_tools.exec_read("ls")
         assert result["exit_code"] == 0
+    
+    @pytest.mark.asyncio
+    async def test_write_requires_approval(self):
+        tools = TerminalMCPTools(profile=Profile.AGENT)
+        result = await tools.execute_command("ls", mode=ExecutionMode.WRITE)
+        assert result["success"] is False
+        assert "approved" in result["error"].lower()
+        
+        from whitemagic.terminal.approver import Approver
+        approved_tools = TerminalMCPTools(
+            profile=Profile.AGENT,
+            approver=Approver(auto_approve=True)
+        )
+        approved = await approved_tools.execute_command(
+            "echo",
+            args=["ok"],
+            mode=ExecutionMode.WRITE
+        )
+        assert approved["success"] is True
 
 class TestModels:
     """Test Pydantic models."""

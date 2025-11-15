@@ -75,7 +75,7 @@ The wizard will guide you through:
    ```
    🔌 Testing connection...
    ✅ Connection successful!
-   📦 API Version: 2.1.3
+   📦 API Version: 2.1.5
    ```
 
 6. **Config Writing**

@@ -5,15 +5,28 @@ TODO: Implement when sentence-transformers dependency conflicts are resolved.
 """
 
 from typing import List
+import logging
 from .base import EmbeddingProvider
+
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class LocalEmbeddings(EmbeddingProvider):
     """
     Local embeddings provider using sentence-transformers.
     
-    NOTE: Currently not implemented due to transformers dependency conflicts.
-    Will be added once dependencies are resolved.
+    Provides privacy-first semantic search without external APIs.
+    Models are downloaded and cached locally on first use.
+    
+    Recommended models:
+    - all-MiniLM-L6-v2: Fast, 90MB, 384 dimensions (default)
+    - all-mpnet-base-v2: Better quality, 420MB, 768 dimensions
     """
     
     def __init__(self, model: str = "all-MiniLM-L6-v2"):
@@ -24,27 +37,36 @@ class LocalEmbeddings(EmbeddingProvider):
             model: SentenceTransformer model name
             
         Raises:
-            NotImplementedError: Always, until dependencies are resolved
+            ImportError: If sentence-transformers not installed
         """
-        raise NotImplementedError(
-            "Local embeddings not yet implemented. "
-            "Use 'openai' provider or help resolve sentence-transformers dependency conflicts."
-        )
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "sentence-transformers not installed. "
+                "Install with: pip install sentence-transformers"
+            )
+        
+        logger.info(f"Loading local embedding model: {model}")
+        self._model_name = model
+        self._model = SentenceTransformer(model)
+        self._dimensions = self._model.get_sentence_embedding_dimension()
+        logger.info(f"Model loaded: {model} ({self._dimensions} dimensions)")
     
     async def embed(self, text: str) -> List[float]:
-        """Not implemented."""
-        raise NotImplementedError("Local embeddings not available")
+        """Generate embedding for single text."""
+        embedding = self._model.encode(text, convert_to_numpy=True)
+        return embedding.tolist()
     
     async def embed_batch(self, texts: List[str]) -> List[List[float]]:
-        """Not implemented."""
-        raise NotImplementedError("Local embeddings not available")
+        """Generate embeddings for multiple texts (batched for efficiency)."""
+        embeddings = self._model.encode(texts, convert_to_numpy=True, show_progress_bar=len(texts) > 10)
+        return embeddings.tolist()
     
     @property
     def dimensions(self) -> int:
-        """Not implemented."""
-        return 384  # Standard for MiniLM
+        """Embedding dimensions for this model."""
+        return self._dimensions
     
     @property
     def model_name(self) -> str:
-        """Not implemented."""
-        return "all-MiniLM-L6-v2"
+        """Name of the loaded model."""
+        return self._model_name

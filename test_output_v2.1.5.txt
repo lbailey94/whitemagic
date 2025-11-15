@@ -1,0 +1,14 @@
+ImportError while loading conftest '/home/lucas/Desktop/whitemagic/tests/conftest.py'.
+tests/conftest.py:7: in <module>
+    from whitemagic.api import rate_limit
+whitemagic/api/__init__.py:10: in <module>
+    from .app import app
+whitemagic/api/app.py:307: in <module>
+    logger.warning(
+/usr/lib/python3.10/logging/__init__.py:1489: in warning
+    self._log(WARNING, msg, args, **kwargs)
+/usr/lib/python3.10/logging/__init__.py:1622: in _log
+    record = self.makeRecord(self.name, level, fn, lno, msg, args,
+/usr/lib/python3.10/logging/__init__.py:1596: in makeRecord
+    raise KeyError("Attempt to overwrite %r in LogRecord" % key)
+E   KeyError: "Attempt to overwrite 'message' in LogRecord"

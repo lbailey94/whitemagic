@@ -10,6 +10,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.5] - 2025-11-14
+
+### 🎉 Feature Activation Edition
+
+This release enables two powerful features that were fully built but disabled: Terminal Tool for safe code execution and Semantic Search for intelligent memory retrieval.
+
+### 🔧 Terminal Tool - Safe Code Execution
+
+**Enabled by default** with comprehensive safety guardrails:
+
+- **Read-only by default**: PROD profile enforces strict command allowlist
+- **Write operations**: Require explicit `--write` flag AND approval workflow
+- **Audit logging**: Every execution tracked with correlation IDs
+- **Command allowlist**: Blocks dangerous operations (rm -rf, sudo, etc.)
+- **API endpoints**: `/api/v1/exec/read` and `/api/v1/exec/`
+- **MCP integration**: Safe command execution in IDE
+
+### 🔍 Semantic Search - Intelligent Retrieval
+
+**Fully functional** with hybrid search capabilities:
+
+- **Hybrid mode**: Combines keyword + semantic ranking for best results
+- **Local embeddings**: Privacy-first using sentence-transformers (no API key needed)
+- **OpenAI support**: Optional for production-quality embeddings
+- **API endpoint**: `/api/v1/search/semantic`
+- **MCP integration**: Semantic search tool for IDE
+- **Configurable**: Adjustable weights, thresholds, and modes
+
+### Added
+
+- Terminal Tool enabled by default (change `WM_ENABLE_EXEC_API` default from `false` to `true`)
+- Enhanced logging for Terminal Tool startup (safety profile info)
+- Comprehensive Terminal Tool section in README.md
+- Comprehensive Semantic Search section in README.md
+- Feature highlights in README Features section
+- Strategic documentation:
+  - `docs/VISION.md` - Philosophy, theory, and strategic direction
+  - `docs/ARCHITECTURE.md` - Technical design and system overview
+  - `docs/VISION_TO_REALITY.md` - Gap analysis and priorities
+  - `docs/RELEASE_PLAN_v2.1.5_to_v2.1.9.md` - 3-week roadmap
+  - `START_HERE.md` - New user orientation guide
+- CLI `whitemagic exec` improvements: support for arbitrary arguments/flags and interactive approval prompts
+- `/api/v1/exec` now requires `X-Confirm-Write-Operation: confirmed` for write operations
+
+### Changed
+
+- Terminal Tool now enabled by default (can disable with `WM_ENABLE_EXEC_API=false`)
+- Logging level changed from `warning` to appropriate levels for Terminal Tool status
+- README.md features list updated with new capabilities
+
+### Security
+
+- Terminal Tool uses PROD profile (strict read-only) by default
+- Write operations require explicit `--write` flag AND approval workflow
+- All executions logged with correlation IDs for audit trail
+- Command allowlist prevents dangerous operations
+- Users can disable Terminal Tool entirely with environment variable
+
+### Documentation
+
+- Added Terminal Tool quick start guide to README.md
+- Added Semantic Search quick start guide to README.md
+- Updated feature list highlighting v2.1.5 capabilities
+- Created comprehensive strategic documentation (VISION, ARCHITECTURE, etc.)
+- Added release plan documentation for v2.1.5-v2.1.9
+
+---
+
 ## [2.1.4] - 2025-11-13
 
 ### 🚀 Developer Experience Edition

@@ -3,6 +3,7 @@
 
 # Core (from Phase 1)
 pydantic>=2.0.0
+email-validator>=2.0.0       # Required for pydantic EmailStr
 
 # Database
 sqlalchemy>=2.0.0
@@ -23,6 +24,11 @@ httpx>=0.25.0                     # Async HTTP client (for Whop API)
 
 # Observability
 python-json-logger>=2.0.7         # Structured logging
+
+# AI/Embeddings (for semantic search)
+openai>=1.3.0                     # OpenAI embeddings (optional)
+sentence-transformers>=2.2.0      # Local embeddings (privacy-first)
+torch>=2.0.0                      # Required by sentence-transformers
 
 # Optional Plugins (enable as needed)
 # sentry-sdk[fastapi]>=1.38.0       # Error tracking

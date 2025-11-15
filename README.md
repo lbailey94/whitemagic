@@ -3,7 +3,7 @@
 **Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
 [![Version](https://img.shields.io/badge/version-2.1.5-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.1.3-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+[![npm](https://img.shields.io/badge/npm-2.1.5-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-223%20passing-brightgreen.svg)](#testing)
@@ -46,6 +46,8 @@ WhiteMagic is a production-ready memory OS for AI agents. **Free to use locally*
 
 - **Tiered Memory**: Short-term, long-term, and archive storage
 - **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
+- **🔧 Terminal Tool**: Safe code execution with approval workflows (NEW in v2.1.5)
+- **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings (NEW in v2.1.5)
 - **Smart Search**: Full-text search with tag filtering
 - **Context Generation**: 3-tier context system
 - **Type-Safe**: 100% type hints with Pydantic V2
@@ -166,15 +168,107 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 }
 ```
 
+---
+
+## 🔧 Terminal Tool - Safe Code Execution (NEW in v2.1.5)
+
+Execute commands safely with built-in approval workflows:
+
+```bash
+# Read-only commands (safe, no approval needed)
+whitemagic exec ls -la
+whitemagic exec git status
+whitemagic exec rg "TODO" --json
+
+# Write operations (require explicit --write flag + approval)
+whitemagic exec --write git commit -m "Update docs"
+whitemagic exec --write npm install lodash
+```
+
+**Safety Features**:
+- ✅ **Read-only by default** (PROD profile enforces strict allowlist)
+- ✅ **Write operations** require explicit `--write` flag AND approval
+- ✅ **Audit logging** tracks every execution with correlation IDs
+- ✅ **Command allowlist** blocks dangerous operations (rm -rf, sudo, etc.)
+- ✅ **API writes require** `X-Confirm-Write-Operation: confirmed` header to opt-in
+
+**Via API**:
+```bash
+curl -X POST https://api.whitemagic.dev/api/v1/exec/read \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"cmd": "ls", "args": ["-la"], "cwd": "/workspace"}'
+
+# Write commands must opt-in with a confirmation header
+curl -X POST https://api.whitemagic.dev/api/v1/exec \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "X-Confirm-Write-Operation: confirmed" \
+  -H "Content-Type: application/json" \
+  -d '{"cmd": "git", "args": ["commit", "-m", "Update docs"], "mode": "write"}'
+```
+
+📖 **Full guide**: [Terminal Tool Usage](docs/TERMINAL_TOOL_USAGE.md)
+
+---
+
+## 🔍 Semantic Search - Intelligent Retrieval (NEW in v2.1.5)
+
+Find memories by **meaning**, not just keywords:
+
+```bash
+# One-time setup (downloads local model, ~90MB)
+whitemagic setup-embeddings
+# Choose: 1) local (privacy-first, no API key) or 2) openai (best quality)
+
+# Hybrid search (keyword + semantic - recommended)
+whitemagic search-semantic "debugging async race conditions"
+
+# Pure semantic search
+whitemagic search-semantic --mode semantic "error handling patterns"
+
+# Keyword-only search (traditional)
+whitemagic search-semantic --mode keyword "TODO"
+```
+
+**Features**:
+- ✅ **Hybrid mode** combines keyword + semantic ranking (best results)
+- ✅ **Local embeddings** using sentence-transformers (no API key needed)
+- ✅ **OpenAI support** optional for production-quality vectors
+- ✅ **MCP integration** for semantic search in your IDE
+
+**Via API**:
+```bash
+curl -X POST https://api.whitemagic.dev/api/v1/search/semantic \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do I debug race conditions?",
+    "mode": "hybrid",
+    "k": 10,
+    "threshold": 0.7
+  }'
+```
+
+**MCP Tool** (available in Cursor/Windsurf):
+```javascript
+// Your AI assistant can now search semantically:
+"Find memories about debugging async issues"
+```
+
+---
+
 ## 📚 Documentation
 
 ### Core Docs
+- [VISION.md](docs/VISION.md) - **Philosophy, theory, and strategic direction**
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - **Technical design and system overview**
 - [INSTALL.md](INSTALL.md) - Installation guide
 - [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup for Cursor/Windsurf/Claude
 - [ROADMAP.md](ROADMAP.md) - Development roadmap
 - [CHANGELOG.md](CHANGELOG.md) - Version history
 
-### Reference
+### Strategic & Reference
+- [VISION_TO_REALITY.md](docs/VISION_TO_REALITY.md) - Vision vs current state comparison
 - [docs/reviews/v2.1.3/](docs/reviews/v2.1.3/) - Quality assurance reports
 - [docs/production/](docs/production/) - Production deployment guides
 - [docs/archive/](docs/archive/) - Historical documentation

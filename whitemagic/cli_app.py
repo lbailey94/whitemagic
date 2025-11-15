@@ -435,6 +435,207 @@ def command_verify_backup(manager: MemoryManager, args: argparse.Namespace) -> i
         return 1
 
 
+def command_exec(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'exec' command - execute terminal commands."""
+    try:
+        from whitemagic.terminal import TerminalMCPTools, ExecutionMode, Profile
+    except ImportError:
+        print("✗ Terminal tools not available. Install with: pip install whitemagic[terminal]", file=sys.stderr)
+        return 1
+    
+    # Determine profile and mode
+    profile = Profile.AGENT if args.write else Profile.PROD
+    mode = ExecutionMode.WRITE if args.write else ExecutionMode.READ
+    
+    # Create tools (approver configured later)
+    approver = None
+    
+    # Get approval for write operations
+    if args.write:
+        print(f"\n⚠️  Write Operation Requested", file=sys.stderr)
+        print(f"Command: {args.cmd_name} {' '.join(args.cmd_args)}", file=sys.stderr)
+        print(f"Working Directory: {args.cwd or 'current'}", file=sys.stderr)
+        if args.env:
+            print(f"Environment: {args.env}", file=sys.stderr)
+        print(f"\n⚠️  This command will modify the filesystem!", file=sys.stderr)
+        
+        response = input("\nApprove this operation? [y/N]: ")
+        if response.lower() != 'y':
+            print("✗ Operation cancelled by user", file=sys.stderr)
+            return 1
+        from whitemagic.terminal.approver import Approver
+        approver = Approver(auto_approve=True)
+    
+    tools = TerminalMCPTools(profile=profile, approver=approver)
+    
+    # Execute
+    try:
+        import asyncio
+        result = asyncio.run(tools.execute_command(
+            cmd=args.cmd_name,
+            args=args.cmd_args,
+            mode=mode,
+            cwd=args.cwd,
+            timeout_ms=args.timeout * 1000
+        ))
+        
+        # Output result
+        if args.json:
+            print(json.dumps(result, indent=2))
+            return 0 if result.get("success") else 1
+        
+        if result.get("success"):
+            print(result.get("stdout", ""), end="")
+            if result.get("stderr"):
+                print(result["stderr"], file=sys.stderr, end="")
+            return 0
+        else:
+            print(f"✗ Command failed: {result.get('error', 'Unknown error')}", file=sys.stderr)
+            return 1
+    
+    except Exception as e:
+        print(f"✗ Execution error: {str(e)}", file=sys.stderr)
+        return 1
+
+
+def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'search-semantic' command - semantic search with local/OpenAI embeddings."""
+    try:
+        from whitemagic.search import SemanticSearcher, SearchMode
+    except ImportError:
+        print("✗ Semantic search not available. Install with: pip install whitemagic[search]", file=sys.stderr)
+        return 1
+    
+    try:
+        import asyncio
+        
+        # Create searcher with memory manager
+        searcher = SemanticSearcher(memory_manager=manager)
+        
+        # Convert mode string to enum
+        mode_map = {
+            "keyword": SearchMode.KEYWORD,
+            "semantic": SearchMode.SEMANTIC,
+            "hybrid": SearchMode.HYBRID
+        }
+        search_mode = mode_map.get(args.mode, SearchMode.HYBRID)
+        
+        # Search (async)
+        results = asyncio.run(searcher.search(
+            query=args.query,
+            mode=search_mode,
+            k=args.limit,
+            memory_type=args.type,
+            tags=args.tags
+        ))
+        
+        # Output
+        if args.json:
+            print(json.dumps([r.__dict__ for r in results], indent=2, default=str))
+            return 0
+        
+        if not results:
+            print("No results found.")
+            return 0
+        
+        print(f"=== SEARCH RESULTS ({len(results)}) ===\n")
+        for i, result in enumerate(results, 1):
+            print(f"{i}. {result.title}")
+            print(f"   Score: {result.score:.3f} | Type: {result.type}")
+            if result.tags:
+                print(f"   Tags: {', '.join(result.tags)}")
+            # Show preview
+            preview = result.content[:150] + "..." if len(result.content) > 150 else result.content
+            print(f"   {preview}")
+            print()
+        
+        return 0
+    
+    except Exception as e:
+        print(f"✗ Search error: {str(e)}", file=sys.stderr)
+        return 1
+
+
+def command_setup_embeddings(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'setup-embeddings' command - interactive setup wizard."""
+    import os
+    
+    print("🔧 Embeddings Configuration Wizard\n")
+    
+    # Provider selection
+    print("Choose embedding provider:")
+    print("  1. local (recommended) - Privacy-first, no API key needed")
+    print("  2. openai - Higher quality, requires API key")
+    
+    choice = input("\nSelect [1/2] (default: 1): ").strip() or "1"
+    
+    if choice == "1":
+        # Local provider
+        print("\nLocal embeddings selected!")
+        print("\nChoose model:")
+        print("  1. all-MiniLM-L6-v2 (recommended) - Fast, 90MB, good quality")
+        print("  2. all-mpnet-base-v2 - Better quality, 420MB, slower")
+        
+        model_choice = input("\nSelect [1/2] (default: 1): ").strip() or "1"
+        model = "all-MiniLM-L6-v2" if model_choice == "1" else "all-mpnet-base-v2"
+        
+        # Download model
+        print(f"\nDownloading model: {model}...")
+        try:
+            from sentence_transformers import SentenceTransformer
+            SentenceTransformer(model)  # Downloads if needed
+            print("✓ Model downloaded successfully!")
+        except Exception as e:
+            print(f"✗ Error downloading model: {e}", file=sys.stderr)
+            return 1
+        
+        print("\n✓ Local embeddings configured!")
+        print("\nTo use these settings, set environment variables:")
+        print("  export WM_EMBEDDING_PROVIDER=local")
+        print(f"  export WM_EMBEDDING_MODEL={model}")
+        print("\nOr add to your .env file:")
+        print("  WM_EMBEDDING_PROVIDER=local")
+        print(f"  WM_EMBEDDING_MODEL={model}")
+        
+    elif choice == "2":
+        # OpenAI provider
+        print("\nOpenAI embeddings selected!")
+        import getpass
+        api_key = getpass.getpass("\nEnter OpenAI API key: ")
+        
+        if not api_key:
+            print("✗ API key required", file=sys.stderr)
+            return 1
+        
+        # Test key
+        print("\nTesting API key...")
+        try:
+            from whitemagic.embeddings import OpenAIEmbeddings
+            provider = OpenAIEmbeddings(api_key)
+            # Test with a simple embedding
+            import asyncio
+            asyncio.run(provider.embed("test"))
+            print("✓ API key validated!")
+        except Exception as e:
+            print(f"✗ API key validation failed: {e}", file=sys.stderr)
+            return 1
+        
+        print("\n✓ OpenAI embeddings configured!")
+        print("\nTo use these settings, set environment variables:")
+        print("  export WM_EMBEDDING_PROVIDER=openai")
+        print(f"  export OPENAI_API_KEY={api_key[:8]}...")
+        print("\nOr add to your .env file:")
+        print("  WM_EMBEDDING_PROVIDER=openai")
+        print(f"  OPENAI_API_KEY={api_key}")
+    
+    else:
+        print("✗ Invalid choice", file=sys.stderr)
+        return 1
+    
+    print("\n✓ Setup complete! You can now use semantic search.")
+    return 0
+
+
 # Command dispatch table
 COMMAND_HANDLERS = {
     "create": command_create,
@@ -451,6 +652,9 @@ COMMAND_HANDLERS = {
     "restore-backup": command_restore_backup,
     "list-backups": command_list_backups,
     "verify-backup": command_verify_backup,
+    "exec": command_exec,
+    "search-semantic": command_search_semantic,
+    "setup-embeddings": command_setup_embeddings,
 }
 
 
@@ -762,6 +966,90 @@ def build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="Output verification result as JSON.",
+    )
+    
+    # exec
+    exec_parser = subparsers.add_parser(
+        "exec",
+        help="Execute terminal commands safely.",
+    )
+    exec_parser.add_argument(
+        "cmd_name",
+        help="Command to execute (e.g., 'ls', 'git', 'rg').",
+    )
+    exec_parser.add_argument(
+        "cmd_args",
+        nargs=argparse.REMAINDER,
+        default=[],
+        help="Arguments to pass to the command (place CLI options before the command, e.g., '--json exec ls -la').",
+    )
+    exec_parser.add_argument(
+        "--write",
+        action="store_true",
+        help="Enable write operations (requires approval).",
+    )
+    exec_parser.add_argument(
+        "--cwd",
+        help="Working directory for command execution.",
+    )
+    exec_parser.add_argument(
+        "--env",
+        help="Environment variables as JSON string.",
+    )
+    exec_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=30,
+        help="Timeout in seconds (default: 30).",
+    )
+    exec_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output result as JSON.",
+    )
+    
+    # search-semantic
+    search_semantic_parser = subparsers.add_parser(
+        "search-semantic",
+        help="Semantic search with local or OpenAI embeddings.",
+    )
+    search_semantic_parser.add_argument(
+        "query",
+        help="Search query.",
+    )
+    search_semantic_parser.add_argument(
+        "--mode",
+        choices=["keyword", "semantic", "hybrid"],
+        default="hybrid",
+        help="Search mode (default: hybrid).",
+    )
+    search_semantic_parser.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Maximum number of results (default: 10).",
+    )
+    search_semantic_parser.add_argument(
+        "--type",
+        choices=["short_term", "long_term"],
+        help="Filter by memory type.",
+    )
+    search_semantic_parser.add_argument(
+        "--tag",
+        dest="tags",
+        action="append",
+        help="Filter by tags (can be specified multiple times).",
+    )
+    search_semantic_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output results as JSON.",
+    )
+    
+    # setup-embeddings
+    setup_embeddings_parser = subparsers.add_parser(
+        "setup-embeddings",
+        help="Interactive wizard to configure embedding providers.",
     )
 
     return parser
