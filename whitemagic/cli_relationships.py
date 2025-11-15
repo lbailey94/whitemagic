@@ -2,7 +2,7 @@
 import sys
 import argparse
 from whitemagic.relationships import RelationType, add_relationship
-from whitemagic.utils import split_frontmatter, create_frontmatter
+from whitemagic.utils import split_frontmatter, serialize_frontmatter
 
 def command_relate(manager, args):
     """Link two memories."""
@@ -17,7 +17,7 @@ def command_relate(manager, args):
     raw = path.read_text()
     front, body = split_frontmatter(raw)
     front = add_relationship(front, args.target, RelationType(args.type), args.description)
-    path.write_text(create_frontmatter(front, body))
+    path.write_text(serialize_frontmatter(front, body))
     
     print(f"✓ Linked: {args.source} → {args.target}")
     return 0

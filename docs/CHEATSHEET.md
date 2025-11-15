@@ -8,10 +8,10 @@
 
 ```bash
 # Basic install
-pip install whitemagic==2.1.5
+pip install whitemagic==2.1.7
 
-# With API support
-pip install whitemagic[api]==2.1.5
+# With all features
+pip install whitemagic[embeddings]==2.1.7
 
 # Development install
 git clone https://github.com/lbailey94/whitemagic.git
@@ -520,7 +520,7 @@ for item in items:
 
 ---
 
-**Version**: 2.1.5  
-**Last Updated**: November 14, 2025
+**Version**: 2.1.7  
+**Last Updated**: November 15, 2025
 
 **Print this page for quick reference!**

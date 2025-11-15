@@ -261,6 +261,27 @@ def create_frontmatter(
     return "\n".join(lines)
 
 
+def serialize_frontmatter(frontmatter: Dict[str, Any], body: str) -> str:
+    """
+    Serialize a frontmatter dictionary and body back into a markdown file.
+    
+    Args:
+        frontmatter: Dictionary of frontmatter fields
+        body: Markdown body content
+    
+    Returns:
+        Complete markdown file content with frontmatter and body
+    """
+    import yaml
+    lines = ["---"]
+    yaml_content = yaml.dump(frontmatter, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    lines.append(yaml_content.rstrip())
+    lines.append("---")
+    lines.append("")
+    lines.append(body)
+    return "\n".join(lines)
+
+
 def parse_datetime(value: Any) -> datetime:
     """
     Parse various datetime formats into datetime object.
