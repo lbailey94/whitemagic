@@ -152,7 +152,55 @@ Remember: rate limiting is **disabled** unless you set `REDIS_URL`. Point it at 
 
 ---
 
-## 5. Run the MCP Server (Cursor/Windsurf/Claude)
+## 5. Security Considerations
+
+### ⚠️ Terminal Execution API (DISABLED BY DEFAULT)
+
+WhiteMagic includes a **Terminal Execution API** (`/api/v1/exec`) that allows AI agents to run commands. This feature is **disabled by default** for security reasons.
+
+**Threat Model**:
+- If enabled with weak authentication, attackers could execute arbitrary commands
+- Combined with compromised API keys = Remote Code Execution (RCE)
+- Even read-only mode exposes filesystem and environment information
+
+**When to Enable**:
+- ✅ **Local development** with trusted AI agents only
+- ✅ **Controlled environments** (isolated VMs, sandboxed containers)
+- ✅ **Research** with understanding of risks
+- ❌ **NOT in production** without additional safeguards
+- ❌ **NOT on public APIs** without strong authentication
+
+**How to Enable**:
+```bash
+# Only set this if you understand the risks!
+export WM_ENABLE_EXEC_API=true
+uvicorn whitemagic.api.app:app --host 0.0.0.0 --port 8000
+```
+
+**Safer Alternatives**:
+- Use CLI: `whitemagic exec <command>` (interactive approval for writes)
+- Use MCP server: Built-in safety with Windsurf/Cursor's approval workflows
+- Use Python SDK: Direct MemoryManager calls (no command execution)
+
+See [SECURITY.md](SECURITY.md#terminal-execution-api-security) for full threat model and mitigation strategies.
+
+### 🔐 API Key Security
+
+**Best Practices**:
+- Generate keys via CLI: `whitemagic create-api-key --email user@example.com`
+- Rotate keys regularly (30-90 days for production)
+- Use environment variables, never hardcode keys
+- Enable rate limiting with Redis (`REDIS_URL`) before production
+- Monitor `/health` endpoint for anomalies
+
+**Key Storage**:
+- Keys are hashed with SHA-256 (never stored in plaintext)
+- Stored in SQLite (local) or PostgreSQL (production)
+- Database should be secured with filesystem permissions
+
+---
+
+## 6. Run the MCP Server (Cursor/Windsurf/Claude)
 
 ```bash
 cd whitemagic-mcp
@@ -180,7 +228,7 @@ Set `WM_API_URL` + `WM_API_KEY` if you prefer the REST API over local file mode.
 
 ---
 
-## 6. Verification Checklist
+## 7. Verification Checklist
 
 | Task | Command |
 | --- | --- |
@@ -192,7 +240,7 @@ Set `WM_API_URL` + `WM_API_KEY` if you prefer the REST API over local file mode.
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |

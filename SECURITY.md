@@ -96,6 +96,29 @@ While we don't have a formal bug bounty program, we will:
 
 ---
 
+## ⚠️ Terminal Execution API Security
+
+**Status**: DISABLED BY DEFAULT (enable with `WM_ENABLE_EXEC_API=true`)
+
+**Threat Model**: If enabled with weak auth = Remote Code Execution (RCE)
+
+**When to Enable**:
+- ✅ Local development only
+- ✅ Isolated VMs/containers with no sensitive data
+- ❌ NEVER on public APIs
+- ❌ NEVER in production without additional hardening
+
+**Required Mitigations** (if enabling):
+1. Network isolation (VPC, firewall)
+2. Run as non-root user
+3. Docker sandboxing with `--cap-drop=ALL`
+4. Monitor audit logs for suspicious commands
+5. Additional authentication layer (beyond API keys)
+
+See [INSTALL.md](INSTALL.md#security-considerations) for full details.
+
+---
+
 ## 🔐 Security Best Practices
 
 ### **For Users**

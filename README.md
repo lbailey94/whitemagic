@@ -207,6 +207,8 @@ curl -X POST https://api.whitemagic.dev/api/v1/exec \
   -d '{"cmd": "git", "args": ["commit", "-m", "Update docs"], "mode": "write"}'
 ```
 
+> **⚠️ SECURITY NOTE**: The Terminal Execution API is **disabled by default** for security. Only enable in controlled environments by setting `WM_ENABLE_EXEC_API=true`. See [Security Policy](SECURITY.md#terminal-execution-api-security) for threat model and best practices.
+
 📖 **Full guide**: [Terminal Tool Usage](docs/TERMINAL_TOOL_USAGE.md)
 
 ---
