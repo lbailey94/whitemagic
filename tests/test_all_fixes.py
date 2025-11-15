@@ -24,8 +24,6 @@ from whitemagic.api.rate_limit import (
 
 APP_PATH = Path("whitemagic/api/app.py")
 MIDDLEWARE_PATH = Path("whitemagic/api/middleware.py")
-WHOP_ROUTES_PATH = Path("whitemagic/api/routes/whop.py")
-WHOP_MODULE_PATH = Path("whitemagic/api/whop.py")
 MCP_TEST_PATH = Path("tests/test_mcp_integration.py")
 
 
@@ -60,16 +58,8 @@ def test_quota_updates_invoked():
     assert "update_quota_in_db" in source
 
 
-def test_webhook_logging_obscures_api_keys():
-    source = WHOP_ROUTES_PATH.read_text(encoding="utf-8")
-    assert "key_prefix" in source, "prefix should be logged instead of full key"
-    assert "raw_key" not in source or "print(f\"API Key (send to user): {raw_key}\")" not in source
-
-
-def test_webhook_secret_required_in_production():
-    source = WHOP_MODULE_PATH.read_text(encoding="utf-8")
-    assert "ENVIRONMENT" in source
-    assert "raise ValueError(\"WHOP_WEBHOOK_SECRET must be set in production\")" in source
+# Whop integration tests removed - feature deprecated
+# Tests for webhook_logging and webhook_secret were here
 
 
 def test_mcp_tests_close_process_pipes():
