@@ -17,14 +17,48 @@ For backward compatibility, memory_manager.py imports from this module.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
+from functools import wraps
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Callable, Any
 
 # Import from whitemagic package
 from whitemagic import MemoryManager
 from whitemagic.backup import BackupManager
+
+
+# ---------------------------------------------------------------------- #
+# Utility Functions & Decorators
+# ---------------------------------------------------------------------- #
+
+
+def async_command(func: Callable) -> Callable:
+    """
+    Decorator to make CLI commands async-aware.
+    
+    Wraps async functions with asyncio.run() so they can be called
+    from synchronous CLI dispatch.
+    
+    Example:
+        @async_command
+        async def command_search_semantic(manager, args):
+            results = await manager.search_semantic(...)
+            return 0
+    """
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> int:
+        if asyncio.iscoroutinefunction(func):
+            return asyncio.run(func(*args, **kwargs))
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def get_console():
+    """Get a rich Console instance for formatted output."""
+    from rich.console import Console
+    return Console()
 
 
 # ---------------------------------------------------------------------- #
@@ -76,21 +110,48 @@ def command_list(manager: MemoryManager, args: argparse.Namespace) -> int:
         print(json.dumps(listing, indent=2))
         return 0
 
-    # Pretty print
+    from rich.table import Table
+    console = get_console()
+
+    # Display each memory type with rich tables
     for memory_type in ["short_term", "long_term"]:
         memories = listing.get(memory_type, [])
         if memories:
-            print(f"\n=== {memory_type.upper().replace('_', ' ')} ({len(memories)}) ===")
+            console.print(f"\n[bold cyan]{memory_type.upper().replace('_', ' ')}[/bold cyan] [dim]({len(memories)} memories)[/dim]\n")
+            
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Filename", style="cyan", no_wrap=True)
+            table.add_column("Title", style="green")
+            table.add_column("Tags", style="yellow")
+            
             for mem in memories:
-                tags_str = ", ".join(mem.get("tags", [])) or "(no tags)"
-                print(f"  {mem['filename']:40} | {mem.get('title', 'Untitled'):30} | {tags_str}")
+                tags_str = ", ".join(mem.get("tags", [])) or "[dim](no tags)[/dim]"
+                table.add_row(
+                    mem['filename'],
+                    mem.get('title', '[dim]Untitled[/dim]'),
+                    tags_str
+                )
+            
+            console.print(table)
 
     if args.include_archived and listing.get("archived"):
         memories = listing["archived"]
-        print(f"\n=== ARCHIVED ({len(memories)}) ===")
+        console.print(f"\n[bold red]ARCHIVED[/bold red] [dim]({len(memories)} memories)[/dim]\n")
+        
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Filename", style="cyan", no_wrap=True)
+        table.add_column("Title", style="green")
+        table.add_column("Tags", style="yellow")
+        
         for mem in memories:
-            tags_str = ", ".join(mem.get("tags", [])) or "(no tags)"
-            print(f"  {mem['filename']:40} | {mem.get('title', 'Untitled'):30} | {tags_str}")
+            tags_str = ", ".join(mem.get("tags", [])) or "[dim](no tags)[/dim]"
+            table.add_row(
+                mem['filename'],
+                mem.get('title', '[dim]Untitled[/dim]'),
+                tags_str
+            )
+        
+        console.print(table)
 
     return 0
 
@@ -498,16 +559,22 @@ def command_exec(manager: MemoryManager, args: argparse.Namespace) -> int:
         return 1
 
 
-def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) -> int:
+@async_command
+async def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'search-semantic' command - semantic search with local/OpenAI embeddings."""
     try:
         from whitemagic.search import SemanticSearcher, SearchMode
     except ImportError:
-        print("✗ Semantic search not available. Install with: pip install whitemagic[search]", file=sys.stderr)
+        console = get_console()
+        console.print("✗ Semantic search not available. Install with: pip install whitemagic[search]", style="bold red")
         return 1
     
     try:
-        import asyncio
+        from rich.table import Table
+        from rich.panel import Panel
+        from rich.progress import Progress, SpinnerColumn, TextColumn
+        
+        console = get_console()
         
         # Create searcher with memory manager
         searcher = SemanticSearcher(memory_manager=manager)
@@ -520,14 +587,22 @@ def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) ->
         }
         search_mode = mode_map.get(args.mode, SearchMode.HYBRID)
         
-        # Search (async)
-        results = asyncio.run(searcher.search(
-            query=args.query,
-            mode=search_mode,
-            k=args.limit,
-            memory_type=args.type,
-            tags=args.tags
-        ))
+        # Search with spinner
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task(f"Searching with {args.mode} mode...", total=None)
+            
+            results = await searcher.search(
+                query=args.query,
+                mode=search_mode,
+                k=args.limit,
+                memory_type=args.type,
+                tags=args.tags
+            )
         
         # Output
         if args.json:
@@ -535,24 +610,140 @@ def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) ->
             return 0
         
         if not results:
-            print("No results found.")
+            console.print("\n[yellow]No results found.[/yellow]")
             return 0
         
-        print(f"=== SEARCH RESULTS ({len(results)}) ===\n")
+        # Display results with rich formatting
+        console.print(f"\n[bold green]Found {len(results)} results[/bold green]\n")
+        
         for i, result in enumerate(results, 1):
-            print(f"{i}. {result.title}")
-            print(f"   Score: {result.score:.3f} | Type: {result.type}")
+            # Create a table for each result
+            table = Table(show_header=False, box=None, padding=(0, 1))
+            table.add_column("Field", style="cyan")
+            table.add_column("Value")
+            
+            table.add_row("Title", f"[bold]{result.title}[/bold]")
+            table.add_row("Score", f"[green]{result.score:.3f}[/green]")
+            table.add_row("Type", result.type)
             if result.tags:
-                print(f"   Tags: {', '.join(result.tags)}")
+                table.add_row("Tags", f"[blue]{', '.join(result.tags)}[/blue]")
+            
             # Show preview
             preview = result.content[:150] + "..." if len(result.content) > 150 else result.content
-            print(f"   {preview}")
-            print()
+            table.add_row("Preview", preview)
+            
+            # Wrap in panel
+            panel = Panel(
+                table,
+                title=f"[bold]Result {i}[/bold]",
+                border_style="blue",
+                expand=False
+            )
+            console.print(panel)
         
         return 0
     
     except Exception as e:
-        print(f"✗ Search error: {str(e)}", file=sys.stderr)
+        console = get_console()
+        console.print(f"\n[bold red]✗ Search error:[/bold red] {str(e)}")
+        return 1
+
+
+def command_embeddings_install(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'embeddings-install' command - install embedding model with progress."""
+    from rich.console import Console
+    from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
+    
+    console = Console()
+    
+    # Get model name
+    model = args.model
+    
+    # Load model name from config if not specified
+    if not model:
+        try:
+            from whitemagic.config import get_config_manager
+            config_mgr = get_config_manager()
+            config = config_mgr.load()
+            model = config.embeddings.model
+        except Exception:
+            model = "all-MiniLM-L6-v2"
+    
+    console.print(f"\n📦 Installing embedding model: [bold]{model}[/bold]")
+    
+    # Estimate size based on model
+    estimated_mb = 90 if "MiniLM" in model else 420 if "mpnet" in model else 340
+    console.print(f"   Estimated size: ~{estimated_mb}MB (one-time download)\n")
+    
+    try:
+        from sentence_transformers import SentenceTransformer
+        from pathlib import Path
+        
+        # Check if already cached
+        cache_dir = Path.home() / ".cache" / "torch" / "sentence_transformers"
+        model_cache = cache_dir / model.replace("/", "_")
+        
+        if model_cache.exists():
+            console.print(f"✓ Model already installed at: {model_cache}\n")
+            return 0
+        
+        # Download with progress simulation
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task(f"Downloading {model}...", total=100)
+            
+            # The actual download happens inside SentenceTransformer
+            # We simulate progress since sentence-transformers doesn't provide callbacks
+            import threading
+            
+            download_complete = False
+            model_obj = None
+            error = None
+            
+            def download_model():
+                nonlocal model_obj, error, download_complete
+                try:
+                    model_obj = SentenceTransformer(model)
+                    download_complete = True
+                except Exception as e:
+                    error = e
+                    download_complete = True
+            
+            # Start download in background
+            thread = threading.Thread(target=download_model)
+            thread.start()
+            
+            # Simulate progress while waiting
+            import time
+            while not download_complete:
+                for i in range(0, 101, 5):
+                    if download_complete:
+                        progress.update(task, completed=100)
+                        break
+                    progress.update(task, completed=i)
+                    time.sleep(0.2)
+            
+            thread.join()
+            
+            if error:
+                raise error
+            
+            progress.update(task, completed=100)
+        
+        console.print(f"\n✓ Model installed successfully!")
+        console.print(f"✓ Cached at: {model_cache}")
+        console.print(f"\nYou can now use semantic search:")
+        console.print(f"  [bold]whitemagic search-semantic 'your query'[/bold]\n")
+        
+        return 0
+        
+    except Exception as e:
+        console.print(f"\n✗ Installation failed: {e}", style="bold red")
         return 1
 
 
@@ -636,6 +827,83 @@ def command_setup_embeddings(manager: MemoryManager, args: argparse.Namespace) -
     return 0
 
 
+def command_config_get(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config get' command - get config value."""
+    from whitemagic.config import ConfigManager
+    
+    config_mgr = ConfigManager()
+    value = config_mgr.get(args.key)
+    
+    if value is None:
+        print(f"✗ Config key not found: {args.key}", file=sys.stderr)
+        return 1
+    
+    if args.json:
+        print(json.dumps({"key": args.key, "value": value}))
+    else:
+        print(value)
+    
+    return 0
+
+
+def command_config_set(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config set' command - set config value."""
+    from whitemagic.config import ConfigManager
+    
+    config_mgr = ConfigManager()
+    
+    # Smart type conversion for common types
+    value = args.value
+    # Try to convert to appropriate type
+    if value.lower() in ("true", "yes", "on", "1"):
+        value = True
+    elif value.lower() in ("false", "no", "off", "0"):
+        value = False
+    elif value.isdigit():
+        value = int(value)
+    elif value.replace(".", "", 1).isdigit() and value.count(".") == 1:
+        value = float(value)
+    
+    try:
+        config_mgr.set(args.key, value)
+        print(f"✓ Set {args.key} = {value}")
+        return 0
+    except Exception as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
+
+def command_config_show(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config show' command - display all config."""
+    from whitemagic.config import ConfigManager
+    import yaml
+    
+    config_mgr = ConfigManager()
+    config = config_mgr.load()
+    
+    if args.json:
+        print(json.dumps(config.model_dump(), indent=2))
+    else:
+        print(yaml.dump(config.model_dump(), default_flow_style=False, sort_keys=False))
+    
+    return 0
+
+
+def command_config_path(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config path' command - show config file path."""
+    from whitemagic.config import ConfigManager
+    
+    config_mgr = ConfigManager()
+    path = config_mgr.get_path()
+    
+    if args.json:
+        print(json.dumps({"config_path": str(path)}))
+    else:
+        print(path)
+    
+    return 0
+
+
 # Command dispatch table
 COMMAND_HANDLERS = {
     "create": command_create,
@@ -654,7 +922,12 @@ COMMAND_HANDLERS = {
     "verify-backup": command_verify_backup,
     "exec": command_exec,
     "search-semantic": command_search_semantic,
+    "embeddings-install": command_embeddings_install,
     "setup-embeddings": command_setup_embeddings,
+    "config-get": command_config_get,
+    "config-set": command_config_set,
+    "config-show": command_config_show,
+    "config-path": command_config_path,
 }
 
 
@@ -1046,10 +1319,71 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output results as JSON.",
     )
     
+    # embeddings-install
+    embeddings_install_parser = subparsers.add_parser(
+        "embeddings-install",
+        help="Install embedding model with progress bar.",
+    )
+    embeddings_install_parser.add_argument(
+        "--model",
+        help="Model name to install (default: from config or all-MiniLM-L6-v2).",
+    )
+    
     # setup-embeddings
     setup_embeddings_parser = subparsers.add_parser(
         "setup-embeddings",
         help="Interactive wizard to configure embedding providers.",
+    )
+    
+    # config-get
+    config_get_parser = subparsers.add_parser(
+        "config-get",
+        help="Get a configuration value by key (e.g., 'embeddings.provider').",
+    )
+    config_get_parser.add_argument(
+        "key",
+        help="Config key in dot notation (e.g., 'embeddings.provider', 'search.max_results').",
+    )
+    config_get_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
+    )
+    
+    # config-set
+    config_set_parser = subparsers.add_parser(
+        "config-set",
+        help="Set a configuration value.",
+    )
+    config_set_parser.add_argument(
+        "key",
+        help="Config key in dot notation.",
+    )
+    config_set_parser.add_argument(
+        "value",
+        help="New value for the key.",
+    )
+    
+    # config-show
+    config_show_parser = subparsers.add_parser(
+        "config-show",
+        help="Display all configuration settings.",
+    )
+    config_show_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
+    )
+    
+    # config-path
+    config_path_parser = subparsers.add_parser(
+        "config-path",
+        help="Show path to config file.",
+    )
+    config_path_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
     )
 
     return parser

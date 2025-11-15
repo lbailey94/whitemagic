@@ -10,6 +10,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.6] - 2025-11-14
+
+### 🎛️ Configuration & Polish Edition
+
+This release introduces a powerful configuration system, async CLI patterns, beautiful rich formatting, and professional documentation organization. Focus on user experience, deployment optimization, and production readiness for widespread public adoption.
+
+### 🔧 Configuration System
+
+**New centralized configuration** at `~/.whitemagic/config.yaml`:
+
+- **Pydantic V2 validation**: Type-safe configuration with comprehensive validation
+- **Dot notation access**: `config.get('embeddings.provider')`, `config.set('search.max_results', 25)`
+- **Environment override**: Env vars > Config file > Defaults (smart priority system)
+- **Auto-creation**: Sensible defaults created on first run
+- **CLI commands**: 
+  - `wm config-show` - Display all configuration
+  - `wm config-get <key>` - Get specific value
+  - `wm config-set <key> <value>` - Set value with smart type conversion
+  - `wm config-path` - Show config file location
+
+### 🎨 Rich CLI Formatting
+
+**Beautiful terminal output** with rich formatting:
+
+- **Color-coded tables**: List command now displays beautiful tables with syntax highlighting
+- **Progress indicators**: Spinners for semantic search, progress bars for model installation
+- **Panel displays**: Search results wrapped in styled panels with borders
+- **Async patterns**: `@async_command` decorator for non-blocking operations
+- **JSON mode**: All commands support `--json` flag for scripting
+
+### 📦 Embeddings Installer
+
+**Easy model installation** with visual feedback:
+
+- `wm embeddings-install` - Download and cache embedding models
+- Progress bars with time estimates
+- Size estimation before download
+- Cache detection (skips if already installed)
+- Reads model from config by default
+
+### 🚀 Deployment Optimization
+
+**Railway deployment fixed** with lightweight builds:
+
+- New `requirements-railway.txt` - Excludes heavy ML dependencies (~2.5GB saved)
+- Uses OpenAI embeddings in production (lightweight, fast)
+- Local embeddings for development (privacy-first)
+- Build time reduced from timeout to <5 minutes
+
+### 📚 Documentation Cleanup
+
+**Professional structure** for public release:
+
+- Created `docs/development/` for internal process documentation
+- Root contains only user-facing docs (README, INSTALL, CHANGELOG, etc.)
+- Development docs excluded from PyPI/npm packages via MANIFEST.in
+- Transparent process available on GitHub
+- Clean 22-file reorganization
+
+### Added
+
+- Configuration system with Pydantic V2 schemas
+- ConfigManager class with load/save/get/set/reset methods
+- CLI config commands (config-get, config-set, config-show, config-path)
+- `@async_command` decorator for async CLI commands
+- Rich formatting for `list` and `search-semantic` commands
+- `embeddings-install` command with progress bars
+- `requirements-railway.txt` for optimized Railway deployments
+- `docs/development/` directory structure
+- `docs/development/README.md` explaining purpose
+- Smart type conversion in config-set (bool, int, float, string)
+- Environment variable override system for configuration
+- 13 comprehensive config system tests
+
+### Changed
+
+- `list` command now uses rich tables with colors
+- `search-semantic` command has spinners and panel displays
+- Embedding config reads from `~/.whitemagic/config.yaml` first
+- Documentation organized: dev docs separated from user docs
+- Railway deployment uses lightweight requirements (no torch)
+- MANIFEST.in excludes `docs/development/` from distributions
+
+### Fixed
+
+- Railway deployment timeout (excluded heavy ML dependencies)
+- Pillow dependency version conflict on older systems
+- Config integration with embeddings system
+
+### Removed
+
+- Deprecated Whop integration tests (feature deferred to v3.0)
+- Development clutter from project root
+- Unnecessary test output files from repository
+
+### Technical Details
+
+- **Tests**: 173/173 passing (100% pass rate)
+- **Config Tests**: 13/13 dedicated config tests
+- **Lines Added**: ~1,400 lines of quality code
+- **Files Reorganized**: 22 documentation files
+- **Build Optimization**: ~2.5GB reduction in Railway builds
+- **Token Efficiency**: ~95% reduction using WhiteMagic memories
+
+### Migration Notes
+
+**No breaking changes!** Configuration is purely additive.
+
+**For Railway deployments**:
+- Ensure `WM_EMBEDDING_PROVIDER=openai` environment variable is set
+- Add `OPENAI_API_KEY` to Railway environment
+- Railway will now use `requirements-railway.txt` automatically
+
+**For local development**:
+- Config file auto-created at `~/.whitemagic/config.yaml`
+- Edit directly or use `wm config-set` commands
+- Environment variables override config file settings
+
+---
+
 ## [2.1.5] - 2025-11-14
 
 ### 🎉 Feature Activation Edition
