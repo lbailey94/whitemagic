@@ -86,13 +86,28 @@ def command_create(manager: MemoryManager, args: argparse.Namespace) -> int:
         if "=" in kv:
             key, value = kv.split("=", 1)
             extra_fields[key.strip()] = value.strip()
+    
+    # Auto-suggest tags if not disabled
+    tags = list(args.tags) if args.tags else []
+    if not getattr(args, 'no_auto_tag', False) and not tags:
+        from whitemagic.auto_tagger import AutoTagger
+        from rich.prompt import Confirm
+        console = get_console()
+        
+        tagger = AutoTagger(memory_manager=manager)
+        suggested = tagger.suggest_tags(args.title, content, tags)
+        
+        if suggested:
+            console.print(f"\n[yellow]Suggested tags:[/yellow] {', '.join(suggested)}")
+            if Confirm.ask("Accept these tags?", default=True):
+                tags = suggested
 
     # Create memory
     path = manager.create_memory(
         title=args.title,
         content=content,
         memory_type=args.type,
-        tags=args.tags,
+        tags=tags,
         extra_fields=extra_fields if extra_fields else None,
     )
 
@@ -1011,6 +1026,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Additional frontmatter fields in key=value form (multiple allowed).",
+    )
+    create_parser.add_argument(
+        "--no-auto-tag",
+        action="store_true",
+        help="Disable automatic tag suggestions.",
     )
 
     # list
