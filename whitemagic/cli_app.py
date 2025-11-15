@@ -636,6 +636,83 @@ def command_setup_embeddings(manager: MemoryManager, args: argparse.Namespace) -
     return 0
 
 
+def command_config_get(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config get' command - get config value."""
+    from whitemagic.config import ConfigManager
+    
+    config_mgr = ConfigManager()
+    value = config_mgr.get(args.key)
+    
+    if value is None:
+        print(f"✗ Config key not found: {args.key}", file=sys.stderr)
+        return 1
+    
+    if args.json:
+        print(json.dumps({"key": args.key, "value": value}))
+    else:
+        print(value)
+    
+    return 0
+
+
+def command_config_set(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config set' command - set config value."""
+    from whitemagic.config import ConfigManager
+    
+    config_mgr = ConfigManager()
+    
+    # Smart type conversion for common types
+    value = args.value
+    # Try to convert to appropriate type
+    if value.lower() in ("true", "yes", "on", "1"):
+        value = True
+    elif value.lower() in ("false", "no", "off", "0"):
+        value = False
+    elif value.isdigit():
+        value = int(value)
+    elif value.replace(".", "", 1).isdigit() and value.count(".") == 1:
+        value = float(value)
+    
+    try:
+        config_mgr.set(args.key, value)
+        print(f"✓ Set {args.key} = {value}")
+        return 0
+    except Exception as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
+
+def command_config_show(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config show' command - display all config."""
+    from whitemagic.config import ConfigManager
+    import yaml
+    
+    config_mgr = ConfigManager()
+    config = config_mgr.load()
+    
+    if args.json:
+        print(json.dumps(config.model_dump(), indent=2))
+    else:
+        print(yaml.dump(config.model_dump(), default_flow_style=False, sort_keys=False))
+    
+    return 0
+
+
+def command_config_path(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'config path' command - show config file path."""
+    from whitemagic.config import ConfigManager
+    
+    config_mgr = ConfigManager()
+    path = config_mgr.get_path()
+    
+    if args.json:
+        print(json.dumps({"config_path": str(path)}))
+    else:
+        print(path)
+    
+    return 0
+
+
 # Command dispatch table
 COMMAND_HANDLERS = {
     "create": command_create,
@@ -655,6 +732,10 @@ COMMAND_HANDLERS = {
     "exec": command_exec,
     "search-semantic": command_search_semantic,
     "setup-embeddings": command_setup_embeddings,
+    "config-get": command_config_get,
+    "config-set": command_config_set,
+    "config-show": command_config_show,
+    "config-path": command_config_path,
 }
 
 
@@ -1050,6 +1131,57 @@ def build_parser() -> argparse.ArgumentParser:
     setup_embeddings_parser = subparsers.add_parser(
         "setup-embeddings",
         help="Interactive wizard to configure embedding providers.",
+    )
+    
+    # config-get
+    config_get_parser = subparsers.add_parser(
+        "config-get",
+        help="Get a configuration value by key (e.g., 'embeddings.provider').",
+    )
+    config_get_parser.add_argument(
+        "key",
+        help="Config key in dot notation (e.g., 'embeddings.provider', 'search.max_results').",
+    )
+    config_get_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
+    )
+    
+    # config-set
+    config_set_parser = subparsers.add_parser(
+        "config-set",
+        help="Set a configuration value.",
+    )
+    config_set_parser.add_argument(
+        "key",
+        help="Config key in dot notation.",
+    )
+    config_set_parser.add_argument(
+        "value",
+        help="New value for the key.",
+    )
+    
+    # config-show
+    config_show_parser = subparsers.add_parser(
+        "config-show",
+        help="Display all configuration settings.",
+    )
+    config_show_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
+    )
+    
+    # config-path
+    config_path_parser = subparsers.add_parser(
+        "config-path",
+        help="Show path to config file.",
+    )
+    config_path_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON.",
     )
 
     return parser
