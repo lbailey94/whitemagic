@@ -17,14 +17,48 @@ For backward compatibility, memory_manager.py imports from this module.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
+from functools import wraps
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Callable, Any
 
 # Import from whitemagic package
 from whitemagic import MemoryManager
 from whitemagic.backup import BackupManager
+
+
+# ---------------------------------------------------------------------- #
+# Utility Functions & Decorators
+# ---------------------------------------------------------------------- #
+
+
+def async_command(func: Callable) -> Callable:
+    """
+    Decorator to make CLI commands async-aware.
+    
+    Wraps async functions with asyncio.run() so they can be called
+    from synchronous CLI dispatch.
+    
+    Example:
+        @async_command
+        async def command_search_semantic(manager, args):
+            results = await manager.search_semantic(...)
+            return 0
+    """
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> int:
+        if asyncio.iscoroutinefunction(func):
+            return asyncio.run(func(*args, **kwargs))
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def get_console():
+    """Get a rich Console instance for formatted output."""
+    from rich.console import Console
+    return Console()
 
 
 # ---------------------------------------------------------------------- #
@@ -76,21 +110,48 @@ def command_list(manager: MemoryManager, args: argparse.Namespace) -> int:
         print(json.dumps(listing, indent=2))
         return 0
 
-    # Pretty print
+    from rich.table import Table
+    console = get_console()
+
+    # Display each memory type with rich tables
     for memory_type in ["short_term", "long_term"]:
         memories = listing.get(memory_type, [])
         if memories:
-            print(f"\n=== {memory_type.upper().replace('_', ' ')} ({len(memories)}) ===")
+            console.print(f"\n[bold cyan]{memory_type.upper().replace('_', ' ')}[/bold cyan] [dim]({len(memories)} memories)[/dim]\n")
+            
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("Filename", style="cyan", no_wrap=True)
+            table.add_column("Title", style="green")
+            table.add_column("Tags", style="yellow")
+            
             for mem in memories:
-                tags_str = ", ".join(mem.get("tags", [])) or "(no tags)"
-                print(f"  {mem['filename']:40} | {mem.get('title', 'Untitled'):30} | {tags_str}")
+                tags_str = ", ".join(mem.get("tags", [])) or "[dim](no tags)[/dim]"
+                table.add_row(
+                    mem['filename'],
+                    mem.get('title', '[dim]Untitled[/dim]'),
+                    tags_str
+                )
+            
+            console.print(table)
 
     if args.include_archived and listing.get("archived"):
         memories = listing["archived"]
-        print(f"\n=== ARCHIVED ({len(memories)}) ===")
+        console.print(f"\n[bold red]ARCHIVED[/bold red] [dim]({len(memories)} memories)[/dim]\n")
+        
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Filename", style="cyan", no_wrap=True)
+        table.add_column("Title", style="green")
+        table.add_column("Tags", style="yellow")
+        
         for mem in memories:
-            tags_str = ", ".join(mem.get("tags", [])) or "(no tags)"
-            print(f"  {mem['filename']:40} | {mem.get('title', 'Untitled'):30} | {tags_str}")
+            tags_str = ", ".join(mem.get("tags", [])) or "[dim](no tags)[/dim]"
+            table.add_row(
+                mem['filename'],
+                mem.get('title', '[dim]Untitled[/dim]'),
+                tags_str
+            )
+        
+        console.print(table)
 
     return 0
 
@@ -498,16 +559,22 @@ def command_exec(manager: MemoryManager, args: argparse.Namespace) -> int:
         return 1
 
 
-def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) -> int:
+@async_command
+async def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'search-semantic' command - semantic search with local/OpenAI embeddings."""
     try:
         from whitemagic.search import SemanticSearcher, SearchMode
     except ImportError:
-        print("✗ Semantic search not available. Install with: pip install whitemagic[search]", file=sys.stderr)
+        console = get_console()
+        console.print("✗ Semantic search not available. Install with: pip install whitemagic[search]", style="bold red")
         return 1
     
     try:
-        import asyncio
+        from rich.table import Table
+        from rich.panel import Panel
+        from rich.progress import Progress, SpinnerColumn, TextColumn
+        
+        console = get_console()
         
         # Create searcher with memory manager
         searcher = SemanticSearcher(memory_manager=manager)
@@ -520,14 +587,22 @@ def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) ->
         }
         search_mode = mode_map.get(args.mode, SearchMode.HYBRID)
         
-        # Search (async)
-        results = asyncio.run(searcher.search(
-            query=args.query,
-            mode=search_mode,
-            k=args.limit,
-            memory_type=args.type,
-            tags=args.tags
-        ))
+        # Search with spinner
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task(f"Searching with {args.mode} mode...", total=None)
+            
+            results = await searcher.search(
+                query=args.query,
+                mode=search_mode,
+                k=args.limit,
+                memory_type=args.type,
+                tags=args.tags
+            )
         
         # Output
         if args.json:
@@ -535,24 +610,42 @@ def command_search_semantic(manager: MemoryManager, args: argparse.Namespace) ->
             return 0
         
         if not results:
-            print("No results found.")
+            console.print("\n[yellow]No results found.[/yellow]")
             return 0
         
-        print(f"=== SEARCH RESULTS ({len(results)}) ===\n")
+        # Display results with rich formatting
+        console.print(f"\n[bold green]Found {len(results)} results[/bold green]\n")
+        
         for i, result in enumerate(results, 1):
-            print(f"{i}. {result.title}")
-            print(f"   Score: {result.score:.3f} | Type: {result.type}")
+            # Create a table for each result
+            table = Table(show_header=False, box=None, padding=(0, 1))
+            table.add_column("Field", style="cyan")
+            table.add_column("Value")
+            
+            table.add_row("Title", f"[bold]{result.title}[/bold]")
+            table.add_row("Score", f"[green]{result.score:.3f}[/green]")
+            table.add_row("Type", result.type)
             if result.tags:
-                print(f"   Tags: {', '.join(result.tags)}")
+                table.add_row("Tags", f"[blue]{', '.join(result.tags)}[/blue]")
+            
             # Show preview
             preview = result.content[:150] + "..." if len(result.content) > 150 else result.content
-            print(f"   {preview}")
-            print()
+            table.add_row("Preview", preview)
+            
+            # Wrap in panel
+            panel = Panel(
+                table,
+                title=f"[bold]Result {i}[/bold]",
+                border_style="blue",
+                expand=False
+            )
+            console.print(panel)
         
         return 0
     
     except Exception as e:
-        print(f"✗ Search error: {str(e)}", file=sys.stderr)
+        console = get_console()
+        console.print(f"\n[bold red]✗ Search error:[/bold red] {str(e)}")
         return 1
 
 
