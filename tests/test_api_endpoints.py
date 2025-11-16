@@ -7,11 +7,11 @@ Integration tests for the FastAPI REST API.
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from whitemagic.api.app import app
-from whitemagic.api.database import Base, Database, User
 from whitemagic.api.auth import create_api_key
+from whitemagic.api.database import Base, Database, User
 from whitemagic.api.dependencies import set_database
 
 

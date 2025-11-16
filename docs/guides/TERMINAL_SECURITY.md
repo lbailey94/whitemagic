@@ -11,6 +11,7 @@ WhiteMagic v2.2.6 includes comprehensive security testing for the terminal/exec 
 The terminal execution feature (`whitemagic exec`) must protect against:
 
 **Primary Threats**:
+
 - Command injection via unsanitized input
 - Path traversal attacks
 - Privilege escalation
@@ -18,6 +19,7 @@ The terminal execution feature (`whitemagic exec`) must protect against:
 - Information disclosure
 
 **Out of Scope** (by design):
+
 - User runs malicious commands intentionally
 - Host OS vulnerabilities
 - Network-level attacks
@@ -70,11 +72,13 @@ def validate_command(cmd: str) -> bool:
 ### 2.2 Command Sanitization
 
 **Subprocess Isolation**:
+
 - Uses `subprocess.run()` with `shell=False` (when possible)
 - Arguments passed as list, not string
 - No shell metacharacter interpretation
 
 **Example**:
+
 ```python
 # ❌ UNSAFE - Shell injection possible
 subprocess.run(f"ls {user_input}", shell=True)
@@ -86,12 +90,13 @@ subprocess.run(["ls", user_input], shell=False)
 ### 2.3 Working Directory Restrictions
 
 **Path Traversal Protection**:
+
 ```python
 def validate_working_dir(cwd: str, base_path: str) -> bool:
     """Ensure working directory is within allowed base path."""
     resolved_cwd = Path(cwd).resolve()
     resolved_base = Path(base_path).resolve()
-    
+
     try:
         resolved_cwd.relative_to(resolved_base)
         return True
@@ -103,6 +108,7 @@ def validate_working_dir(cwd: str, base_path: str) -> bool:
 ### 2.4 Resource Limits
 
 **Timeout Enforcement**:
+
 ```python
 # Command must complete within timeout
 result = subprocess.run(
@@ -113,6 +119,7 @@ result = subprocess.run(
 ```
 
 **Output Size Limits**:
+
 ```python
 MAX_OUTPUT_SIZE = 1_048_576  # 1 MB
 
@@ -123,6 +130,7 @@ if len(result.stdout) > MAX_OUTPUT_SIZE:
 ### 2.5 Output Filtering
 
 **Sensitive Data Redaction**:
+
 ```python
 def redact_sensitive_data(output: str) -> str:
     """Remove sensitive patterns from output."""
@@ -133,14 +141,14 @@ def redact_sensitive_data(output: str) -> str:
         output,
         flags=re.IGNORECASE
     )
-    
+
     # Redact passwords in URLs
     output = re.sub(
         r'://[^:]+:([^@]+)@',
         r'://***:***@',
         output
     )
-    
+
     return output
 ```
 
@@ -168,6 +176,7 @@ pytest tests/test_terminal_security.py --cov=whitemagic.cli.exec --cov-report=ht
 **File**: `tests/test_terminal_security.py::TestCommandInjection`
 
 **Tests**:
+
 ```python
 def test_semicolon_injection():
     """Ensure ; command chaining is blocked."""
@@ -191,6 +200,7 @@ def test_pipe_to_shell():
 **File**: `tests/test_terminal_security.py::TestPathTraversal`
 
 **Tests**:
+
 ```python
 def test_directory_traversal():
     """Block ../../../etc/passwd patterns."""
@@ -212,20 +222,21 @@ def test_symlink_escape():
 **File**: `tests/test_terminal_security.py::TestResourceLimits`
 
 **Tests**:
+
 ```python
 def test_timeout_enforcement():
     """Ensure long-running commands are killed."""
     start = time.time()
     result = exec_command("sleep 60", timeout=1)
     duration = time.time() - start
-    
+
     assert result.timed_out
     assert duration < 2  # Killed quickly
 
 def test_output_size_limit():
     """Ensure large outputs are truncated."""
     result = exec_command("yes | head -n 1000000")
-    
+
     assert len(result.stdout) <= MAX_OUTPUT_SIZE
     assert "[OUTPUT TRUNCATED]" in result.stdout
 ```
@@ -235,6 +246,7 @@ def test_output_size_limit():
 **File**: `tests/test_terminal_security.py::TestPrivilegeEscalation`
 
 **Tests**:
+
 ```python
 def test_sudo_blocked():
     """Block sudo commands."""
@@ -255,12 +267,13 @@ def test_setuid_detection():
 **File**: `tests/test_terminal_security.py::TestInformationDisclosure`
 
 **Tests**:
+
 ```python
 def test_api_key_redaction():
     """Ensure API keys are redacted in output."""
     output = "API_KEY=sk-1234567890abcdefghij"
     redacted = redact_sensitive_data(output)
-    
+
     assert "sk-1234567890abcdefghij" not in redacted
     assert "***REDACTED***" in redacted
 
@@ -268,7 +281,7 @@ def test_password_url_redaction():
     """Redact passwords in URLs."""
     output = "Connecting to https://user:password123@api.example.com"
     redacted = redact_sensitive_data(output)
-    
+
     assert "password123" not in redacted
     assert "***:***@" in redacted
 ```
@@ -296,6 +309,7 @@ Not Covered:
 ```
 
 View full report:
+
 ```bash
 pytest tests/test_terminal_security.py --cov=whitemagic.cli.exec --cov-report=html
 open htmlcov/index.html
@@ -324,6 +338,7 @@ def test_new_injection_vector():
 ### 5.2 Adversarial Testing
 
 Think like an attacker:
+
 - Try every bypass technique you know
 - Chain multiple vectors together
 - Test Unicode/encoding tricks
@@ -332,6 +347,7 @@ Think like an attacker:
 ### 5.3 Regression Testing
 
 When a vulnerability is discovered:
+
 1. Write test that reproduces it
 2. Fix the vulnerability
 3. Ensure test passes
@@ -351,7 +367,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run security test suite
         run: pytest tests/test_terminal_security.py -v
-      
+
       - name: Security coverage check
         run: |
           coverage run -m pytest tests/test_terminal_security.py
@@ -365,22 +381,26 @@ jobs:
 ### 6.1 Defense in Depth
 
 **Layer 1: Input Validation** (Reject bad input early)
+
 ```python
 if not validate_command(user_cmd):
     raise ValueError("Dangerous command pattern detected")
 ```
 
 **Layer 2: Sanitization** (Clean allowed input)
+
 ```python
 sanitized = shlex.quote(user_input)
 ```
 
 **Layer 3: Sandboxing** (Isolate execution)
+
 ```python
 subprocess.run(cmd, shell=False, cwd=safe_dir, timeout=30)
 ```
 
 **Layer 4: Output Filtering** (Clean output)
+
 ```python
 return redact_sensitive_data(result.stdout)
 ```
@@ -388,6 +408,7 @@ return redact_sensitive_data(result.stdout)
 ### 6.2 Least Privilege
 
 **Run with minimal permissions**:
+
 ```python
 import os
 import pwd
@@ -403,6 +424,7 @@ if os.getuid() == 0:
 ### 6.3 Audit Logging
 
 **Log all command executions**:
+
 ```python
 import logging
 
@@ -410,9 +432,9 @@ logger = logging.getLogger("whitemagic.exec")
 
 def exec_command(cmd: str, cwd: str, user_id: str):
     logger.info(f"EXEC: user={user_id}, cmd={cmd[:100]}, cwd={cwd}")
-    
+
     result = subprocess.run(...)
-    
+
     logger.info(f"EXEC_RESULT: status={result.returncode}, user={user_id}")
     return result
 ```
@@ -420,6 +442,7 @@ def exec_command(cmd: str, cwd: str, user_id: str):
 ### 6.4 Rate Limiting
 
 **Prevent abuse**:
+
 ```python
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -431,14 +454,14 @@ MAX_EXECS_PER_MINUTE = 10
 def rate_limit_check(user_id: str) -> bool:
     now = datetime.now()
     minute_ago = now - timedelta(minutes=1)
-    
+
     # Clean old entries
     exec_counts[user_id] = [t for t in exec_counts[user_id] if t > minute_ago]
-    
+
     # Check limit
     if len(exec_counts[user_id]) >= MAX_EXECS_PER_MINUTE:
         return False
-    
+
     exec_counts[user_id].append(now)
     return True
 ```
@@ -500,13 +523,15 @@ subprocess.run(cmd, env=safe_env)
 **DO NOT open public GitHub issues for security vulnerabilities.**
 
 Instead:
-1. Email: security@whitemagic.dev (or project maintainer)
+
+1. Email: <security@whitemagic.dev> (or project maintainer)
 2. Include: PoC, impact assessment, suggested fix
 3. Allow 90 days for patch before public disclosure
 
 ### 8.2 Security Advisories
 
 Check for published advisories:
+
 - GitHub Security tab
 - `SECURITY.md` in repo
 - Release notes for security fixes
@@ -516,6 +541,7 @@ Check for published advisories:
 ## 9. Compliance & Standards
 
 WhiteMagic terminal security follows:
+
 - **OWASP Top 10** (command injection = #1 risk)
 - **CWE-78** (OS Command Injection)
 - **CWE-22** (Path Traversal)
@@ -525,7 +551,7 @@ WhiteMagic terminal security follows:
 
 ## 10. Incident Response
 
-### If vulnerability found in production:
+### If vulnerability found in production
 
 1. **Contain**: Disable affected endpoint/feature immediately
 2. **Assess**: Determine scope and impact
@@ -540,23 +566,25 @@ WhiteMagic terminal security follows:
 
 Terminal security in v2.2.6 provides comprehensive protection:
 
-✅ **Input validation** - Block dangerous patterns  
-✅ **Command sanitization** - Prevent injection  
-✅ **Path restrictions** - Stop traversal attacks  
-✅ **Resource limits** - Prevent DoS  
-✅ **Output filtering** - Protect sensitive data  
-✅ **98% test coverage** - Thoroughly validated  
+✅ **Input validation** - Block dangerous patterns
+✅ **Command sanitization** - Prevent injection
+✅ **Path restrictions** - Stop traversal attacks
+✅ **Resource limits** - Prevent DoS
+✅ **Output filtering** - Protect sensitive data
+✅ **98% test coverage** - Thoroughly validated
 
 Run security tests before every release:
+
 ```bash
 pytest tests/test_terminal_security.py -v --cov=whitemagic.cli.exec
 ```
 
-Report vulnerabilities responsibly to: security@whitemagic.dev
+Report vulnerabilities responsibly to: <security@whitemagic.dev>
 
 ---
 
 **See also**:
+
 - `SECURITY.md` - General security policy
 - `CONTRIBUTING.md` - Security testing guidelines
 - `docs/production/DEPLOYMENT.md` - Production hardening

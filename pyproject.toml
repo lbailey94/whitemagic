@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whitemagic"
-version = "2.2.5"
+version = "2.2.6"
 description = "Tiered memory management system for AI agents with native MCP support"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -42,6 +42,10 @@ dependencies = [
     "redis>=5.0.1",
     # HTTP Client
     "httpx>=0.25.0",
+    # Pin compatible versions to fix urllib3 warnings
+    "requests>=2.31.0",
+    "urllib3>=2.0.0,<3.0.0",
+    "chardet>=5.0.0",
     # AI/Embeddings (OpenAI for API, local optional)
     "openai>=1.3.0",
     "numpy>=1.24.0",

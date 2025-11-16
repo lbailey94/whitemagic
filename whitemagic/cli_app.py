@@ -1031,6 +1031,103 @@ def command_config_path(manager: MemoryManager, args: argparse.Namespace) -> int
     return 0
 
 
+def command_ai_init(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """
+    Handle 'ai-init' command.
+    
+    Display comprehensive initialization guide for AI assistants.
+    Shows essential documentation, project structure, and workflow recommendations.
+    """
+    from rich.console import Console
+    from rich.text import Text
+    from pathlib import Path
+    
+    console = Console()
+    
+    # Header
+    console.print("\n[bold cyan]🪄 WhiteMagic AI Initialization Guide[/bold cyan]\n")
+    
+    # 1. Project Overview
+    console.print("[bold]📖 Essential Documentation[/bold]")
+    console.print("  • Overview: [cyan]docs/OVERVIEW.md[/cyan]")
+    console.print("  • Quick Start: [cyan]docs/guides/QUICKSTART.md[/cyan]")
+    console.print("  • Architecture: [cyan]docs/ARCHITECTURE.md[/cyan]")
+    console.print("  • Latest Release: [cyan]docs/releases/RELEASE_NOTES_v2.2.6.md[/cyan]\n")
+    
+    # 2. Key Concepts
+    console.print("[bold]🧠 Core Concepts to Understand[/bold]")
+    console.print("  1. [yellow]Meta-Optimization[/yellow]: 94% token reduction via tiered loading")
+    console.print("     → [cyan]docs/guides/META_OPTIMIZATION.md[/cyan]")
+    console.print("  2. [yellow]Memory System[/yellow]: Short-term, long-term, and archived memories")
+    console.print("     → [cyan]docs/guides/MEMORY_SYSTEM_README.md[/cyan]")
+    console.print("  3. [yellow]CLI Metrics[/yellow]: Track token efficiency and workflow")
+    console.print("     → [cyan]docs/guides/CLI_METRICS.md[/cyan]\n")
+    
+    # 3. Project Structure
+    console.print("[bold]📁 Project Structure[/bold]")
+    structure = """
+whitemagic/
+├── whitemagic/        # Python package
+│   ├── cli/           # CLI commands
+│   ├── api/           # FastAPI server
+│   ├── embeddings/    # Semantic search
+│   └── ...
+├── whitemagic-mcp/    # MCP server (TypeScript)
+├── tests/             # Test suite
+├── docs/              # Documentation
+│   ├── guides/        # How-to guides
+│   ├── production/    # Deployment
+│   └── sdk/           # Client libraries
+├── memory/            # Memory storage (gitignored)
+└── users/             # Multi-user storage (gitignored)
+    """
+    console.print(Text(structure, style="dim"))
+    
+    # 4. Quick Commands
+    console.print("[bold]⚡ Quick Commands[/bold]")
+    console.print("  [yellow]whitemagic stats[/yellow]              # Show memory statistics")
+    console.print("  [yellow]whitemagic list[/yellow]               # List all memories")
+    console.print("  [yellow]whitemagic context --tier 1[/yellow]   # Generate context")
+    console.print("  [yellow]pytest -q[/yellow]                   # Run tests\n")
+    
+    # 5. Current Version
+    version_file = Path("VERSION")
+    if version_file.exists():
+        version = version_file.read_text().strip()
+        console.print(f"[bold]📌 Current Version:[/bold] v{version}\n")
+    
+    # 6. Important Notes
+    console.print("[bold yellow]⚠️  Important Notes[/bold yellow]")
+    console.print("  • Use [cyan]Tier 0/1[/cyan] context loading to save tokens (see META_OPTIMIZATION.md)")
+    console.print("  • Memory files are [yellow]personal[/yellow] - excluded from git")
+    console.print("  • Read [cyan]CONTRIBUTING.md[/cyan] before making changes")
+    console.print("  • Check [cyan]ROADMAP.md[/cyan] for future plans\n")
+    
+    # 7. Workflow Recommendations
+    console.print("[bold]🎯 Recommended AI Workflow[/bold]")
+    console.print("  1. Start with [cyan]Tier 0[/cyan] context scan")
+    console.print("  2. Load specific files as needed")
+    console.print("  3. Track metrics: [yellow]whitemagic metrics-track ...[/yellow]")
+    console.print("  4. Create memories for important decisions")
+    console.print("  5. Consolidate when you have 5-10 short-term memories\n")
+    
+    # 8. Stats (if available)
+    try:
+        from whitemagic.stats import generate_stats
+        stats = generate_stats(manager)
+        total = stats.get('total_memories', 0)
+        console.print(f"[bold]📊 Current Memory Count:[/bold] {total} memories")
+        console.print(f"  • Short-term: {stats.get('by_type', {}).get('short_term', 0)}")
+        console.print(f"  • Long-term: {stats.get('by_type', {}).get('long_term', 0)}\n")
+    except Exception:
+        # Gracefully handle if stats aren't available
+        console.print(f"[bold]📊 Memory System:[/bold] Ready\n")
+    
+    console.print("[bold green]✅ Ready to go! Use commands above to explore.[/bold green]\n")
+    
+    return 0
+
+
 def command_stats(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'stats' command - show memory statistics dashboard."""
     from whitemagic.stats import generate_stats, print_stats_dashboard
@@ -1164,6 +1261,7 @@ from whitemagic.cli_graph import command_graph, command_graph_stats
 
 # Command dispatch table
 COMMAND_HANDLERS = {
+    "ai-init": command_ai_init,
     "create": command_create,
     "list": command_list,
     "search": command_search,
@@ -1783,6 +1881,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--show-orphaned",
         action="store_true",
         help="Show memories with no relationships.",
+    )
+    
+    # ai-init
+    ai_init_parser = subparsers.add_parser(
+        "ai-init",
+        help="Initialize AI assistant with WhiteMagic project context.",
     )
     
     # stats

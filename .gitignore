@@ -93,6 +93,33 @@ whitemagic-mcp/dist/*.map
 logs/
 .venv/
 test_output.txt
+
+# Users directory (API test artifacts)
 users/
+
+# Audit logs
+.whitemagic_audit/
+
+# Database files
 *.db
+*.db-shm
+*.db-wal
+whitemagic_*.db*
+
+# Cache
 .whitemagic/cache/
+
+# Version-specific planning docs (keep in private/)
+V2.*_IMPLEMENTATION_PLAN.md
+V2.*_ROADMAP.md
+*_AUDIT_*.md
+COMPREHENSIVE_AUDIT_*.md
+CODE_AUDIT_*.md
+MARKDOWN_AUDIT_*.md
+DOCUMENTATION_AUDIT_*.md
+
+# Memory consolidation plans (temporary)
+memory/CONSOLIDATION_PLAN*.md
+
+# Metrics data
+.whitemagic/metrics/

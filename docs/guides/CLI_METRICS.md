@@ -26,90 +26,108 @@ Metrics are stored in `~/.whitemagic/metrics/<category>.jsonl` as append-only lo
 WhiteMagic tracks six primary metric categories:
 
 ### 2.1 Token Efficiency
+
 **Purpose**: Monitor token budget usage and optimization effectiveness
 
 **Key Metrics**:
+
 - `usage_percent` - Current token budget used (0-100)
 - `tokens_saved` - Tokens saved by optimizations
 - `efficiency_ratio` - Speedup factor (e.g., 17.9x)
 - `tier_used` - Context tier loaded (0/1/2)
 
 **Example**:
+
 ```bash
 whitemagic track token_efficiency usage_percent 38.5 "After Tier 1 load"
 whitemagic track token_efficiency efficiency_ratio 17.9 "Tier 1 vs baseline"
 ```
 
 ### 2.2 Velocity
+
 **Purpose**: Track development speed and throughput
 
 **Key Metrics**:
+
 - `features_per_day` - Feature completion rate
 - `bugs_fixed_per_session` - Bug resolution speed
 - `files_modified_per_hour` - Code churn rate
 - `commits_per_day` - Commit frequency
 
 **Example**:
+
 ```bash
 whitemagic track velocity features_per_day 3 "v2.2.6 week 1"
 whitemagic track velocity bugs_fixed_per_session 5 "Debug marathon"
 ```
 
 ### 2.3 Tactical Progress
+
 **Purpose**: Measure task-level execution
 
 **Key Metrics**:
+
 - `tasks_complete` - Completed tasks count
 - `tests_passing` - Test pass count
 - `tests_total` - Total test count
 - `coverage_percent` - Code coverage (0-100)
 
 **Example**:
+
 ```bash
 whitemagic track tactical tests_passing 194 "Test suite run"
 whitemagic track tactical tasks_complete 7 "Phase 1 done"
 ```
 
 ### 2.4 Strategic Progress
+
 **Purpose**: Track high-level goals and milestones
 
 **Key Metrics**:
+
 - `version_progress` - Version completion (0-100)
 - `milestones_hit` - Milestone count
 - `timeline_variance` - Ahead/behind schedule (hours)
 - `scope_completion` - Feature scope done (0-100)
 
 **Example**:
+
 ```bash
 whitemagic track strategic version_progress 75 "v2.2.6 75% complete"
 whitemagic track strategic timeline_variance -12 "12 hours ahead"
 ```
 
 ### 2.5 Quality
+
 **Purpose**: Monitor code and output quality
 
 **Key Metrics**:
+
 - `bugs_introduced` - New bugs per session
 - `rollback_count` - Times had to revert changes
 - `review_score` - Code quality rating (1-10)
 - `documentation_coverage` - Docs completion (0-100)
 
 **Example**:
+
 ```bash
 whitemagic track quality review_score 9 "Phase 2 code review"
 whitemagic track quality bugs_introduced 0 "Clean session!"
 ```
 
 ### 2.6 Fatigue (AI & Human)
+
 **Purpose**: Monitor cognitive load and workflow health
 
 **Key Metrics**:
+
 - `stress_level` - Subjective stress (0-10)
 - `context_switches` - Task switching count
 - `session_duration_hours` - Time spent working
 - `break_frequency` - Breaks taken per session
 
 **Example**:
+
 ```bash
 whitemagic track fatigue stress_level 2 "Feeling good"
 whitemagic track fatigue session_duration_hours 4.5 "Afternoon session"
@@ -122,17 +140,20 @@ whitemagic track fatigue session_duration_hours 4.5 "Afternoon session"
 ### 3.1 `whitemagic track`
 
 **Syntax**:
+
 ```bash
 whitemagic track <category> <metric> <value> [context]
 ```
 
 **Arguments**:
+
 - `category` - One of: token_efficiency, velocity, tactical, strategic, quality, fatigue
 - `metric` - Short metric name (e.g., `usage_percent`, `tests_passing`)
 - `value` - Numeric value (float or int)
 - `context` - Optional description (e.g., "Phase 2", "v2.2.6")
 
 **Examples**:
+
 ```bash
 # Simple tracking
 whitemagic track tactical tests_passing 194
@@ -145,6 +166,7 @@ whitemagic track strategic timeline_variance -8 "8 hours ahead of schedule"
 ```
 
 **Output**:
+
 ```
 ✅ Metric tracked: tactical.tests_passing = 194
    Context: [no context provided]
@@ -156,16 +178,19 @@ whitemagic track strategic timeline_variance -8 "8 hours ahead of schedule"
 ### 3.2 `whitemagic summary`
 
 **Syntax**:
+
 ```bash
 whitemagic summary [categories...] [--days N] [--format FORMAT]
 ```
 
 **Arguments**:
+
 - `categories` - One or more categories (default: all)
 - `--days N` - Include only last N days (default: 30)
 - `--format` - Output format: `table` (default), `json`, `markdown`
 
 **Examples**:
+
 ```bash
 # Summary of all categories (last 30 days)
 whitemagic summary
@@ -181,6 +206,7 @@ whitemagic summary token_efficiency --format json
 ```
 
 **Output** (table format):
+
 ```
 📊 Metrics Summary (Last 30 Days)
 
@@ -206,17 +232,20 @@ Category: tactical
 ### 3.3 `whitemagic export`
 
 **Syntax**:
+
 ```bash
 whitemagic export [categories...] [OPTIONS]
 ```
 
 **Options**:
+
 - `--format FORMAT` - Export format: `json`, `csv`, `jsonl` (default: json)
 - `--output FILE` - Output file path (default: stdout)
 - `--days N` - Include only last N days
 - `--pretty` - Pretty-print JSON (json format only)
 
 **Examples**:
+
 ```bash
 # Export all metrics to JSON
 whitemagic export --format json --output metrics.json
@@ -232,6 +261,7 @@ whitemagic export token_efficiency --format jsonl | jq '.value'
 ```
 
 **JSON Format**:
+
 ```json
 {
   "token_efficiency": [
@@ -247,6 +277,7 @@ whitemagic export token_efficiency --format jsonl | jq '.value'
 ```
 
 **CSV Format**:
+
 ```csv
 category,timestamp,metric,value,context
 token_efficiency,2025-11-16T14:30:00Z,usage_percent,38.5,"After Tier 1 load"
@@ -260,6 +291,7 @@ tactical,2025-11-16T14:45:00Z,tests_passing,194,"Test suite run"
 ### 4.1 Session Start/End Protocol
 
 **Session Start**:
+
 ```bash
 # Baseline token check
 whitemagic track token_efficiency usage_percent 0 "Session start"
@@ -267,6 +299,7 @@ whitemagic track fatigue stress_level 0 "Fresh start"
 ```
 
 **Session End**:
+
 ```bash
 # Final metrics
 whitemagic track token_efficiency usage_percent 55.5 "Session complete"
@@ -295,6 +328,7 @@ whitemagic track strategic version_progress 40 "40% v2.2.6 complete"
 Automate tracking with git hooks:
 
 **`.git/hooks/post-commit`**:
+
 ```bash
 #!/bin/bash
 # Track commits
@@ -306,6 +340,7 @@ whitemagic track velocity files_modified $FILES_CHANGED "Latest commit"
 ```
 
 **`.git/hooks/pre-push`**:
+
 ```bash
 #!/bin/bash
 # Count passing tests
@@ -316,6 +351,7 @@ whitemagic track tactical tests_passing $TESTS_PASSING "Pre-push validation"
 ### 4.4 CI/CD Integration
 
 **GitHub Actions** (`.github/workflows/metrics.yml`):
+
 ```yaml
 name: Track Metrics
 on: [push, pull_request]
@@ -327,21 +363,21 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install WhiteMagic
         run: pip install whitemagic
-      
+
       - name: Run tests
         id: tests
         run: |
           pytest --junitxml=report.xml
           PASSING=$(xmllint --xpath "count(//testcase)" report.xml)
           echo "passing=$PASSING" >> $GITHUB_OUTPUT
-      
+
       - name: Track test metrics
         run: |
           whitemagic track tactical tests_passing ${{ steps.tests.outputs.passing }} "CI: ${{ github.sha }}"
-      
+
       - name: Export metrics artifact
         run: whitemagic export --format json --output metrics.json
-      
+
       - uses: actions/upload-artifact@v3
         with:
           name: metrics
@@ -407,6 +443,7 @@ fi
 ### 6.1 Frequency
 
 **Track often, but not obsessively**:
+
 - ✅ Start/end of sessions
 - ✅ Phase boundaries
 - ✅ After significant changes (tests pass, features complete)
@@ -415,6 +452,7 @@ fi
 ### 6.2 Context Strings
 
 Use consistent, meaningful context strings:
+
 - ✅ `"v2.2.6 Phase 1 complete"`
 - ✅ `"After Tier 1 optimization"`
 - ✅ `"Debug session - auth bug"`
@@ -431,6 +469,7 @@ Use consistent, meaningful context strings:
 ### 6.4 Privacy
 
 Metrics stay local by default. If exporting:
+
 - Sanitize context strings (remove sensitive info)
 - Review JSON/CSV before sharing
 - Use `.gitignore` for metrics files if in repo
@@ -444,6 +483,7 @@ Metrics stay local by default. If exporting:
 **Cause**: Metrics directory doesn't exist yet
 
 **Solution**: Track any metric to create directory structure:
+
 ```bash
 whitemagic track tactical test 1 "Initialize"
 ```
@@ -451,6 +491,7 @@ whitemagic track tactical test 1 "Initialize"
 ### Issue: "Summary shows no data"
 
 **Check**:
+
 1. Are metrics within the time window? Try `--days 365`
 2. Correct category name? Use `whitemagic summary` (no args) to see all
 3. Metrics file corrupted? Verify `~/.whitemagic/metrics/<category>.jsonl` is valid JSONL
@@ -460,6 +501,7 @@ whitemagic track tactical test 1 "Initialize"
 **Cause**: Corrupted JSONL file (incomplete write)
 
 **Solution**:
+
 ```bash
 # Validate and fix
 cat ~/.whitemagic/metrics/tactical.jsonl | jq -c . > fixed.jsonl
@@ -506,6 +548,7 @@ whitemagic track fatigue session_duration_hours $duration "Session complete"
 ```
 
 Usage:
+
 ```bash
 ./track_session.sh python cli.py work-on-feature
 ```
@@ -539,6 +582,7 @@ elif phase.value == "WATER":
 ## 10. Future Enhancements (v2.2.7+)
 
 Planned improvements:
+
 - **Real-time dashboard** (React + D3 visualization)
 - **Metric predictions** (forecast token usage, estimate completion time)
 - **Automated alerts** (Slack/email when thresholds crossed)
@@ -551,13 +595,14 @@ Planned improvements:
 
 CLI metrics in v2.2.6 provide quantitative visibility into your AI workflow:
 
-✅ **Track 6 categories** - token efficiency, velocity, tactical, strategic, quality, fatigue  
-✅ **Simple commands** - `track`, `summary`, `export`  
-✅ **Workflow integration** - git hooks, CI/CD, dashboards  
-✅ **Privacy-first** - all data stays local  
-✅ **Actionable insights** - identify bottlenecks, optimize processes  
+✅ **Track 6 categories** - token efficiency, velocity, tactical, strategic, quality, fatigue
+✅ **Simple commands** - `track`, `summary`, `export`
+✅ **Workflow integration** - git hooks, CI/CD, dashboards
+✅ **Privacy-first** - all data stays local
+✅ **Actionable insights** - identify bottlenecks, optimize processes
 
 Start tracking today:
+
 ```bash
 whitemagic track token_efficiency usage_percent 0 "First metric!"
 whitemagic summary
@@ -566,6 +611,7 @@ whitemagic summary
 ---
 
 **See also**:
+
 - `WU_XING_AND_METRICS.md` - Combine metrics with phase detection
 - `META_OPTIMIZATION.md` - Track optimization effectiveness
 - `QUICKSTART.md` - Basic CLI usage

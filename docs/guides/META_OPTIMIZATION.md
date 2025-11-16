@@ -7,6 +7,7 @@ WhiteMagic v2.2.5 introduces **meta-optimization**: a hierarchical context loadi
 ## 1. Problem Statement
 
 Traditional AI workflows load entire codebases or memory systems into context, consuming 50K-100K+ tokens before any real work begins. This:
+
 - Exhausts token budgets quickly
 - Slows response times
 - Incurs unnecessary costs
@@ -33,6 +34,7 @@ WhiteMagic uses three context tiers:
 ### 2.2 Task-Aware Filtering
 
 The system analyzes your task description to identify relevant:
+
 - File patterns (e.g., "auth bug" → `*auth*.py`, `*login*.js`)
 - Directories (e.g., "API routes" → `api/`, `routes/`)
 - Memory tags (e.g., "deployment" → memories tagged `deployment`, `production`)
@@ -42,6 +44,7 @@ This happens automatically—you just describe what you're doing.
 ### 2.3 Lazy Loading
 
 Large files and memory collections aren't loaded until explicitly requested. The system provides:
+
 - Summaries (1-2 lines per item)
 - Metadata (path, size, tags)
 - Expansion hooks (load full content on demand)
@@ -116,11 +119,13 @@ Tier 1 + query:                    6,120 tokens  (90.3% reduction)
 ### 4.2 Real Session Impact
 
 **Before meta-optimization**:
+
 - Session budget: 200K tokens
 - Initial context: 63K tokens (31.5% consumed)
 - Work remaining: 137K tokens (68.5%)
 
 **After meta-optimization (Tier 1)**:
+
 - Session budget: 200K tokens
 - Initial context: 3.5K tokens (1.75% consumed)
 - Work remaining: 196.5K tokens (98.25%)
@@ -165,6 +170,7 @@ whitemagic summary token_efficiency
 ```
 
 If usage exceeds 60-70%, consider:
+
 - Consolidating memories
 - Ending session and resuming fresh
 - Using more targeted queries
@@ -257,6 +263,7 @@ whitemagic context --tier 1 --query "user authentication login validation bug"
 ### Issue: "Token usage still high with Tier 1"
 
 **Check**:
+
 1. Are you loading Tier 1 multiple times? Cache results!
 2. Is your workspace huge? Set `max_depth` and `file_size_limit`
 3. Do you have massive memory collections? Consolidate first
@@ -264,6 +271,7 @@ whitemagic context --tier 1 --query "user authentication login validation bug"
 ### Issue: "Context missing critical information"
 
 **Solution**: Tier 0/1 optimize for speed. If completeness matters:
+
 - Use Tier 2 for comprehensive tasks
 - Manually specify critical files
 - Combine Tier 1 + targeted file reads
@@ -286,6 +294,7 @@ whitemagic summary token_efficiency
 ```
 
 Expected results:
+
 - **Tier 0**: 30-35x efficiency gain
 - **Tier 1**: 15-20x efficiency gain
 - **Tier 2**: 5-10x efficiency gain
@@ -295,6 +304,7 @@ Expected results:
 ## 10. Future Enhancements (v2.2.7+)
 
 Planned improvements:
+
 - **Adaptive tiers**: System learns optimal tier for different task types
 - **Semantic caching**: Reuse contexts across similar tasks
 - **Predictive loading**: Pre-fetch likely-needed files based on task patterns
@@ -306,17 +316,18 @@ Planned improvements:
 
 Meta-optimization is **the** foundational efficiency technique in WhiteMagic v2.2.5+:
 
-✅ **Start with Tier 0 or 1** - save 90-97% tokens  
-✅ **Use task descriptions** - get relevant context automatically  
-✅ **Escalate progressively** - load more only when needed  
-✅ **Monitor token usage** - stay within budget  
-✅ **Combine with symbolic reasoning** - compress even further  
+✅ **Start with Tier 0 or 1** - save 90-97% tokens
+✅ **Use task descriptions** - get relevant context automatically
+✅ **Escalate progressively** - load more only when needed
+✅ **Monitor token usage** - stay within budget
+✅ **Combine with symbolic reasoning** - compress even further
 
 With meta-optimization, your 200K token sessions can accomplish 10-20x more work. Use it!
 
 ---
 
 **See also**:
+
 - `SYMBOLIC_REASONING.md` - Compress context further with Chinese characters
 - `WU_XING_AND_METRICS.md` - Track optimization effectiveness
 - `QUICKSTART.md` - Basic usage patterns

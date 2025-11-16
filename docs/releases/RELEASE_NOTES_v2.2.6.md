@@ -1,7 +1,7 @@
 # WhiteMagic v2.2.6 Release Notes
 
-**Release Date**: November 16, 2025  
-**Status**: Production Ready  
+**Release Date**: November 16, 2025
+**Status**: Production Ready
 **Theme**: CLI Metrics + Terminal Security + Documentation Complete
 
 ---
@@ -11,6 +11,7 @@
 v2.2.6 is a **polish and completeness release** that adds comprehensive metrics tracking via CLI, security-hardened terminal execution testing, and fills all documentation gaps from v2.2.5.
 
 **Key Achievements**:
+
 - CLI metrics commands for quantitative workflow tracking
 - Comprehensive terminal security test suite (98% coverage)
 - Three new documentation guides (META_OPTIMIZATION, CLI_METRICS, TERMINAL_SECURITY)
@@ -24,6 +25,7 @@ v2.2.6 is a **polish and completeness release** that adds comprehensive metrics 
 **195 tests passed** / **0 failures** (validated via `pytest -q --ignore=tests/test_workspace_loader.py`)
 
 All modules validated:
+
 - ✅ Core memory system
 - ✅ API endpoints (including fixed `test_search_by_tags`)
 - ✅ CLI commands
@@ -35,6 +37,7 @@ All modules validated:
 - ✅ Terminal security
 
 Replicate locally:
+
 ```bash
 python -m pip install -e ".[api,dev]"
 pytest -q --ignore=tests/test_workspace_loader.py
@@ -47,6 +50,7 @@ pytest -q --ignore=tests/test_workspace_loader.py
 ### 1. CLI Metrics Tracking
 
 **Commands Added**:
+
 ```bash
 # Track a metric
 whitemagic track <category> <metric> <value> [context]
@@ -59,6 +63,7 @@ whitemagic export [categories...] --format json|csv|jsonl
 ```
 
 **Categories**:
+
 - `token_efficiency` - Token budget usage and optimization
 - `velocity` - Development speed metrics
 - `tactical` - Task-level execution
@@ -67,6 +72,7 @@ whitemagic export [categories...] --format json|csv|jsonl
 - `fatigue` - Cognitive load and workflow health
 
 **Example Usage**:
+
 ```bash
 # Track token usage
 whitemagic track token_efficiency usage_percent 45.2 "Phase 2 complete"
@@ -79,6 +85,7 @@ whitemagic export --format json --output metrics.json
 ```
 
 **Files**:
+
 - Metrics stored in `~/.whitemagic/metrics/<category>.jsonl`
 - CLI implementation in `whitemagic/cli/app.py`
 
@@ -87,6 +94,7 @@ whitemagic export --format json --output metrics.json
 **New Test Module**: `tests/test_terminal_security.py`
 
 **Security Tests**:
+
 - Command injection prevention (semicolons, substitutions, pipes)
 - Path traversal protection
 - Resource exhaustion limits (timeouts, output size)
@@ -96,6 +104,7 @@ whitemagic export --format json --output metrics.json
 **Coverage**: 98% of `whitemagic/cli/exec.py`
 
 **Run Tests**:
+
 ```bash
 pytest tests/test_terminal_security.py -v
 ```
@@ -105,21 +114,27 @@ pytest tests/test_terminal_security.py -v
 **New Guides**:
 
 #### A. META_OPTIMIZATION.md
+
 Comprehensive guide to hierarchical context loading:
+
 - Tiered loading strategy (Tier 0/1/2)
 - Task-aware filtering
 - Real-world benchmarks (94.4% token reduction)
 - Best practices and troubleshooting
 
 #### B. CLI_METRICS.md
+
 Complete metrics tracking documentation:
+
 - All 6 metric categories explained
 - Command reference (`track`, `summary`, `export`)
 - Workflow integration (git hooks, CI/CD)
 - Analysis and visualization examples
 
 #### C. TERMINAL_SECURITY.md
+
 Security testing and hardening guide:
+
 - Threat model and security boundaries
 - Security controls implementation
 - Test suite walkthrough
@@ -130,9 +145,11 @@ Security testing and hardening guide:
 ## 🐛 Bug Fixes
 
 ### test_search_by_tags Fixed
+
 **Issue**: Test was sending `tags` parameter as a list `["python"]` but API expects a string `"python"`
 
 **Fix**: Updated test to match API schema:
+
 ```python
 # Before (failing)
 json={"tags": ["python"]}
@@ -148,6 +165,7 @@ json={"tags": "python"}
 ## 📋 Complete Feature Set (v2.2.6)
 
 ### Core Memory System
+
 - ✅ Short-term and long-term memories
 - ✅ YAML frontmatter + Markdown content
 - ✅ Tag-based organization
@@ -155,22 +173,26 @@ json={"tags": "python"}
 - ✅ Consolidation and archival
 
 ### Meta-Optimization (v2.2.5)
+
 - ✅ Tiered context loading (0/1/2)
 - ✅ 94.4% token reduction validated
 - ✅ Task-aware filtering
 - ✅ Lazy loading support
 
 ### Symbolic Reasoning (v2.2.5)
+
 - ✅ Chinese character compression
 - ✅ Concept graph generation
 - ✅ 30-50% additional token savings
 
 ### Wu Xing Phase Detection (v2.2.5)
+
 - ✅ 5-phase cycle detection (Wood/Fire/Earth/Metal/Water)
 - ✅ Activity-based classification
 - ✅ Adaptive workflow optimization
 
 ### CLI (v2.2.6)
+
 - ✅ Memory CRUD operations
 - ✅ Search and filtering
 - ✅ Context generation
@@ -178,17 +200,20 @@ json={"tags": "python"}
 - ✅ **Metrics tracking** (NEW)
 
 ### API Server
+
 - ✅ REST API with auth
 - ✅ Memory management endpoints
 - ✅ Search and context endpoints
 - ✅ Rate limiting support
 
 ### MCP Server
+
 - ✅ IDE integration (Windsurf, Claude Desktop, Cursor)
 - ✅ All memory operations
 - ✅ Metrics tools (`track_metric`, `get_metrics_summary`)
 
 ### Documentation (v2.2.6)
+
 - ✅ 14 comprehensive guides
 - ✅ API reference
 - ✅ Deployment guides
@@ -234,6 +259,7 @@ pip install -e ".[api,dev]"
 The terminal execution feature (`whitemagic exec`) has been thoroughly tested for security:
 
 **Protected Against**:
+
 - Command injection (`;`, `$(...)`, backticks)
 - Path traversal (`../../../etc/passwd`)
 - Resource exhaustion (timeouts, output limits)
@@ -249,17 +275,20 @@ The terminal execution feature (`whitemagic exec`) has been thoroughly tested fo
 ## 📊 Performance Metrics
 
 ### Token Efficiency (from v2.2.5)
+
 - Tier 0: 97.0% reduction (33.6x efficiency)
 - Tier 1: 94.4% reduction (17.9x efficiency)
 - Tier 2: 75-85% reduction (4-7x efficiency)
 
 ### Test Suite
+
 - Total tests: 195
 - Pass rate: 100%
 - Coverage: >95% for core modules
 - Execution time: ~15 seconds
 
 ### Bundle Size
+
 - Python package: ~500KB
 - MCP server: ~200KB
 - Documentation: ~1MB
@@ -288,6 +317,7 @@ railway up
 ```
 
 Environment variables needed:
+
 - `WM_API_KEY` - API authentication key
 - `DATABASE_URL` - PostgreSQL connection string (optional, defaults to SQLite)
 - `REDIS_URL` - Redis connection string (optional, for rate limiting)
@@ -321,6 +351,7 @@ vercel deploy
 **No migration needed!** v2.2.6 is a pure additive release.
 
 **What's New for You**:
+
 1. Start using CLI metrics: `whitemagic track token_efficiency usage_percent 0 "First metric"`
 2. Read new guides: `docs/guides/CLI_METRICS.md`, `META_OPTIMIZATION.md`, `TERMINAL_SECURITY.md`
 3. Enjoy 100% test pass rate and production-ready stability
@@ -332,6 +363,7 @@ vercel deploy
 **Theme**: React + D3 Metrics Dashboard
 
 **Planned Features**:
+
 - Wu Xing wheel visualization (D3 circular diagram)
 - Token efficiency charts (line, bar, pie charts)
 - Session timeline with phase detection
@@ -348,6 +380,7 @@ See `V2.2.7_ROADMAP.md` for full details.
 ## 🙏 Acknowledgments
 
 Special thanks to:
+
 - The open source community for feedback
 - WhiteMagic contributors and testers
 - Ancient Chinese philosophy (Art of War, Wu Xing, I Ching) for inspiration

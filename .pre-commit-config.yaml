@@ -18,28 +18,28 @@ repos:
       - id: check-case-conflict
       - id: detect-private-key
       - id: mixed-line-ending
-  
+
   # Python formatting with Black
   - repo: https://github.com/psf/black
     rev: 25.9.0
     hooks:
       - id: black
         language_version: python3.10
-  
+
   # Python linting with Ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.4
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-  
+
   # Python import sorting
   - repo: https://github.com/pycqa/isort
     rev: 7.0.0
     hooks:
       - id: isort
         args: ["--profile", "black"]
-  
+
   # Python type checking (disabled due to types-all dependency issues)
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: v1.18.2
@@ -47,7 +47,7 @@ repos:
   #     - id: mypy
   #       additional_dependencies: [types-all]
   #       args: [--ignore-missing-imports, --no-strict-optional]
-  
+
   # Security checks
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.6
@@ -55,20 +55,20 @@ repos:
       - id: bandit
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
-  
+
   # Markdown linting
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.45.0
     hooks:
       - id: markdownlint
         args: ['--fix']
-  
+
   # Dockerfile linting
   - repo: https://github.com/hadolint/hadolint
     rev: v2.14.0
     hooks:
       - id: hadolint-docker
-  
+
   # Custom security checks
   - repo: local
     hooks:
