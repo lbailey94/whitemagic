@@ -220,10 +220,10 @@ class TestSearchEndpoint:
             headers=auth_headers,
         )
 
-        # Search by tag
+        # Search by tag (API expects string, not list)
         response = client.post(
             "/api/v1/search",
-            json={"tags": ["python"]},
+            json={"tags": "python"},
             headers=auth_headers,
         )
 
