@@ -37,7 +37,7 @@ def add_relationship(
     
     # Check if relationship already exists
     for rel in frontmatter["related_to"]:
-        if rel.get("filename") == related_filename and rel.get("type") == rel_type:
+        if rel.get("filename") == related_filename and rel.get("type") == rel_type.value:
             # Update existing
             if description:
                 rel["description"] = description
@@ -46,7 +46,7 @@ def add_relationship(
     # Add new relationship
     relationship = {
         "filename": related_filename,
-        "type": rel_type,
+        "type": rel_type.value,  # Convert enum to string
     }
     if description:
         relationship["description"] = description
@@ -71,7 +71,7 @@ def get_relationships(
     relationships = frontmatter.get("related_to", [])
     
     if rel_type:
-        return [r for r in relationships if r.get("type") == rel_type]
+        return [r for r in relationships if r.get("type") == rel_type.value]
     
     return relationships
 
@@ -100,7 +100,7 @@ def remove_relationship(
         # Remove specific type only
         frontmatter["related_to"] = [
             r for r in relationships 
-            if not (r.get("filename") == related_filename and r.get("type") == rel_type)
+            if not (r.get("filename") == related_filename and r.get("type") == rel_type.value)
         ]
     else:
         # Remove all relationships to this file

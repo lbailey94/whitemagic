@@ -1,6 +1,6 @@
 {
   "name": "whitemagic-mcp",
-  "version": "2.1.8",
+  "version": "2.1.9",
   "description": "WhiteMagic MCP Server - Tiered Prompt & Memory System for AI Agents",
   "main": "dist/index.js",
   "type": "module",
