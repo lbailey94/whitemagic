@@ -8,7 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
----
+## [2.2.4] - 2024-11-16
+
+### Added
+- **Art of War Integration**: Strategic planning framework based on Sun Tzu's principles
+  - Task terrain analysis (6 terrain types)
+  - Five factors assessment (道天地將法)
+  - Strategic decision framework
+- **I Ching Threading Tiers**: Philosophically-aligned parallel execution
+  - Tier 0-5: 8, 16, 32, 64, 128, 256 threads
+  - Based on 8 trigrams and 64 hexagrams
+  - Automatic tier recommendation
+- **Strategic Planning Module**: `whitemagic.strategy` with terrain and factors classes
+- **Threading Module**: `whitemagic.threading_tiers` with I Ching-aligned tiers
+- **Documentation**: Comprehensive Art of War integration guide
+
+### Philosophy
+- Ancient military strategy applied to modern AI workflows
+- 2,500+ years of strategic wisdom codified
+- Natural progression through powers of 2, rooted in I Ching patterns
 
 ## [2.2.3] - 2025-11-16
 

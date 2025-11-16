@@ -1,15 +1,27 @@
-# Workflow Rules v3.0 - Universal AI System
+# Workflow Rules v3.1 - Universal AI System
 
 **Date**: November 16, 2025  
+**Version**: 3.1 (adds Art of War + I Ching threading)  
 **Scope**: ANY AI system with WhiteMagic (not just Windsurf)  
-**Goal**: Make these patterns universally accessible
+**Goal**: Ancient wisdom meets universal patterns
 
 ---
 
 ## 🌍 Universal Applicability Design
 
-### Core Principle
-**WhiteMagic patterns should work in ANY environment**:
+### Core Principles
+
+**1. WhiteMagic patterns should work in ANY environment**:
+
+**2. Strategic thinking before tactical execution** (Art of War):
+- Assess terrain before acting
+- Check five factors (道天地將法)
+- Know when to proceed, when to wait
+
+**3. Philosophical alignment in architecture** (I Ching):
+- Threading tiers: 8, 16, 32, 64, 128, 256
+- Based on trigrams (8) and hexagrams (64)
+- Natural progression, not arbitrary numbers
 - Claude Desktop with MCP
 - ChatGPT with plugins
 - Custom AI agents
@@ -19,7 +31,56 @@
 
 ---
 
-## 📋 Additional Workflow Rules (v3.0 Updates)
+## ⚔️ Art of War Integration (v3.1)
+
+### **Pre-Task Assessment** (Sun Tzu)
+
+Before executing any task, perform strategic assessment:
+
+**1. Terrain Analysis** (\u5730\u5f62):
+```python
+from whitemagic.strategy import TaskTerrain
+
+# Assess task terrain
+terrain_types = {
+    ACCESSIBLE: "Straightforward, proceed directly",
+    ENTANGLING: "Dependencies, resolve first",
+    TEMPORIZING: "Need more info, gather intelligence",
+    NARROW: "Sequential only, no parallelism",
+    PRECIPITOUS: "High risk, extreme caution",
+    DISTANT: "Long duration, plan checkpoints"
+}
+```
+
+**2. Five Factors** (\u4e94\u4e8b):
+```python
+# Check before proceeding
+\u9053 (Dao): Aligned with values?
+\u5929 (Heaven): Right timing?
+\u5730 (Earth): Have resources?
+\u5c07 (General): Clear strategy?
+\u6cd5 (Law): Following best practices?
+
+If score >= 0.8: PROCEED
+If score >= 0.6: PROCEED_WITH_CAUTION
+Else: PREPARE_MORE
+```
+
+**3. Threading Tier** (I Ching):
+```python
+from whitemagic.threading_tiers import get_tier_threads
+
+Tier 0: 8 threads (8 trigrams)
+Tier 1: 16 threads
+Tier 2: 32 threads
+Tier 3: 64 threads (hexagrams - sweet spot!)
+Tier 4: 128 threads
+Tier 5: 256 threads (ultimate complexity)
+```
+
+---
+
+## 📋 Additional Workflow Rules (v3.0-3.1 Updates)
 
 ### 1. **Metrics-Driven Reflection** (NEW!)
 
