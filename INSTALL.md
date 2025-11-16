@@ -1,4 +1,4 @@
-# Installation Guide · WhiteMagic v2.1.6
+# Installation Guide · WhiteMagic v2.2.1
 
 **WhiteMagic is modular by design.** Start minimal (~50MB), add features as needed.
 

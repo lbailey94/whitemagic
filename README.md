@@ -2,8 +2,8 @@
 
 **Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.2.0-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.2.1-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen.svg)](#testing)
@@ -15,20 +15,18 @@
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
 
-WhiteMagic is a production-ready memory OS for AI agents. **Free to use locally** with full features, or upgrade to cloud-hosted for team collaboration and sync. Includes Python SDK + CLI, FastAPI backend, and native MCP integration for Cursor/Windsurf/Claude.
+WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, and native MCP integration for Cursor/Windsurf/Claude.
 
-## 🎁 Free Forever (Local)
-- ✅ Full feature set
-- ✅ No signup required
-- ✅ Local SQLite storage
-- ✅ MCP server included
-- ✅ Perfect for individuals
+## 🎁 Free & Open Source
+- ✅ **87% token reduction** via tiered context loading
+- ✅ **10-100x faster** direct file operations
+- ✅ **37-58% cost savings** for multi-session AI projects
+- ✅ Full feature set, no signup required
+- ✅ Local-first, Git-friendly markdown storage
+- ✅ MCP server + REST API included
+- ✅ Perfect for individuals and teams
 
-## ☁️ Cloud Tiers (Coming Soon)
-- **Starter** ($10/month): 10k requests, 100 memories, cloud sync
-- **Pro** ($30/month): Unlimited requests, unlimited memories, priority support
-
-*Cloud integration powered by Stripe - Simple, secure signup*
+*Cloud sync and team features planned for v2.4.0+ (Q1 2026)*
 
 ---
 

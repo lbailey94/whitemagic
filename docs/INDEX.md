@@ -60,7 +60,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 ### Essential Reading
 - **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** - Complete deployment guide  
   ⭐ **Most comprehensive** - Docker, PostgreSQL, Redis, Caddy
-- **[DEPLOY_NOW.md](archive/v2.1.3-prep/DEPLOY_NOW.md)** - Quick deployment checklist (archived)  
+- **[DEPLOY_NOW.md](archive/v2.2.1-prep/DEPLOY_NOW.md)** - Quick deployment checklist (archived)  
   ⏱️ **~45 minutes** from zero to production
 - **[START_HERE.md](../START_HERE.md)** - Quick reference card
 

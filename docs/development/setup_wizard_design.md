@@ -1,4 +1,4 @@
-# Setup Wizard Design - v2.1.7
+# Setup Wizard Design - v2.2.1
 
 **Created**: Nov 15, 2025 | **Priority**: 0 (Highest)
 

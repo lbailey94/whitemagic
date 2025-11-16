@@ -7,79 +7,79 @@
 
 ## 📊 What the Review Team Added (Missing from Our Plan)
 
-### ⭐ Config File System (v2.1.6)
+### ⭐ Config File System (v2.2.1)
 **What**: `~/.whitemagic/config.yaml` for persistent configuration  
 **Why**: Massive UX win - configure once, use everywhere  
 **Impact**: CLI, SDK, and API all read same config  
 **Our Assessment**: **CRITICAL - This is huge!**
 
-### ⭐ Bundled Embeddings (v2.1.6)
+### ⭐ Bundled Embeddings (v2.2.1)
 **What**: Bundle MiniLM or add `whitemagic embeddings install`  
 **Why**: Users shouldn't wrestle with torch/sentence-transformers  
 **Impact**: Removes #1 friction point for new users  
 **Our Assessment**: **HIGH PRIORITY**
 
-### ⭐ Async CLI Wrappers (v2.1.6)
+### ⭐ Async CLI Wrappers (v2.2.1)
 **What**: Non-blocking operations with progress indicators  
 **Why**: Better UX for long operations (model downloads)  
 **Impact**: More responsive CLI  
 **Our Assessment**: **MEDIUM PRIORITY**
 
-### ⭐⭐ Auto-Consolidation (v2.1.7)
+### ⭐⭐ Auto-Consolidation (v2.2.1)
 **What**: `whitemagic consolidate --auto` with semantic clustering  
 **Why**: This is THE killer feature - automated memory hygiene  
 **Impact**: Differentiates WhiteMagic from all competitors  
 **Our Assessment**: **KILLER FEATURE - Must implement!**
 
-### ⭐ Provenance Metadata (v2.1.7)
+### ⭐ Provenance Metadata (v2.2.1)
 **What**: Track source_command, source_tool, source_project  
 **Why**: Essential for debugging and trust  
 **Impact**: Better context-building and transparency  
 **Our Assessment**: **HIGH PRIORITY**
 
-### ⭐ Memory Health Metrics (v2.1.7)
+### ⭐ Memory Health Metrics (v2.2.1)
 **What**: `/stats` endpoint with promotion rates, storage, performance  
 **Why**: Enables agent reasoning about memory health  
 **Impact**: Dashboard insights and automation  
 **Our Assessment**: **MEDIUM-HIGH PRIORITY**
 
-### ⭐⭐ Init Wizard (v2.1.8)
+### ⭐⭐ Init Wizard (v2.2.1)
 **What**: `whitemagic init` interactive onboarding  
 **Why**: Critical for adoption - get users to "aha moment" fast  
 **Impact**: <2 minute setup vs. reading docs  
 **Our Assessment**: **CRITICAL FOR ADOPTION**
 
-### ⭐⭐ TUI Dashboard (v2.1.8)
+### ⭐⭐ TUI Dashboard (v2.2.1)
 **What**: Terminal UI using textual/rich  
 **Why**: CLI users deserve beautiful interfaces too  
 **Impact**: Browse, search, approve - all in terminal  
 **Our Assessment**: **GAME-CHANGER**
 
-### ⭐ First-Run Validation (v2.1.8)
+### ⭐ First-Run Validation (v2.2.1)
 **What**: API/CLI validates env vars before starting  
 **Why**: Prevents cryptic deployment failures  
 **Impact**: Better error messages, faster debugging  
 **Our Assessment**: **HIGH PRIORITY**
 
-### ⭐⭐ Docker Images (v2.1.9)
+### ⭐⭐ Docker Images (v2.2.1)
 **What**: Official images on Docker Hub (SQLite + Postgres variants)  
 **Why**: Massive distribution win - reduces setup friction  
 **Impact**: One-command deployment  
 **Our Assessment**: **MASSIVE DISTRIBUTION WIN**
 
-### ⭐⭐ MCP Expansion (v2.1.9)
+### ⭐⭐ MCP Expansion (v2.2.1)
 **What**: First-class MCP tools/resources for search, exec, CRUD  
 **Why**: Enables true agent autonomy  
 **Impact**: Cursor/Windsurf agents can maintain memory without shell  
 **Our Assessment**: **CRITICAL FOR AGENT ADOPTION**
 
-### ⭐ Socket/JSON Protocol (v2.1.9)
+### ⭐ Socket/JSON Protocol (v2.2.1)
 **What**: TUI exposes programmatic interface  
 **Why**: Enables automation and scripting  
 **Impact**: Agent-friendly memory browser  
 **Our Assessment**: **MEDIUM PRIORITY**
 
-### ⭐ Monetization Prep (v2.1.9)
+### ⭐ Monetization Prep (v2.2.1)
 **What**: Stripe/Whop behind feature flags  
 **Why**: Infrastructure ready, no code churn later  
 **Impact**: Easy paid tier activation  
@@ -136,7 +136,7 @@
 
 ## 🎯 UNIFIED ROADMAP
 
-### v2.1.6: Foundation & Polish (Week of Nov 18)
+### v2.2.1: Foundation & Polish (Week of Nov 18)
 | Feature | Source | Priority |
 |---------|--------|----------|
 | Config file system | Review | ⭐⭐⭐ |
@@ -147,7 +147,7 @@
 | Terminal integration tests | Both | ⭐⭐⭐ |
 | Documentation | Both | ⭐⭐ |
 
-### v2.1.7: Intelligence & Automation (Week of Nov 25)
+### v2.2.1: Intelligence & Automation (Week of Nov 25)
 | Feature | Source | Priority |
 |---------|--------|----------|
 | Auto-consolidation | Review | ⭐⭐⭐⭐ KILLER |
@@ -156,7 +156,7 @@
 | Memory relationships | Ours | ⭐⭐ (defer?) |
 | Auto-tagging | Ours | ⭐ (optional) |
 
-### v2.1.8: Onboarding & Experience (Week of Dec 2)
+### v2.2.1: Onboarding & Experience (Week of Dec 2)
 | Feature | Source | Priority |
 |---------|--------|----------|
 | Init wizard | Review | ⭐⭐⭐⭐ CRITICAL |
@@ -165,7 +165,7 @@
 | Getting started docs | Both | ⭐⭐ |
 | Video walkthrough | Ours | ⭐⭐ |
 
-### v2.1.9: Distribution & Integration (Week of Dec 9)
+### v2.2.1: Distribution & Integration (Week of Dec 9)
 | Feature | Source | Priority |
 |---------|--------|----------|
 | Docker images | Review | ⭐⭐⭐⭐ MASSIVE |
@@ -199,23 +199,23 @@
 ## ✅ What We're Adding to Our Roadmap
 
 ### Must-Have (Game Changers)
-1. ✅ Config file system (v2.1.6)
-2. ✅ Auto-consolidation (v2.1.7) - **KILLER FEATURE**
-3. ✅ Init wizard (v2.1.8)
-4. ✅ TUI dashboard (v2.1.8)
-5. ✅ Docker images (v2.1.9)
-6. ✅ MCP expansion (v2.1.9)
+1. ✅ Config file system (v2.2.1)
+2. ✅ Auto-consolidation (v2.2.1) - **KILLER FEATURE**
+3. ✅ Init wizard (v2.2.1)
+4. ✅ TUI dashboard (v2.2.1)
+5. ✅ Docker images (v2.2.1)
+6. ✅ MCP expansion (v2.2.1)
 
 ### High Priority
-1. ✅ Bundled embeddings (v2.1.6)
-2. ✅ Provenance metadata (v2.1.7)
-3. ✅ Memory health metrics (v2.1.7)
-4. ✅ First-run validation (v2.1.8)
+1. ✅ Bundled embeddings (v2.2.1)
+2. ✅ Provenance metadata (v2.2.1)
+3. ✅ Memory health metrics (v2.2.1)
+4. ✅ First-run validation (v2.2.1)
 
 ### Medium Priority
-1. ✅ Async CLI wrappers (v2.1.6)
-2. ✅ Socket/JSON protocol (v2.1.9)
-3. ✅ Monetization prep (v2.1.9)
+1. ✅ Async CLI wrappers (v2.2.1)
+2. ✅ Socket/JSON protocol (v2.2.1)
+3. ✅ Monetization prep (v2.2.1)
 
 ### Defer to v2.2+
 1. Memory relationships (good idea, not urgent)
@@ -247,9 +247,9 @@ Combined with our quality/testing rigor, we now have a roadmap that will make Wh
 ## 📅 Next Steps
 
 1. **Tonight**: Release v2.2.1 officially ✅
-2. **This weekend**: Plan v2.1.6 in detail
+2. **This weekend**: Plan v2.2.1 in detail
 3. **Monday**: Start implementing config system
-4. **Week of Nov 18**: Ship v2.1.6
-5. **Thanksgiving week**: Plan v2.1.7 auto-consolidation
+4. **Week of Nov 18**: Ship v2.2.1
+5. **Thanksgiving week**: Plan v2.2.1 auto-consolidation
 
 Let's build something amazing! 🚀

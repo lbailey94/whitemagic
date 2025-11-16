@@ -415,7 +415,7 @@ WhiteMagic is well-positioned if we:
 
 ### The Path Forward
 
-**Next 30 Days** (v2.1.6-2.1.9):
+**Next 30 Days** (v2.2.1-2.1.9):
 1. UX polish: Nested Learning, onboarding wizard, memory browser TUI
 2. Build community hub (Discord)
 3. Launch campaign (PH + HN + communities)

@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Independent reviewer found **2 critical RCE vulnerabilities** and **5 high-priority issues**. Critical vulnerabilities have been patched immediately (commit `965c495`). Remaining issues tracked below for v2.1.7 release.
+Independent reviewer found **2 critical RCE vulnerabilities** and **5 high-priority issues**. Critical vulnerabilities have been patched immediately (commit `965c495`). Remaining issues tracked below for v2.2.1 release.
 
 ---
 
@@ -30,7 +30,7 @@ Independent reviewer found **2 critical RCE vulnerabilities** and **5 high-prior
 - Endpoint now returns 503 with security explanation
 - Documented proper flow: Whop webhook → signed token → email → validation
 
-**Proper Implementation** (TODO v2.1.7):
+**Proper Implementation** (TODO v2.2.1):
 ```python
 @router.post("/retrieve")
 async def retrieve_api_key(
@@ -96,7 +96,7 @@ async def retrieve_api_key(
 
 ---
 
-## 🟠 HIGH PRIORITY - TODO v2.1.7
+## 🟠 HIGH PRIORITY - TODO v2.2.1
 
 ### 3. Incremental Backups Don't Work
 
@@ -262,7 +262,7 @@ VERSION = whitemagic.__version__
 
 ---
 
-## 🟡 MEDIUM PRIORITY - TODO v2.1.8
+## 🟡 MEDIUM PRIORITY - TODO v2.2.1
 
 ### 7. Semantic Search Re-embeds Everything
 
@@ -363,12 +363,12 @@ def restore_backup(backup_path: Path) -> bool:
 
 ## Implementation Timeline
 
-### v2.1.6.1 (Hotfix - November 15, 2025)
+### v2.2.1.1 (Hotfix - November 15, 2025)
 - ✅ DONE: Disable API key retrieval endpoint
 - ✅ DONE: Change exec API default to false
 - ✅ DONE: Deploy security fixes
 
-### v2.1.7 (December 2025)
+### v2.2.1 (December 2025)
 - [ ] #3: Implement or remove incremental backups
 - [ ] #4: Forward env/stdin in terminal execution
 - [ ] #5: Fix async embeddings (asyncio.to_thread)
@@ -376,7 +376,7 @@ def restore_backup(backup_path: Path) -> bool:
 - [ ] #8: Add security documentation
 - [ ] Implement proper API key retrieval flow (signed tokens)
 
-### v2.1.8 (January 2026)
+### v2.2.1 (January 2026)
 - [ ] #7: Add semantic search caching
 - [ ] #9: Add backup hash verification
 
@@ -419,7 +419,7 @@ def restore_backup(backup_path: Path) -> bool:
 ## Status Summary
 
 - 🔴 Critical (2): ✅ **FIXED** (deployed)
-- 🟠 High (4): 📋 Planned for v2.1.7
-- 🟡 Medium (3): 📋 Planned for v2.1.7-v2.1.8
+- 🟠 High (4): 📋 Planned for v2.2.1
+- 🟡 Medium (3): 📋 Planned for v2.2.1-v2.2.1
 
 **All critical vulnerabilities patched.** System is now secure by default.

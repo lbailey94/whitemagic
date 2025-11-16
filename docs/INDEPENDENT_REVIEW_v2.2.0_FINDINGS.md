@@ -11,7 +11,7 @@
 
 - **Version References**: Updated verify_fixes.py, ROADMAP.md, SECURITY.md to 2.2.0
 - **Parser Bug**: Fixed frontmatter YAML parsing (already in v2.2.0)
-- **Enum Serialization**: Fixed RelationType storage (already in v2.1.8)
+- **Enum Serialization**: Fixed RelationType storage (already in v2.2.1)
 
 ---
 
@@ -91,7 +91,7 @@
 **Issues**:
 - README claims "173/223 tests" (actual count unknown)
 - CHANGELOG says terminal exec API "enabled by default" (requires `WM_ENABLE_EXEC_API=true`)
-- Various docs still reference v2.1.3
+- Various docs still reference v2.2.1
 - Files: `README.md:9-56`, `CHANGELOG.md:212-267`, `whitemagic/api/app.py:302-324`
 
 **Priority**: 🟢 P2 (Confusion, not blocking)

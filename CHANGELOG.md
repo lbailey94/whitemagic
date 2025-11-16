@@ -10,6 +10,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.1] - 2025-11-15
+
+### Added
+- **Tiered context loading** (Tier 0/1/2) for 87% reduction in context overhead
+- **Direct file reads** (10-100x faster than MCP server calls)
+- **Optimized grep search** for targeted memory discovery
+- **Session resume protocol** with <5K token context loads
+- **Backup verification** with SHA256 checksums and manifests
+- **Archive API endpoints** (list, restore, permanent delete)
+- **SDK header compatibility** (X-API-Key + Authorization support)
+- **Dockerfile** for docker-compose deployments
+
+### Fixed
+- **Docker compose** missing Dockerfile issue resolved
+- **SDK alignment** improved authentication header support
+- **Archive operations** now accessible via REST API
+- **Documentation** version consistency (71 files reviewed, 26 archived)
+
+### Changed
+- **Documentation reorganized** with structured archive system
+- **SDK versions updated** to 2.2.1 (Python & TypeScript)
+- **Performance** 37-58% token reduction for multi-session projects
+
+### Documentation
+- Created organized archive structure (future/, plans/, releases/, security-reviews/, development/)
+- Archived 26 outdated/aspirational files
+- Updated all version references to 2.2.1
+- Added EFFICIENCY_EXPLAINED.md (technical deep dive)
+- Added comprehensive audit documents
+
+[2.2.1]: https://github.com/lbailey94/whitemagic/compare/v2.2.0...v2.2.1
+
+---
+
 ## [2.2.0] - 2025-11-15
 
 ### Fixed

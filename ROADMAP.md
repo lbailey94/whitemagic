@@ -1,8 +1,9 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: 2.2.0 ✅ (Released Nov 15, 2025)  
-**Next Version**: 2.3.0 (SDK Realignment & API Completion)  
-**Status**: Core Stable, Addressing Integration Issues  
+**Current Version**: 2.2.1 ✅ (Released Nov 15, 2025)  
+**Next Version**: 2.2.2 (Bugfix Release - Est. Late Nov 2025)  
+**Future**: 2.3.0 (Feature Release - Est. Late Dec 2025/Early Jan 2026)  
+**Status**: High Efficiency, Planning Next Phases  
 **Updated**: November 15, 2025
 
 ---
@@ -23,10 +24,230 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 - ✅ REST API with auth, quotas, rate limits
 - ✅ MCP server (IDE integration - Cursor, Windsurf, Claude)
 - ✅ Semantic search with embeddings
-- 🚧 Multi-tier monetization via Whop
-- 🚧 Graph-based memory relationships
-- 🚧 Team workspaces & collaboration
-- 🚧 Multi-modal memory (images, PDFs, audio)
+- ✅ **NEW v2.2.1**: Tiered context loading (87% token reduction)
+- ✅ **NEW v2.2.1**: Archive API endpoints
+- 🚧 Multi-tier monetization via Whop (DEFERRED to v2.4.0+)
+- 🚧 Graph-based memory relationships (v2.3.0)
+- 🚧 Team workspaces & collaboration (v2.4.0+)
+- 🚧 Multi-modal memory (images, PDFs, audio) (v2.4.0+)
+
+---
+
+## v2.2.1 ✅ COMPLETE (Nov 15, 2025)
+
+**Focus**: Efficiency Improvements + Documentation Audit
+
+### Added
+- **87% token reduction** via tiered context loading (Tier 0/1/2)
+- **10-100x faster** direct file reads (vs MCP server calls)
+- **Optimized grep search** for targeted memory discovery
+- **Session resume protocol** with <5K token context loads
+- **Backup verification** with SHA256 checksums and manifests
+- **Archive API endpoints** (list, restore, permanent delete)
+- **SDK header compatibility** (X-API-Key + Authorization support)
+- **Dockerfile** added for docker-compose deployments
+
+### Fixed
+- Docker compose missing Dockerfile issue
+- SDK authentication header alignment
+- Archive operations via REST API
+- Documentation version consistency (71 files reviewed, 26 archived)
+
+### Documentation
+- Created organized archive structure (future/, plans/, releases/, security-reviews/, development/)
+- Archived 26 outdated/aspirational files
+- Updated all version references to 2.2.1
+- Added EFFICIENCY_EXPLAINED.md (technical deep dive)
+- Comprehensive audit documents created
+
+### Performance
+- **37-58% token reduction** for multi-session projects
+- **5-10 sessions per 200K budget** (vs 2-3 before)
+- **Session resume**: <5K tokens for complete context
+- **Cost savings**: 37% reduction in API usage
+
+---
+
+## v2.2.2 🚧 NEXT (Est. Late Nov 2025)
+
+**Focus**: Bugfix Release + SDK Realignment  
+**Timeline**: 1-2 weeks  
+**Type**: Patch release (backwards compatible)
+
+### Core Objectives
+
+1. **Complete SDK/API Contract Realignment**
+   - Ensure Python SDK matches all v2.2.1 API endpoints
+   - Ensure TypeScript SDK matches all v2.2.1 API endpoints
+   - Add missing archive operations to SDKs
+   - Update SDK documentation
+
+2. **Dashboard Decision**
+   - **Option A**: Fix dashboard login (if quick fix available)
+   - **Option B**: Remove dashboard entirely (defer to v2.3.0+ with proper design)
+   - **Decision criteria**: Time investment vs value
+
+3. **Test Coverage Improvements**
+   - Target: 90%+ test coverage across core modules
+   - Add integration tests for Archive API
+   - Add SDK compatibility tests
+   - Performance regression tests
+
+4. **Documentation Polish**
+   - Fix any broken links from archive reorganization
+   - Update SDK examples with v2.2.1 features
+   - Add troubleshooting entries for common issues
+   - Website content from EFFICIENCY_EXPLAINED.md
+
+### Advanced Features (New)
+
+5. **Parallel Memory Contexts**
+   - Multiple independent memory spaces via `--memory-dir` flag
+   - Process isolation for concurrent projects
+   - Shared read access, exclusive write locks
+   - Background operations (consolidation, search)
+
+6. **External Memory Integration**
+   - Treat all `.md` files as queryable knowledge base
+   - `docs/` folder becomes searchable external memory
+   - Cross-reference memories with documentation
+   - Unified search across memory + docs
+
+7. **MCP Optimization Mode**
+   - Fast mode: Skip metadata enrichment (10x faster)
+   - Batch operations: Multiple files in one call
+   - Caching layer for frequently accessed memories
+   - Lazy metadata loading (only when needed)
+
+8. **Incremental Backups**
+   - Only backup changed memories (faster, less storage)
+   - Differential backup strategy
+   - Automatic old backup cleanup
+   - Backup verification enhancements
+
+9. **Memory Analytics Dashboard**
+   - Usage patterns visualization
+   - Most-accessed memories tracking
+   - Growth over time metrics
+   - Access heatmaps (optional telemetry)
+
+10. **Smart Consolidation**
+   - Auto-consolidate based on access patterns
+   - Heuristic-based promotion (short → long term)
+   - Background process with configurable rules
+   - Manual override available
+
+### Critical Issues from Independent Review
+- ✅ SDK/API contract drift (partially fixed in 2.2.1, complete in 2.2.2)
+- ⏸️ Dashboard login broken (fix or remove decision)
+- ✅ Archive API incomplete (fixed in 2.2.1)
+- ✅ Documentation inconsistencies (fixed in 2.2.1)
+
+### Success Criteria
+- ✅ All SDK operations match API capabilities
+- ✅ Dashboard either working or removed
+- ✅ 90%+ test coverage
+- ✅ Zero broken documentation links
+- ✅ Performance maintained or improved
+
+---
+
+## v2.3.0 🎯 FUTURE (Est. Late Dec 2025 / Early Jan 2026)
+
+**Focus**: Feature Release + Website Launch  
+**Timeline**: 4-6 weeks  
+**Type**: Minor release (new features, backwards compatible)
+
+### Major Features
+
+1. **Graph Visualization (Complete)**
+   - Memory relationship graphs
+   - ASCII tree output for CLI
+   - Mermaid diagram generation
+   - API endpoints for graph data
+   - Interactive visualization (if dashboard exists)
+
+2. **Enhanced Caching System**
+   - Semantic search cache (file-based)
+   - Cache invalidation strategy
+   - Performance benchmarks
+   - Cache clearing/rebuild commands
+
+3. **Website & Documentation Hub**
+   - **whitemagiclabs.com** (or similar)
+   - Feature showcase
+   - Technical blog (efficiency deep dive)
+   - Interactive demos
+   - SDK documentation
+   - API reference
+   - Getting started guide
+
+4. **Performance Optimizations**
+   - Batch operations for multiple memories
+   - Lazy loading for large memory sets
+   - Streaming for large memory content
+   - Query optimization for semantic search
+
+5. **Enhanced Monitoring**
+   - Usage analytics (opt-in)
+   - Performance metrics dashboard
+   - Error tracking improvements
+   - Health check enhancements
+
+### Deferred Features (NOT in v2.3.0)
+- ❌ **Monetization** (deferred to v2.4.0+)
+- ❌ **Cloud sync** (deferred to v2.4.0+)
+- ❌ **Team workspaces** (deferred to v2.4.0+)
+- ❌ **Stripe integration** (deferred to v2.4.0+)
+
+### User Directive
+**NO monetization until AFTER v2.3.0**
+- Focus on polish, features, and user growth
+- Target: 1,000+ active local users before monetization
+- Build solid foundation for paid features
+
+### Success Criteria
+- ✅ Website live and professional
+- ✅ Complete v2.2.1_PLAN.md features
+- ✅ Graph visualization production-ready
+- ✅ Caching provides measurable performance gains
+- ✅ Documentation comprehensive and up-to-date
+- ✅ 1,000+ downloads or significant user growth
+
+---
+
+## v2.4.0+ 💰 MONETIZATION (Q1 2026)
+
+**Focus**: Cloud Sync + Team Features + Monetization  
+**Timeline**: 8-12 weeks after v2.3.0  
+**Type**: Major release (may include breaking changes)
+
+### Prerequisites
+- ✅ 1,000+ active local users
+- ✅ Stable core product
+- ✅ Comprehensive documentation
+- ✅ Strong community feedback
+
+### Planned Features
+- **Cloud sync** (optional, encrypted)
+- **Team workspaces** (shared memories)
+- **Collaboration features** (comments, permissions)
+- **Stripe integration** (subscription billing)
+- **Hosted service** (optional paid tier)
+- **Dashboard** (if not in v2.3.0, redesigned)
+- **Advanced analytics** (team insights)
+
+### Pricing Strategy (TBD)
+- **Free tier**: Local-only (always free)
+- **Pro tier** ($10-15/mo): Cloud sync, 10GB storage
+- **Team tier** ($30-50/mo): Team workspaces, 50GB storage, collaboration
+- **Enterprise**: Custom pricing, on-prem, SSO, support
+
+### Philosophy
+- **Local-first always** (free tier never limited)
+- **Privacy-focused** (encryption, user control)
+- **Value-driven** (features justify cost)
+- **Community-supported** (open source core)
 
 ---
 
