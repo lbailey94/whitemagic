@@ -1695,6 +1695,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Main CLI entry point."""
+    import os
+    
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -1702,7 +1704,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         parser.print_help()
         return 0
 
-    manager = MemoryManager(base_dir=args.base_dir)
+    # Support environment variable for base_dir (parallel contexts)
+    # Priority: CLI arg > WHITEMAGIC_BASE_DIR env > default
+    base_dir = args.base_dir
+    if base_dir == "." and "WHITEMAGIC_BASE_DIR" in os.environ:
+        base_dir = os.environ["WHITEMAGIC_BASE_DIR"]
+
+    manager = MemoryManager(base_dir=base_dir)
     handler = COMMAND_HANDLERS.get(args.command)
     if not handler:
         parser.error(f"Unknown command: {args.command}")
