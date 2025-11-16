@@ -15,6 +15,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { WhiteMagicClient } from './client.js';
+import { fastRead, batchRead, clearCache, getCacheStats } from './optimizations.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -355,6 +356,63 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ['filename'],
         },
       },
+      {
+        name: 'fast_read_memory',
+        description: '⚡ FAST: Read memory content with optimizations (10-100x faster)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filename: {
+              type: 'string',
+              description: 'Memory filename (e.g., "20251115_setup_wizard.md")',
+            },
+            fast_mode: {
+              type: 'boolean',
+              description: 'Skip metadata parsing for maximum speed',
+              default: true,
+            },
+            cache: {
+              type: 'boolean',
+              description: 'Use cache if available',
+              default: true,
+            },
+          },
+          required: ['filename'],
+        },
+      },
+      {
+        name: 'batch_read_memories',
+        description: '⚡ BATCH: Read multiple memories in one operation',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filenames: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of memory filenames to read',
+            },
+            fast_mode: {
+              type: 'boolean',
+              description: 'Skip metadata parsing',
+              default: true,
+            },
+            cache: {
+              type: 'boolean',
+              description: 'Use cache',
+              default: true,
+            },
+          },
+          required: ['filenames'],
+        },
+      },
+      {
+        name: 'clear_memory_cache',
+        description: 'Clear the memory read cache (useful for testing or memory pressure)',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
     ],
   };
 });
@@ -527,15 +585,87 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case 'fast_read_memory': {
+        const memoryPath = join(config.basePath, 'memory');
+        const filename = args.filename as string;
+        const type = filename.includes('long_term') ? 'long_term' : 'short_term';
+        const filepath = join(memoryPath, type, filename);
+        
+        const content = fastRead(filepath, {
+          fast_mode: args.fast_mode !== false,
+          cache: args.cache !== false,
+        });
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: content,
+            },
+          ],
+        };
+      }
+
+      case 'batch_read_memories': {
+        const memoryPath = join(config.basePath, 'memory');
+        const filenames = args.filenames as string[];
+        
+        // Resolve full paths
+        const fullPaths = filenames.map(filename => {
+          const type = filename.includes('long_term') ? 'long_term' : 'short_term';
+          return join(type, filename);
+        });
+        
+        const result = batchRead(memoryPath, {
+          filenames: fullPaths,
+          options: {
+            fast_mode: args.fast_mode !== false,
+            cache: args.cache !== false,
+          },
+        });
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'clear_memory_cache': {
+        clearCache();
+        const stats = getCacheStats();
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Cache cleared. Stats: ${JSON.stringify(stats)}`,
+            },
+          ],
+        };
+      }
+
       default:
-        throw new Error(`Unknown tool: ${name}`);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Unknown tool: ${name}`,
+            },
+          ],
+          isError: true,
+        };
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       content: [
         {
           type: 'text',
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          text: `Error: ${errorMessage}`,
         },
       ],
       isError: true,

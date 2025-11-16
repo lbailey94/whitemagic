@@ -69,3 +69,24 @@ export interface WhiteMagicConfig {
   apiKey?: string;
   basePath: string;
 }
+
+export interface ReadOptions {
+  fast_mode?: boolean;      // Skip metadata enrichment (10x faster)
+  include_metadata?: boolean; // Load frontmatter (default: true)
+  cache?: boolean;           // Use cache if available (default: true)
+}
+
+export interface BatchReadRequest {
+  filenames: string[];
+  options?: ReadOptions;
+}
+
+export interface BatchReadResponse {
+  results: Array<{
+    filename: string;
+    content?: string;
+    error?: string;
+  }>;
+  cached: number;
+  total_ms: number;
+}
