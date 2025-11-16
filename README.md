@@ -2,8 +2,8 @@
 
 **Tiered Memory Management for AI Agents with Native MCP + REST Support**
 
-[![Version](https://img.shields.io/badge/version-2.1.7-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.1.7-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.2.0-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen.svg)](#testing)
@@ -352,7 +352,8 @@ pre-commit run dependency-guards
 - ✅ v2.1: Core Features (Python API, MCP, REST API)
 - ✅ v2.1.4: SDKs (TypeScript + Python clients)
 - ✅ v2.1.7: Smart Memory (Setup wizard, templates, auto-tagging, relationships)
-- 🚧 v2.2: Stripe Integration (Cloud tiers, subscriptions)
+- ✅ v2.2.0: Critical Fixes (YAML parsing, enum serialization)
+- 🚧 v2.3: Stripe Integration (Cloud tiers, subscriptions)
 - 📅 v2.3: Semantic Search (Vector embeddings, AI-powered search)
 - 📅 v3.0: Team Features (Shared memories, collaboration)
 

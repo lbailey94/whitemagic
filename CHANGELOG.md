@@ -10,6 +10,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2025-11-15
+
+### Fixed
+- **CRITICAL**: Frontmatter parser now uses yaml.safe_load() instead of custom parser
+- Handles multi-line YAML lists and nested structures correctly
+- Fixes relationship commands (relate/related)
+
+---
+
+## [2.1.8] - 2025-11-15
+
+### Fixed
+- RelationType enum serialization (Python object → clean string value)
+
+---
+
+## [2.1.7] - 2025-11-15
+
+### Added
+- Setup Wizard, Templates, Auto-Tagging, Relationships, Lifecycle, Stats
+- serialize_frontmatter() helper
+
+---
+
 ## [2.1.6] - 2025-11-14
 
 ### 🎛️ Configuration & Polish Edition
