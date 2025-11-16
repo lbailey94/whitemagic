@@ -233,6 +233,8 @@ class BackupManager:
         # Load and verify manifest if it exists
         manifest_valid = True
         manifest = None
+        hash_verification = {}
+        
         if has_manifest:
             try:
                 with open(manifest_path) as f:
@@ -241,16 +243,55 @@ class BackupManager:
                 # Verify file count matches
                 if manifest["stats"]["total_files"] != file_count:
                     manifest_valid = False
+                
+                # Verify file hashes
+                with tarfile.open(backup_path, "r:*") as tar:
+                    for file_info in manifest.get("files", {}).items():
+                        rel_path, file_meta = file_info
+                        expected_hash = file_meta.get("sha256")
+                        
+                        if not expected_hash:
+                            continue
+                        
+                        try:
+                            # Extract file content
+                            member = tar.getmember(rel_path)
+                            file_obj = tar.extractfile(member)
+                            if file_obj:
+                                actual_hash = hashlib.sha256(file_obj.read()).hexdigest()
+                                hash_match = actual_hash == expected_hash
+                                hash_verification[rel_path] = {
+                                    "match": hash_match,
+                                    "expected": expected_hash,
+                                    "actual": actual_hash
+                                }
+                                
+                                if not hash_match:
+                                    manifest_valid = False
+                        except KeyError:
+                            # File in manifest but not in tar
+                            hash_verification[rel_path] = {
+                                "match": False,
+                                "error": "File not found in archive"
+                            }
+                            manifest_valid = False
             except Exception as e:
                 manifest_valid = False
                 logger.warning(f"Manifest verification failed: {e}")
         
+        # Calculate overall validity
+        overall_valid = manifest_valid if has_manifest else True
+        mismatched_files = [k for k, v in hash_verification.items() if not v.get("match", True)]
+        
         return {
-            "valid": True,
+            "valid": overall_valid,
             "backup_path": str(backup_path),
             "has_manifest": has_manifest,
             "manifest_valid": manifest_valid,
             "file_count": file_count,
+            "hash_verification_count": len(hash_verification),
+            "hash_mismatches": len(mismatched_files),
+            "mismatched_files": mismatched_files[:10],  # First 10 for reporting
             "manifest": manifest
         }
     
@@ -309,14 +350,24 @@ class BackupManager:
         if metadata_file.exists():
             files.append(metadata_file)
         
+        # Get last backup timestamp for incremental
+        last_backup_time = None
+        if incremental and last_backup:
+            last_backup_path = Path(last_backup)
+            if last_backup_path.exists():
+                last_backup_time = last_backup_path.stat().st_mtime
+        
         # Collect all memory files
         for directory in dirs_to_backup:
             if directory.exists():
                 for file_path in directory.rglob("*.md"):
-                    if incremental and last_backup:
-                        # TODO: Implement incremental logic
-                        # For now, include all files
-                        pass
+                    # For incremental: only include files modified after last backup
+                    if incremental and last_backup_time:
+                        file_mtime = file_path.stat().st_mtime
+                        if file_mtime <= last_backup_time:
+                            # Skip - not modified since last backup
+                            continue
+                    
                     files.append(file_path)
         
         return files
