@@ -1,9 +1,9 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: 2.1.3 ✅ (Released Nov 12, 2025)  
-**Next Version**: 2.1.4 (Developer Experience & SDK)  
-**Status**: Foundation Complete, Moving to Ecosystem & Monetization  
-**Updated**: November 12, 2025
+**Current Version**: 2.2.0 ✅ (Released Nov 15, 2025)  
+**Next Version**: 2.3.0 (SDK Realignment & API Completion)  
+**Status**: Core Stable, Addressing Integration Issues  
+**Updated**: November 15, 2025
 
 ---
 

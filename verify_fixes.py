@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 
 def check_versions():
-    """Verify all version numbers are 2.1.3."""
+    """Verify all version numbers are 2.2.0."""
     print("Checking version consistency...")
 
     import whitemagic
@@ -26,18 +26,18 @@ def check_versions():
     errors = []
 
     # Check package version
-    if whitemagic.__version__ != "2.1.3":
-        errors.append(f"whitemagic.__version__ is {whitemagic.__version__}, expected 2.1.3")
+    if whitemagic.__version__ != "2.2.0":
+        errors.append(f"whitemagic.__version__ is {whitemagic.__version__}, expected 2.2.0")
 
     # Check API version
-    if whitemagic.api.__version__ != "2.1.3":
-        errors.append(f"whitemagic.api.__version__ is {whitemagic.api.__version__}, expected 2.1.3")
+    if whitemagic.api.__version__ != "2.2.0":
+        errors.append(f"whitemagic.api.__version__ is {whitemagic.api.__version__}, expected 2.2.0")
 
     # Check markdown files
     files_to_check = {
-        "README.md": "2.1.3",
-        "INSTALL.md": "2.1.3",
-        "DEPLOYMENT_GUIDE.md": "2.1.3",
+        "README.md": "2.2.0",
+        "INSTALL.md": "2.2.0",
+        "DEPLOYMENT_GUIDE.md": "2.2.0",
     }
 
     for filename, expected_version in files_to_check.items():
@@ -53,7 +53,7 @@ def check_versions():
             print(f"  - {error}")
         return False
 
-    print("✅ All versions are 2.1.3")
+    print("✅ All versions are 2.2.0")
     return True
 
 

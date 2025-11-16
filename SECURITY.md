@@ -145,7 +145,7 @@ docker run \
   --security-opt=no-new-privileges:true \
   -v whitemagic-data:/data \
   --tmpfs /tmp \
-  whitemagic:2.1.3
+  whitemagic:2.2.0
 ```
 
 #### **Database Security**
