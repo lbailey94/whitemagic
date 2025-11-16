@@ -138,15 +138,16 @@ class SearchRequest(BaseModel):
     """Request to search memories."""
 
     query: Optional[str] = Field(None, description="Search query string")
-    tags: Optional[List[str]] = Field(None, description="Filter by tags (AND logic)")
+    tags: Optional[str] = Field(None, description="Filter by tags (AND logic)")
     type: Optional[str] = Field(None, description="Filter by memory type")
     limit: int = Field(default=50, ge=1, le=1000, description="Maximum results to return")
+    include_archived: bool = Field(default=False, description="Include archived memories in results")
 
     @field_validator("type")
     @classmethod
     def validate_memory_type(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v not in ["short_term", "long_term"]:
-            raise ValueError("type must be 'short_term' or 'long_term'")
+        if v is not None and v not in ["short_term", "long_term", "archive"]:
+            raise ValueError("type must be 'short_term', 'long_term', or 'archive'")
         return v
 
 

@@ -370,11 +370,13 @@ async def create_memory(
 async def list_memories(
     user: CurrentUser,
     type: Optional[str] = None,
+    include_archived: bool = False,
 ):
     """
     List all memories for the current user.
 
-    Optionally filter by type (short_term or long_term).
+    Optionally filter by type (short_term, long_term, or archive).
+    Set include_archived=true to include archived memories in results.
     """
     try:
         manager = get_memory_manager(user)
@@ -384,8 +386,10 @@ async def list_memories(
         if type:
             memories = all_memories.get(type, [])
         else:
-            # Combine all types
+            # Combine active types (and archive if requested)
             memories = all_memories.get("short_term", []) + all_memories.get("long_term", [])
+            if include_archived:
+                memories += all_memories.get("archive", [])
 
         memory_responses = [_memory_response(manager, m) for m in memories]
 
@@ -463,17 +467,46 @@ async def delete_memory(
     filename: str,
     user: CurrentUser,
     session: DBSession,
+    permanent: bool = False,
 ):
-    """Delete a memory."""
+    """
+    Delete a memory.
+    
+    By default, memories are archived (soft delete).
+    Set permanent=true for permanent deletion (cannot be restored).
+    """
     try:
         manager = get_memory_manager(user)
-        await asyncio.to_thread(manager.delete_memory, filename)
+        await asyncio.to_thread(manager.delete_memory, filename, permanent=permanent)
         await refresh_quota_usage(session, user, manager)
 
-        return SuccessResponse(message=f"Memory deleted: {filename}")
+        action = "permanently deleted" if permanent else "archived"
+        return SuccessResponse(message=f"Memory {action}: {filename}")
 
     except Exception as e:
         raise HTTPException(500, f"Failed to delete memory: {str(e)}")
+
+
+@app.post("/api/v1/memories/{filename}/restore", response_model=SuccessResponse, tags=["Memories"])
+async def restore_memory(
+    filename: str,
+    user: CurrentUser,
+    session: DBSession,
+):
+    """
+    Restore an archived memory.
+    
+    Moves the memory from archive back to its original type (short_term or long_term).
+    """
+    try:
+        manager = get_memory_manager(user)
+        await asyncio.to_thread(manager.restore_memory, filename)
+        await refresh_quota_usage(session, user, manager)
+
+        return SuccessResponse(message=f"Memory restored: {filename}")
+
+    except Exception as e:
+        raise HTTPException(500, f"Failed to restore memory: {str(e)}")
 
 
 # Search endpoint
@@ -497,6 +530,7 @@ async def search_memories(
             query=request.query,
             tags=request.tags,
             memory_type=request.type,
+            include_archived=request.include_archived,
         )
         
         # Apply limit after search
