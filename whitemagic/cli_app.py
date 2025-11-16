@@ -209,6 +209,88 @@ def command_context(manager: MemoryManager, args: argparse.Namespace) -> int:
     return 0
 
 
+def command_resume(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'resume' command - show recent context for session continuity."""
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.markdown import Markdown
+    from pathlib import Path
+    
+    console = Console()
+    
+    # Get current version
+    version_file = Path(__file__).parent.parent / "VERSION"
+    current_version = version_file.read_text().strip() if version_file.exists() else "unknown"
+    
+    console.print(f"\n[bold cyan]🔄 WhiteMagic Session Resume - v{current_version}[/bold cyan]\n")
+    
+    # 1. Search for in-progress sessions
+    console.print("[bold]📍 Recent Session Snapshots:[/bold]")
+    in_progress = manager.search_memories(
+        tags=["in-progress", "project-state", "session"]
+    )[:3]  # Limit to 3 most recent
+    if in_progress:
+        for entry in in_progress:
+            entry_data = entry.get('entry', {})
+            created = entry_data.get('created', 'unknown')
+            title = entry_data.get('title', 'Untitled')
+            filename = entry_data.get('filename', 'unknown')
+            console.print(f"  • {title} ([dim]{created}[/dim])")
+            console.print(f"    [dim]→ {filename}[/dim]")
+    else:
+        console.print("  [dim]No active session snapshots found[/dim]")
+    
+    # 2. Search for version-specific context
+    console.print(f"\n[bold]🏷️  v{current_version} Context:[/bold]")
+    version_memories = manager.search_memories(
+        query=f"v{current_version}"
+    )[:5]  # Limit to 5
+    if version_memories:
+        for entry in version_memories[:3]:
+            entry_data = entry.get('entry', {})
+            title = entry_data.get('title', 'Untitled')
+            console.print(f"  • {title}")
+    else:
+        console.print(f"  [dim]No v{current_version}-specific memories found[/dim]")
+    
+    # 3. Get tiered context if requested
+    if args.tier is not None:
+        console.print(f"\n[bold]🧠 Context Summary (Tier {args.tier}):[/bold]")
+        summary = manager.generate_context_summary(args.tier)
+        
+        # Show truncated version in panel
+        lines = summary.split('\n')
+        if len(lines) > 30:
+            truncated = '\n'.join(lines[:30]) + f"\n\n... ({len(lines) - 30} more lines)"
+        else:
+            truncated = summary
+        
+        console.print(Panel(Markdown(truncated), border_style="blue"))
+    
+    # 4. Helpful next steps
+    console.print("\n[bold green]✅ Session Context Ready![/bold green]")
+    console.print("\n[bold]Recommended next steps:[/bold]")
+    console.print("  1. Share relevant findings with your AI assistant")
+    console.print("  2. Use [cyan]whitemagic search \"[query]\"[/cyan] for targeted context")
+    console.print("  3. Use [cyan]whitemagic context --tier 1[/cyan] for balanced context")
+    
+    if args.detailed and in_progress:
+        console.print("\n[bold]📄 Full Session Details:[/bold]")
+        for entry in in_progress[:1]:  # Show first in-progress memory in full
+            entry_data = entry.get('entry', {})
+            filename = entry_data.get('filename')
+            title = entry_data.get('title', 'Untitled')
+            if filename:
+                content = manager.read_memory(filename)
+                console.print(Panel(
+                    Markdown(content.get('content', '')),
+                    title=f"[bold]{title}[/bold]",
+                    border_style="green"
+                ))
+    
+    return 0
+
+
 def command_consolidate(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'consolidate' command."""
     dry_run = not args.no_dry_run
@@ -967,6 +1049,7 @@ COMMAND_HANDLERS = {
     "list": command_list,
     "search": command_search,
     "context": command_context,
+    "resume": command_resume,
     "consolidate": command_consolidate,
     "delete": command_delete,
     "update": command_update,
@@ -1117,6 +1200,24 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[0, 1, 2],
         default=1,
         help="Context tier: 0 (minimal), 1 (balanced), 2 (full).",
+    )
+
+    # resume
+    resume_parser = subparsers.add_parser(
+        "resume",
+        help="Show recent context for session continuity (in-progress work, version context)."
+    )
+    resume_parser.add_argument(
+        "--tier",
+        type=int,
+        choices=[0, 1, 2],
+        default=None,
+        help="Include context summary at specified tier (optional).",
+    )
+    resume_parser.add_argument(
+        "--detailed",
+        action="store_true",
+        help="Show full content of most recent in-progress memory.",
     )
 
     # consolidate
