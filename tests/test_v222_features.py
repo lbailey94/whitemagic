@@ -74,10 +74,11 @@ class TestParallelContexts:
             memory_type="short_term"
         )
         
-        # Both memories should exist
-        memories = mgr1.list_all_memories()["short_term"]
+        # Both memories should exist (create fresh manager to reload index)
+        mgr_fresh = MemoryManager(base_dir=str(context))
+        memories = mgr_fresh.list_all_memories()["short_term"]
         assert len(memories) == 2
-        titles = [m.title for m in memories]
+        titles = [m["title"] for m in memories]
         assert "Memory 1" in titles
         assert "Memory 2" in titles
 
