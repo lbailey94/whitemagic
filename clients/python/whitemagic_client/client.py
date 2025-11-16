@@ -175,6 +175,27 @@ class WhiteMagicClient:
         result = self._request("GET", "/api/v1/search", params=query_params)
         return [Memory(**m) for m in result]
     
+    def add_relationship(
+        self,
+        memory_id: str,
+        target_id: str,
+        relationship_type: str,
+        description: str | None = None
+    ) -> dict:
+        """Add a relationship between two memories."""
+        data = {
+            "target_filename": target_id,
+            "type": relationship_type,
+            "description": description
+        }
+        result = self._request("POST", f"/api/v1/memories/{memory_id}/relationships", json=data)
+        return result
+    
+    def get_relationships(self, memory_id: str) -> list[dict]:
+        """Get all relationships for a memory."""
+        result = self._request("GET", f"/api/v1/memories/{memory_id}/relationships")
+        return result
+    
     # User operations
     def get_current_user(self) -> User:
         """Get current user information."""

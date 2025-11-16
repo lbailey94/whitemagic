@@ -1,0 +1,16 @@
+{
+  "filename": "20251115_132433_development_lessons_file_splitting_and_common_mist.md",
+  "title": "Development Lessons - File Splitting and Common Mistakes",
+  "tags": [
+    "lessons-learned",
+    "development",
+    "best-practices",
+    "file-splitting"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Development Lessons - File Splitting and Common Mistakes | lessons-learned, development, best-practices, file-splitting",
+  "tier1": "**Problem**: Writing large files (>300 lines) causes `deadline_exceeded` errors **Token Waste**:...",
+  "tier2": "Development Lessons Learned. File Size and Timeout Issues. **Problem**: Writing large files (>300 lines) causes `deadline_exceeded` errors. **Solution - Multi-File Architecture**:. **Benefits**:",
+  "created_at": null,
+  "updated_at": null
+}

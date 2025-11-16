@@ -1,0 +1,18 @@
+{
+  "filename": "20251115_141736_missing_mcp_tools_critical_gap_analysis.md",
+  "title": "Missing MCP Tools - Critical Gap Analysis",
+  "tags": [
+    "mcp",
+    "tools",
+    "missing-features",
+    "critical",
+    "ux",
+    "v2.1.8"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Missing MCP Tools - Critical Gap Analysis | mcp, tools, missing-features, critical, ux, v2.1.8",
+  "tier1": "1. `read_memory` - Read full content of specific memory 2. `list_memories` - Browse all memories...",
+  "tier2": "MCP Tools - Complete Roadmap. \u2705 Implemented (Week 1 Polish). 1. `read_memory` - Read full content of specific memory. \ud83c\udfaf Priority for v2.1.8. High Priority",
+  "created_at": null,
+  "updated_at": null
+}

@@ -1,0 +1,18 @@
+{
+  "filename": "20251115_164209_test_results_173174_pass_minor_import_bug_found.md",
+  "title": "Test Results: 173/174 Pass - Minor Import Bug Found",
+  "tags": [
+    "testing",
+    "v2.1.7",
+    "bug",
+    "cli-relationships",
+    "test-results",
+    "v2.1.8"
+  ],
+  "memory_type": "short_term",
+  "tier0": "[short_term] Test Results: 173/174 Pass - Minor Import Bug Found | testing, v2.1.7, bug, cli-relationships, test-results, v2.1.8",
+  "tier1": "**Date**: Nov 15, 2025, 4:35 PM **Status**: 173/174 tests passing",
+  "tier2": "Test Results: v2.1.7 - 99.4% Pass Rate. **Date**: Nov 15, 2025, 4:35 PM. Results. ```. Failed Test",
+  "created_at": null,
+  "updated_at": null
+}

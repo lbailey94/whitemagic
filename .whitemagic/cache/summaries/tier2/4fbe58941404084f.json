@@ -1,0 +1,19 @@
+{
+  "filename": "20251115_175008_v218_strategy_dependency_management_polish_release.md",
+  "title": "v2.1.8 Strategy - Dependency Management + Polish Release",
+  "tags": [
+    "v2.1.8",
+    "strategy",
+    "roadmap",
+    "dependencies",
+    "setup-wizard",
+    "polish",
+    "quality"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] v2.1.8 Strategy - Dependency Management + Polish Release | v2.1.8, strategy, roadmap, dependencies, setup-wizard, polish, quality",
+  "tier1": "**Target Date**: November 18-20, 2025 **Theme**: Quality & Choice - Let Users Pick Their Stack...",
+  "tier2": "v2.1.8 Strategy: Dependency Management + Polish. **Target Date**: November 18-20, 2025. Overview. v2.1.8 focuses on fixing the relationship CLI bug, improving dependency management with user choice, and adding comprehensive tests. This is about **quality and flexibility** rather than new features.. Core Goals",
+  "created_at": null,
+  "updated_at": null
+}

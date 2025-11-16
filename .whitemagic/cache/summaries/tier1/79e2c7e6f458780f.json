@@ -1,0 +1,16 @@
+{
+  "filename": "20251116_000322_composite_reasoning_strategy_building_complex_outp.md",
+  "title": "Composite Reasoning Strategy - Building Complex Outputs",
+  "tags": [
+    "strategy",
+    "efficiency",
+    "composite-reasoning",
+    "best-practices"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Composite Reasoning Strategy - Building Complex Outputs | strategy, efficiency, composite-reasoning, best-practices",
+  "tier1": "**Concept**: Build complex outputs incrementally rather than all at once",
+  "tier2": "Composite/Tactical Reasoning Strategy. **Concept**: Build complex outputs incrementally rather than all at once. ---. The Problem. **Length/timeout limits**: AI responses capped at ~5-10K tokens (2.5-5% of budget)",
+  "created_at": null,
+  "updated_at": null
+}

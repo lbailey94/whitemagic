@@ -1,0 +1,16 @@
+{
+  "filename": "20251116_005509_problem_solving_memory_system_error_patterns_solut.md",
+  "title": "Problem-Solving Memory System - Error Patterns & Solutions",
+  "tags": [
+    "problem-solving",
+    "errors",
+    "learning",
+    "patterns"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Problem-Solving Memory System - Error Patterns & Solutions | problem-solving, errors, learning, patterns",
+  "tier1": "**Purpose**: Remember errors and their solutions to avoid repeating mistakes",
+  "tier2": "Problem-Solving Memory System. **Purpose**: Remember errors and their solutions to avoid repeating mistakes. ---. Error Pattern: API Signature Mismatches. **Problem**: Tests calling `create_memory(title=..., type=...)` but API expects `create_memory(title, content, memory_type=...)`",
+  "created_at": null,
+  "updated_at": null
+}

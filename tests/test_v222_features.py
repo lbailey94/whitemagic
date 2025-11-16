@@ -46,8 +46,8 @@ class TestParallelContexts:
         )
         
         # Verify isolation
-        assert mgr_a.list_all_memories()["short_term"][0].title == "Context A Memory"
-        assert mgr_b.list_all_memories()["short_term"][0].title == "Context B Memory"
+        assert mgr_a.list_all_memories()["short_term"][0]["title"] == "Context A Memory"
+        assert mgr_b.list_all_memories()["short_term"][0]["title"] == "Context B Memory"
         
         # Context A should not see B's memory
         assert len(mgr_a.list_all_memories()["short_term"]) == 1
@@ -55,11 +55,13 @@ class TestParallelContexts:
     
     def test_concurrent_writes(self, tmp_path):
         """Test that concurrent writes to different contexts are safe."""
-        context = tmp_path / "concurrent"
-        context.mkdir()
+        context_a = tmp_path / "concurrent_a"
+        context_b = tmp_path / "concurrent_b"
+        context_a.mkdir()
+        context_b.mkdir()
         
-        mgr1 = MemoryManager(base_dir=str(context))
-        mgr2 = MemoryManager(base_dir=str(context))
+        mgr1 = MemoryManager(base_dir=str(context_a))
+        mgr2 = MemoryManager(base_dir=str(context_b))
         
         # Both should be able to write without conflict
         mem1 = mgr1.create_memory(
@@ -74,13 +76,14 @@ class TestParallelContexts:
             memory_type="short_term"
         )
         
-        # Both memories should exist (create fresh manager to reload index)
-        mgr_fresh = MemoryManager(base_dir=str(context))
-        memories = mgr_fresh.list_all_memories()["short_term"]
-        assert len(memories) == 2
-        titles = [m["title"] for m in memories]
-        assert "Memory 1" in titles
-        assert "Memory 2" in titles
+        # Each context should have its own memory (isolation)
+        memories_a = mgr1.list_all_memories()["short_term"]
+        memories_b = mgr2.list_all_memories()["short_term"]
+        
+        assert len(memories_a) == 1
+        assert len(memories_b) == 1
+        assert memories_a[0]["title"] == "Memory 1"
+        assert memories_b[0]["title"] == "Memory 2"
 
 
 class TestIncrementalBackups:

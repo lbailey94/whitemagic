@@ -132,6 +132,23 @@ export class WhiteMagicClient {
     search: async (params: SearchMemoriesParams): Promise<Memory[]> => {
       return this.request<Memory[]>('GET', '/api/v1/search', undefined, params);
     },
+
+    addRelationship: async (
+      id: string,
+      targetId: string,
+      type: string,
+      description?: string
+    ): Promise<any> => {
+      return this.request('POST', `/api/v1/memories/${id}/relationships`, {
+        target_filename: targetId,
+        type,
+        description,
+      });
+    },
+
+    getRelationships: async (id: string): Promise<any[]> => {
+      return this.request<any[]>('GET', `/api/v1/memories/${id}/relationships`);
+    },
   };
 
   // User operations

@@ -1,0 +1,17 @@
+{
+  "filename": "20251115_112749_security_review_fixes_nov_14_15_2025.md",
+  "title": "Security Review Fixes - Nov 14-15, 2025",
+  "tags": [
+    "security",
+    "fixes",
+    "vulnerabilities",
+    "lessons-learned",
+    "v2.1.5"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Security Review Fixes - Nov 14-15, 2025 | security, fixes, vulnerabilities, lessons-learned, v2.1.5",
+  "tier1": "**Vulnerability**: `/api/v1/api-keys/retrieve` had NO authentication **Impact**: Anyone with an...",
+  "tier2": "Security Review Fixes (Nov 14-15, 2025). Critical Vulnerabilities (FIXED - Review 1). \ud83d\udd34 API Key Retrieval = Account Takeover. **Vulnerability**: `/api/v1/api-keys/retrieve` had NO authentication. \ud83d\udd34 Exec API Enabled by Default = RCE",
+  "created_at": null,
+  "updated_at": null
+}

@@ -1,0 +1,18 @@
+{
+  "filename": "20251115_141149_week_1_complete_setup_wizard_templates.md",
+  "title": "Week 1 Complete - Setup Wizard + Templates",
+  "tags": [
+    "v2.1.7",
+    "week-1",
+    "complete",
+    "milestone",
+    "setup-wizard",
+    "templates"
+  ],
+  "memory_type": "short_term",
+  "tier0": "[short_term] Week 1 Complete - Setup Wizard + Templates | v2.1.7, week-1, complete, milestone, setup-wizard, templates",
+  "tier1": "- Added Terminal Execution API warnings to README, INSTALL, SECURITY - Documented threat model,...",
+  "tier2": "Week 1 v2.1.7 Development - COMPLETE \u2705. Date: November 15, 2025. Tasks Completed. 1. Security Documentation \u2705. - Added Terminal Execution API warnings to README, INSTALL, SECURITY",
+  "created_at": null,
+  "updated_at": null
+}

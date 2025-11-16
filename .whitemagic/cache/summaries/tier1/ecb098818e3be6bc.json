@@ -1,0 +1,18 @@
+{
+  "filename": "20251115_161107_version_number_audit_sync_plan_v217_release.md",
+  "title": "Version Number Audit & Sync Plan - v2.1.7 Release",
+  "tags": [
+    "versions",
+    "audit",
+    "sync",
+    "v2.1.7",
+    "release-prep",
+    "mcp"
+  ],
+  "memory_type": "short_term",
+  "tier0": "[short_term] Version Number Audit & Sync Plan - v2.1.7 Release | versions, audit, sync, v2.1.7, release-prep, mcp",
+  "tier1": "**Date**: Nov 15, 2025, 4:10 PM **Status**: INCONSISTENT - Need sync before release!",
+  "tier2": "Version Number Audit - Current State. **Date**: Nov 15, 2025, 4:10 PM. Current Versions Across Project. | Component | Current Version | Should Be |. Installed vs Development",
+  "created_at": null,
+  "updated_at": null
+}

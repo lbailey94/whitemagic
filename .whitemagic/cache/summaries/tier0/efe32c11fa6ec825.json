@@ -1,0 +1,18 @@
+{
+  "filename": "20251115_215648_token_efficiency_memory_retrieval_analysis.md",
+  "title": "Token Efficiency & Memory Retrieval Analysis",
+  "tags": [
+    "token-efficiency",
+    "memory-retrieval",
+    "optimization",
+    "analysis",
+    "dogfooding",
+    "mcp-performance"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Token Efficiency & Memory Retrieval Analysis | token-efficiency, memory-retrieval, optimization, analysis, dogfooding, mcp-performance",
+  "tier1": "**Date**: November 15, 2025, 9:55 PM **Context**: Testing session continuity and memory recall",
+  "tier2": "Token Efficiency & Memory System Analysis. **Date**: November 15, 2025, 9:55 PM. Key Findings. 1. Auto-Retrieval vs WhiteMagic MCP Gap. **Problem**: Windsurf auto-retrieved 9 memories (~8K tokens) but MISSED the most recent v2.2.1 audit memory.",
+  "created_at": null,
+  "updated_at": null
+}

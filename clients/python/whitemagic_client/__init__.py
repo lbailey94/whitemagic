@@ -14,7 +14,7 @@ from .types import (
     MemoryType,
 )
 
-__version__ = "2.1.4"
+__version__ = "2.2.1"
 __all__ = [
     "WhiteMagicClient",
     "WhiteMagicError",
