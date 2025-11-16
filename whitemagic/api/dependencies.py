@@ -59,17 +59,20 @@ security = HTTPBearer(
 
 async def get_api_key_from_header(
     authorization: Annotated[str | None, Header()] = None,
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> str:
     """
-    Extract API key from Authorization header.
+    Extract API key from headers.
 
-    Supports two formats:
+    Supports three formats (in order of preference):
     1. Authorization: Bearer wm_prod_xxxxx...
     2. Authorization: wm_prod_xxxxx...
+    3. X-API-Key: wm_prod_xxxxx... (legacy SDK support)
 
     Args:
         authorization: Raw Authorization header
+        x_api_key: X-API-Key header (deprecated, for SDK compatibility)
         credentials: Parsed Bearer token from HTTPBearer
 
     Returns:
@@ -88,11 +91,21 @@ async def get_api_key_from_header(
         if authorization.startswith("Bearer "):
             return authorization[7:]
         return authorization
+    
+    # Try X-API-Key header (legacy SDK support)
+    if x_api_key:
+        import warnings
+        warnings.warn(
+            "X-API-Key header is deprecated. Please use Authorization: Bearer <key>",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return x_api_key
 
     # No API key provided
     raise HTTPException(
         status_code=401,
-        detail="API key required. Include in Authorization header: 'Bearer wm_prod_xxxxx...'",
+        detail="API key required. Include in Authorization header: 'Bearer wm_prod_xxxxx...' or X-API-Key header",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
