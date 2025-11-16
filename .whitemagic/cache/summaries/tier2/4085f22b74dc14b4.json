@@ -1,0 +1,18 @@
+{
+  "filename": "20251115_135221_composite_memory_strategy_for_token_limited_enviro.md",
+  "title": "Composite Memory Strategy for Token-Limited Environments",
+  "tags": [
+    "v2.1.8",
+    "strategy",
+    "token-limits",
+    "composite-memory",
+    "episodic-bursts",
+    "user-insight"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Composite Memory Strategy for Token-Limited Environments | v2.1.8, strategy, token-limits, composite-memory, episodic-bursts, user-insight",
+  "tier1": "AI systems face arbitrary token/time limits that interrupt complex tasks: - Timeout after...",
+  "tier2": "Working Under Token Limits: Composite Memory Strategy. The Problem. AI systems face arbitrary token/time limits that interrupt complex tasks:. User Insight (Nov 15, 2025). \"Perhaps we can find a way in 2.1.8 to allow for AI under these restrictions to create composite memories and find a way around/through using tactical and strategic problem solving in short episodic bursts under the arbitrary external token limit\"",
+  "created_at": null,
+  "updated_at": null
+}

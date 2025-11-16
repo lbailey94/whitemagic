@@ -1,0 +1,17 @@
+{
+  "filename": "20251114_105418_stripe_integration_plan_replace_whop.md",
+  "title": "Stripe Integration Plan - Replace Whop",
+  "tags": [
+    "stripe",
+    "payments",
+    "architecture",
+    "whop-replacement",
+    "todo"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Stripe Integration Plan - Replace Whop | stripe, payments, architecture, whop-replacement, todo",
+  "tier1": "**Objective:** Replace Whop with simpler Stripe-based payment system",
+  "tier2": "Stripe Payment Integration Plan. **Objective:** Replace Whop with simpler Stripe-based payment system. Architecture. **Free Tier (Local):**. **Paid Tiers (Cloud):**",
+  "created_at": null,
+  "updated_at": null
+}

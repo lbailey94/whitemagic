@@ -1,0 +1,16 @@
+{
+  "filename": "20251115_132411_future_features_for_v218_roadmap.md",
+  "title": "Future Features for v2.1.8+ Roadmap",
+  "tags": [
+    "roadmap",
+    "v2.1.8",
+    "future-features",
+    "user-feedback"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Future Features for v2.1.8+ Roadmap | roadmap, v2.1.8, future-features, user-feedback",
+  "tier1": "1. **Auto-Consolidation Prompts** - Detect >10 short-term, suggest merging 2. **Duplicate...",
+  "tier2": "Features to Add to Roadmap. High Priority. 1. **Auto-Consolidation Prompts** - Detect >10 short-term, suggest merging. Medium Priority. 5. **Lessons Learned Pattern** - Special memory type, updated frequently",
+  "created_at": null,
+  "updated_at": null
+}

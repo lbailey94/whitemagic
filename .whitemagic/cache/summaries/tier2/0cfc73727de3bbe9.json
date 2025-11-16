@@ -1,0 +1,18 @@
+{
+  "filename": "20251114_203028_embeddings_installer_fix_pillow_dependency_issue_n.md",
+  "title": "Embeddings Installer Fix - Pillow Dependency Issue (Nov 14, 2025)",
+  "tags": [
+    "troubleshooting",
+    "dependencies",
+    "pillow",
+    "embeddings",
+    "fix",
+    "testing"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Embeddings Installer Fix - Pillow Dependency Issue (Nov 14, 2025) | troubleshooting, dependencies, pillow, embeddings, fix, testing",
+  "tier1": "**Date**: November 14, 2025, ~8:30 PM EST **Issue**: Embeddings installer failing on old laptop but...",
+  "tier2": "Embeddings Installer Fix - Old Laptop Issue. **Date**: November 14, 2025, ~8:30 PM EST. Root Cause Analysis. The Problem. **Symptom**:",
+  "created_at": null,
+  "updated_at": null
+}

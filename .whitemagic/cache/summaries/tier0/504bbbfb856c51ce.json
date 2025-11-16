@@ -1,0 +1,17 @@
+{
+  "filename": "20251116_001036_file_type_expansion_roadmap_beyond_markdown.md",
+  "title": "File Type Expansion Roadmap - Beyond Markdown",
+  "tags": [
+    "roadmap",
+    "file-types",
+    "features",
+    "v2.2.2",
+    "v2.3.0"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] File Type Expansion Roadmap - Beyond Markdown | roadmap, file-types, features, v2.2.2, v2.3.0",
+  "tier1": "**Current**: Only `.md` files in memory system **Goal**: Support `.txt`, `.pdf`, `.json`, `.csv`,...",
+  "tier2": "File Type Expansion Roadmap. **Current**: Only `.md` files in memory system. ---. Phase 1: Text Files (.txt) - v2.2.2. **Implementation**: Trivial (already works!)",
+  "created_at": null,
+  "updated_at": null
+}

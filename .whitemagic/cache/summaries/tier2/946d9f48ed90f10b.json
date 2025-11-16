@@ -1,0 +1,18 @@
+{
+  "filename": "20251114_193456_terminal_tool_critical_fixes_v215_nov_14_2025.md",
+  "title": "Terminal Tool Critical Fixes - v2.1.5 (Nov 14, 2025)",
+  "tags": [
+    "terminal_tool",
+    "bug_fixes",
+    "v2.1.5",
+    "security",
+    "cli",
+    "approval_workflow"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Terminal Tool Critical Fixes - v2.1.5 (Nov 14, 2025) | terminal_tool, bug_fixes, v2.1.5, security, cli, approval_workflow",
+  "tier1": "**Issue**: `whitemagic exec ls -la` failed with \"unrecognized arguments: -la\" **Root Cause**:...",
+  "tier2": "Terminal Tool Critical Fixes - v2.1.5. Problems Identified (Third Review). 1. CLI Argument Parsing Bug. **Issue**: `whitemagic exec ls -la` failed with \"unrecognized arguments: -la\". **Fix**: Changed to `nargs=argparse.REMAINDER` with parameter name `cmd_args`",
+  "created_at": null,
+  "updated_at": null
+}

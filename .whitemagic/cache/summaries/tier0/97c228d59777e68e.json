@@ -1,0 +1,17 @@
+{
+  "filename": "20251115_235940_v222_advanced_features_design_notes.md",
+  "title": "v2.2.2 Advanced Features - Design Notes",
+  "tags": [
+    "v2.2.2",
+    "features",
+    "design",
+    "roadmap",
+    "advanced"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] v2.2.2 Advanced Features - Design Notes | v2.2.2, features, design, roadmap, advanced",
+  "tier1": "**Problem**: Can't work on multiple projects simultaneously **Solution**: Independent memory...",
+  "tier2": "v2.2.2 Advanced Features - Design Notes. 1. Parallel Memory Contexts. **Problem**: Can't work on multiple projects simultaneously. **Implementation**:. Project A",
+  "created_at": null,
+  "updated_at": null
+}

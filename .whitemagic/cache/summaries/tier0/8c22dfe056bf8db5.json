@@ -1,0 +1,19 @@
+{
+  "filename": "20251115_161155_composite_memory_strategy_incremental_implementati.md",
+  "title": "Composite Memory Strategy - Incremental Implementation Pattern",
+  "tags": [
+    "strategy",
+    "composite-memory",
+    "incremental-implementation",
+    "token-efficiency",
+    "timeout-avoidance",
+    "v2.1.8",
+    "methodology"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Composite Memory Strategy - Incremental Implementation Pattern | strategy, composite-memory, incremental-implementation, token-efficiency, timeout-avoidance, v2.1.8, methodology",
+  "tier1": "**Concept**: Use short-term memory as \"scratchpad\" for plans, implement incrementally in small...",
+  "tier2": "Composite Memory Strategy - Token-Efficient Workflow. **Concept**: Use short-term memory as \"scratchpad\" for plans, implement incrementally in small chunks to avoid timeouts. **User's Metaphor**: \"Dozen flashcards to pass notes quickly vs spending minutes writing full page\". The Problem. **Current workflow issues**:",
+  "created_at": null,
+  "updated_at": null
+}

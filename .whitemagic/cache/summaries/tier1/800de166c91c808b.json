@@ -1,0 +1,18 @@
+{
+  "filename": "20251114_195217_v215_release_shipped_nov_14_2025_751_pm_est.md",
+  "title": "v2.1.5 Release Shipped - Nov 14, 2025 7:51 PM EST",
+  "tags": [
+    "release",
+    "v2.1.5",
+    "deployment",
+    "milestone",
+    "shipped",
+    "production"
+  ],
+  "memory_type": "short_term",
+  "tier0": "[short_term] v2.1.5 Release Shipped - Nov 14, 2025 7:51 PM EST | release, v2.1.5, deployment, milestone, shipped, production",
+  "tier1": "**Date**: November 14, 2025, 7:51 PM EST **Status**: \u2705 DEPLOYED TO GITHUB",
+  "tier2": "v2.1.5 Successfully Shipped. **Date**: November 14, 2025, 7:51 PM EST. Release Details. **Commit**: a7a49bc. What Was Shipped",
+  "created_at": null,
+  "updated_at": null
+}

@@ -1,0 +1,17 @@
+{
+  "filename": "20251114_193548_terminal_tool_architecture_security_design.md",
+  "title": "Terminal Tool Architecture & Security Design",
+  "tags": [
+    "architecture",
+    "terminal_tool",
+    "security",
+    "design_patterns",
+    "components"
+  ],
+  "memory_type": "long_term",
+  "tier0": "[long_term] Terminal Tool Architecture & Security Design | architecture, terminal_tool, security, design_patterns, components",
+  "tier1": "Low-level command execution - runs subprocess, captures output, handles timeouts - Pure function...",
+  "tier2": "Terminal Tool Architecture. Core Components. 1. Executor (`whitemagic/terminal/executor.py`). Low-level command execution - runs subprocess, captures output, handles timeouts. 2. Allowlist (`whitemagic/terminal/allowlist.py`)",
+  "created_at": null,
+  "updated_at": null
+}

@@ -49,13 +49,25 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Project Specific
-memory/short_term/*.md
-memory/long_term/*.md
-memory/archive/*.md
-memory/metadata.json
+# Project Specific - Memory System
+# Exclude ALL personal memory files, keep only examples
+memory/
+!memory/.gitkeep
+!memory/short_term/.gitkeep
+!memory/long_term/.gitkeep
+!memory/archive/.gitkeep
+!memory/templates/
 !memory/short_term/example_short_term.md
 !memory/long_term/example_long_term.md
+
+# Private Development Folder (NEVER commit)
+private/
+
+# Session/Development Documents (keep in dev, not in releases)
+SESSION_*.md
+PHASE_*.md
+PARALLEL_THREADING_TEST_RESULTS.md
+V2.2.3_*.md
 
 # Temporary files
 *.tmp
