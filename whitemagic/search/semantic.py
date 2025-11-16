@@ -15,7 +15,7 @@ from pathlib import Path
 
 from ..core import MemoryManager
 from ..embeddings import EmbeddingProvider, EmbeddingConfig, get_embedding_provider
-from ..embeddings.storage import EmbeddingCache
+from ..embeddings.storage import EmbeddingCache, FileBasedEmbeddingCache
 
 
 class SearchMode(str, Enum):
@@ -75,8 +75,11 @@ class SemanticSearcher:
             config = EmbeddingConfig.from_env()
             self.embedder = get_embedding_provider(config)
         
-        # Set up caching (optional)
-        self.cache = cache
+        # Set up caching (use file-based cache by default)
+        if cache is None:
+            self.cache = FileBasedEmbeddingCache()
+        else:
+            self.cache = cache
     
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """
@@ -226,18 +229,69 @@ class SemanticSearcher:
                             logging.debug(f"Skipping {memory_file}: {e}")
                             continue
         
-        # Generate embeddings for all memories and calculate similarity
+        # Generate embeddings for all memories (with caching)
         results = []
         
-        # Batch embed for efficiency
-        memory_texts = [
-            f"{m['title']} {m['content']}" for m in memories
-        ]
-        
-        if not memory_texts:
+        if not memories:
             return []
         
-        memory_embeddings = await self.embedder.embed_batch(memory_texts)
+        # Get model name for cache key
+        model_name = getattr(self.embedder, 'model_name', 'default')
+        
+        # Try to get cached embeddings first
+        memory_embeddings = []
+        texts_to_embed = []
+        indices_to_embed = []
+        
+        for i, memory in enumerate(memories):
+            # Try cache first if available
+            if self.cache and hasattr(self.cache, 'get'):
+                # Get memory file path for cache lookup
+                memory_path = self.manager.base_dir / memory.get('type', 'short_term') / memory['id']
+                if not memory_path.exists():
+                    # Try alternate paths
+                    alt_paths = [
+                        self.manager.base_dir / "memory" / memory.get('type', 'short_term') / memory['id']
+                    ]
+                    for alt_path in alt_paths:
+                        if alt_path.exists():
+                            memory_path = alt_path
+                            break
+                
+                if isinstance(self.cache, FileBasedEmbeddingCache) and memory_path.exists():
+                    cached = await self.cache.get(memory_path, model_name)
+                    if cached:
+                        memory_embeddings.append(cached)
+                        continue
+            
+            # Not cached, need to embed
+            memory_embeddings.append(None)  # Placeholder
+            texts_to_embed.append(f"{memory['title']} {memory['content']}")
+            indices_to_embed.append(i)
+        
+        # Batch embed uncached memories
+        if texts_to_embed:
+            fresh_embeddings = await self.embedder.embed_batch(texts_to_embed)
+            
+            # Fill in fresh embeddings and cache them
+            for idx, embedding in zip(indices_to_embed, fresh_embeddings):
+                memory_embeddings[idx] = embedding
+                
+                # Cache the fresh embedding
+                if self.cache and isinstance(self.cache, FileBasedEmbeddingCache):
+                    memory = memories[idx]
+                    memory_path = self.manager.base_dir / memory.get('type', 'short_term') / memory['id']
+                    if not memory_path.exists():
+                        alt_paths = [
+                            self.manager.base_dir / "memory" / memory.get('type', 'short_term') / memory['id']
+                        ]
+                        for alt_path in alt_paths:
+                            if alt_path.exists():
+                                memory_path = alt_path
+                                break
+                    
+                    if memory_path.exists():
+                        await self.cache.set(memory_path, model_name, embedding)
         
         # Calculate similarities
         for memory, embedding in zip(memories, memory_embeddings):

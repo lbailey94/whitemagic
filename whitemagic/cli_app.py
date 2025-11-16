@@ -959,6 +959,7 @@ from whitemagic.cli_templates import (
     command_template_create,
 )
 from whitemagic.cli_relationships import command_relate, command_related
+from whitemagic.cli_graph import command_graph, command_graph_stats
 
 # Command dispatch table
 COMMAND_HANDLERS = {
@@ -990,6 +991,8 @@ COMMAND_HANDLERS = {
     "template-create": command_template_create,
     "relate": command_relate,
     "related": command_related,
+    "graph": command_graph,
+    "graph-stats": command_graph_stats,
     "stats": command_stats,
 }
 
@@ -1528,6 +1531,35 @@ def build_parser() -> argparse.ArgumentParser:
         "--type",
         choices=["depends_on", "implements", "supersedes", "informed_by", "relates_to", "contradicts"],
         help="Filter by relationship type.",
+    )
+    
+    # graph
+    graph_parser = subparsers.add_parser(
+        "graph",
+        help="Show relationship graph for a memory.",
+    )
+    graph_parser.add_argument("filename", help="Memory filename.")
+    graph_parser.add_argument(
+        "--depth",
+        type=int,
+        default=2,
+        help="Maximum depth for graph traversal (default: 2).",
+    )
+    graph_parser.add_argument(
+        "--type",
+        choices=["depends_on", "implements", "supersedes", "informed_by", "relates_to", "contradicts"],
+        help="Filter relationships by type.",
+    )
+    
+    # graph-stats
+    graph_stats_parser = subparsers.add_parser(
+        "graph-stats",
+        help="Show graph statistics for all memories.",
+    )
+    graph_stats_parser.add_argument(
+        "--show-orphaned",
+        action="store_true",
+        help="Show memories with no relationships.",
     )
     
     # stats
