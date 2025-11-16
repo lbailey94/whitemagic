@@ -472,11 +472,14 @@ def command_backup(manager: MemoryManager, args: argparse.Namespace) -> int:
     backup_mgr = BackupManager(Path(args.base_dir))
     
     output_path = Path(args.output) if args.output else None
+    last_backup = Path(args.last_backup) if hasattr(args, 'last_backup') and args.last_backup else None
     
     try:
-        # Note: Incremental backups removed until properly implemented (v2.1.7)
+        # v2.2.2: Incremental backups re-enabled (implementation complete)
         result = backup_mgr.create_backup(
             output_path=output_path,
+            incremental=args.incremental if hasattr(args, 'incremental') else False,
+            last_backup=last_backup,
             compress=not args.no_compress
         )
         
