@@ -1038,7 +1038,6 @@ def command_stats(manager: MemoryManager, args: argparse.Namespace) -> int:
     stats = generate_stats(manager)
     
     if args.json:
-        # Convert Counter objects to dicts for JSON serialization
         stats["by_type"] = dict(stats["by_type"])
         stats["by_status"] = dict(stats["by_status"])
         print(json.dumps(stats, indent=2, default=str))
@@ -1046,6 +1045,112 @@ def command_stats(manager: MemoryManager, args: argparse.Namespace) -> int:
         print_stats_dashboard(stats)
     
     return 0
+
+
+def command_metrics_track(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'metrics-track' command."""
+    from whitemagic.metrics import track_metric
+    
+    try:
+        track_metric(
+            category=args.category,
+            metric=args.metric,
+            value=float(args.value),
+            context=args.context
+        )
+        print(f"✓ Tracked {args.category}/{args.metric} = {args.value}")
+        if args.context:
+            print(f"  Context: {args.context}")
+        return 0
+    except Exception as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
+
+def command_metrics_summary(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'metrics-summary' command."""
+    from whitemagic.metrics import get_tracker
+    
+    tracker = get_tracker()
+    categories = args.categories if hasattr(args, 'categories') and args.categories else None
+    
+    try:
+        summary = tracker.get_summary(categories)
+        
+        if args.json:
+            print(json.dumps(summary, indent=2, default=str))
+            return 0
+        
+        from rich.table import Table
+        console = get_console()
+        
+        console.print("\n[bold cyan]📊 Metrics Summary[/bold cyan]\n")
+        
+        for category, data in summary.items():
+            if data["count"] == 0:
+                continue
+            
+            console.print(f"[yellow]{category}[/yellow]")
+            table = Table(show_header=True, header_style="bold magenta", box=None)
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+            
+            if data.get("latest"):
+                latest = data["latest"]
+                table.add_row("Latest Value", str(latest.get("value", "N/A")))
+                table.add_row("Latest Metric", latest.get("metric", "N/A"))
+                if latest.get("context"):
+                    table.add_row("Context", latest.get("context", "N/A")[:50])
+            
+            if "average" in data:
+                table.add_row("Average", f"{data['average']:.2f}")
+            table.add_row("Total Entries", str(data["count"]))
+            
+            console.print(table)
+            console.print()
+        
+        return 0
+    except Exception as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
+
+def command_metrics_export(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'metrics-export' command."""
+    from whitemagic.metrics import get_tracker
+    from pathlib import Path
+    
+    tracker = get_tracker()
+    output_path = Path(args.output)
+    
+    try:
+        categories = args.categories if hasattr(args, 'categories') and args.categories else None
+        summary = tracker.get_summary(categories)
+        
+        if args.format == "json":
+            output_path.write_text(json.dumps(summary, indent=2, default=str))
+        elif args.format == "csv":
+            import csv
+            with output_path.open("w", newline="") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["Category", "Metric", "Value", "Context", "Timestamp"])
+                
+                for category, data in summary.items():
+                    if data.get("latest"):
+                        latest = data["latest"]
+                        writer.writerow([
+                            category,
+                            latest.get("metric", ""),
+                            latest.get("value", ""),
+                            latest.get("context", ""),
+                            latest.get("timestamp", "")
+                        ])
+        
+        print(f"✓ Exported to: {output_path}")
+        return 0
+    except Exception as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
 
 
 # Import template commands
@@ -1091,6 +1196,9 @@ COMMAND_HANDLERS = {
     "graph": command_graph,
     "graph-stats": command_graph_stats,
     "stats": command_stats,
+    "metrics-track": command_metrics_track,
+    "metrics-summary": command_metrics_summary,
+    "metrics-export": command_metrics_export,
 }
 
 
@@ -1687,6 +1795,33 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Output as JSON.",
     )
+    
+    # metrics-track
+    metrics_track_parser = subparsers.add_parser(
+        "metrics-track",
+        help="Track a metric value.",
+    )
+    metrics_track_parser.add_argument("--category", required=True, help="Metric category (e.g., token_efficiency)")
+    metrics_track_parser.add_argument("--metric", required=True, help="Metric name (e.g., usage_percent)")
+    metrics_track_parser.add_argument("--value", required=True, help="Metric value (numeric)")
+    metrics_track_parser.add_argument("--context", help="Optional context string")
+    
+    # metrics-summary
+    metrics_summary_parser = subparsers.add_parser(
+        "metrics-summary",
+        help="Display metrics summary dashboard.",
+    )
+    metrics_summary_parser.add_argument("--categories", nargs="+", help="Filter by categories")
+    metrics_summary_parser.add_argument("--json", action="store_true", help="Output as JSON")
+    
+    # metrics-export
+    metrics_export_parser = subparsers.add_parser(
+        "metrics-export",
+        help="Export metrics to file.",
+    )
+    metrics_export_parser.add_argument("--output", required=True, help="Output file path")
+    metrics_export_parser.add_argument("--format", choices=["json", "csv"], default="json", help="Export format")
+    metrics_export_parser.add_argument("--categories", nargs="+", help="Filter by categories")
 
     return parser
 

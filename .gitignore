@@ -27,6 +27,12 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.env
+.env.local
+.env.*.local
+
+# WhiteMagic cache
+.whitemagic/cache/
 
 # IDEs
 .vscode/
@@ -89,3 +95,4 @@ logs/
 test_output.txt
 users/
 *.db
+.whitemagic/cache/

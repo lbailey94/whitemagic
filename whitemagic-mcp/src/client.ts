@@ -33,6 +33,15 @@ export class WhiteMagicClient extends EventEmitter {
     this.config = config;
   }
 
+  // Metrics
+  async trackMetric(category: string, metric: string, value: number, context?: string): Promise<void> {
+    await this.call('track_metric', { category, metric, value, context });
+  }
+
+  async getMetricsSummary(categories?: string[]): Promise<Record<string, any>> {
+    return await this.call('get_metrics_summary', { categories });
+  }
+
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Spawn Python process running a simple JSON-RPC wrapper around WhiteMagic
@@ -204,6 +213,7 @@ base_dir = sys.argv[1] if len(sys.argv) > 1 else '.'
 sys.path.insert(0, str(Path(base_dir).resolve()))
 
 from whitemagic import MemoryManager
+from whitemagic.metrics import track_metric as wm_track_metric, get_tracker
 
 manager = MemoryManager(base_dir=base_dir)
 
@@ -287,6 +297,20 @@ def handle_request(cmd):
                 include_archived=params.get('include_archived', False)
             )
             return {'success': True, 'result': result}
+        
+        elif method == 'track_metric':
+            wm_track_metric(
+                category=params['category'],
+                metric=params['metric'],
+                value=float(params['value']),
+                context=params.get('context')
+            )
+            return {'success': True, 'result': 'ok'}
+
+        elif method == 'get_metrics_summary':
+            tracker = get_tracker()
+            summary = tracker.get_summary(params.get('categories'))
+            return {'success': True, 'result': summary}
         
         else:
             return {'success': False, 'error': f'Unknown method: {method}'}

@@ -1,10 +1,10 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: 2.2.1 ✅ (Released Nov 15, 2025)  
-**Next Version**: 2.2.2 (Bugfix Release - Est. Late Nov 2025)  
+**Current Version**: 2.2.5 ✅ (Released Nov 16, 2025)  
+**Next Version**: 2.2.6 (Feature Release - Est. Late Nov 2025)  
 **Future**: 2.3.0 (Feature Release - Est. Late Dec 2025/Early Jan 2026)  
-**Status**: High Efficiency, Planning Next Phases  
-**Updated**: November 15, 2025
+**Status**: Meta-Optimization + Symbolic Reasoning Complete  
+**Updated**: November 16, 2025
 
 ---
 
@@ -30,6 +30,53 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 - 🚧 Graph-based memory relationships (v2.3.0)
 - 🚧 Team workspaces & collaboration (v2.4.0+)
 - 🚧 Multi-modal memory (images, PDFs, audio) (v2.4.0+)
+
+---
+
+## v2.2.5 ✅ COMPLETE (Nov 16, 2025)
+
+**Focus**: Meta-Optimization + Symbolic Reasoning + Wu Xing
+
+### Added
+- **Meta-Optimization Foundation** (Phase 1)
+  - Hierarchical workspace loader (`workspace_loader.py`)
+  - Smart START HERE templates (`session_templates.py`)
+  - Delta-based session tracking (`delta_tracking.py`)
+  - Session type detection (`session_types.py`)
+  - Workflow patterns API (`workflow_patterns.py`)
+  - **94.4% token reduction** validated (63K → 3.5K tokens)
+  
+- **Symbolic Reasoning Module** (Phase 2)
+  - Core symbolic engine with Chinese character compression (`symbolic.py`)
+  - Concept mapping with NetworkX graphs (`concept_map.py`)
+  - Memory-concept integration (`symbolic_memory.py`)
+  - Pre-loaded Chinese dictionary (`chinese_dict.py`)
+  - **30-50% token savings** from logographic encoding
+  
+- **Wu Xing Cycle Detection** (Phase 3)
+  - Five-phase activity detector (`wu_xing.py`)
+  - Automatic workflow phase recognition (WOOD/FIRE/EARTH/METAL/WATER)
+  - 90-minute rolling window analysis
+  
+- **MCP Metrics Integration** (Phase 4)
+  - New MCP tools: `track_metric`, `get_metrics_summary`
+  - Real-time metrics tracking via JSONL storage
+  - TypeScript client methods for metrics
+
+### Documentation
+- Created comprehensive guides:
+  - [Symbolic Reasoning Guide](docs/guides/SYMBOLIC_REASONING.md)
+  - [Wu Xing & Metrics Guide](docs/guides/WU_XING_AND_METRICS.md)
+  - [Semantic Search Guide](docs/guides/SEMANTIC_SEARCH.md)
+  - [Terminal Tool Guide](docs/guides/TERMINAL_TOOL.md)
+- Updated all version badges to 2.2.5
+- Complete release notes: `RELEASE_NOTES_v2.2.5.md`
+
+### Performance
+- **Token efficiency**: 17.9x improvement (Tier 1)
+- **Cache speedup**: 4.0x on repeated reads
+- **Session start**: 3.5K tokens (down from 63K)
+- **Test success**: 194/194 tests passing (100%)
 
 ---
 

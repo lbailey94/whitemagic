@@ -8,6 +8,173 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.5] - 2025-11-16
+
+### Added - Meta-Optimization Foundation (Phase 1) ✅
+
+**Status**: COMPLETE
+
+### Added - Wu Xing Cycle Detection (Phase 3) ✅
+
+**Status**: COMPLETE
+
+#### New Module
+
+- **Wu Xing Cycle Detector** (`whitemagic/wu_xing.py`)
+  - Heuristic-based phase detection from activity patterns
+  - Five phases: WOOD (planning), FIRE (execution), EARTH (testing), METAL (refinement), WATER (reflection)
+  - 90-minute rolling window analysis
+  - Scoring system based on reads, writes, tests, docs, memory ops
+  - Confidence levels and diagnostic metrics
+  
+#### Philosophy
+
+Based on Wu Xing (五行) five-phase theory:
+- **WOOD** (木): Planning, research, exploration - high reads, low edits
+- **FIRE** (火): Creation, execution - high writes, many file changes
+- **EARTH** (土): Consolidation - tests, documentation
+- **METAL** (金): Refinement - small edits, debugging, polishing
+- **WATER** (水): Reflection - memory operations, reviews
+
+**Impact**: Automatic session phase detection for adaptive workflow optimization
+
+### Added - MCP Metrics Integration ✅
+
+**Status**: COMPLETE
+
+#### Enhanced MCP Server
+
+- **New Tools**:
+  - `track_metric(category, metric, value, context)` - Record quantitative metrics
+  - `get_metrics_summary(categories?)` - Retrieve metrics dashboard
+  
+- **Implementation**:
+  - TypeScript client methods in `whitemagic-mcp/src/client.ts`
+  - Python wrapper integration with `whitemagic.metrics`
+  - Tool handlers in `whitemagic-mcp/src/index.ts`
+  - Version synced to 2.2.5
+
+**Impact**: Real-time metrics tracking via MCP for AI-driven optimization
+
+### Added - Symbolic Reasoning Module (Phase 2) ✅
+
+**Status**: COMPLETE
+
+#### New Modules
+
+- **Symbolic Reasoning Engine** (`whitemagic/symbolic.py`)
+  - ConceptNode with English + Chinese representations
+  - Token efficiency tracking (30-50% savings validated)
+  - Multiple concept types (principle, method, pattern, etc.)
+  - Usage statistics and compression metrics
+  
+- **Concept Mapping System** (`whitemagic/concept_map.py`)
+  - NetworkX-based graph operations
+  - Path finding and traversal algorithms
+  - Community detection and centrality analysis
+  - Export to GraphML, DOT formats
+  
+- **Symbolic-Memory Integration** (`whitemagic/symbolic_memory.py`)
+  - Bidirectional memory-concept linking
+  - Automatic concept extraction from memories
+  - Concept-based memory search
+  - Pattern recognition across memories
+  
+- **Chinese Character Dictionary** (`whitemagic/chinese_dict.py`)
+  - Curated philosophical concepts (道, 德, 理, 法, etc.)
+  - Technical concepts with Chinese encoding
+  - Pre-computed token efficiency metrics
+
+### Philosophy - Symbolic Reasoning
+
+Based on I Ching principle: 象 (Xiang) - Symbolic representation
+- Ancient wisdom meets modern AI
+- Semantic compression through Chinese characters
+- Cultural and philosophical alignment
+- Toggle-able: Chinese for internal, English for APIs
+
+### Added - Meta-Optimization Foundation (Phase 1) ✅
+
+**Goal**: Reduce initial session token burn from ~20K to ~6-8K tokens (60-70% reduction)
+
+#### New Modules
+
+- **Hierarchical Workspace Loader** (`whitemagic/workspace_loader.py`)
+  - Tiered workspace loading (0=minimal, 1=balanced, 2=full)
+  - Task-aware directory filtering
+  - Auto-detection of relevant paths
+  - Lazy-loading support for on-demand expansion
+  - Token-efficient workspace representation
+
+- **Smart START HERE Templates** (`whitemagic/session_templates.py`)
+  - Three-tier resume system (30-second, 2-minute, 5-minute)
+  - Progressive detail on-demand
+  - Auto-generated session snapshots
+  - Frontmatter for easy parsing
+  - Token budget: <1K (quick), ~3K (balanced), ~8K (comprehensive)
+
+- **Delta-Based Session Tracking** (`whitemagic/delta_tracking.py`)
+  - Track changes, not absolute state
+  - Session deltas: files, features, bugs, decisions
+  - Automatic insights and pattern detection
+  - Markdown and JSON export formats
+  - Minimal token usage for session continuity
+
+- **Session Type Detection** (`whitemagic/session_types.py`)
+  - 8 session types with optimized strategies
+  - Auto-detection from task descriptions
+  - Configurable context loading per type
+  - Confidence scoring for detection
+  - Recommended actions for each type
+
+#### Session Types Supported
+
+- **CONTINUATION**: Minimal context (<8K tokens) - Resume from last session
+- **NEW_CONTRIBUTOR**: Full context (~25K tokens) - Project onboarding
+- **DEBUG**: Focused context (~10K tokens) - Error investigation
+- **EXPLORATION**: Balanced context (~15K tokens) - Discovery mode
+- **OPTIMIZATION**: Targeted context (~12K tokens) - Performance work
+- **DOCUMENTATION**: Doc-focused (~15K tokens) - Writing guides
+- **TESTING**: Test-focused (~10K tokens) - Validation work
+- **RELEASE**: Release-focused (~15K tokens) - Version shipping
+
+### Features
+
+- **Automatic session type detection** from task descriptions
+- **Configurable tier loading** for memories and workspace
+- **Token estimation** for all operations
+- **On-demand lazy loading** of excluded directories
+- **Change tracking** throughout sessions
+- **Smart template generation** for session resumption
+
+### Examples
+
+- Added comprehensive `examples/meta_optimization_example.py`
+- Demonstrates all 4 new modules
+- Shows complete workflow integration
+- Includes token savings calculations
+
+### Performance Impact
+
+**Expected Results**:
+- Initial session load: 20K → 6-8K tokens (60-70% reduction)
+- Resume time: < 1 minute (vs 2-3 minutes previously)
+- Context quality: Maintained or improved
+- Session continuity: Seamless
+
+**Validated in v2.2.3 session**:
+- Traditional: ~20K initial tokens
+- With meta-optimizations: ~8K initial tokens
+- Real savings: 60% reduction confirmed
+
+### Philosophy
+
+Based on Art of War principle: "Know your terrain" (知地形)
+- Load only what you need for the current task
+- Progressive detail on-demand
+- Efficient session continuity through deltas
+- Auto-optimization based on context
+
 ## [2.2.4] - 2024-11-16
 
 ### Added

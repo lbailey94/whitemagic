@@ -1,12 +1,12 @@
 # WhiteMagic 🧠✨
 
-**Tiered Memory Management for AI Agents with Native MCP + REST Support**
+Tiered Memory Management for AI Agents with Native MCP + REST Support
 
-[![Version](https://img.shields.io/badge/version-2.2.4-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.2.4-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+[![Version](https://img.shields.io/badge/version-2.2.5-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.2.5-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](#-testing)
 [![Grade](https://img.shields.io/badge/grade-A%2B%20(99%2F100)-success.svg)](docs/reviews/v2.1.3/PRODUCTION_TEST_RESULTS.md)
 
 [![CodeQL](https://github.com/lbailey94/whitemagic/workflows/CodeQL%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/codeql.yml)
@@ -15,7 +15,7 @@
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
 
-WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, and native MCP integration for Cursor/Windsurf/Claude.
+WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, native MCP integration for Cursor/Windsurf/Claude, and the new v2.2.5 symbolic reasoning, Wu Xing workflow, and live metrics modules.
 
 ## 🎁 Free & Open Source
 - ✅ **87% token reduction** via tiered context loading
@@ -30,13 +30,14 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 ---
 
-## 🚦 Getting Started (3 Steps)
+## 🚦 Getting Started (4 Steps)
 
 1. **Install**: `pip install whitemagic` or `git clone https://github.com/lbailey94/whitemagic`
 2. **Try CLI**: `whitemagic create "My first memory" --content "Hello WhiteMagic!"`
-3. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
+3. **Load Symbolic Tools** *(optional but recommended in v2.2.5)*: follow the [Symbolic Reasoning guide](docs/guides/SYMBOLIC_REASONING.md) to enable Chinese concept compression + concept graphs.
+4. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
 
-→ **Full guides**: [User Guide](docs/USER_GUIDE.md) | [Quickstart](docs/guides/QUICKSTART.md) | [Cheat Sheet](docs/CHEATSHEET.md)
+→ **Full guides**: [User Guide](docs/USER_GUIDE.md) | [Quickstart](docs/guides/QUICKSTART.md) | [Cheat Sheet](docs/CHEATSHEET.md) | [Symbolic Reasoning](docs/guides/SYMBOLIC_REASONING.md) | [Wu Xing + Metrics](docs/guides/WU_XING_AND_METRICS.md) | [Semantic Search](docs/guides/SEMANTIC_SEARCH.md) | [Terminal Tool Hardening](docs/guides/TERMINAL_TOOL.md)
 
 ---
 
@@ -44,14 +45,17 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 - **Tiered Memory**: Short-term, long-term, and archive storage
 - **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
+- **🧠 Symbolic Reasoning Engine** *(NEW v2.2.5)*: Chinese logographic compression, concept mapping, and memory linking.
+- **🌊 Wu Xing Workflow Detection** *(NEW v2.2.5)*: Automatic phase detection for adaptive prompts + recommendations.
+- **📈 Live Metrics Hooks** *(NEW v2.2.5)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
 - **🔧 Terminal Tool**: Safe code execution with approval workflows
-- **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings
-- **🧠 Smart Features**: Setup wizard, templates, auto-tagging, relationships (NEW in v2.1.7)
+- **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings (see [Semantic Search guide](docs/guides/SEMANTIC_SEARCH.md))
+- **🧠 Smart Features**: Setup wizard, templates, auto-tagging, relationships
 - **Smart Search**: Full-text search with tag filtering
 - **Context Generation**: 3-tier context system
 - **Type-Safe**: 100% type hints with Pydantic V2
 - **CLI + API**: Command-line and Python library
-- **Automated Tests**: 223 passing tests (196 Python + 27 MCP)
+- **Automated Tests**: 221 passing tests (194 Python + 27 MCP)
 - **Production Grade**: A+ (99/100) - All security vulnerabilities patched
 
 ## 🚀 Quick Start

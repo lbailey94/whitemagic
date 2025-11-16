@@ -413,6 +413,30 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {},
         },
       },
+      {
+        name: 'track_metric',
+        description: 'Record a quantitative metric (category/metric/value/context)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            category: { type: 'string', description: 'Metric category (e.g., token_efficiency)' },
+            metric: { type: 'string', description: 'Metric name (e.g., usage_percent)' },
+            value: { type: 'number', description: 'Metric value' },
+            context: { type: 'string', description: 'Optional context label' },
+          },
+          required: ['category', 'metric', 'value'],
+        },
+      },
+      {
+        name: 'get_metrics_summary',
+        description: 'Retrieve metrics dashboard summary (optionally filtered by categories)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            categories: { type: 'array', items: { type: 'string' }, description: 'Categories to include' },
+          },
+        },
+      },
     ],
   };
 });
@@ -644,6 +668,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               type: 'text',
               text: `Cache cleared. Stats: ${JSON.stringify(stats)}`,
             },
+          ],
+        };
+      }
+
+      case 'track_metric': {
+        await client.trackMetric(
+          args.category as string,
+          args.metric as string,
+          Number(args.value),
+          args.context as string
+        );
+        return {
+          content: [
+            { type: 'text', text: 'Metric recorded' },
+          ],
+        };
+      }
+
+      case 'get_metrics_summary': {
+        const summary = await client.getMetricsSummary(args.categories as string[]);
+        return {
+          content: [
+            { type: 'text', text: JSON.stringify(summary, null, 2) },
           ],
         };
       }

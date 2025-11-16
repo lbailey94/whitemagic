@@ -95,6 +95,53 @@ from .constants import (
     SORT_BY_ACCESSED,
 )
 
+# Meta-optimization exports (v2.2.5)
+from .workspace_loader import WorkspaceLoader, load_workspace_for_task
+from .session_templates import StartHereTemplate, create_start_here_memory, SessionSnapshot
+from .delta_tracking import DeltaTracker, track_session_changes, SessionDelta
+from .session_types import (
+    SessionType,
+    SessionTypeDetector,
+    SessionConfigurator,
+    configure_session,
+    print_session_config,
+)
+
+# Symbolic reasoning and integrations (v2.2.5)
+from .symbolic import (
+    SymbolicReasoning,
+    ConceptNode,
+    ConceptType,
+    create_symbolic_engine,
+)
+from .concept_map import (
+    ConceptMap,
+    create_concept_map,
+)
+from .symbolic_memory import (
+    SymbolicMemoryIntegration,
+    create_symbolic_memory_integration,
+)
+from .chinese_dict import load_core_concepts
+
+# Workflow patterns (v2.2.5)
+from .workflow_patterns import (
+    WorkflowPatterns,
+    WorkflowConfig,
+    get_workflow,
+    configure_workflow,
+    ThreadingTier,
+    LoadingTier,
+    TaskTerrain,
+)
+
+# Wu Xing cycle detection
+from .wu_xing import (
+    WuXingDetector,
+    Phase,
+    Activity,
+)
+
 __all__ = [
     # Version
     "__version__",
@@ -145,4 +192,40 @@ __all__ = [
     "SORT_BY_CREATED",
     "SORT_BY_UPDATED",
     "SORT_BY_ACCESSED",
+    # Meta-optimization (v2.2.5)
+    "WorkspaceLoader",
+    "load_workspace_for_task",
+    "StartHereTemplate",
+    "create_start_here_memory",
+    "SessionSnapshot",
+    "DeltaTracker",
+    "track_session_changes",
+    "SessionDelta",
+    "SessionType",
+    "SessionTypeDetector",
+    "SessionConfigurator",
+    "configure_session",
+    "print_session_config",
+    # Symbolic reasoning (v2.2.5)
+    "SymbolicReasoning",
+    "ConceptNode",
+    "ConceptType",
+    "create_symbolic_engine",
+    "ConceptMap",
+    "create_concept_map",
+    "SymbolicMemoryIntegration",
+    "create_symbolic_memory_integration",
+    "load_core_concepts",
+    # Workflow patterns (v2.2.5)
+    "WorkflowPatterns",
+    "WorkflowConfig",
+    "get_workflow",
+    "configure_workflow",
+    "ThreadingTier",
+    "LoadingTier",
+    "TaskTerrain",
+    # Wu Xing cycle detection
+    "WuXingDetector",
+    "Phase",
+    "Activity",
 ]
