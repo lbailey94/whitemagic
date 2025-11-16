@@ -232,8 +232,8 @@ async def embed_batch(self, texts: List[str]) -> List[List[float]]:
 
 **Files**:
 - `whitemagic/constants.py:8-10` says `2.1.3`
-- `pyproject.toml:7` says `2.1.5`
-- `VERSION` file says `2.1.5`
+- `pyproject.toml:7` says `2.2.1`
+- `VERSION` file says `2.2.1`
 
 **Issue**: Duplicate version definitions have drifted  
 **Impact**: Backup manifests, logs report wrong version  

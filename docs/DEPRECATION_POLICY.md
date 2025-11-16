@@ -1,6 +1,6 @@
 # WhiteMagic API Deprecation Policy
 
-**Version**: 2.1.1  
+**Version**: 2.2.1  
 **Last Updated**: November 10, 2025
 
 ---
@@ -117,6 +117,7 @@ Questions about deprecations? Contact:
 
 | Version | Release Date | Support Until |
 |---------|-------------|---------------|
-| 2.1.1   | Nov 10, 2025 | Active        |
+| v1      | 2.2.1       | Current       |
+| Nov 10, 2025 | Active        |
 | 2.1.0   | Nov 9, 2025  | Active        |
 | 2.0.0   | Nov 1, 2025  | Nov 1, 2026   |

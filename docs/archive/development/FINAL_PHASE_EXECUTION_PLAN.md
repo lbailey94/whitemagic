@@ -1,7 +1,7 @@
-# 🚀 Final Phase Execution Plan - v2.1.5 Completion
+# 🚀 Final Phase Execution Plan - v2.2.1 Completion
 
 **Date**: November 13-14, 2025  
-**Goal**: Complete v2.1.5, prepare for release, plan v2.1.6  
+**Goal**: Complete v2.2.1, prepare for release, plan v2.1.6  
 **Status**: Production deployed, now testing and documentation
 
 ---
@@ -20,7 +20,7 @@ Update README, consolidate docs, clean up bloat
 ### Phase 4: User Guide Creation (30 min)
 Create comprehensive user-facing documentation
 
-### Phase 5: v2.1.5 Checklist Review (15 min)
+### Phase 5: v2.2.1 Checklist Review (15 min)
 Verify all planned features completed
 
 ### Phase 6: Release Preparation (20 min)
@@ -317,7 +317,7 @@ mv DAY*.md docs/archive/day-logs/
 mv LOGIN_FIXES.md docs/archive/deployment-fixes/
 mv SERVICES_*.md docs/archive/deployment-fixes/
 mv PREVIEW_INSTRUCTIONS.md docs/archive/
-mv v2.1.5_PHASE*.md docs/archive/version-planning/
+mv v2.2.1_PHASE*.md docs/archive/version-planning/
 
 # Keep in root (primary docs)
 README.md
@@ -472,17 +472,17 @@ Link to CHANGELOG.md for version history
 
 ---
 
-## Phase 5: v2.1.5 Checklist Review
+## Phase 5: v2.2.1 Checklist Review
 
-**Objective**: Verify all v2.1.5 features are complete
+**Objective**: Verify all v2.2.1 features are complete
 
 ### Review Existing Planning Docs:
-- [ ] Check v2.1.5_PHASE1_COMPLETE.md
-- [ ] Check v2.1.5_PHASE2_PLAN.md
+- [ ] Check v2.2.1_PHASE1_COMPLETE.md
+- [ ] Check v2.2.1_PHASE2_PLAN.md
 - [ ] Check v2.1.4_PROJECT_TRACKER.md
 - [ ] Check any TODO or ROADMAP files
 
-### Expected v2.1.5 Features:
+### Expected v2.2.1 Features:
 
 #### Core Features:
 - [ ] Tiered memory system (short/long term)
@@ -533,14 +533,14 @@ Link to CHANGELOG.md for version history
 
 ## Phase 6: Release Preparation
 
-**Objective**: Tag v2.1.5 release and prepare announcement
+**Objective**: Tag v2.2.1 release and prepare announcement
 
 ### 6.1 Update CHANGELOG.md
 
-Add v2.1.5 release notes:
+Add v2.2.1 release notes:
 
 ```markdown
-## [2.1.5] - 2025-11-14
+## [2.2.1] - 2025-11-14
 
 ### Added
 - 🚀 **Production deployment** on Railway (API) and Vercel (Dashboard)
@@ -580,35 +580,35 @@ Add v2.1.5 release notes:
 ```bash
 # Ensure all changes committed
 git add .
-git commit -m "chore: prepare v2.1.5 release"
+git commit -m "chore: prepare v2.2.1 release"
 git push origin main
 
 # Create release tag
-git tag -a v2.1.5 -m "Release v2.1.5 - Production Deployment"
-git push origin v2.1.5
+git tag -a v2.2.1 -m "Release v2.2.1 - Production Deployment"
+git push origin v2.2.1
 
 # Create GitHub release
 # Go to: https://github.com/lbailey94/whitemagic/releases/new
-# Tag: v2.1.5
-# Title: WhiteMagic v2.1.5 - Production Launch
+# Tag: v2.2.1
+# Title: WhiteMagic v2.2.1 - Production Launch
 # Description: Copy from CHANGELOG.md
 ```
 
 ### 6.3 Update Version Numbers
 
 Update version in code:
-- [ ] pyproject.toml: `version = "2.1.5"`
-- [ ] whitemagic/__init__.py: `__version__ = "2.1.5"`
+- [ ] pyproject.toml: `version = "2.2.1"`
+- [ ] whitemagic/__init__.py: `__version__ = "2.2.1"`
 - [ ] dashboard/index.html: Version display
-- [ ] API health endpoint: Check returns 2.1.5
+- [ ] API health endpoint: Check returns 2.2.1
 
 ### 6.4 Deployment Verification
 
 After tagging:
 - [ ] Railway auto-deploys tagged version
 - [ ] Vercel auto-deploys tagged version
-- [ ] Health check returns v2.1.5
-- [ ] Dashboard shows v2.1.5
+- [ ] Health check returns v2.2.1
+- [ ] Dashboard shows v2.2.1
 
 ### 6.5 Announcement Preparation
 
@@ -620,14 +620,14 @@ Draft announcement for:
 
 **Sample Announcement**:
 ```
-🎉 WhiteMagic v2.1.5 is LIVE!
+🎉 WhiteMagic v2.2.1 is LIVE!
 
 We're excited to announce WhiteMagic is now in production!
 
 🌐 Try it now: https://app.whitemagic.dev
 📖 Documentation: https://github.com/lbailey94/whitemagic
 
-What's new in v2.1.5:
+What's new in v2.2.1:
 ✅ Production deployment on Railway + Vercel
 ✅ Custom domains with SSL
 ✅ Whop subscription integration
@@ -728,19 +728,19 @@ Low Impact, High Effort:
 
 ## 🎯 Success Criteria
 
-### v2.1.5 Complete When:
+### v2.2.1 Complete When:
 - [ ] All 15 tests passing
 - [ ] README reflects production state
 - [ ] USER_GUIDE.md created and comprehensive
 - [ ] API_DOCS.md created with all endpoints
 - [ ] Documentation consolidated and organized
-- [ ] Git tag v2.1.5 created and pushed
+- [ ] Git tag v2.2.1 created and pushed
 - [ ] GitHub release published
 - [ ] No critical bugs in production
 - [ ] Performance acceptable (< 200ms API response)
 
 ### Ready for v2.1.6 When:
-- [ ] v2.1.5 released
+- [ ] v2.2.1 released
 - [ ] Feature priorities defined
 - [ ] Timeline established
 - [ ] User feedback collected

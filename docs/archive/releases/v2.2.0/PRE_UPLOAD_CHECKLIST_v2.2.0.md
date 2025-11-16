@@ -57,7 +57,7 @@
 
 ## 📋 Version History Summary
 
-### v2.1.5 (Nov 14, 2025) - Last stable release
+### v2.2.1 (Nov 14, 2025) - Last stable release
 - Terminal tool fixes
 - All tests passing
 

@@ -33,7 +33,7 @@
 - Wildcard patterns
 
 ### 📝 Phase 6: Documentation (Day 4)
-- Update all version refs 2.1.3 → 2.1.5
+- Update all version refs 2.1.3 → 2.2.1
 - Match docs to implementation
 - Fix broken links
 

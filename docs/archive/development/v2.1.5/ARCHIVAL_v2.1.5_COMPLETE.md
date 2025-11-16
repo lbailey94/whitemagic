@@ -1,4 +1,4 @@
-# Documentation Archival - v2.1.5 Complete
+# Documentation Archival - v2.2.1 Complete
 
 **Date**: November 14, 2025  
 **Status**: ✅ Complete
@@ -51,7 +51,7 @@ docs/
 ├── DEPRECATION_POLICY.md        # Version policy
 ├── INDEX.md                     # Documentation index
 ├── MCP_CLI_SETUP.md             # MCP auto-setup
-├── RELEASE_PLAN_v2.1.5_to_v2.1.9.md  # 3-week roadmap ⭐ NEW
+├── RELEASE_PLAN_v2.2.1_to_v2.1.9.md  # 3-week roadmap ⭐ NEW
 ├── STRIPE_INTEGRATION.md        # Future (v2.2.0)
 ├── TERMINAL_TOOL_DESIGN.md      # Design doc
 ├── TERMINAL_TOOL_USAGE.md       # User guide
@@ -146,7 +146,7 @@ Plus existing archive folders:
 
 ---
 
-## 🎯 Next Steps (Optional - After v2.1.5 Ships)
+## 🎯 Next Steps (Optional - After v2.2.1 Ships)
 
 ### Phase 2 Cleanup (Low Priority)
 
@@ -163,8 +163,8 @@ Plus existing archive folders:
    - Reference RELEASE_PLAN for roadmap
 
 4. **Update dashboard/PREVIEW_GUIDE.md**
-   - Remove `v2.1.5-dev` branch reference
-   - Update to reflect actual v2.1.5 release
+   - Remove `v2.2.1-dev` branch reference
+   - Update to reflect actual v2.2.1 release
 
 ---
 
@@ -173,7 +173,7 @@ Plus existing archive folders:
 When committing this cleanup:
 
 ```
-docs: Archive historical documentation (v2.1.5 cleanup)
+docs: Archive historical documentation (v2.2.1 cleanup)
 
 Archived obsolete and historical documentation to improve clarity:
 
@@ -190,7 +190,7 @@ Result: Clean, focused documentation structure with only active,
 relevant docs in main folders. All historical content preserved
 in docs/archive/ for reference.
 
-Part of v2.1.5 release preparation.
+Part of v2.2.1 release preparation.
 ```
 
 ---
@@ -199,4 +199,4 @@ Part of v2.1.5 release preparation.
 
 **Phase 1 Archival**: ✅ **COMPLETE**
 
-The documentation structure is now clean, organized, and ready for v2.1.5 release!
+The documentation structure is now clean, organized, and ready for v2.2.1 release!

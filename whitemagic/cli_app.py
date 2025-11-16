@@ -253,9 +253,19 @@ def command_resume(manager: MemoryManager, args: argparse.Namespace) -> int:
     else:
         console.print(f"  [dim]No v{current_version}-specific memories found[/dim]")
     
-    # 3. Get tiered context if requested
-    if args.tier is not None:
-        console.print(f"\n[bold]🧠 Context Summary (Tier {args.tier}):[/bold]")
+    # 3. Always do tier 0 quick scan for efficiency
+    console.print("\n[bold]📚 Memory Overview (Tier 0 - Titles & Tags):[/bold]")
+    tier0_summary = manager.generate_context_summary(0)
+    tier0_lines = tier0_summary.split('\n')
+    if len(tier0_lines) > 20:
+        tier0_truncated = '\n'.join(tier0_lines[:20]) + f"\n\n... ({len(tier0_lines) - 20} more)"
+    else:
+        tier0_truncated = tier0_summary
+    console.print(Panel(Markdown(tier0_truncated), border_style="cyan"))
+    
+    # 4. Get additional tiered context if requested
+    if args.tier is not None and args.tier > 0:
+        console.print(f"\n[bold]🧠 Detailed Context (Tier {args.tier}):[/bold]")
         summary = manager.generate_context_summary(args.tier)
         
         # Show truncated version in panel
@@ -267,12 +277,13 @@ def command_resume(manager: MemoryManager, args: argparse.Namespace) -> int:
         
         console.print(Panel(Markdown(truncated), border_style="blue"))
     
-    # 4. Helpful next steps
+    # 5. Helpful next steps
     console.print("\n[bold green]✅ Session Context Ready![/bold green]")
     console.print("\n[bold]Recommended next steps:[/bold]")
     console.print("  1. Share relevant findings with your AI assistant")
     console.print("  2. Use [cyan]whitemagic search \"[query]\"[/cyan] for targeted context")
-    console.print("  3. Use [cyan]whitemagic context --tier 1[/cyan] for balanced context")
+    console.print("  3. Use [cyan]whitemagic resume --tier 1[/cyan] for balanced context (automatic tier 0 + tier 1)")
+    console.print("\n[dim]💡 Tip: Tier 0 always shown automatically for token efficiency (~500 tokens)[/dim]")
     
     if args.detailed and in_progress:
         console.print("\n[bold]📄 Full Session Details:[/bold]")
@@ -1205,14 +1216,14 @@ def build_parser() -> argparse.ArgumentParser:
     # resume
     resume_parser = subparsers.add_parser(
         "resume",
-        help="Show recent context for session continuity (in-progress work, version context)."
+        help="Show recent context for session continuity (always shows tier 0 quick scan + optional deeper tiers)."
     )
     resume_parser.add_argument(
         "--tier",
         type=int,
         choices=[0, 1, 2],
         default=None,
-        help="Include context summary at specified tier (optional).",
+        help="Include additional context at specified tier (tier 0 always shown, use 1 or 2 for more detail).",
     )
     resume_parser.add_argument(
         "--detailed",

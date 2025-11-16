@@ -1,4 +1,4 @@
-# Release Plan: v2.1.5 → v2.1.9
+# Release Plan: v2.2.1 → v2.1.9
 ## Local-First Feature Completion Before Monetization
 
 **Date**: November 14, 2025  
@@ -62,7 +62,7 @@
 
 ## 🚀 Release Schedule
 
-### **v2.1.5 - Terminal Tool GA** (November 14-15, 2025)
+### **v2.2.1 - Terminal Tool GA** (November 14-15, 2025)
 
 **Theme**: Safe, Powerful Code-Mode Execution
 
@@ -583,7 +583,7 @@ Target metrics:
 ```
 
 #### 4. Final Polish
-- [ ] Fix any reported bugs from v2.1.5-2.1.8
+- [ ] Fix any reported bugs from v2.2.1-2.1.8
 - [ ] Update all documentation
 - [ ] Create video tutorials (3-5 short videos)
 - [ ] Write blog post: "WhiteMagic v2.1: Feature Complete"
@@ -688,7 +688,7 @@ Target metrics:
 
 ---
 
-## 📋 Immediate Actions (v2.1.5 Tonight)
+## 📋 Immediate Actions (v2.2.1 Tonight)
 
 ### High Priority (Ship Tonight)
 
@@ -704,7 +704,7 @@ Target metrics:
    - [ ] Update README.md with feature highlights
 
 3. **Documentation**
-   - [ ] CHANGELOG.md entry for v2.1.5
+   - [ ] CHANGELOG.md entry for v2.2.1
    - [ ] Update VERSION file
    - [ ] Quick security FAQ
 
@@ -751,7 +751,7 @@ Target metrics:
 
 **Next Steps**:
 1. Review this plan
-2. Ship v2.1.5 tonight (Terminal Tool)
+2. Ship v2.2.1 tonight (Terminal Tool)
 3. Execute progressive releases v2.1.6-2.1.9
 4. Launch publicly by December 1, 2025
 5. Build to 1,000 users before monetization
@@ -763,4 +763,4 @@ Local version is free, powerful, and complete. Cloud version (v2.2+) is convenie
 
 ---
 
-**Ready to ship v2.1.5?** Let's enable that Terminal Tool! 🎉
+**Ready to ship v2.2.1?** Let's enable that Terminal Tool! 🎉

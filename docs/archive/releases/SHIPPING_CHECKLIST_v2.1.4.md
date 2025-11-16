@@ -126,7 +126,7 @@ npx whitemagic-mcp-setup
 ### Follow-up
 - [ ] Respond to issues within 24h
 - [ ] Document any problems in GitHub
-- [ ] Plan v2.1.5 based on feedback
+- [ ] Plan v2.2.1 based on feedback
 
 ---
 
@@ -150,7 +150,7 @@ If critical issues found:
 
 1. **Immediately**: Document the issue
 2. **Quick fix possible?** 
-   - Yes → Patch release (v2.1.5)
+   - Yes → Patch release (v2.2.1)
    - No → Deprecate v2.1.4, advise v2.1.3
 3. **Update documentation** with workarounds
 4. **Communicate** via GitHub release notes

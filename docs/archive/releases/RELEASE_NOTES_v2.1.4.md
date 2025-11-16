@@ -223,7 +223,7 @@ with WhiteMagicClient(api_key='key') as client:
 
 ---
 
-## 🚀 What's Next (v2.1.5)
+## 🚀 What's Next (v2.2.1)
 
 Planned for next release:
 - Usage dashboard (visualize your memory usage)

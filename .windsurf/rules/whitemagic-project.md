@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # WhiteMagic Workspace Rules
 
 ## Session Start Protocol v2 (Optimized)

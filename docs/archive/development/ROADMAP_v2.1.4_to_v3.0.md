@@ -47,7 +47,7 @@ Nov 2025  Dec 2025  Jan 2026  Feb 2026  Mar 2026  Apr 2026  May 2026
            DX+SDK    Agent     GitHub   Teams    Multi-
                     Powers    +VSCode            modal
                     
-           v2.1.5    v2.2.5
+           v2.2.1    v2.2.5
            ↓         ↓
          Money    Providers
 ```
@@ -119,7 +119,7 @@ Auto-generated from FastAPI schema, published to npm/PyPI.
 
 ---
 
-## v2.1.5 - "Monetization Foundation"
+## v2.2.1 - "Monetization Foundation"
 **Timeline**: 2-3 weeks (Dec 9 - Dec 27, 2025)  
 **Theme**: Get billing/usage infrastructure solid
 
@@ -449,7 +449,7 @@ POST /api/v1/webhooks
 
 ---
 
-## Pricing Strategy (Launch with v2.1.5)
+## Pricing Strategy (Launch with v2.2.1)
 
 ### Proposed Tiers
 

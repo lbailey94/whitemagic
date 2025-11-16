@@ -50,7 +50,7 @@
 #### 2. **Dashboard** ✅ IN PROGRESS
 > "dashboard/site"
 
-**Status**: ✅ **Phase 1 Complete** (v2.1.5)
+**Status**: ✅ **Phase 1 Complete** (v2.2.1)
 - Working dashboard with Chart.js
 - API key management
 - Usage statistics
@@ -307,7 +307,7 @@ Enterprise: Annual contract
 
 **My Recommendation: Start with A, Iterate to B**
 
-**Phase 1 (v2.1.5 - Now)**: 
+**Phase 1 (v2.2.1 - Now)**: 
 - Ship with pure subscription (already built)
 - Activate Whop integration
 - Get first paying users
@@ -325,7 +325,7 @@ Enterprise: Annual contract
 
 ## 🎯 Recommended Phase 2 Scope
 
-### MUST SHIP (v2.1.5 - This Week)
+### MUST SHIP (v2.2.1 - This Week)
 
 #### 1. Visual Polish ⭐⭐⭐
 - [ ] Beige background + pastel colors
@@ -420,7 +420,7 @@ Enterprise: Annual contract
 
 ## 🎯 Final Recommendation
 
-### Ship This Week (v2.1.5)
+### Ship This Week (v2.2.1)
 1. ✅ Dashboard visual polish (beige + pastels + sidebar)
 2. ✅ Activate Whop (revenue!)
 3. ✅ Create-whitemagic-app installer
@@ -471,7 +471,7 @@ If you approve this direction:
 5. **Friday**: Create-whitemagic-app package
 6. **Weekend**: Polish + testing
 
-**Result**: v2.1.5 ships Monday with:
+**Result**: v2.2.1 ships Monday with:
 - Beautiful dashboard
 - Active monetization
 - Zero-friction installer

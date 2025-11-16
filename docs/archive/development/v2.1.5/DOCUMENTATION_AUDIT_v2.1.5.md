@@ -1,4 +1,4 @@
-# Documentation Audit - v2.1.5
+# Documentation Audit - v2.2.1
 
 **Date**: November 14, 2025  
 **Purpose**: Identify obsolete docs for archival and valuable content to preserve
@@ -73,7 +73,7 @@ These are valuable historical records but should be archived:
 27. **`docs/VERSION_2.2.0_RELEASE_NOTES.md`**
    - Date: November 11, 2025 (claims v2.2.0 is "Production Ready")
    - **Action**: ARCHIVE → `docs/archive/obsolete/`
-   - **Reason**: We're on v2.1.5, this is a draft/mistake, never released
+   - **Reason**: We're on v2.2.1, this is a draft/mistake, never released
 
 28. **`docs/IMPROVEMENTS_AND_FIXES.md`**
    - Date: November 11, 2025, v2.1.2
@@ -110,10 +110,10 @@ These are valuable historical records but should be archived:
 - ✅ `docs/VISION.md` - Philosophy and strategy
 - ✅ `docs/ARCHITECTURE.md` - Technical design
 - ✅ `docs/VISION_TO_REALITY.md` - Gap analysis
-- ✅ `docs/RELEASE_PLAN_v2.1.5_to_v2.1.9.md` - Roadmap
+- ✅ `docs/RELEASE_PLAN_v2.2.1_to_v2.1.9.md` - Roadmap
 - ✅ `START_HERE.md` - New user guide
-- ✅ `RELEASE_v2.1.5_SUMMARY.md` - Current release summary
-- ✅ `v2.1.5_SHIP_TONIGHT.md` - Current action plan
+- ✅ `RELEASE_v2.2.1_SUMMARY.md` - Current release summary
+- ✅ `v2.2.1_SHIP_TONIGHT.md` - Current action plan
 
 ### Root Level (Active)
 - ✅ `README.md` - Main entry point
@@ -165,7 +165,7 @@ These are valuable historical records but should be archived:
 ### Dashboard Docs
 - ✅ `dashboard/IMPROVEMENTS.md` - Dashboard roadmap
 - ✅ `dashboard/MEMORY_BROWSER_FEATURES.md` - Feature list
-- ✅ `dashboard/PREVIEW_GUIDE.md` - v2.1.5 preview
+- ✅ `dashboard/PREVIEW_GUIDE.md` - v2.2.1 preview
 
 ### Development
 - ✅ `docs/development/BUGFIX_REPORT.md` - Bug tracking
@@ -201,12 +201,12 @@ These are valuable historical records but should be archived:
    > **STATUS**: PLANNED FOR v2.2.0 (Q1 2026)
    > 
    > This document describes future functionality. Stripe integration is not yet implemented.
-   > See [RELEASE_PLAN_v2.1.5_to_v2.1.9.md](RELEASE_PLAN_v2.1.5_to_v2.1.9.md) for current roadmap.
+   > See [RELEASE_PLAN_v2.2.1_to_v2.1.9.md](RELEASE_PLAN_v2.2.1_to_v2.1.9.md) for current roadmap.
    ```
 
 4. **`dashboard/PREVIEW_GUIDE.md`**
-   - Says v2.1.5 but mentions branch `v2.1.5-dev`
-   - **Action**: Update to reflect actual v2.1.5 release status
+   - Says v2.2.1 but mentions branch `v2.2.1-dev`
+   - **Action**: Update to reflect actual v2.2.1 release status
 
 5. **Review `docs/reviews/v2.1.3/` folder** (19 files)
    - Many overlapping reviews
@@ -301,7 +301,7 @@ whitemagic/
     ├── VISION.md                 # Strategy
     ├── ARCHITECTURE.md           # Design
     ├── VISION_TO_REALITY.md      # Gap analysis
-    ├── RELEASE_PLAN_v2.1.5_to_v2.1.9.md
+    ├── RELEASE_PLAN_v2.2.1_to_v2.1.9.md
     ├── USER_GUIDE.md
     ├── CHEATSHEET.md
     ├── TROUBLESHOOTING.md
@@ -356,8 +356,8 @@ whitemagic/
 - Delete duplicate DOCUMENTATION_INDEX.md
 - Archive obsolete/outdated tracking docs
 
-**Phase 2 can wait** until after v2.1.5 ships.
+**Phase 2 can wait** until after v2.2.1 ships.
 
 ---
 
-**Recommendation**: Execute Phase 1 archival now as part of v2.1.5 release housekeeping.
+**Recommendation**: Execute Phase 1 archival now as part of v2.2.1 release housekeeping.

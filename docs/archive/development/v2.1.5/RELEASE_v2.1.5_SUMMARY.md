@@ -1,4 +1,4 @@
-# v2.1.5 Release Summary
+# v2.2.1 Release Summary
 
 **Date**: November 14, 2025  
 **Status**: ✅ Ready to Ship  
@@ -16,10 +16,10 @@
    - **Safety**: PROD profile (read-only) enforced, write requires explicit flag
 
 2. **`VERSION`**
-   - Changed: `2.1.4` → `2.1.5`
+   - Changed: `2.1.4` → `2.2.1`
 
 3. **`pyproject.toml`**
-   - Changed: `version = "2.1.5"`
+   - Changed: `version = "2.2.1"`
 
 4. **`README.md`**
    - Added: Terminal Tool section with examples
@@ -27,7 +27,7 @@
    - Updated: Features list with NEW badges
 
 5. **`CHANGELOG.md`**
-   - Added: Comprehensive v2.1.5 entry
+   - Added: Comprehensive v2.2.1 entry
 
 ### Documentation Created
 
@@ -49,7 +49,7 @@
    - Strategic priorities
    - Action plan (30/90/180 days)
 
-4. **`docs/RELEASE_PLAN_v2.1.5_to_v2.1.9.md`** (11 KB)
+4. **`docs/RELEASE_PLAN_v2.2.1_to_v2.1.9.md`** (11 KB)
    - Progressive release plan
    - v2.1.6: Semantic Search CLI
    - v2.1.7: Nested Learning
@@ -70,7 +70,7 @@
 ## ✅ Verification Results
 
 ### Imports
-- ✅ `whitemagic.__version__` → `2.1.5`
+- ✅ `whitemagic.__version__` → `2.2.1`
 - ✅ `whitemagic.terminal` imports successfully
 - ✅ `whitemagic.search.SemanticSearcher` imports successfully
 - ⚠️ API imports have local env dependency issue (email-validator)
@@ -84,7 +84,7 @@
 
 ---
 
-## 🎯 What v2.1.5 Delivers
+## 🎯 What v2.2.1 Delivers
 
 ### For Users
 
@@ -133,14 +133,14 @@ git diff
 git add -A
 
 # Commit
-git commit -m "Release v2.1.5: Enable Terminal Tool + Highlight Semantic Search"
+git commit -m "Release v2.2.1: Enable Terminal Tool + Highlight Semantic Search"
 
 # Tag
-git tag -a v2.1.5 -m "Release v2.1.5: Terminal Tool + Semantic Search"
+git tag -a v2.2.1 -m "Release v2.2.1: Terminal Tool + Semantic Search"
 
 # Push
 git push origin main
-git push origin v2.1.5
+git push origin v2.2.1
 ```
 
 ### Railway Deployment
@@ -159,7 +159,7 @@ curl https://api.whitemagic.dev/health
 
 # Check version
 curl https://api.whitemagic.dev/version
-# Should show: {"version": "2.1.5", ...}
+# Should show: {"version": "2.2.1", ...}
 
 # Check Terminal Tool (requires auth)
 curl -X POST https://api.whitemagic.dev/api/v1/exec/read \
@@ -203,7 +203,7 @@ curl -X POST https://api.whitemagic.dev/api/v1/exec/read \
 Before pushing, verify:
 
 - [ ] Version bumped in all files (VERSION, pyproject.toml)
-- [ ] CHANGELOG.md has comprehensive v2.1.5 entry
+- [ ] CHANGELOG.md has comprehensive v2.2.1 entry
 - [ ] README.md clearly highlights new features
 - [ ] Terminal Tool enabled with safety notes
 - [ ] Semantic Search documented with examples
@@ -264,7 +264,7 @@ Following lessons from v2.1.3 testing mistakes:
 
 ## 🏆 Success Criteria
 
-**v2.1.5 is successful if**:
+**v2.2.1 is successful if**:
 
 - ✅ Terminal Tool enabled in production
 - ✅ Semantic Search highlighted and accessible
@@ -274,7 +274,7 @@ Following lessons from v2.1.3 testing mistakes:
 
 **Measurement**:
 - Production health check passes
-- Version endpoint shows 2.1.5
+- Version endpoint shows 2.2.1
 - Terminal Tool API responds
 - Semantic Search API responds
 - No critical errors in Railway logs

@@ -246,7 +246,7 @@ Combined with our quality/testing rigor, we now have a roadmap that will make Wh
 
 ## 📅 Next Steps
 
-1. **Tonight**: Release v2.1.5 officially ✅
+1. **Tonight**: Release v2.2.1 officially ✅
 2. **This weekend**: Plan v2.1.6 in detail
 3. **Monday**: Start implementing config system
 4. **Week of Nov 18**: Ship v2.1.6

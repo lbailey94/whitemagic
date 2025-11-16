@@ -409,8 +409,8 @@ WhiteMagic is well-positioned if we:
 
 1. 🚧 **Monetization**: Plus/Pro tiers not live yet
 2. 🚧 **Distribution**: Product ready, but not widely known
-3. ✅ **Terminal Tool**: **SHIPPED in v2.1.5** (CLI + API + MCP, read/write modes, approval workflow)
-4. ✅ **Semantic Search**: **SHIPPED in v2.1.5** (Local embeddings + OpenAI, hybrid mode, CLI + API + MCP)
+3. ✅ **Terminal Tool**: **SHIPPED in v2.2.1** (CLI + API + MCP, read/write modes, approval workflow)
+4. ✅ **Semantic Search**: **SHIPPED in v2.2.1** (Local embeddings + OpenAI, hybrid mode, CLI + API + MCP)
 5. 📅 **Team Features**: Roadmap item, no code yet
 
 ### The Path Forward

@@ -1,6 +1,6 @@
 # WhiteMagic Architecture
 
-**Version**: 2.2.0  
+**Version**: 2.2.1  
 **Last Updated**: November 15, 2025
 
 ---

@@ -178,6 +178,6 @@ That changes everything.
 
 **Ready?** Pick a quick start path above and dive in! 🚀
 
-**Version**: 2.1.5  
+**Version**: 2.2.1  
 **License**: MIT  
 **Last Updated**: November 14, 2025

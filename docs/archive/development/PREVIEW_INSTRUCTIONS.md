@@ -1,4 +1,4 @@
-# 📸 Preview Instructions - Dashboard v2.1.5
+# 📸 Preview Instructions - Dashboard v2.2.1
 
 **Quick Start**: Follow these steps to preview the enhanced dashboard!
 
@@ -217,7 +217,7 @@ Once you send screenshots and feedback:
 1. We'll iterate on any issues
 2. Polish based on your input
 3. Move to Phase 2 (Feature Toggles)
-4. Continue building v2.1.5!
+4. Continue building v2.2.1!
 
 ---
 

@@ -37,7 +37,7 @@ Two independent security reviews identified critical vulnerabilities and functio
 **Status**: ✅ Deployed (commit 705b26c)
 
 ### ✅ Issue #5: Version Constant Drift (FIXED)
-**Problem**: `constants.VERSION = "2.1.3"` but actual version is 2.1.5  
+**Problem**: `constants.VERSION = "2.1.3"` but actual version is 2.2.1  
 **Impact**: Backup manifests, logs reported wrong version  
 **Fix**: Read from VERSION file (single source of truth)  
 **Status**: ✅ Deployed (commit 705b26c)

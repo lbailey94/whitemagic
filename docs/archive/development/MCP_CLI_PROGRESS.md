@@ -196,7 +196,7 @@ Issue #1 is complete when:
 ### Option C: Ship Core, Iterate Later
 - Current implementation is usable
 - Ship what we have
-- Add tests and polish in v2.1.5
+- Add tests and polish in v2.2.1
 
 ---
 
