@@ -174,10 +174,11 @@ def parse_frontmatter(block: str) -> Dict[str, Any]:
     """
     Parse YAML-style frontmatter block.
 
-    Simple parser that handles:
+    Uses PyYAML for proper parsing of YAML structures including:
     - key: value
     - key: [item1, item2]
-    - tags: tag1, tag2
+    - Multi-line lists
+    - Nested structures
 
     Args:
         block: Frontmatter block text
@@ -185,39 +186,13 @@ def parse_frontmatter(block: str) -> Dict[str, Any]:
     Returns:
         Dictionary of parsed values
     """
-    data: Dict[str, Any] = {}
-    for line in block.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-
-        if ":" in stripped:
-            key, value = stripped.split(":", 1)
-            key = key.strip()
-            value = value.strip()
-
-            # Parse lists
-            if value.startswith("[") and value.endswith("]"):
-                items = value[1:-1].split(",")
-                data[key] = [item.strip().strip("'\"") for item in items if item.strip()]
-            # Parse comma-separated (for tags) or single tag
-            elif key == "tags":
-                if "," in value:
-                    data[key] = [item.strip() for item in value.split(",") if item.strip()]
-                else:
-                    # Single tag - still return as list
-                    data[key] = [value.strip()] if value.strip() else []
-            # Parse booleans
-            elif value.lower() in ("true", "false"):
-                data[key] = value.lower() == "true"
-            # Parse numbers
-            elif value.isdigit():
-                data[key] = int(value)
-            # String value
-            else:
-                data[key] = value.strip("'\"")
-
-    return data
+    import yaml
+    try:
+        data = yaml.safe_load(block)
+        return data if isinstance(data, dict) else {}
+    except yaml.YAMLError:
+        # Fallback to empty dict if YAML is invalid
+        return {}
 
 
 def create_frontmatter(
