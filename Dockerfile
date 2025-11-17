@@ -31,5 +31,5 @@ EXPOSE $PORT
 # Healthcheck - use PORT env var
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Use shell form to allow env var substitution
-CMD uvicorn whitemagic.api.app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+# Use shell form to allow env var substitution with sh -c
+CMD sh -c "uvicorn whitemagic.api.app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"
