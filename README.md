@@ -2,7 +2,7 @@
 
 Tiered Memory Management for AI Agents with Native MCP + REST Support
 
-[![Version](https://img.shields.io/badge/version-2.2.5-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![Version](https://img.shields.io/badge/version-2.2.7-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
 [![npm](https://img.shields.io/badge/npm-2.2.5-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -15,9 +15,10 @@ Tiered Memory Management for AI Agents with Native MCP + REST Support
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
 
-WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, native MCP integration for Cursor/Windsurf/Claude, and the new v2.2.5 symbolic reasoning, Wu Xing workflow, and live metrics modules.
+WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, native MCP integration for Cursor/Windsurf/Claude, and the new v2.2.7 parallel infrastructure + scratchpads alongside v2.2.5 symbolic reasoning, Wu Xing workflow, and live metrics modules.
 
 ## 🎁 Free & Open Source
+
 - ✅ **87% token reduction** via tiered context loading
 - ✅ **10-100x faster** direct file operations
 - ✅ **37-58% cost savings** for multi-session AI projects
@@ -34,7 +35,7 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 1. **Install**: `pip install whitemagic` or `git clone https://github.com/lbailey94/whitemagic`
 2. **Try CLI**: `whitemagic create "My first memory" --content "Hello WhiteMagic!"`
-3. **Load Symbolic Tools** *(optional but recommended in v2.2.5)*: follow the [Symbolic Reasoning guide](docs/guides/SYMBOLIC_REASONING.md) to enable Chinese concept compression + concept graphs.
+3. **Load Symbolic & Parallel Tools** *(new in v2.2.7)*: follow the [Symbolic Reasoning guide](docs/guides/SYMBOLIC_REASONING.md) plus the Session/Parallel docs to enable Chinese concept compression, Wu Xing guidance, and the new I Ching-aligned thread pools.
 4. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
 
 → **Full guides**: [User Guide](docs/USER_GUIDE.md) | [Quickstart](docs/guides/QUICKSTART.md) | [Cheat Sheet](docs/CHEATSHEET.md) | [Symbolic Reasoning](docs/guides/SYMBOLIC_REASONING.md) | [Wu Xing + Metrics](docs/guides/WU_XING_AND_METRICS.md) | [Semantic Search](docs/guides/SEMANTIC_SEARCH.md) | [Terminal Tool Hardening](docs/guides/TERMINAL_TOOL.md)
@@ -45,9 +46,11 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 - **Tiered Memory**: Short-term, long-term, and archive storage
 - **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
-- **🧠 Symbolic Reasoning Engine** *(NEW v2.2.5)*: Chinese logographic compression, concept mapping, and memory linking.
-- **🌊 Wu Xing Workflow Detection** *(NEW v2.2.5)*: Automatic phase detection for adaptive prompts + recommendations.
-- **📈 Live Metrics Hooks** *(NEW v2.2.5)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
+- **⚡ Parallel Infrastructure** *(NEW v2.2.7)*: I Ching-aligned pools + schedulers (8→256 threads) with CLI/MCP hooks coming in v2.2.9.
+- **🧠 Symbolic Reasoning Engine** *(v2.2.5)*: Chinese logographic compression, concept mapping, and memory linking.
+- **🌊 Wu Xing Workflow Detection** *(v2.2.5)*: Automatic phase detection for adaptive prompts + recommendations.
+- **📈 Live Metrics Hooks** *(v2.2.5)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
+- **🛠️ Audit & Terminal Helpers** *(coming v2.2.8)*: `whitemagic audit`, `docs-check`, and `exec plan` commands to keep docs + commands in sync across IDEs and terminals.
 - **🔧 Terminal Tool**: Safe code execution with approval workflows
 - **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings (see [Semantic Search guide](docs/guides/SEMANTIC_SEARCH.md))
 - **🧠 Smart Features**: Setup wizard, templates, auto-tagging, relationships
@@ -63,9 +66,11 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 ### Official SDKs (New in v2.1.4!) 📦
 
 **TypeScript/JavaScript** - [npm](https://www.npmjs.com/package/whitemagic-client)
+
 ```bash
 npm install whitemagic-client
 ```
+
 ```typescript
 import { WhiteMagicClient } from 'whitemagic-client';
 
@@ -78,9 +83,11 @@ const memory = await client.memories.create({
 ```
 
 **Python** - [PyPI](https://pypi.org/project/whitemagic-client/)
+
 ```bash
 pip install whitemagic-client
 ```
+
 ```python
 from whitemagic_client import WhiteMagicClient
 
@@ -97,6 +104,7 @@ memory = client.create_memory({
 ---
 
 ### Auto-Configure Your IDE (New!)
+
 ```bash
 npx whitemagic-mcp-setup
 # Interactive wizard configures:
@@ -109,6 +117,7 @@ npx whitemagic-mcp-setup
 📖 **Full guide**: [MCP CLI Setup](docs/MCP_CLI_SETUP.md)
 
 ### Install MCP Server Manually
+
 ```bash
 # Install from npm
 npm install -g whitemagic-mcp
@@ -117,6 +126,7 @@ npm install -g whitemagic-mcp
 ```
 
 ### Local Development
+
 ```bash
 # Clone and install
 git clone https://github.com/lbailey94/whitemagic.git
@@ -142,8 +152,10 @@ docker compose up -d
 ### Cloud Deployment (Production)
 
 **Live Services:**
-- 🌐 **API**: https://api.whitemagic.dev (Railway)
-- 📊 **Dashboard**: https://app.whitemagic.dev (Vercel)
+
+- 🌐 **API**: <https://api.whitemagic.dev> (Railway)
+- 📊 **Dashboard**: <https://app.whitemagic.dev> (Vercel)
+- 💬 **Discussions**: <https://github.com/lbailey94/whitemagic/discussions>
 
 **Stack:**
 - **Backend**: Railway (FastAPI + PostgreSQL + Redis)
@@ -151,70 +163,6 @@ docker compose up -d
 - **Payments**: Stripe (Coming soon)
 
 For deployment guides, see `docs/archive/deployment/` or contact for enterprise setup.
-
-## 📦 MCP Server (Windsurf/Cursor)
-
-```bash
-cd whitemagic-mcp && npm install && npm run build
-```
-
-Add to `~/.codeium/windsurf/mcp_config.json`:
-```json
-{
-  "mcpServers": {
-    "whitemagic": {
-      "command": "node",
-      "args": ["/path/to/whitemagic-mcp/dist/index.js"],
-      "env": {"WM_BASE_PATH": "/path/to/whitemagic"}
-    }
-  }
-}
-```
-
----
-
-## 🔧 Terminal Tool - Safe Code Execution
-
-Execute commands safely with built-in approval workflows:
-
-```bash
-# Read-only commands (safe, no approval needed)
-whitemagic exec ls -la
-whitemagic exec git status
-whitemagic exec rg "TODO" --json
-
-# Write operations (require explicit --write flag + approval)
-whitemagic exec --write git commit -m "Update docs"
-whitemagic exec --write npm install lodash
-```
-
-**Safety Features**:
-- ✅ **Read-only by default** (PROD profile enforces strict allowlist)
-- ✅ **Write operations** require explicit `--write` flag AND approval
-- ✅ **Audit logging** tracks every execution with correlation IDs
-- ✅ **Command allowlist** blocks dangerous operations (rm -rf, sudo, etc.)
-- ✅ **API writes require** `X-Confirm-Write-Operation: confirmed` header to opt-in
-
-**Via API**:
-```bash
-curl -X POST https://api.whitemagic.dev/api/v1/exec/read \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"cmd": "ls", "args": ["-la"], "cwd": "/workspace"}'
-
-# Write commands must opt-in with a confirmation header
-curl -X POST https://api.whitemagic.dev/api/v1/exec \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -H "X-Confirm-Write-Operation: confirmed" \
-  -H "Content-Type: application/json" \
-  -d '{"cmd": "git", "args": ["commit", "-m", "Update docs"], "mode": "write"}'
-```
-
-> **⚠️ SECURITY NOTE**: The Terminal Execution API is **disabled by default** for security. Only enable in controlled environments by setting `WM_ENABLE_EXEC_API=true`. See [Security Policy](SECURITY.md#terminal-execution-api-security) for threat model and best practices.
-
-📖 **Full guide**: [Terminal Tool Usage](docs/TERMINAL_TOOL_USAGE.md)
-
----
 
 ## 🔍 Semantic Search - Intelligent Retrieval
 

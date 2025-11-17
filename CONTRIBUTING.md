@@ -37,12 +37,14 @@ This project adheres to a code of conduct. By participating, you are expected to
 
 1. Fork the repository on GitHub
 2. Clone your fork locally:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/whitemagic.git
    cd whitemagic
    ```
 
 3. Add upstream remote:
+
    ```bash
    git remote add upstream https://github.com/lbailey94/whitemagic.git
    ```
@@ -108,6 +110,7 @@ git checkout -b fix/your-bug-fix
 ```
 
 **Branch naming conventions**:
+
 - `feature/` - New features
 - `fix/` - Bug fixes
 - `docs/` - Documentation changes
@@ -120,7 +123,9 @@ git checkout -b fix/your-bug-fix
 - Write clear, concise code
 - Follow the existing code style
 - Add comments for complex logic
-- Update documentation as needed
+- **Update documentation as needed**
+  - Run `whitemagic audit` (v2.2.8) to confirm version/doc consistency
+  - Run `whitemagic docs-check docs/ README.md` to flag stale sections
 
 ### 3. Write Tests
 
@@ -134,6 +139,9 @@ pytest tests/ -v
 
 # With coverage
 pytest tests/ --cov=whitemagic --cov-report=term
+
+# Upcoming automation (v2.2.8)
+whitemagic exec plan plan.yaml  # Stage batched commands for approval
 ```
 
 ### 4. Update Documentation
@@ -174,11 +182,13 @@ pytest tests/ --cov=whitemagic --cov-report=html
 import pytest
 from whitemagic import MemoryManager
 
+
 def test_create_memory():
     """Test memory creation."""
     manager = MemoryManager()
     result = manager.create_memory("Test", "Content", "short_term")
     assert result.exists()
+
 
 @pytest.mark.asyncio
 async def test_api_endpoint():
@@ -192,16 +202,19 @@ async def test_api_endpoint():
 **`tests/conftest.py` contains an autouse fixture that mocks the rate limiter** for all tests. This prevents "Rate limiter not initialized" errors in unit tests that don't go through the full app lifespan.
 
 **Why this exists**:
+
 - FastAPI's rate limiter requires Redis initialization via the `lifespan` context
 - Unit tests that directly call endpoints bypass this initialization
 - The mock allows isolated testing without Redis dependency
 
 **What it does**:
+
 - Automatically patches the global rate limiter for all tests
 - Returns mock "allowed" responses for rate limit checks
 - Ensures tests remain fast and don't require Redis
 
 **When to update**:
+
 - If you modify `whitemagic/api/rate_limit.py`, ensure the mock in `tests/conftest.py` stays compatible
 - If adding new rate limiter features, update the mock return values accordingly
 
@@ -219,6 +232,7 @@ git commit -m "feat: add new feature"
 ```
 
 **Commit message format**:
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `docs:` - Documentation changes
@@ -285,41 +299,42 @@ mypy whitemagic/ --ignore-missing-imports
 from typing import Optional, List
 from pathlib import Path
 
+
 class MemoryManager:
     """
     Manages memory operations for AI agents.
-    
+
     Attributes:
         base_dir: Base directory for memory storage
-        
+
     Example:
         >>> manager = MemoryManager(base_dir="/path/to/memories")
         >>> manager.create_memory("Title", "Content", "short_term")
     """
-    
+
     def __init__(self, base_dir: str) -> None:
         """Initialize the memory manager."""
         self.base_dir = Path(base_dir)
-    
+
     def create_memory(
         self,
         title: str,
         content: str,
         memory_type: str,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
     ) -> Path:
         """
         Create a new memory file.
-        
+
         Args:
             title: Memory title
             content: Memory content
             memory_type: Type (short_term or long_term)
             tags: Optional list of tags
-            
+
         Returns:
             Path to created memory file
-            
+
         Raises:
             ValueError: If memory_type is invalid
         """
@@ -331,7 +346,7 @@ class MemoryManager:
 
 ## Project Structure
 
-```
+```text
 whitemagic/
 ├── whitemagic/          # Core package
 │   ├── __init__.py      # Package exports

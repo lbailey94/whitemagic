@@ -13,6 +13,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 2. **[README.md](../README.md)** - Project overview, features, installation
 3. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 5-minute hands-on tutorial
 4. **[USER_GUIDE.md](USER_GUIDE.md)** - Complete beginner to advanced guide
+5. **[README.md#-features](../README.md#-features)** - Snapshot of v2.2.7 parallel infrastructure + scratchpads
 
 ---
 
@@ -45,19 +46,23 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 ## 📚 **Core Documentation**
 
 ### User Guides
+
 - **[Memory System](guides/MEMORY_SYSTEM_README.md)** - How the memory system works
 - **[Advanced Usage](guides/ADVANCED_USAGE.md)** - Power user features
 - **[System Overview](guides/SYSTEM_OVERVIEW.md)** - Architecture deep-dive
 
-### MCP Integration
+### MCP & Parallel Integration
+
 - **[whitemagic-mcp/README.md](../whitemagic-mcp/README.md)** - MCP server setup for Cursor/Windsurf/Claude
 - **[Tool Wrappers Guide](guides/TOOL_WRAPPERS_GUIDE.md)** - Framework integrations
+- **[guides/CLI_METRICS.md](guides/CLI_METRICS.md)** - Track workflow health + prep for `whitemagic audit/docs-check`
 
 ---
 
 ## 🚢 **Production Deployment**
 
 ### Essential Reading
+
 - **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** - Complete deployment guide  
   ⭐ **Most comprehensive** - Docker, PostgreSQL, Redis, Caddy
 - **[DEPLOY_NOW.md](archive/v2.2.1-prep/DEPLOY_NOW.md)** - Quick deployment checklist (archived)  
@@ -65,6 +70,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 - **[START_HERE.md](../START_HERE.md)** - Quick reference card
 
 ### Production Resources
+
 - **[Optional Integrations](production/OPTIONAL_INTEGRATIONS.md)** - Sentry, Prometheus, log shipping
 - **[Production Checklist](production/PRODUCTION_CHECKLIST.md)** - Pre-deployment verification
 - **[Testing & Deployment Summary](production/TESTING_DEPLOYMENT_SUMMARY.md)** - Test coverage & strategies
@@ -74,12 +80,14 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 ## 🔧 **Development**
 
 ### Planning & Design
-- **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones
+
+- **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones (current v2.2.7, upcoming v2.2.8/v2.2.9)
 - **[RELEASE_PLAN_v2.2.1_to_v2.1.9.md](RELEASE_PLAN_v2.2.1_to_v2.1.9.md)** - 3-week progressive release plan
 - **[REST API Design](development/REST_API_DESIGN.md)** - API architecture
 - **[Bugfix Report](development/BUGFIX_REPORT.md)** - Known issues & fixes
 
 ### Historical Context
+
 - **[archive/phases/](archive/phases/)** - Completed phase documentation
 - **[archive/reviews/](archive/reviews/)** - Historical review documents
 
@@ -105,6 +113,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 ## 🗂️ **Archive**
 
 Historical documents (for reference only):
+
 - **[archive/](archive/)** - Day-by-day progress, old designs, deprecated docs
   - Phase completion summaries
   - Daily checkpoints
@@ -117,7 +126,7 @@ Historical documents (for reference only):
 
 ## 🎯 **Common Tasks**
 
-### I want to...
+### I want to…
 
 **Install WhiteMagic**
 → [README.md](../README.md#installation) → [INSTALL.md](../INSTALL.md)
@@ -143,14 +152,17 @@ Historical documents (for reference only):
 **See the roadmap**
 → [ROADMAP.md](../ROADMAP.md) → [RELEASE_PLAN_v2.2.1_to_v2.1.9.md](RELEASE_PLAN_v2.2.1_to_v2.1.9.md)
 
+**Run audits / automate docs (v2.2.8)**
+→ [guides/CLI_METRICS.md](guides/CLI_METRICS.md#44-cicd-integration) → README (audit + exec plan overview)
+
 ---
 
 ## 🆘 **Need Help?**
 
 1. **Check the docs above** (most questions answered here)
 2. **Read troubleshooting**: [whitemagic-mcp/README.md#troubleshooting](../whitemagic-mcp/README.md#troubleshooting)
-3. **File an issue**: https://github.com/lbailey94/whitemagic/issues
-4. **Discussions**: https://github.com/lbailey94/whitemagic/discussions
+3. **File an issue**: <https://github.com/lbailey94/whitemagic/issues>
+4. **Discussions**: <https://github.com/lbailey94/whitemagic/discussions>
 
 ---
 
@@ -160,7 +172,7 @@ Historical documents (for reference only):
 - **Active docs**: ~40 (core + guides + production + strategic)
 - **Archived docs**: ~150 (historical reference, properly organized)
 - **Cleanup**: v2.2.1 - Archived phases/, reviews/, daily logs, obsolete docs
-- **Last updated**: November 14, 2025
+- **Last updated**: November 16, 2025 (v2.2.7 parallel release)
 
 ---
 

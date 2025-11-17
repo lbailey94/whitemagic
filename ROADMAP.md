@@ -1,9 +1,9 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: 2.2.5 ✅ (Released Nov 16, 2025)  
-**Next Version**: 2.2.6 (Feature Release - Est. Late Nov 2025)  
-**Future**: 2.3.0 (Feature Release - Est. Late Dec 2025/Early Jan 2026)  
-**Status**: Meta-Optimization + Symbolic Reasoning Complete  
+**Current Version**: 2.2.7 ✅ (Released Nov 16, 2025)  
+**Next Version**: 2.2.8 (Stability + UX Polish - Est. Late Nov 2025)  
+**Future**: 2.2.9 (Parallel Experience - Est. Early Dec 2025) → 2.3.0 (Feature Release - Late Dec 2025/Early Jan 2026)  
+**Status**: Parallel Infrastructure + Scratchpads Complete  
 **Updated**: November 16, 2025
 
 ---
@@ -33,7 +33,30 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.2.5 ✅ COMPLETE (Nov 16, 2025)
+## v2.2.7 ✅ COMPLETE (Nov 16, 2025)
+
+**Focus**: Parallel Infrastructure + Scratchpads + Session Automation
+
+### Added
+- **I Ching-aligned parallel pools** (`whitemagic/parallel/`) powering 8→256 thread orchestration
+- **File/memory task schedulers** with adaptive workload balancing (`fileops.py`, `memoryops.py`, `scheduler.py`)
+- **Session & scratchpad systems** (`sessions/`, `scratchpad/`) with auto-checkpointing + resume
+- **New MCP tools** for session lifecycle & scratchpads (`createsession`, `checkpointsession`, `createscratchpad`, `updatescratchpad`, `finalizescratchpad`)
+- **Railway deployment fixes** (PORT env interpolation + docs)
+
+### Documentation
+- Added guides for Session Management, Scratchpads, and Parallel Operations
+- Updated release notes + VERSION to 2.2.7
+- Highlighted parallel workflow gains (40x faster file ops, 8x faster search)
+
+### Performance
+- **Token efficiency**: Tiered loads now <5K tokens to resume sessions
+- **Throughput**: 3,250+ LOC delivered across 13 new modules in 1.5 hours
+- **Test coverage**: New parallel modules + session flows covered end-to-end
+
+---
+
+## v2.2.6 ✅ COMPLETE (Nov 16, 2025)
 
 **Focus**: Meta-Optimization + Symbolic Reasoning + Wu Xing
 
@@ -115,87 +138,72 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.2.2 🚧 NEXT (Est. Late Nov 2025)
+## v2.2.8 🚧 NEXT (Est. Late Nov 2025)
 
-**Focus**: Bugfix Release + SDK Realignment  
-**Timeline**: 1-2 weeks  
+**Focus**: Version Hygiene + AI-First UX  
+**Timeline**: <1 week  
 **Type**: Patch release (backwards compatible)
 
 ### Core Objectives
 
-1. **Complete SDK/API Contract Realignment**
-   - Ensure Python SDK matches all v2.2.1 API endpoints
-   - Ensure TypeScript SDK matches all v2.2.1 API endpoints
-   - Add missing archive operations to SDKs
-   - Update SDK documentation
+1. **Version & Documentation Sync Automation**
+   - Add `whitemagic audit` CLI/MCP tool to report version drift, doc freshness, and roadmap deltas
+   - Introduce `whitemagic docs-check` to scan Markdown for stale badges + upgrade hints
+   - Surface audit/docs-check results directly in CLI output so humans see the same guardrails agents apply automatically
+   - Wire automation into CI + release checklist
 
-2. **Dashboard Decision**
-   - **Option A**: Fix dashboard login (if quick fix available)
-   - **Option B**: Remove dashboard entirely (defer to v2.3.0+ with proper design)
-   - **Decision criteria**: Time investment vs value
+2. **Terminal Helper Upgrades**
+   - `whitemagic exec plan` helper for batching approved commands from agents
+   - Pre-flight safety summaries + write-mode confirmations
 
-3. **Test Coverage Improvements**
-   - Target: 90%+ test coverage across core modules
-   - Add integration tests for Archive API
-   - Add SDK compatibility tests
-   - Performance regression tests
+3. **Roadmap & SDK Alignment**
+   - Ensure Python/TypeScript SDKs expose archive + parallel endpoints
+   - Update SDK docs + Quickstart examples to 2.2.7 defaults
 
 4. **Documentation Polish**
-   - Fix any broken links from archive reorganization
-   - Update SDK examples with v2.2.1 features
-   - Add troubleshooting entries for common issues
-   - Website content from EFFICIENCY_EXPLAINED.md
-
-### Advanced Features (New)
-
-5. **Parallel Memory Contexts**
-   - Multiple independent memory spaces via `--memory-dir` flag
-   - Process isolation for concurrent projects
-   - Shared read access, exclusive write locks
-   - Background operations (consolidation, search)
-
-6. **External Memory Integration**
-   - Treat all `.md` files as queryable knowledge base
-   - `docs/` folder becomes searchable external memory
-   - Cross-reference memories with documentation
-   - Unified search across memory + docs
-
-7. **MCP Optimization Mode**
-   - Fast mode: Skip metadata enrichment (10x faster)
-   - Batch operations: Multiple files in one call
-   - Caching layer for frequently accessed memories
-   - Lazy metadata loading (only when needed)
-
-8. **Incremental Backups**
-   - Only backup changed memories (faster, less storage)
-   - Differential backup strategy
-   - Automatic old backup cleanup
-   - Backup verification enhancements
-
-9. **Memory Analytics Dashboard**
-   - Usage patterns visualization
-   - Most-accessed memories tracking
-   - Growth over time metrics
-   - Access heatmaps (optional telemetry)
-
-10. **Smart Consolidation**
-   - Auto-consolidate based on access patterns
-   - Heuristic-based promotion (short → long term)
-   - Background process with configurable rules
-   - Manual override available
-
-### Critical Issues from Independent Review
-- ✅ SDK/API contract drift (partially fixed in 2.2.1, complete in 2.2.2)
-- ⏸️ Dashboard login broken (fix or remove decision)
-- ✅ Archive API incomplete (fixed in 2.2.1)
-- ✅ Documentation inconsistencies (fixed in 2.2.1)
+   - Refresh Quickstart, User Guide, Architecture, Index, CLI Metrics, Contributing for v2.2.7 capabilities
+   - Remove dashboard login flow references until the redesigned experience ships
 
 ### Success Criteria
-- ✅ All SDK operations match API capabilities
-- ✅ Dashboard either working or removed
-- ✅ 90%+ test coverage
-- ✅ Zero broken documentation links
-- ✅ Performance maintained or improved
+- ✅ `whitemagic audit` + `docs-check` usable via CLI + MCP
+- ✅ Terminal helper supports batch proposals with audit logs
+- ✅ All flagship docs reference 2.2.7 features + token metrics
+- ✅ SDK + API parity verified automatically
+
+---
+
+## v2.2.9 🧭 PLANNED (Est. Early Dec 2025)
+
+**Focus**: Parallel Experience + Visual Feedback  
+**Timeline**: 1 week  
+**Type**: Feature release (backwards compatible)
+
+### Planned Features
+1. **Parallel CLI Surfaces**
+   - `whitemagic parallel status/run` commands visualizing thread tiers, queues, and throughput
+   - MCP hooks for live thread telemetry inside IDEs
+
+2. **Scratchpad & Metrics Dashboard**
+   - TUI/CLI timeline view for scratchpad sections + checkpoint history
+   - Token usage widgets fed by `track_metric` + audit data
+
+3. **Docs & IDE Enhancements**
+   - Parallel Infrastructure Guide with agent-ready snippets
+   - IDE snippets/templates for creating scratchpads + sessions programmatically
+
+### Success Criteria
+- ✅ Agents can inspect/manage parallel pools without editing Python files
+- ✅ Token + scratchpad telemetry accessible from CLI/TUI + MCP
+- ✅ Documentation demonstrates end-to-end parallel workflows
+
+---
+
+## v2.3.0 🎯 FUTURE (Est. Late Dec 2025 / Early Jan 2026)
+
+### Notes
+
+- Dashboard login flow is **temporarily removed** until the redesigned experience ships in or after v2.3.0. Use CLI/API key provisioning scripts for authentication during v2.2.8+.  
+- Advanced feature list (parallel contexts, external memory integration, MCP optimization mode, incremental backups, analytics, smart consolidation) remains on deck for 2.3.x once the 2.2.x polish cycle ends.
 
 ---
 

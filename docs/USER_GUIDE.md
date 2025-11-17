@@ -21,9 +21,11 @@
 ## Introduction
 
 WhiteMagic is a tiered memory management system for AI agents. It provides:
+
 - **Short-term memory**: Recent, active information
 - **Long-term memory**: Important, permanent knowledge
 - **Archive**: Historical data for reference
+- **Parallel infrastructures & scratchpads (v2.2.7)**: I Ching-aligned thread pools, session automation, and working-memory scratchpads for agents and humans alike.
 
 ### Who Is This For?
 
@@ -39,12 +41,12 @@ WhiteMagic is a tiered memory management system for AI agents. It provides:
 
 ### Quick Install
 ```bash
-pip install whitemagic==2.2.1
+pip install whitemagic==2.2.7
 ```
 
 ### With API Support
 ```bash
-pip install whitemagic[api]==2.2.1
+pip install whitemagic[api]==2.2.7
 ```
 
 ### Development Install
@@ -57,10 +59,10 @@ pip install -e ".[api,dev]"
 ### Verify Installation
 ```bash
 whitemagic --version
-# Expected: WhiteMagic CLI v2.2.1
+# Expected: WhiteMagic CLI v2.2.7
 
 python -c "from whitemagic import __version__; print(__version__)"
-# Expected: 2.2.1
+# Expected: 2.2.7
 ```
 
 ---
@@ -164,6 +166,9 @@ whitemagic stats
 | `delete FILENAME` | Delete memory |
 | `stats` | Show statistics |
 | `tags` | List all tags |
+| `audit` *(v2.2.8)* | Report version/doc drift |
+| `docs-check` *(v2.2.8)* | Scan docs for stale sections |
+| `exec plan` *(v2.2.8)* | Stage terminal commands for approval |
 
 ---
 
@@ -177,6 +182,7 @@ whitemagic stats
 See [Quick Setup MCP Guide](guides/QUICK_SETUP_MCP.md) for detailed instructions.
 
 **Quick version**:
+
 ```bash
 npm install -g whitemagic-mcp
 ```
@@ -188,11 +194,13 @@ Then add to your IDE settings with `WM_BASE_PATH` configured.
 Once connected, ask your AI assistant natural language questions:
 
 #### Creating Memories
+
 ```
 "Create a short-term memory titled 'Project Requirements' with the following content: [paste requirements]"
 ```
 
 #### Searching and Retrieving
+
 ```
 "Search my memories for anything about Python testing"
 "Show me all memories tagged with 'urgent'"
@@ -200,12 +208,14 @@ Once connected, ask your AI assistant natural language questions:
 ```
 
 #### Context Generation
+
 ```
 "Give me tier 1 context about this project"
 "Generate full context for my current work"
 ```
 
 #### Memory Management
+
 ```
 "Show me my memory statistics"
 "List all my tags"
@@ -252,6 +262,7 @@ uvicorn whitemagic.api.app:app --reload
 ### Environment Configuration
 
 Create `.env`:
+
 ```bash
 # Database
 DATABASE_URL=sqlite+aiosqlite:///./whitemagic.db
@@ -269,6 +280,7 @@ WM_LOG_LEVEL=INFO
 ### Authentication
 
 1. **Create User** (via CLI or direct DB):
+
 ```bash
 # Coming soon - user creation via CLI
 ```
@@ -276,6 +288,7 @@ WM_LOG_LEVEL=INFO
 2. **Get API Key** (stored in database)
 
 3. **Use in requests**:
+
 ```bash
 curl http://localhost:8000/api/v1/memories \
   -H "Authorization: Bearer wm_prod_YOUR_KEY_HERE"
@@ -284,6 +297,7 @@ curl http://localhost:8000/api/v1/memories \
 ### API Examples
 
 #### Create Memory
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/memories \
   -H "Authorization: Bearer YOUR_API_KEY" \
@@ -297,12 +311,14 @@ curl -X POST http://localhost:8000/api/v1/memories \
 ```
 
 #### List Memories
+
 ```bash
 curl http://localhost:8000/api/v1/memories \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 #### Search Memories
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/search \
   -H "Authorization: Bearer YOUR_API_KEY" \
@@ -314,6 +330,7 @@ curl -X POST http://localhost:8000/api/v1/search \
 ```
 
 #### Get Context
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/context \
   -H "Authorization: Bearer YOUR_API_KEY" \
@@ -687,11 +704,13 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for complete guide.
 
 - 📖 **Documentation**: [docs/INDEX.md](INDEX.md)
 - 🐛 **Issues**: https://github.com/lbailey94/whitemagic/issues
+- 🌐 **API**: https://api.whitemagic.dev (Railway)
+- 📊 **Dashboard**: https://app.whitemagic.dev (Vercel) — login temporarily paused while we redesign the experience (use CLI/API provisioning in the meantime).
 - 💬 **Discussions**: https://github.com/lbailey94/whitemagic/discussions
 - 🔒 **Security**: See [SECURITY.md](../SECURITY.md)
 
 ---
 
 **Last Updated**: November 14, 2025  
-**Version**: 2.2.1  
+**Version**: 2.2.7  
 **Status**: Production Ready

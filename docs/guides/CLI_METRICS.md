@@ -1,6 +1,6 @@
-# CLI Metrics Guide (v2.2.6)
+# CLI Metrics Guide (v2.2.7)
 
-WhiteMagic v2.2.6 adds comprehensive metrics tracking through the CLI, allowing you to measure and optimize your AI workflow effectiveness. This guide covers all metrics commands and best practices.
+WhiteMagic v2.2.7 keeps the comprehensive metrics stack introduced in earlier releases and pairs it with the new parallel/scratchpad infrastructure. This guide covers all metrics commands, how to pair them with the upcoming `whitemagic audit`, `docs-check`, and `exec plan` helpers, and best practices for keeping AI workflows measurable.
 
 ---
 
@@ -36,12 +36,14 @@ WhiteMagic tracks six primary metric categories:
 - `efficiency_ratio` - Speedup factor (e.g., 17.9x)
 - `tier_used` - Context tier loaded (0/1/2)
 
-**Example**:
+**Example** *(capture both raw usage + efficiency gains from the new parallel pools)*:
 
 ```bash
 whitemagic track token_efficiency usage_percent 38.5 "After Tier 1 load"
 whitemagic track token_efficiency efficiency_ratio 17.9 "Tier 1 vs baseline"
 ```
+
+Pair this with the `whitemagic audit` command (v2.2.8) to ensure every session records token deltas before and after parallel pool bursts.
 
 ### 2.2 Velocity
 
@@ -54,7 +56,7 @@ whitemagic track token_efficiency efficiency_ratio 17.9 "Tier 1 vs baseline"
 - `files_modified_per_hour` - Code churn rate
 - `commits_per_day` - Commit frequency
 
-**Example**:
+**Example** *(align sprint plans with Wu Xing + threading tiers so the audit report can map strategic progress to terrain assessments)*:
 
 ```bash
 whitemagic track velocity features_per_day 3 "v2.2.6 week 1"
@@ -72,7 +74,7 @@ whitemagic track velocity bugs_fixed_per_session 5 "Debug marathon"
 - `tests_total` - Total test count
 - `coverage_percent` - Code coverage (0-100)
 
-**Example**:
+**Example** *(align sprint plans with Wu Xing + threading tiers so the audit report can map strategic progress to terrain assessments)*:
 
 ```bash
 whitemagic track tactical tests_passing 194 "Test suite run"
@@ -90,7 +92,7 @@ whitemagic track tactical tasks_complete 7 "Phase 1 done"
 - `timeline_variance` - Ahead/behind schedule (hours)
 - `scope_completion` - Feature scope done (0-100)
 
-**Example**:
+**Example** *(log review + documentation coverage before/after running `whitemagic docs-check`)*:
 
 ```bash
 whitemagic track strategic version_progress 75 "v2.2.6 75% complete"
@@ -349,6 +351,19 @@ whitemagic track tactical tests_passing $TESTS_PASSING "Pre-push validation"
 ```
 
 ### 4.4 CI/CD Integration
+
+Add the forthcoming automation commands to your workflow once v2.2.8 lands:
+
+```bash
+# Verify docs + versions before CI
+whitemagic audit --strict
+whitemagic docs-check docs/ README.md
+```
+
+```bash
+# Stage batched terminal operations for approvals
+whitemagic exec plan plan.yaml
+```
 
 **GitHub Actions** (`.github/workflows/metrics.yml`):
 

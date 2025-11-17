@@ -79,14 +79,13 @@ python scripts/create_demo_user.py
 ```
 
 Copy the key that’s printed and paste it wherever you need authentication.  
-If you prefer the dashboard flow, run `docker compose up -d api dashboard` and log
-in at `http://localhost:3000` with the same key.
-
 Use the key with `curl`:
 
 ```bash
 curl -H "Authorization: Bearer wm_dev_xxx" http://localhost:8000/api/v1/memories
 ```
+
+> **Note:** The hosted dashboard login is paused while we redesign the experience. Stick to CLI/API provisioning (or your MCP IDE) for now.
 
 Remember to set `REDIS_URL` if you want rate limiting.
 
