@@ -851,10 +851,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }>;
         const created = [];
         for (const mem of memories) {
+          const memType = (mem.type === 'long_term' ? 'long_term' : 'short_term') as 'short_term' | 'long_term';
           const path = await client.createMemory(
             mem.title,
             mem.content,
-            mem.type || 'short_term',
+            memType,
             mem.tags || []
           );
           created.push(path);
