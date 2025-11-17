@@ -8,7 +8,7 @@ version = "2.2.7"
 description = "Tiered memory management system for AI agents with native MCP support"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "WhiteMagic Contributors"}
 ]
@@ -16,7 +16,6 @@ keywords = ["memory", "ai", "mcp", "context", "llm", "agents"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -120,7 +119,21 @@ Repository = "https://github.com/lbailey94/whitemagic"
 whitemagic = "whitemagic.cli_app:main"
 
 [tool.setuptools]
-packages = ["whitemagic", "whitemagic.api", "whitemagic.api.routes"]
+packages = [
+    "whitemagic",
+    "whitemagic.api",
+    "whitemagic.api.routes",
+    "whitemagic.cli",
+    "whitemagic.config",
+    "whitemagic.embeddings",
+    "whitemagic.parallel",
+    "whitemagic.scratchpad",
+    "whitemagic.search",
+    "whitemagic.sessions",
+    "whitemagic.setup",
+    "whitemagic.templates",
+    "whitemagic.terminal",
+]
 
 [tool.setuptools.package-data]
 whitemagic = ["py.typed"]
