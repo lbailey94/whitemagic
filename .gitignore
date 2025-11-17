@@ -99,6 +99,7 @@ users/
 
 # Audit logs
 .whitemagic_audit/
+.whitemagic/last_audit.json
 
 # Database files
 *.db
@@ -106,8 +107,22 @@ users/
 *.db-wal
 whitemagic_*.db*
 
-# Cache
-.whitemagic/cache/
+# API Keys and Secrets (CRITICAL)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.json
+credentials.json
+
+# Internal development
+TODO.private.md
+NOTES.private.md
+*_INTERNAL*.md
+
+# Metrics data
+.whitemagic/metrics/
 
 # Version-specific planning docs (keep in private/)
 V2.*_IMPLEMENTATION_PLAN.md
