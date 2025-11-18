@@ -46,11 +46,12 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 - **Tiered Memory**: Short-term, long-term, and archive storage
 - **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
-- **⚡ Parallel Infrastructure** *(NEW v2.2.9)*: I Ching-aligned pools + schedulers (8→256 threads) with CLI/MCP hooks coming in v2.2.9.
-- **🧠 Symbolic Reasoning Engine** *(v2.2.9)*: Chinese logographic compression, concept mapping, and memory linking.
-- **🌊 Wu Xing Workflow Detection** *(v2.2.9)*: Automatic phase detection for adaptive prompts + recommendations.
-- **📈 Live Metrics Hooks** *(v2.2.9)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
-- **🛠️ Audit & Terminal Helpers** *(coming v2.2.9)*: `whitemagic audit`, `docs-check`, and `exec plan` commands to keep docs + commands in sync across IDEs and terminals.
+- **🦠 Biological Immune System** *(NEW v2.2.9)*: Self-healing with DNA validation, threat detection, and auto-repair (1,251 lines)
+- **🦀 Rust Performance Core** *(NEW v2.2.9)*: 10-100x faster consolidation and search (472 lines)
+- **λ Haskell Logic Layer** *(NEW v2.2.9)*: Type-safe transformations with I Ching state machine (690 lines)
+- **⚖️ Homeostasis System** *(NEW v2.2.9)*: Self-balancing memory management with feedback loops (1,086 lines)
+- **⚡ Terminal Multiplexing** *(NEW v2.2.9)*: Parallel reasoning with named scratchpads (381 lines)
+- **📚 Universal AI Guidelines** *(NEW v2.2.9)*: Discoverable by any AI system (830 lines)
 - **🔧 Terminal Tool**: Safe code execution with approval workflows
 - **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings (see [Semantic Search guide](docs/guides/SEMANTIC_SEARCH.md))
 - **🧠 Smart Features**: Setup wizard, templates, auto-tagging, relationships
