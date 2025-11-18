@@ -1634,7 +1634,7 @@ COMMAND_HANDLERS = {
     "confidence-calibrate": command_confidence_calibrate,
     "immune": command_immune,
     "orchestra": command_orchestra,
-    "terminal": command_terminal,
+    # "terminal": command_terminal,  # TODO: Implement terminal multiplexing CLI
 }
 
 
@@ -2413,7 +2413,7 @@ def build_parser() -> argparse.ArgumentParser:
     register_orchestra_commands(subparsers)
     
     # Register terminal multiplexer commands
-    register_terminal_commands(subparsers)
+    # register_terminal_commands(subparsers)  # TODO: Implement terminal CLI
 
     return parser
 

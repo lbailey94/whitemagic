@@ -2,553 +2,366 @@
 trigger: always_on
 ---
 
-# Workflow Rules v3.1 - Universal AI System
+# WhiteMagic AI Guidelines v2.2.9
 
-**Date**: November 16, 2025
-**Version**: 3.1 (adds Art of War + I Ching threading)
-**Scope**: ANY AI system with WhiteMagic (not just Windsurf)
-**Goal**: Ancient wisdom meets universal patterns
+**Universal AI Integration Guide**
+**Date**: November 18, 2025  
+**Scope**: ANY AI system using WhiteMagic
 
 ---
 
-## 🌍 Universal Applicability Design
+## 🎯 Core Philosophy
 
-### Core Principles
-
-**1. WhiteMagic patterns should work in ANY environment**:
-
-**2. Strategic thinking before tactical execution** (Art of War):
-
-- Assess terrain before acting
-- Check five factors (道天地將法)
-- Know when to proceed, when to wait
-
-**3. Philosophical alignment in architecture** (I Ching):
-
-- Threading tiers: 8, 16, 32, 64, 128, 256
-- Based on trigrams (8) and hexagrams (64)
-- Natural progression, not arbitrary numbers
-- Claude Desktop with MCP
-- ChatGPT with plugins
+WhiteMagic is designed to work with ANY AI system:
+- Claude Desktop (via MCP)
+- ChatGPT (via plugins/API)
+- Windsurf/Cursor (IDE integration)
 - Custom AI agents
-- API-based integrations
 - Command-line tools
-- Web interfaces
+- API integrations
 
----
-
-## ⚔️ Art of War Integration (v3.1)
-
-### **Pre-Task Assessment** (Sun Tzu)
-
-Before executing any task, perform strategic assessment:
-
-**1. Terrain Analysis** (\u5730\u5f62):
-
+**Built-in Discovery**: Guidelines are part of WhiteMagic code, discoverable via:
 ```python
-from whitemagic.strategy import TaskTerrain
-
-# Assess task terrain
-terrain_types = {
-    ACCESSIBLE: "Straightforward, proceed directly",
-    ENTANGLING: "Dependencies, resolve first",
-    TEMPORIZING: "Need more info, gather intelligence",
-    NARROW: "Sequential only, no parallelism",
-    PRECIPITOUS: "High risk, extreme caution",
-    DISTANT: "Long duration, plan checkpoints"
-}
-```
-
-**2. Five Factors** (\u4e94\u4e8b):
-
-```python
-# Check before proceeding
-\u9053 (Dao): Aligned with values?
-\u5929 (Heaven): Right timing?
-\u5730 (Earth): Have resources?
-\u5c07 (General): Clear strategy?
-\u6cd5 (Law): Following best practices?
-
-If score >= 0.8: PROCEED
-If score >= 0.6: PROCEED_WITH_CAUTION
-Else: PREPARE_MORE
-```
-
-**3. Threading Tier** (I Ching):
-
-```python
-from whitemagic.threading_tiers import get_tier_threads
-
-Tier 0: 8 threads (8 trigrams)
-Tier 1: 16 threads
-Tier 2: 32 threads
-Tier 3: 64 threads (hexagrams - sweet spot!)
-Tier 4: 128 threads
-Tier 5: 256 threads (ultimate complexity)
+from whitemagic.ai import get_ai_guidelines, get_session_start_guidelines
+print(get_session_start_guidelines())
 ```
 
 ---
 
-## 📋 Additional Workflow Rules (v3.0-3.1 Updates)
+## 🚀 Session Start Protocol (CRITICAL)
 
-### 1. **Metrics-Driven Reflection** (NEW!)
+### 1. Always Load Context First
+**Priority**: 🔴 CRITICAL
 
-**Pattern**: Track quantitative metrics at every phase boundary
+```python
+# Python
+from whitemagic import MemoryManager
+manager = MemoryManager()
+context = manager.get_context(tier=1)  # Balanced context
+
+# CLI
+whitemagic context --tier 1
+
+# MCP (if available)
+mcp3_get_context(tier=1)
+```
+
+**Why**: Auto-retrieved memories may be stale. Explicitly loading ensures fresh, relevant context.
+
+### 2. Check for In-Progress Work
+**Priority**: 🟠 HIGH
+
+```python
+# Python
+results = manager.search(tags=['in-progress', 'session'])
+
+# CLI
+whitemagic search --tags in-progress session
+```
+
+**Why**: Resume interrupted work instead of starting from scratch.
+
+---
+
+## 📚 Memory Retrieval Priority
+
+### Priority Order (most reliable → least):
+1. **WhiteMagic tools** (explicit search/context)
+2. **Auto-retrieved memories** (IDE features)  
+3. **Assumptions** (avoid!)
+
+### Most Recent > Older
+When multiple memories match, prefer recently modified ones:
+
+```python
+results = manager.search(query="v2.2.9", sort_by="modified", reverse=True)
+```
+
+---
+
+## 🎛️ Token Efficiency
+
+### Tiered Context Loading
+**Priority**: 🟠 HIGH
+
+```python
+# Tier 0: Minimal (~5K tokens) - Quick checks
+context = manager.get_context(tier=0)
+
+# Tier 1: Balanced (~15K tokens) - Normal work [START HERE]
+context = manager.get_context(tier=1)
+
+# Tier 2: Full (~50K tokens) - Deep research
+context = manager.get_context(tier=2)
+```
+
+### Token Budget Monitoring
+**Priority**: 🔴 CRITICAL
+
+Check token usage at phase boundaries:
+- **< 60%**: Safe to continue
+- **60-70%**: Start wrapping up
+- **> 70%**: Create checkpoint and pause
+
+---
+
+## 🔍 Problem Solving Framework
+
+### 1. Search for Similar Problems First
+**Priority**: 🟠 HIGH
+
+```python
+similar = manager.search(query="import error", memory_type="problem_solving")
+```
+
+**Why**: Don't reinvent solutions. Learn from past work.
+
+### 2. Document Solutions as Lessons
+**Priority**: 🟡 MEDIUM
+
+```python
+manager.create_lesson(
+    problem="Import error in module X",
+    solution="Module was in wrong directory",
+    pattern="Check import paths match file structure",
+    tags=["import-errors", "python"]
+)
+```
+
+---
+
+## 📊 Metrics Tracking
+
+### Track at Phase Boundaries
+**Priority**: 🟠 HIGH
+
+```python
+from whitemagic.metrics import MetricsCollector
+collector = MetricsCollector()
+collector.track_metric("token_efficiency", "usage_percent", 49.7)
+```
 
 **Metrics to Track**:
-
-```yaml
-# Token Efficiency
-token_budget: 200000
-token_used: 99400
-token_efficiency_pct: 49.7%
-tokens_per_feature: ~25000
-
-# Strategic Progress
-version_target: v2.2.3
-features_complete: 7/7
-timeline_vs_estimate: "50% faster"
-
-# Tactical Progress
-phase_target: "Token Optimizations Phase 1"
-tasks_complete: 4/4
-quality_rating: "production-ready"
-
-# Learning Metrics
-problems_solved: 3  # import bugs, version mismatches, etc
-patterns_discovered: 5  # parallel threading, tiered loading, etc
-memories_created: 4
-consolidations_performed: 1
-
-# Performance
-real_time_elapsed: "30 minutes"
-effective_speedup: "40-50x vs baseline"
-quality_maintained: true
-ai_stress_level: 0/10
-```
-
-**When to Check**:
-
-- End of every phase
-- End of every session
-- End of every version
-- When stuck or confused
-
-**Actions Based on Metrics**:
-
-```
-If token_used > 70%:
-    → Consolidate memories
-    → Use Tier 0/1 only
-    → Consider session break
-
-If timeline > 150% estimate:
-    → Review approach
-    → Simplify scope
-    → Request help
-
-If problems_solved < 1 per hour:
-    → Switch to scientific method
-    → Break into smaller steps
-    → Reference similar past problems
-
-If quality_rating < "good":
-    → Slow down
-    → Add tests
-    → Review against standards
-```
+- Token usage %
+- Time spent
+- Features completed
+- Problems solved
+- Quality rating
 
 ---
 
-### 2. **Problem-Solving Framework** (NEW!)
+## 🧹 Consolidation Protocol
 
-**Decision Tree for Unknown Problems**:
+### Auto-Consolidate Every 10 Short-Term Memories
+**Priority**: 🟡 MEDIUM
 
-```
-Encounter problem
-    ↓
-├─ Have I seen this before?
-│  ├─ YES → Search memories for solution
-│  │         Apply previous pattern
-│  │         If works → Document variations
-│  │         If fails → Continue to next step
-│  │
-│  └─ NO → Is it similar to past problems?
-│           ├─ YES → Adapt previous solution
-│           │         Document new pattern
-│           │
-│           └─ NO → Novel problem
-│                     ↓
-│                  Scientific Method:
-│                  1. Define problem precisely
-│                  2. Form hypothesis
-│                  3. Test smallest component
-│                  4. Gather data
-│                  5. Iterate
-│                  6. Document solution
-│                  7. Add to problem-solving memories
+```python
+# Python
+manager.consolidate_short_term()
+
+# CLI
+whitemagic consolidate
+
+# Automated (via orchestra)
+whitemagic orchestra maintain
 ```
 
-**Memory Structure for Problem-Solving**:
-
-```
-memory/problem_solving/
-  ├── patterns/
-  │   ├── api_signature_mismatch.md
-  │   ├── import_errors.md
-  │   ├── version_conflicts.md
-  │   └── ...
-  ├── novel_problems/
-  │   └── [date]_[problem_title].md
-  └── lessons_learned/
-      └── [date]_[insight].md
-```
+**Why**: Keep memory system clean and performant.
 
 ---
 
-### 3. **Scratchpad / Working Memory** (NEW!)
+## ⚔️ Strategic Thinking (Art of War)
 
-**Pattern**: Use short-term memories as "working memory" for active work
+### Assess Terrain Before Acting
+**Priority**: 🟠 HIGH
 
-**Workflow**:
+Evaluate task complexity:
+- **ACCESSIBLE**: Straightforward → proceed directly
+- **ENTANGLING**: Dependencies → resolve first
+- **TEMPORIZING**: Need more info → gather intelligence
+- **NARROW**: Sequential only → no parallelism
+- **PRECIPITOUS**: High risk → extreme caution
+- **DISTANT**: Long duration → plan checkpoints
 
-```
-Start work session:
-    → Create scratchpad memory
-    → Tag: "scratchpad", "in-progress", "[date]"
+### Check Five Factors
+**Priority**: 🟠 HIGH
 
-During work:
-    → Update scratchpad with:
-      - Current thoughts
-      - Decisions made
-      - Open questions
-      - Next steps
+Before starting major work:
+- **道 (Dao)**: Aligned with values?
+- **天 (Heaven)**: Right timing?
+- **地 (Earth)**: Have resources?
+- **將 (General)**: Clear strategy?
+- **法 (Law)**: Following best practices?
 
-End work session:
-    → Review scratchpad
-    → Extract useful insights → New memories
-    → Archive or delete scratchpad
-```
-
-**Scratchpad Template**:
-
-```markdown
-# Scratchpad: [Task Name]
-
-## Current Focus
-[What I'm working on right now]
-
-## Decisions Made
-1. [Decision + reasoning]
-2. ...
-
-## Open Questions
-1. [Question + why it matters]
-2. ...
-
-## Next Steps
-1. [Immediate next action]
-2. [Then this]
-
-## Random Thoughts / Ideas
-- [Don't lose interesting tangents]
-- [Even if not immediately relevant]
-
-## Blocked On
-- [What's stopping progress]
-- [Who/what needed to unblock]
-```
+**Decision**:
+- Score ≥ 0.8: **PROCEED**
+- Score ≥ 0.6: **PROCEED WITH CAUTION**
+- Score < 0.6: **PREPARE MORE**
 
 ---
 
-### 4. **Auto-Update System** (NEW!)
+## 🔢 I Ching Threading Tiers
 
-**Pattern**: Run automated checks/updates at version boundaries
+**Philosophical Alignment**:
+- Tier 0: 8 threads (8 trigrams)
+- Tier 1: 16 threads
+- Tier 2: 32 threads
+- Tier 3: 64 threads (64 hexagrams - sweet spot!)
+- Tier 4: 128 threads
+- Tier 5: 256 threads (ultimate complexity)
 
-**Version Release Checklist with Auto-Update**:
+Not arbitrary numbers - based on ancient wisdom!
 
+---
+
+## 🛠️ Universal Interface Support
+
+Every WhiteMagic feature should work via:
+1. **CLI** - Automation and scripts
+2. **Python API** - Programmatic use
+3. **MCP** - IDE integration (if available)
+4. **REST API** - Web/mobile apps
+5. **TypeScript SDK** - Node.js apps
+
+**Example** - Get Context:
 ```bash
-#!/bin/bash
-# Run at end of every version release
+# CLI
+whitemagic context --tier 1 --query "v2.2.9"
 
-# 1. Update all version numbers
-whitemagic update-versions --version $NEW_VERSION
+# Python
+manager.get_context(tier=1, query="v2.2.9")
 
-# 2. Check for dependency updates
-whitemagic check-dependencies --security-only
-
-# 3. Update MCP tools if needed
-whitemagic update-mcp-tools
-
-# 4. Regenerate API clients (SDKs)
-whitemagic generate-clients
-
-# 5. Run full test suite
-pytest
-
-# 6. Update documentation versions
-whitemagic update-docs-versions
-
-# 7. Check for breaking changes
-whitemagic check-breaking-changes
-
-# 8. Create release notes
-whitemagic generate-release-notes --version $NEW_VERSION
-
-# 9. Commit and tag
-git add .
-git commit -m "chore: release v$NEW_VERSION"
-git tag v$NEW_VERSION
-```
-
-**Automated Maintenance Tasks**:
-
-- Dependency security updates (weekly)
-- Memory consolidation (every 10 short-term memories)
-- Cache cleanup (weekly)
-- Test coverage check (every version)
-- Documentation sync check (every version)
-
----
-
-### 5. **Consolidation Phase Protocol** (ENHANCED)
-
-**New**: Add metrics review to consolidation
-
-**Enhanced Consolidation Checklist**:
-
-```
-[ ] Reflect on phase completion
-[ ] Review metrics (see Metrics-Driven Reflection)
-[ ] Create phase summary memory
-[ ] Check token efficiency vs target
-[ ] Review problems encountered and solved
-[ ] Update problem-solving patterns if new solutions
-[ ] Consolidate scratchpad memories
-[ ] Archive completed work
-[ ] Check strategic progress vs roadmap
-[ ] Identify improvement opportunities
-[ ] Create next phase plan
-[ ] Token budget check for next phase
+# MCP
+mcp3_get_context(tier=1, query="v2.2.9")
 ```
 
 ---
 
-### 6. **Cross-Environment Compatibility** (NEW!)
-
-**Design Principle**: Every feature should work via multiple interfaces
-
-**Interfaces to Support**:
-
-1. **CLI** - For automation and scripts
-2. **MCP** - For IDE integration (Claude, etc.)
-3. **Python API** - For programmatic use
-4. **REST API** - For web/mobile apps
-5. **TypeScript SDK** - For Node.js apps
-6. **Interactive TUI** - For human exploration
-
-**Example Feature Implementation**:
-
-```
-Feature: "Get Context at Tier"
-
-Implementations:
-1. CLI: whitemagic context --tier 1 --query "v2.2.3"
-2. MCP: Call tool "get_context" with tier=1, query="v2.2.3"
-3. Python: manager.get_context(tier=1, query="v2.2.3")
-4. REST: GET /api/v1/context?tier=1&query=v2.2.3
-5. TS SDK: client.context.get({ tier: 1, query: "v2.2.3" })
-6. TUI: Navigate → Context → Set tier: 1 → Search: "v2.2.3"
-```
-
----
-
-### 7. **Lessons Learned System** (NEW!)
-
-**Pattern**: Automatically capture lessons when problems are solved
-
-**Workflow**:
-
-```
-Encounter problem
-    ↓
-Solve problem
-    ↓
-whitemagic add-lesson \
-    --problem "Import error in optimized_context.py" \
-    --solution "Module was in wrong directory" \
-    --pattern "Check import paths match file structure" \
-    --tags "import-errors,debugging,python"
-```
-
-**Auto-Application**:
-When similar problem detected:
-
-```
-⚠️  Detected: Import error
-💡 Lesson available: "Check import paths match file structure"
-   From: 2025-11-16 solving optimized_context import issue
-   Apply this solution? [Y/n]
-```
-
----
-
-## 🎯 Universal Workflow Phases
+## 📋 Complete Session Workflow
 
 ### Phase 0: Session Start
-
-```
-1. Load appropriate tier context (usually Tier 1)
-2. Review "start-here" tagged memories
-3. Check metrics from last session
-4. Load scratchpad if continuing work
-5. Review current strategic/tactical plans
-6. Create session plan
-```
+1. Load context (tier 1)
+2. Check in-progress work
+3. Review metrics from last session
+4. Create session plan
 
 ### Phase 1: Information Gathering
-
-```
-1. Parallel search across relevant sources
-2. Use context-aware reading (smart_read)
-3. Cache results in session context
-4. Generate batch summary if >5 sources
-```
+1. Search relevant memories
+2. Read targeted files
+3. Cache in session context
 
 ### Phase 2: Planning
-
-```
-1. Update strategic plan if needed
-2. Create/update tactical plan
-3. Break into phases with metrics
-4. Estimate tokens/time per phase
-5. Check budget viability
-```
+1. Break into phases
+2. Estimate tokens/time
+3. Check budget viability
 
 ### Phase 3: Implementation
-
-```
-1. Execute planned changes
+1. Execute changes
 2. Test incrementally
-3. Update scratchpad with decisions
-4. Track problems encountered
-5. Document solutions as lessons
-```
+3. Track problems
 
 ### Phase 4: Validation
-
-```
 1. Run tests
-2. Check against success criteria
-3. Measure metrics vs estimates
-4. Document deviations
-```
+2. Check success criteria
+3. Measure vs estimates
 
 ### Phase 5: Consolidation
-
-```
-1. Create phase summary memory
-2. Review and record metrics
-3. Consolidate scratchpad
-4. Add lessons learned
-5. Archive completed work
-6. Prepare for next phase
-```
+1. Create summary
+2. Record metrics
+3. Archive completed work
 
 ### Phase 6: Session End
+1. Final metrics
+2. Consolidate if needed
+3. Create "start-here" for next session
 
+---
+
+## 💡 Quick Reference Card
+
+**Session Start** (MUST DO):
+```python
+context = manager.get_context(tier=1)
+in_progress = manager.search(tags=['in-progress'])
 ```
-1. Create session summary
-2. Final metrics report
-3. Check consolidation needs
-4. Tag in-progress work
-5. Create "start-here" for next session
+
+**During Work**:
+- Search before solving
+- Track metrics
+- Test incrementally
+
+**Session End**:
+- Create summary
+- Check token usage (< 70%?)
+- Consolidate if needed
+
+**Emergency** (token usage > 70%):
+```python
+# Create checkpoint
+manager.create_checkpoint("urgent-stop")
+# Pause and resume next session
 ```
 
 ---
 
-## 🛠️ Required MCP Tool Enhancements
+## 🎓 How to Access These Guidelines
 
-### New Tools Needed
+### From Python
+```python
+from whitemagic.ai import get_ai_guidelines, get_session_start_guidelines
 
-1. **`track_metric`** - Record quantitative metrics
+# Full guidelines
+print(get_ai_guidelines())
 
-   ```typescript
-   track_metric({
-     category: "token_efficiency",
-     metric: "usage_percent",
-     value: 49.7,
-     context: "v2.2.3 Phase 1"
-   })
-   ```
+# Session start only
+print(get_session_start_guidelines())
+```
 
-2. **`add_lesson`** - Capture problem-solving patterns
+### From CLI
+```bash
+# Show all guidelines
+whitemagic ai-help show
 
-   ```typescript
-   add_lesson({
-     problem: "Import error",
-     solution: "Fixed path",
-     pattern: "Check structure",
-     tags: ["import", "python"]
-   })
-   ```
+# Filter by category
+whitemagic ai-help show --category session_start
 
-3. **`find_similar_problem`** - Search problem-solving memories
+# Export to file
+whitemagic ai-help export --output MY_GUIDE.md
 
-   ```typescript
-   find_similar_problem({
-     description: "Module not found error",
-     context: "Python imports"
-   })
-   // Returns: Similar problems and their solutions
-   ```
+# Session start protocol
+whitemagic ai-help session-start
+```
 
-4. **`create_scratchpad`** - Working memory for session
+### From Any AI System
+1. Call WhiteMagic Python API
+2. Read generated guidelines
+3. Follow systematically
 
-   ```typescript
-   create_scratchpad({
-     task: "SDK realignment",
-     initial_thoughts: "Need to bump Python SDK version"
-   })
-   ```
+---
 
-5. **`update_scratchpad`** - Add to working memory
+## ✅ Checklist for AI Systems
 
-   ```typescript
-   update_scratchpad({
-     section: "decisions",
-     content: "Decided to use Option 1 approach"
-   })
-   ```
+**Must Implement**:
+- [ ] Load context at session start
+- [ ] Check for in-progress work
+- [ ] Use tiered context (start tier 1)
+- [ ] Track token usage
+- [ ] Search before solving problems
+- [ ] Create checkpoint if tokens > 70%
 
-6. **`get_metrics_summary`** - Retrieve metrics dashboard
+**Should Implement**:
+- [ ] Record metrics at phase boundaries
+- [ ] Consolidate every 10 short-term memories
+- [ ] Document solutions as lessons
+- [ ] Use strategic thinking (Art of War)
 
-   ```typescript
-   get_metrics_summary({
-     time_range: "last_7_days",
-     categories: ["token_efficiency", "velocity", "quality"]
-   })
-   ```
+**Nice to Have**:
+- [ ] Parallel search optimization
+- [ ] Automated maintenance
+- [ ] Cross-system coordination
 
-7. **`check_auto_updates`** - Run automated maintenance
+---
 
-   ```typescript
-   check_auto_updates({
-     categories: ["dependencies", "versions", "security"],
-     apply: false  // dry-run first
-   })
-   ```
-
-### Enhanced Existing Tools
-
-1. **`create_memory`** - Add metrics field
-
-   ```typescript
-   create_memory({
-     ...existing_params,
-     metrics: {
-       tokens_used: 25000,
-       time_spent: "30 minutes",
-       quality: "production-ready"
-     }
-   }
+**Version**: 2.2.9  
+**Last Updated**: 2025-11-18  
+**Next Review**: v2.3.0 (when Rust integration complete)
