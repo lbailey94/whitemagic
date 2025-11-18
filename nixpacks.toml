@@ -1,0 +1,15 @@
+# Nixpacks configuration for Railway deployment
+# Override auto-detection to ONLY use requirements-railway.txt (not requirements.txt)
+# This prevents installing torch and keeps the image size <500MB instead of 8.5GB
+
+[phases.setup]
+nixPkgs = ["python3", "gcc"]
+
+[phases.install]
+cmds = [
+    "python -m venv --copies /opt/venv",
+    ". /opt/venv/bin/activate && pip install -r requirements-railway.txt"
+]
+
+[start]
+cmd = "uvicorn whitemagic.api.app:app --host 0.0.0.0 --port $PORT --workers 2"

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "whitemagic-client"
+version = "2.2.8"
+description = "Official Python SDK for WhiteMagic - Memory infrastructure for AI agents"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "WhiteMagic Team", email = "support@whitemagic.dev" }
+]
+keywords = ["whitemagic", "memory", "ai", "agents", "sdk", "api-client"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/lbailey94/whitemagic"
+Documentation = "https://github.com/lbailey94/whitemagic#readme"
+Repository = "https://github.com/lbailey94/whitemagic.git"
+Issues = "https://github.com/lbailey94/whitemagic/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["whitemagic_client"]

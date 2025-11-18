@@ -1,0 +1,22 @@
+# Ignore API and backend code - Vercel should only deploy dashboard/
+whitemagic/
+tests/
+clients/
+whitemagic-mcp/
+*.py
+*.pyc
+__pycache__/
+.pytest_cache/
+.env
+.env.*
+*.db
+*.sqlite
+setup.py
+pyproject.toml
+requirements*.txt
+Procfile
+railway.json
+docker-compose.yml
+Dockerfile
+*.md
+!dashboard/

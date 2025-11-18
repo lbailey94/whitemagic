@@ -1,0 +1,29 @@
+# Include documentation
+include README.md
+include LICENSE
+include ROADMAP.md
+include VERSION
+
+# Include package data
+recursive-include whitemagic *.py py.typed
+
+# Include tests
+recursive-include tests *.py
+
+# Include CLI
+include cli.py
+
+# Exclude build artifacts
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.dylib
+
+# Exclude development files
+exclude memory_manager.py.backup
+exclude windsurf-mcp-config*.json
+exclude check-windsurf-logs.sh
+prune whitemagic-mcp
+prune memory
+prune .git
+prune docs/development

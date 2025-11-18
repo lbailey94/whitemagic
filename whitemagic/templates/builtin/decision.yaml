@@ -1,0 +1,54 @@
+name: decision
+description: Document architectural and technical decisions with rationale
+type: long_term
+tags_required:
+  - decision
+tags_suggested:
+  - architecture
+  - design
+  - tradeoffs
+fields:
+  decision_title:
+    type: string
+    required: true
+    description: What decision was made
+  context:
+    type: string
+    required: true
+    description: Why this decision was needed
+  options_considered:
+    type: list
+    required: true
+    description: Alternatives that were evaluated
+  decision_made:
+    type: string
+    required: true
+    description: What was decided and why
+  tradeoffs:
+    type: list
+    description: Pros and cons of the decision
+  consequences:
+    type: list
+    description: Expected impact and implications
+  date:
+    type: date
+    description: When the decision was made
+content_template: |
+  # Decision: {decision_title}
+
+  **Date**: {date}
+
+  ## Context
+  {context}
+
+  ## Options Considered
+  {options_considered}
+
+  ## Decision
+  {decision_made}
+
+  ## Tradeoffs
+  {tradeoffs}
+
+  ## Consequences
+  {consequences}

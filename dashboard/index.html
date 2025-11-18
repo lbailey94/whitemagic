@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full" style="background-color: #F5F1E8;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhiteMagic Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <meta name="whitemagic-api-base" content="">
+    <style>
+        [x-cloak] { display: none !important; }
+
+        /* Page-from-an-old-book beige background */
+        :root {
+            --bg-beige: #F5F1E8;
+            --card-white: #FFFFFF;
+            --lavender: #A78BFA;
+            --lavender-dark: #7C3AED;
+            --mint: #A7F3D0;
+            --peach: #FED7AA;
+            --soft-pink: #FBCFE8;
+            --pale-blue: #BAE6FD;
+            --soft-yellow: #FEF08A;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+        }
+
+        body {
+            background-color: var(--bg-beige);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--card-white);
+            border-right: 1px solid #E5E7EB;
+            box-shadow: 2px 0 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-link:hover {
+            background-color: #F3F0FF;
+            border-left: 3px solid var(--lavender);
+        }
+
+        .sidebar-link.active {
+            background-color: #F3F0FF;
+            border-left: 3px solid var(--lavender);
+            color: var(--lavender-dark);
+        }
+
+        /* Cards with subtle shadow */
+        .card {
+            background: var(--card-white);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Pastel accents */
+        .accent-lavender { color: var(--lavender-dark); }
+        .bg-lavender { background-color: var(--lavender); }
+        .accent-mint { color: #059669; }
+        .bg-mint { background-color: var(--mint); }
+        .accent-peach { color: #EA580C; }
+        .bg-peach { background-color: var(--peach); }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -240px;
+                top: 0;
+                height: 100vh;
+                z-index: 40;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .usage-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Smooth transitions */
+        .progress-bar {
+            transition: width 0.5s ease-in-out, background-color 0.3s ease;
+        }
+
+        /* Upgrade banner animation */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upgrade-banner-enter {
+            animation: slideDown 0.5s ease-out;
+        }
+
+        /* Hero percentage display */
+        .hero-percentage {
+            font-size: 4.5rem;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--lavender-dark);
+        }
+    </style>
+</head>
+<body class="h-full">
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-30">
+        <div class="px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 justify-between items-center">
+                <div class="flex items-center">
+                    <button onclick="toggleSidebar()" class="md:hidden mr-3 text-gray-500 hover:text-gray-700">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold accent-lavender">WhiteMagic</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="https://docs.whitemagic.dev" target="_blank" class="hidden sm:inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <i data-lucide="book-open" class="w-4 h-4 mr-1"></i>
+                        Docs
+                    </a>
+                    <button onclick="logout()" class="text-sm font-medium text-gray-500 hover:text-gray-700">
+                        Sign out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container with Sidebar -->
+    <div class="flex h-screen pt-16">
+        <!-- Sidebar (hidden until logged in) -->
+        <aside id="sidebar" class="sidebar" style="display: none;">
+            <nav class="py-4">
+                <!-- Account Section -->
+                <div class="px-4 mb-6">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Account</div>
+                    <div class="text-sm font-medium text-gray-900" id="sidebarEmail">Loading...</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        <span id="sidebarPlan" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-lavender text-white">Free</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="space-y-1 px-2">
+                    <a href="#" onclick="showSection('dashboard', event); return false;" class="sidebar-link active flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+                        Dashboard
+                    </a>
+                    <a href="#" onclick="showSection('api-keys', event); return false;" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md">
+                        <i data-lucide="key" class="w-5 h-5 mr-3"></i>
+                        API Keys
+                    </a>
+                    <a href="#" onclick="showSection('memories', event); return false;" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md">
+                        <i data-lucide="brain" class="w-5 h-5 mr-3"></i>
+                        Memories
+                    </a>
+                    <a href="#" onclick="showSection('settings', event); return false;" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md">
+                        <i data-lucide="settings" class="w-5 h-5 mr-3"></i>
+                        Settings
+                    </a>
+                </div>
+
+                <!-- Divider -->
+                <div class="my-4 border-t border-gray-200"></div>
+
+                <!-- Features Section -->
+                <div class="px-4 mb-4">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Resources</div>
+                </div>
+                <div class="space-y-1 px-2">
+                    <a href="https://docs.whitemagic.dev" target="_blank" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md">
+                        <i data-lucide="book-open" class="w-5 h-5 mr-3"></i>
+                        Documentation
+                    </a>
+                    <a href="https://github.com/lbailey94/whitemagic" target="_blank" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md">
+                        <i data-lucide="github" class="w-5 h-5 mr-3"></i>
+                        GitHub
+                    </a>
+                </div>
+
+                <!-- Upgrade CTA in Sidebar -->
+                <div class="px-4 mt-6">
+                    <div class="card p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200">
+                        <div class="flex items-center mb-2">
+                            <i data-lucide="zap" class="w-5 h-5 accent-lavender mr-2"></i>
+                            <span class="text-sm font-semibold text-gray-900">Upgrade</span>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-3">Unlock unlimited memories and more</p>
+                        <a href="https://whop.com/whitemagic" target="_blank" class="block text-center px-3 py-2 bg-lavender text-white text-xs font-medium rounded-md hover:opacity-90 transition-opacity">
+                            Go Pro
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <!-- Login Form (shown when not authenticated) -->
+                    <div id="loginForm" class="mt-8 max-w-md mx-auto" style="display: none;">
+                        <div class="bg-white py-8 px-6 shadow rounded-lg sm:px-10">
+                            <h2 class="text-2xl font-bold mb-6">Get Your API Key</h2>
+
+                            <!-- Email form for Whop subscribers -->
+                            <div id="emailForm">
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Subscribed via <a href="https://whop.com/whitemagic" class="text-purple-600 hover:underline" target="_blank">Whop</a>?
+                                    Enter your email to get your API key:
+                                </p>
+                                <form onsubmit="retrieveApiKey(event)">
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                                            <input type="email" id="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm px-3 py-2 border">
+                                        </div>
+                                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lavender hover:opacity-90">
+                                            Get API Key
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div class="mt-4 text-center">
+                                    <button onclick="showApiKeyForm()" class="text-sm text-gray-600 hover:text-gray-900">
+                                        Already have an API key? Sign in here
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- API Key form for existing users -->
+                            <div id="apiKeyForm" style="display: none;">
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Enter your existing API key:
+                                </p>
+                                <form onsubmit="login(event)">
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="apiKey" class="block text-sm font-medium text-gray-700">API Key</label>
+                                            <input type="password" id="apiKey" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm px-3 py-2 border">
+                                        </div>
+                                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lavender hover:opacity-90">
+                                            Sign in
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div class="mt-4 text-center">
+                                    <button onclick="showEmailForm()" class="text-sm text-gray-600 hover:text-gray-900">
+                                        Don't have an API key? Get one with your email
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Content (shown when authenticated) -->
+                    <div id="dashboardContent" style="display: none;">
+                        <!-- Hero Section: Usage Percentage -->
+                        <div class="card p-8 mb-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <!-- Large Usage Percentage -->
+                                <div class="lg:col-span-2">
+                                    <div class="flex items-end space-x-6">
+                                        <div>
+                                            <div class="text-sm text-gray-500 mb-2">Overall Usage</div>
+                                            <div class="flex items-baseline">
+                                                <span class="hero-percentage" id="overallUsagePercent">0%</span>
+                                                <span class="text-2xl text-gray-400 ml-2">of quota</span>
+                                            </div>
+                                        </div>
+                                        <div class="pb-4">
+                                            <div class="text-3xl font-bold text-gray-900" id="heroRequestCount">0</div>
+                                            <div class="text-sm text-gray-500">requests this month</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Stats -->
+                                <div class="space-y-3">
+                                    <div>
+                                        <div class="text-xs text-gray-500">Account</div>
+                                        <div class="text-sm font-medium text-gray-900" id="accountEmail">-</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-gray-500">Plan</div>
+                                        <div id="accountPlan">
+                                            <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-lavender text-white">Free</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-gray-500">Member Since</div>
+                                        <div class="text-sm text-gray-900" id="accountCreated">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upgrade CTA (shown for free tier near limits) -->
+                        <div id="upgradeBanner" class="card bg-gradient-to-r from-purple-100 to-pink-100 p-6 mb-6 border-2 border-purple-200 upgrade-banner-enter" style="display: none;">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">✨ Upgrade to unlock more power</h3>
+                                    <p class="text-gray-700 text-sm" id="upgradeMessage">You're using 80% of your free tier quota</p>
+                                </div>
+                                <a href="https://whop.com/whitemagic" target="_blank" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-lavender hover:opacity-90 transition-opacity whitespace-nowrap">
+                                    Upgrade Now
+                                    <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Compact Usage Metrics Grid -->
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="card p-4">
+                                <div class="text-xs text-gray-500 uppercase tracking-wider">Today</div>
+                                <div class="mt-2 text-2xl font-bold text-gray-900" id="usageRequestsToday">0</div>
+                                <div class="text-xs text-gray-500 mt-1">of <span id="limitDaily">0</span> daily</div>
+                                <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+                                    <div id="progressRequestsToday" class="progress-bar bg-lavender h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="card p-4">
+                                <div class="text-xs text-gray-500 uppercase tracking-wider">This Month</div>
+                                <div class="mt-2 text-2xl font-bold text-gray-900" id="usageRequestsMonth">0</div>
+                                <div class="text-xs text-gray-500 mt-1">of <span id="limitMonthly">0</span> monthly</div>
+                                <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+                                    <div id="progressRequestsMonth" class="progress-bar bg-lavender h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="card p-4">
+                                <div class="text-xs text-gray-500 uppercase tracking-wider">Memories</div>
+                                <div class="mt-2 text-2xl font-bold text-gray-900" id="usageMemories">0</div>
+                                <div class="text-xs text-gray-500 mt-1">of <span id="limitMemories">0</span> total</div>
+                                <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+                                    <div id="progressMemories" class="progress-bar bg-lavender h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="card p-4">
+                                <div class="text-xs text-gray-500 uppercase tracking-wider">Storage</div>
+                                <div class="mt-2 text-2xl font-bold text-gray-900"><span id="usageStorage">0</span> MB</div>
+                                <div class="text-xs text-gray-500 mt-1">of <span id="limitStorage">0</span></div>
+                                <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+                                    <div id="progressStorage" class="progress-bar bg-lavender h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Usage Trends Chart -->
+                        <div class="card p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-lg font-medium text-gray-900">API Usage Trends</h2>
+                                <div class="flex space-x-2">
+                                    <button onclick="loadUsageChart(7)" id="chart7d" class="px-3 py-1 text-sm rounded-md bg-purple-100 accent-lavender font-medium">7 days</button>
+                                    <button onclick="loadUsageChart(30)" id="chart30d" class="px-3 py-1 text-sm rounded-md text-gray-600 hover:bg-gray-100">30 days</button>
+                                </div>
+                            </div>
+                            <div class="relative" style="height: 300px;">
+                                <canvas id="usageChart"></canvas>
+                            </div>
+                            <div id="chartLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75" style="display: none;">
+                                <div class="text-center">
+                                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                                    <p class="mt-2 text-sm text-gray-600">Loading chart...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- API Keys -->
+                        <div class="card p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-medium text-gray-900">API Keys</h2>
+                                <button onclick="showCreateKeyModal()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-lavender hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                    Create New Key
+                                </button>
+                            </div>
+                            <div id="apiKeysList" class="space-y-4">
+                                <!-- API keys will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Create API Key Modal -->
+    <div id="createKeyModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center" style="display: none;">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-medium mb-4">Create New API Key</h3>
+            <form onsubmit="createApiKey(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label for="keyName" class="block text-sm font-medium text-gray-700">Key Name</label>
+                        <input type="text" id="keyName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideCreateKeyModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-lavender hover:opacity-90">
+                            Create
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Show New API Key Modal -->
+    <div id="newKeyModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center" style="display: none;">
+        <div class="bg-white rounded-lg p-6 max-w-lg w-full">
+            <h3 class="text-lg font-medium mb-4">⚠️ Save Your API Key</h3>
+            <p class="text-sm text-gray-600 mb-4">This is the only time you'll see this key. Copy it now and store it securely.</p>
+            <div class="bg-gray-50 p-4 rounded-md mb-4">
+                <code id="newKeyValue" class="text-sm font-mono break-all">-</code>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="copyNewKey()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Copy to Clipboard
+                </button>
+                <button onclick="hideNewKeyModal()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Memory Modal -->
+    <div id="memoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center overflow-y-auto" style="display: none;">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full m-4">
+            <h3 class="text-lg font-medium mb-4" id="memoryModalTitle">Create Memory</h3>
+            <form onsubmit="saveMemory(event)">
+                <input type="hidden" id="memoryFilename">
+                <div class="space-y-4">
+                    <div>
+                        <label for="memoryTitle" class="block text-sm font-medium text-gray-700">Title</label>
+                        <input type="text" id="memoryTitle" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div>
+                        <label for="memoryContent" class="block text-sm font-medium text-gray-700">Content</label>
+                        <textarea id="memoryContent" rows="8" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"></textarea>
+                    </div>
+                    <div>
+                        <label for="memoryType" class="block text-sm font-medium text-gray-700">Type</label>
+                        <select id="memoryType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border">
+                            <option value="short_term">Short Term</option>
+                            <option value="long_term">Long Term</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="memoryTags" class="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
+                        <input type="text" id="memoryTags" placeholder="project, important, meeting" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border">
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideMemoryModal()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Memory Modal -->
+    <div id="viewMemoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center overflow-y-auto" style="display: none;">
+        <div class="bg-white rounded-lg p-6 max-w-3xl w-full m-4">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900" id="viewMemoryTitle">Memory Title</h3>
+                    <div class="flex items-center mt-2 space-x-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" id="viewMemoryTypeBadge">
+                            <span id="viewMemoryType"></span>
+                        </span>
+                        <span class="text-sm text-gray-500" id="viewMemoryDate"></span>
+                    </div>
+                    <div class="mt-2" id="viewMemoryTagsContainer"></div>
+                </div>
+                <button onclick="hideViewMemoryModal()" class="text-gray-400 hover:text-gray-500">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="prose max-w-none mb-6">
+                <div id="viewMemoryContent" class="whitespace-pre-wrap text-gray-700"></div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="deleteCurrentMemory()" class="px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50">
+                    <i data-lucide="trash-2" class="w-4 h-4 inline mr-2"></i>
+                    Delete
+                </button>
+                <button onclick="editCurrentMemory()" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                    <i data-lucide="edit" class="w-4 h-4 inline mr-2"></i>
+                    Edit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Initialize Lucide icons after page load
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

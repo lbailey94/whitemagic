@@ -1,0 +1,2497 @@
+Warning: WHOP_API_KEY not set. Whop integration disabled.
+{"timestamp": "2025-11-13T00:33:45.104081Z", "level": "WARNING", "logger": "whitemagic.api.app", "message": "terminal_exec_api_disabled", "enabled": false, "env_var": "WM_ENABLE_EXEC_API", "location": {"file": "/home/lucas/Desktop/whitemagic/whitemagic/api/app.py", "line": 308, "function": "<module>"}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "WhiteMagic API",
+    "description": "Memory scaffolding for AI agents with tiered context generation",
+    "version": "2.1.3"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Health Check",
+        "description": "Health check endpoint (liveness probe).\n\nReturns 200 if the service is running.\nDoes not check external dependencies.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Readiness Check",
+        "description": "Readiness check endpoint (readiness probe).\n\nReturns 200 if the service can handle requests.\nChecks database connectivity.",
+        "operationId": "readiness_check_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Get Version Info",
+        "description": "Get version information",
+        "operationId": "get_version_info_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Dashboard Home",
+        "description": "Serve dashboard HTML.",
+        "operationId": "dashboard_home__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/whop": {
+      "post": {
+        "tags": [
+          "Whop"
+        ],
+        "summary": "Whop Webhook",
+        "description": "Handle Whop webhook events.\n\nProcesses subscription lifecycle events:\n- membership.created: Provision new user\n- membership.updated: Update plan tier\n- membership.deleted: Downgrade to free\n- membership.went_valid: Restore access\n- membership.went_invalid: Suspend access",
+        "operationId": "whop_webhook_webhooks_whop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/subscription/verify": {
+      "get": {
+        "tags": [
+          "Whop"
+        ],
+        "summary": "Verify Subscription",
+        "description": "Verify user's subscription status with Whop.\n\nReturns current subscription info.",
+        "operationId": "verify_subscription_webhooks_subscription_verify_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/subscription/status": {
+      "get": {
+        "tags": [
+          "Whop"
+        ],
+        "summary": "Subscription Status",
+        "description": "Get subscription status for current user.\n\nQuick check without Whop API call.",
+        "operationId": "subscription_status_webhooks_subscription_status_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/api-keys": {
+      "post": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Create New Api Key",
+        "description": "Create a new API key.\n\nThe raw API key is only shown once and cannot be retrieved later.",
+        "operationId": "create_new_api_key_dashboard_api_keys_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAPIKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAPIKeyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "List Api Keys",
+        "description": "List all API keys for current user.\n\nReturns metadata only (not the actual keys).",
+        "operationId": "list_api_keys_dashboard_api_keys_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAPIKeysResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/api-keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Revoke Key",
+        "description": "Revoke (deactivate) an API key.\n\nThe key can no longer be used for authentication.",
+        "operationId": "revoke_key_dashboard_api_keys__key_id__delete",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeAPIKeyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/api-keys/{key_id}/rotate": {
+      "post": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Rotate Key",
+        "description": "Rotate an API key.\n\nCreates a new key and revokes the old one.\nThe new raw key is only shown once.",
+        "operationId": "rotate_key_dashboard_api_keys__key_id__rotate_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateAPIKeyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/account": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Get Account Info",
+        "description": "Get account information and usage statistics.\n\nReturns user details, plan limits, and current usage.",
+        "operationId": "get_account_info_dashboard_account_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search/semantic": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Semantic Search",
+        "description": "Semantic search endpoint.",
+        "operationId": "semantic_search_api_v1_search_semantic_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemanticSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memories": {
+      "post": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Create Memory",
+        "description": "Create a new memory.\n\nRequires authentication via API key.",
+        "operationId": "create_memory_api_v1_memories_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "List Memories",
+        "description": "List all memories for the current user.\n\nOptionally filter by type (short_term or long_term).",
+        "operationId": "list_memories_api_v1_memories_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memories/{filename}": {
+      "get": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Get Memory",
+        "description": "Get a specific memory by filename.",
+        "operationId": "get_memory_api_v1_memories__filename__get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Update Memory",
+        "description": "Update an existing memory.",
+        "operationId": "update_memory_api_v1_memories__filename__put",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Memories"
+        ],
+        "summary": "Delete Memory",
+        "description": "Delete a memory.",
+        "operationId": "delete_memory_api_v1_memories__filename__delete",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "post": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Search Memories",
+        "description": "Search memories by query and/or tags.\n\nReturns ranked results with preview snippets.",
+        "operationId": "search_memories_api_v1_search_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/context": {
+      "post": {
+        "tags": [
+          "Context"
+        ],
+        "summary": "Generate Context",
+        "description": "Generate context summary at specified tier.\n\n- Tier 0: Minimal (titles only)\n- Tier 1: Balanced (titles + previews)\n- Tier 2: Full (complete content)",
+        "operationId": "generate_context_api_v1_context_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/consolidate": {
+      "post": {
+        "tags": [
+          "Consolidation"
+        ],
+        "summary": "Consolidate Memories",
+        "description": "Consolidate old short-term memories to archive.\n\nMemories with 'proven' tag are promoted to long-term.",
+        "operationId": "consolidate_memories_api_v1_consolidate_post",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsolidateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsolidateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get Statistics",
+        "description": "Get memory statistics.",
+        "operationId": "get_statistics_api_v1_stats_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tags": {
+      "get": {
+        "tags": [
+          "Tags"
+        ],
+        "summary": "List Tags",
+        "description": "List all unique tags.",
+        "operationId": "list_tags_api_v1_tags_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/user/me": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "Get Current User Info",
+        "description": "Get current user information and usage stats.",
+        "operationId": "get_current_user_info_api_v1_user_me_get",
+        "security": [
+          {
+            "API Key": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "APIKeyInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "key_prefix": {
+            "type": "string",
+            "title": "Key Prefix"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key_prefix",
+          "name",
+          "is_active",
+          "created_at",
+          "last_used_at",
+          "expires_at"
+        ],
+        "title": "APIKeyInfo",
+        "description": "API key information (without secret)."
+      },
+      "AccountInfo": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "plan_tier": {
+            "type": "string",
+            "title": "Plan Tier"
+          },
+          "whop_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Whop User Id"
+          },
+          "has_subscription": {
+            "type": "boolean",
+            "title": "Has Subscription"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Limits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "plan_tier",
+          "whop_user_id",
+          "has_subscription",
+          "created_at",
+          "limits"
+        ],
+        "title": "AccountInfo",
+        "description": "User account information."
+      },
+      "AccountResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "account": {
+            "$ref": "#/components/schemas/AccountInfo"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageStatistics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "account",
+          "usage"
+        ],
+        "title": "AccountResponse",
+        "description": "Response with account info."
+      },
+      "ConsolidateRequest": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "description": "If true, only show what would be done",
+            "default": true
+          },
+          "min_age_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Min Age Days",
+            "description": "Minimum age in days for consolidation",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "title": "ConsolidateRequest",
+        "description": "Request to consolidate memories."
+      },
+      "ConsolidateResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "archived_count": {
+            "type": "integer",
+            "title": "Archived Count"
+          },
+          "promoted_count": {
+            "type": "integer",
+            "title": "Promoted Count"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "archived_count",
+          "promoted_count",
+          "dry_run",
+          "message"
+        ],
+        "title": "ConsolidateResponse",
+        "description": "Response from consolidation operation."
+      },
+      "ContextRequest": {
+        "properties": {
+          "tier": {
+            "type": "integer",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Tier",
+            "description": "Context tier: 0 (minimal), 1 (balanced), 2 (full)",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "ContextRequest",
+        "description": "Request to generate context."
+      },
+      "ContextResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "context": {
+            "type": "string",
+            "title": "Context"
+          },
+          "tier": {
+            "type": "integer",
+            "title": "Tier"
+          },
+          "memories_included": {
+            "type": "integer",
+            "title": "Memories Included"
+          }
+        },
+        "type": "object",
+        "required": [
+          "context",
+          "tier",
+          "memories_included"
+        ],
+        "title": "ContextResponse",
+        "description": "Response containing generated context.",
+        "example": {
+          "context": "## Short-Term Memories\n\n- **API Design** (tags: api, pattern)\n...",
+          "memories_included": 5,
+          "success": true,
+          "tier": 1
+        }
+      },
+      "CreateAPIKeyRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "expires_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateAPIKeyRequest",
+        "description": "Request to create a new API key."
+      },
+      "CreateAPIKeyResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          },
+          "key_id": {
+            "type": "string",
+            "title": "Key Id"
+          },
+          "key_prefix": {
+            "type": "string",
+            "title": "Key Prefix"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "api_key",
+          "key_id",
+          "key_prefix",
+          "name",
+          "message"
+        ],
+        "title": "CreateAPIKeyResponse",
+        "description": "Response with new API key."
+      },
+      "CreateMemoryRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "description": "Memory title"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content",
+            "description": "Memory content (markdown supported)"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Memory type: short_term or long_term",
+            "default": "short_term"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "List of tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "CreateMemoryRequest",
+        "description": "Request to create a new memory."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ListAPIKeysResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/APIKeyInfo"
+            },
+            "type": "array",
+            "title": "Keys"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "keys",
+          "total"
+        ],
+        "title": "ListAPIKeysResponse",
+        "description": "Response with list of API keys."
+      },
+      "MemoryListResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryResponse"
+            },
+            "type": "array",
+            "title": "Memories"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memories",
+          "total"
+        ],
+        "title": "MemoryListResponse",
+        "description": "Response containing list of memories.",
+        "example": {
+          "memories": [
+            {
+              "created": "2025-11-02T09:45:30",
+              "filename": "20251102_094530_api_design.md",
+              "path": "memory/long_term/20251102_094530_api_design.md",
+              "tags": [
+                "api",
+                "pattern"
+              ],
+              "title": "API Design Pattern",
+              "type": "long_term"
+            }
+          ],
+          "success": true,
+          "total": 2
+        }
+      },
+      "MemoryResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Memory body content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "title",
+          "type",
+          "tags",
+          "created",
+          "path"
+        ],
+        "title": "MemoryResponse",
+        "description": "Response containing memory information.",
+        "example": {
+          "content": "Always validate inputs at API boundaries...",
+          "created": "2025-11-02T09:45:30",
+          "filename": "20251102_094530_api_design.md",
+          "path": "memory/long_term/20251102_094530_api_design.md",
+          "success": true,
+          "tags": [
+            "api",
+            "pattern",
+            "proven"
+          ],
+          "title": "API Design Pattern",
+          "type": "long_term"
+        }
+      },
+      "RevokeAPIKeyResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "RevokeAPIKeyResponse",
+        "description": "Response after revoking API key."
+      },
+      "RotateAPIKeyResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "new_api_key": {
+            "type": "string",
+            "title": "New Api Key"
+          },
+          "key_id": {
+            "type": "string",
+            "title": "Key Id"
+          },
+          "key_prefix": {
+            "type": "string",
+            "title": "Key Prefix"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "new_api_key",
+          "key_id",
+          "key_prefix",
+          "message"
+        ],
+        "title": "RotateAPIKeyResponse",
+        "description": "Response after rotating API key."
+      },
+      "SearchMode": {
+        "type": "string",
+        "enum": [
+          "keyword",
+          "semantic",
+          "hybrid"
+        ],
+        "title": "SearchMode",
+        "description": "Search mode selection."
+      },
+      "SearchRequest": {
+        "properties": {
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query",
+            "description": "Search query string"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags",
+            "description": "Filter by tags (AND logic)"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type",
+            "description": "Filter by memory type"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "Maximum results to return",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "SearchRequest",
+        "description": "Request to search memories."
+      },
+      "SearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultItem"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "total",
+          "query"
+        ],
+        "title": "SearchResponse",
+        "description": "Response containing search results.",
+        "example": {
+          "query": "API design",
+          "results": [
+            {
+              "created": "2025-11-02T09:45:30",
+              "filename": "20251102_094530_api_design.md",
+              "preview": "When designing REST APIs, always...",
+              "score": 5,
+              "tags": [
+                "api",
+                "pattern"
+              ],
+              "title": "API Design Pattern",
+              "type": "long_term"
+            }
+          ],
+          "success": true,
+          "total": 1
+        }
+      },
+      "SearchResultItem": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "title",
+          "type",
+          "tags",
+          "created",
+          "preview",
+          "score"
+        ],
+        "title": "SearchResultItem",
+        "description": "Single search result item."
+      },
+      "SemanticSearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "description": "Search query"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Search mode",
+            "default": "hybrid"
+          },
+          "k": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "K",
+            "description": "Number of results",
+            "default": 10
+          },
+          "threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Threshold",
+            "description": "Similarity threshold",
+            "default": 0.7
+          },
+          "memory_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Type",
+            "description": "Filter by type"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags",
+            "description": "Filter by tags"
+          },
+          "keyword_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Keyword Weight",
+            "default": 0.3
+          },
+          "semantic_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Semantic Weight",
+            "default": 0.7
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SemanticSearchRequest",
+        "description": "Request for semantic search."
+      },
+      "SemanticSearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticSearchResultItem"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "execution_time_ms": {
+            "type": "number",
+            "title": "Execution Time Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "mode",
+          "results",
+          "count",
+          "execution_time_ms"
+        ],
+        "title": "SemanticSearchResponse",
+        "description": "Search response."
+      },
+      "SemanticSearchResultItem": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "title": "Memory Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "match_type": {
+            "type": "string",
+            "title": "Match Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory_id",
+          "title",
+          "content",
+          "type",
+          "tags",
+          "score",
+          "match_type"
+        ],
+        "title": "SemanticSearchResultItem",
+        "description": "Single search result."
+      },
+      "StatsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "short_term_count": {
+            "type": "integer",
+            "title": "Short Term Count"
+          },
+          "long_term_count": {
+            "type": "integer",
+            "title": "Long Term Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "total_tags": {
+            "type": "integer",
+            "title": "Total Tags"
+          },
+          "most_used_tags": {
+            "items": {
+              "items": {},
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Most Used Tags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "short_term_count",
+          "long_term_count",
+          "total_count",
+          "total_tags",
+          "most_used_tags"
+        ],
+        "title": "StatsResponse",
+        "description": "Response containing memory statistics.",
+        "example": {
+          "long_term_count": 12,
+          "most_used_tags": [
+            [
+              "api",
+              5
+            ],
+            [
+              "pattern",
+              3
+            ]
+          ],
+          "short_term_count": 5,
+          "success": true,
+          "total_count": 17,
+          "total_tags": 8
+        }
+      },
+      "SuccessResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "SuccessResponse",
+        "description": "Standard success response."
+      },
+      "TagsResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tags",
+          "total"
+        ],
+        "title": "TagsResponse",
+        "description": "Response containing all tags."
+      },
+      "UpdateMemoryRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "title": "UpdateMemoryRequest",
+        "description": "Request to update an existing memory."
+      },
+      "UsageStatistics": {
+        "properties": {
+          "requests_today": {
+            "type": "integer",
+            "title": "Requests Today"
+          },
+          "requests_this_month": {
+            "type": "integer",
+            "title": "Requests This Month"
+          },
+          "memories_count": {
+            "type": "integer",
+            "title": "Memories Count"
+          },
+          "storage_bytes": {
+            "type": "integer",
+            "title": "Storage Bytes"
+          },
+          "storage_mb": {
+            "type": "number",
+            "title": "Storage Mb"
+          },
+          "limits": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Limits"
+          },
+          "usage_percent": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests_today",
+          "requests_this_month",
+          "memories_count",
+          "storage_bytes",
+          "storage_mb",
+          "limits",
+          "usage_percent"
+        ],
+        "title": "UsageStatistics",
+        "description": "Usage statistics for current user."
+      },
+      "UsageStats": {
+        "properties": {
+          "requests_today": {
+            "type": "integer",
+            "title": "Requests Today"
+          },
+          "requests_this_month": {
+            "type": "integer",
+            "title": "Requests This Month"
+          },
+          "memories_count": {
+            "type": "integer",
+            "title": "Memories Count"
+          },
+          "storage_bytes": {
+            "type": "integer",
+            "title": "Storage Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests_today",
+          "requests_this_month",
+          "memories_count",
+          "storage_bytes"
+        ],
+        "title": "UsageStats",
+        "description": "User usage statistics."
+      },
+      "UserInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "plan_tier": {
+            "type": "string",
+            "title": "Plan Tier"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "plan_tier",
+          "created_at",
+          "last_seen_at"
+        ],
+        "title": "UserInfo",
+        "description": "User information."
+      },
+      "UserResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserInfo"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageStats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "usage"
+        ],
+        "title": "UserResponse",
+        "description": "Response containing user information."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "API Key": {
+        "type": "http",
+        "description": "Enter your API key in format: wm_prod_xxxxx...",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

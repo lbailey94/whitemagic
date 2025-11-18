@@ -1,0 +1,153 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.env
+.env.local
+.env.*.local
+
+# WhiteMagic cache
+.whitemagic/cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Specific - Memory System
+# Exclude ALL personal memory files, keep only examples
+memory/
+!memory/.gitkeep
+!memory/short_term/.gitkeep
+!memory/long_term/.gitkeep
+!memory/archive/.gitkeep
+!memory/templates/
+!memory/short_term/example_short_term.md
+!memory/long_term/example_long_term.md
+
+# Private Development Folder (NEVER commit)
+private/
+
+# Session/Development Documents (keep in dev, not in releases)
+SESSION_*.md
+PHASE_*.md
+PARALLEL_THREADING_TEST_RESULTS.md
+V2.2.3_*.md
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+check-windsurf-logs.sh
+windsurf-mcp-config*.json
+cleanup_docs.sh
+
+# Node.js (MCP Server)
+whitemagic-mcp/node_modules/
+whitemagic-mcp/package-lock.json
+whitemagic-mcp/dist/*.map
+
+# Logs
+*.log
+logs/
+.venv/
+test_output.txt
+
+# Users directory (API test artifacts)
+users/
+
+# Audit logs
+.whitemagic_audit/
+.whitemagic/last_audit.json
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+whitemagic_*.db*
+
+# API Keys and Secrets (CRITICAL)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets.json
+credentials.json
+
+# Internal development
+TODO.private.md
+NOTES.private.md
+*_INTERNAL*.md
+
+# Metrics data
+.whitemagic/metrics/
+
+# Version-specific planning docs (keep in private/)
+V2.*_IMPLEMENTATION_PLAN.md
+V2.*_ROADMAP.md
+*_AUDIT_*.md
+COMPREHENSIVE_AUDIT_*.md
+CODE_AUDIT_*.md
+MARKDOWN_AUDIT_*.md
+DOCUMENTATION_AUDIT_*.md
+
+# Memory consolidation plans (temporary)
+memory/CONSOLIDATION_PLAN*.md
+
+# Metrics data
+.whitemagic/metrics/
+
+# Private Documentation Folders (Phase 6 - Nov 18, 2025)
+# Keep directory structure via .gitkeep, but ignore all contents
+docs/production/
+!docs/production/.gitkeep
+docs/archive/
+!docs/archive/.gitkeep
+docs/plans/
+!docs/plans/.gitkeep
+docs/audits/
+!docs/audits/.gitkeep
+backups/
+!backups/.gitkeep
