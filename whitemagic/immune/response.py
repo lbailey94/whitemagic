@@ -100,10 +100,13 @@ class ImmuneResponse:
             self._record_outcome(outcome)
             return outcome
         
-        # Safety check with immune regulator
-        suppress, reason = self.regulator.should_suppress_response(
-            threat, antibody, {"file": threat.location, "action": antibody.description}
-        )
+        # Safety check with immune regulator (if available)
+        if self.regulator:
+            suppress, reason = self.regulator.should_suppress_response(
+                threat, antibody, {"file": threat.location, "action": antibody.description}
+            )
+        else:
+            suppress, reason = False, None
         
         if suppress:
             print(f"🛡️  Response SUPPRESSED: {reason}")
