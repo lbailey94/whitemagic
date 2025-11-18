@@ -1603,7 +1603,6 @@ def command_ai_help(manager: MemoryManager, args: argparse.Namespace) -> int:
         return 0
     else:
         print("Error: No ai-help subcommand specified")
-        print("Available subcommands: show, export, session-start")
         return 1
 
 
@@ -1660,6 +1659,7 @@ COMMAND_HANDLERS = {
     "confidence-calibrate": command_confidence_calibrate,
     "immune": command_immune,
     "orchestra": command_orchestra,
+    "homeostasis": command_homeostasis,
     # "terminal": command_terminal,  # TODO: Implement terminal multiplexing CLI
 }
 
