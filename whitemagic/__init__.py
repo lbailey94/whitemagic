@@ -147,7 +147,7 @@ from .wu_xing import (
     WuXingDetector,
 )
 
-__version__ = "2.2.8"
+__version__ = "2.2.9"
 
 __all__ = [
     "__version__",

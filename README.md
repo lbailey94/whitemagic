@@ -2,12 +2,12 @@
 
 Tiered Memory Management for AI Agents with Native MCP + REST Support
 
-[![Version](https://img.shields.io/badge/version-2.2.8-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.2.8-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+[![Version](https://img.shields.io/badge/version-2.2.9-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.2.9-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](#-testing)
-[![Grade](https://img.shields.io/badge/grade-A%2B%20(99%2F100)-success.svg)](docs/reviews/v2.1.3/PRODUCTION_TEST_RESULTS.md)
+[![Grade](https://img.shields.io/badge/grade-A%2B%20(99%2F100)-success.svg)](docs/reviews/v2.2.9/PRODUCTION_TEST_RESULTS.md)
 
 [![CodeQL](https://github.com/lbailey94/whitemagic/workflows/CodeQL%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/codeql.yml)
 [![Docker Security](https://github.com/lbailey94/whitemagic/workflows/Docker%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/docker-security.yml)
@@ -15,7 +15,7 @@ Tiered Memory Management for AI Agents with Native MCP + REST Support
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 [![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
 
-WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, native MCP integration for Cursor/Windsurf/Claude, and the new v2.2.8 parallel infrastructure + scratchpads alongside v2.2.5 symbolic reasoning, Wu Xing workflow, and live metrics modules.
+WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, native MCP integration for Cursor/Windsurf/Claude, and the new v2.2.9 parallel infrastructure + scratchpads alongside v2.2.9 symbolic reasoning, Wu Xing workflow, and live metrics modules.
 
 ## 🎁 Free & Open Source
 
@@ -27,7 +27,7 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 - ✅ MCP server + REST API included
 - ✅ Perfect for individuals and teams
 
-*Cloud sync and team features planned for v2.4.0+ (Q1 2026)*
+*Cloud sync and team features planned for v2.2.9+ (Q1 2026)*
 
 ---
 
@@ -35,7 +35,7 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 1. **Install**: `pip install whitemagic` or `git clone https://github.com/lbailey94/whitemagic`
 2. **Try CLI**: `whitemagic create "My first memory" --content "Hello WhiteMagic!"`
-3. **Load Symbolic & Parallel Tools** *(new in v2.2.8)*: follow the [Symbolic Reasoning guide](docs/guides/SYMBOLIC_REASONING.md) plus the Session/Parallel docs to enable Chinese concept compression, Wu Xing guidance, and the new I Ching-aligned thread pools.
+3. **Load Symbolic & Parallel Tools** *(new in v2.2.9)*: follow the [Symbolic Reasoning guide](docs/guides/SYMBOLIC_REASONING.md) plus the Session/Parallel docs to enable Chinese concept compression, Wu Xing guidance, and the new I Ching-aligned thread pools.
 4. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
 
 → **Full guides**: [User Guide](docs/USER_GUIDE.md) | [Quickstart](docs/guides/QUICKSTART.md) | [Cheat Sheet](docs/CHEATSHEET.md) | [Symbolic Reasoning](docs/guides/SYMBOLIC_REASONING.md) | [Wu Xing + Metrics](docs/guides/WU_XING_AND_METRICS.md) | [Semantic Search](docs/guides/SEMANTIC_SEARCH.md) | [Terminal Tool Hardening](docs/guides/TERMINAL_TOOL.md)
@@ -46,11 +46,11 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 - **Tiered Memory**: Short-term, long-term, and archive storage
 - **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
-- **⚡ Parallel Infrastructure** *(NEW v2.2.8)*: I Ching-aligned pools + schedulers (8→256 threads) with CLI/MCP hooks coming in v2.2.9.
-- **🧠 Symbolic Reasoning Engine** *(v2.2.5)*: Chinese logographic compression, concept mapping, and memory linking.
-- **🌊 Wu Xing Workflow Detection** *(v2.2.5)*: Automatic phase detection for adaptive prompts + recommendations.
-- **📈 Live Metrics Hooks** *(v2.2.5)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
-- **🛠️ Audit & Terminal Helpers** *(coming v2.2.8)*: `whitemagic audit`, `docs-check`, and `exec plan` commands to keep docs + commands in sync across IDEs and terminals.
+- **⚡ Parallel Infrastructure** *(NEW v2.2.9)*: I Ching-aligned pools + schedulers (8→256 threads) with CLI/MCP hooks coming in v2.2.9.
+- **🧠 Symbolic Reasoning Engine** *(v2.2.9)*: Chinese logographic compression, concept mapping, and memory linking.
+- **🌊 Wu Xing Workflow Detection** *(v2.2.9)*: Automatic phase detection for adaptive prompts + recommendations.
+- **📈 Live Metrics Hooks** *(v2.2.9)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
+- **🛠️ Audit & Terminal Helpers** *(coming v2.2.9)*: `whitemagic audit`, `docs-check`, and `exec plan` commands to keep docs + commands in sync across IDEs and terminals.
 - **🔧 Terminal Tool**: Safe code execution with approval workflows
 - **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings (see [Semantic Search guide](docs/guides/SEMANTIC_SEARCH.md))
 - **🧠 Smart Features**: Setup wizard, templates, auto-tagging, relationships
@@ -63,7 +63,7 @@ WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and
 
 ## 🚀 Quick Start
 
-### Official SDKs (New in v2.1.4!) 📦
+### Official SDKs (New in v2.2.9!) 📦
 
 **TypeScript/JavaScript** - [npm](https://www.npmjs.com/package/whitemagic-client)
 
@@ -228,13 +228,13 @@ curl -X POST https://api.whitemagic.dev/api/v1/search/semantic \
 ### Strategic & Reference
 
 - [VISION_TO_REALITY.md](docs/VISION_TO_REALITY.md) - Vision vs current state comparison
-- [docs/reviews/v2.1.3/](docs/reviews/v2.1.3/) - Quality assurance reports
+- [docs/reviews/v2.2.9/](docs/reviews/v2.2.9/) - Quality assurance reports
 - [docs/production/](docs/production/) - Production deployment guides
 - [docs/archive/](docs/archive/) - Historical documentation
 
 ## 🧪 Testing
 
-**196 Python + 27 MCP automated tests** - See [docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md)
+**196 Python + 27 MCP automated tests** - See [docs/reviews/v2.2.9/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.2.9/TEST_COVERAGE_SUMMARY.md)
 
 ```bash
 # Python tests (install with extras first)
@@ -250,7 +250,7 @@ python3 -m pytest --cov=whitemagic --cov-report=html
 
 ## 📊 Quality Assurance
 
-WhiteMagic v2.1.3 underwent extensive security and stability reviews:
+WhiteMagic v2.2.9 underwent extensive security and stability reviews:
 
 - ✅ **260 automated tests** (100% passing)
   - 196 Python unit tests
@@ -264,8 +264,8 @@ WhiteMagic v2.1.3 underwent extensive security and stability reviews:
   - All endpoints verified in production-like environment
 - ✅ **Grade: A+ (99/100)** - Production ready
 
-📁 **Full review documentation**: [docs/reviews/v2.1.3/](docs/reviews/v2.1.3/)
-📄 **Production test results**: [PRODUCTION_TEST_RESULTS.md](docs/reviews/v2.1.3/PRODUCTION_TEST_RESULTS.md)
+📁 **Full review documentation**: [docs/reviews/v2.2.9/](docs/reviews/v2.2.9/)
+📄 **Production test results**: [PRODUCTION_TEST_RESULTS.md](docs/reviews/v2.2.9/PRODUCTION_TEST_RESULTS.md)
 
 ## 🔌 Optional Integrations
 
@@ -306,9 +306,9 @@ pre-commit run dependency-guards
 ## 🗺️ Roadmap
 
 - ✅ v2.1: Core Features (Python API, MCP, REST API)
-- ✅ v2.1.4: SDKs (TypeScript + Python clients)
-- ✅ v2.1.7: Smart Memory (Setup wizard, templates, auto-tagging, relationships)
-- ✅ v2.2.0: Critical Fixes (YAML parsing, enum serialization)
+- ✅ v2.2.9: SDKs (TypeScript + Python clients)
+- ✅ v2.2.9: Smart Memory (Setup wizard, templates, auto-tagging, relationships)
+- ✅ v2.2.9: Critical Fixes (YAML parsing, enum serialization)
 - 🚧 v2.3: Stripe Integration (Cloud tiers, subscriptions)
 - 📅 v2.3: Semantic Search (Vector embeddings, AI-powered search)
 - 📅 v3.0: Team Features (Shared memories, collaboration)
