@@ -17,6 +17,7 @@ use std::path::PathBuf;
 pub mod consolidation;
 pub mod search;
 pub mod compression;
+pub mod audit;
 
 /// Fast memory consolidation using Rust's parallel processing
 #[pyfunction]
@@ -92,5 +93,9 @@ fn whitemagic_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fast_compress, m)?)?;
     m.add_function(wrap_pyfunction!(fast_decompress, m)?)?;
     m.add_function(wrap_pyfunction!(fast_similarity, m)?)?;
+    m.add_function(wrap_pyfunction!(audit::audit_directory, m)?)?;
+    m.add_function(wrap_pyfunction!(audit::read_files_fast, m)?)?;
+    m.add_function(wrap_pyfunction!(audit::extract_summaries, m)?)?;
+    m.add_class::<audit::FileInfo>()?;
     Ok(())
 }
