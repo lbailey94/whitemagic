@@ -1634,6 +1634,7 @@ COMMAND_HANDLERS = {
     "confidence-calibrate": command_confidence_calibrate,
     "immune": command_immune,
     "orchestra": command_orchestra,
+    "terminal": command_terminal,
 }
 
 
@@ -2410,6 +2411,9 @@ def build_parser() -> argparse.ArgumentParser:
     
     # Register automation orchestra commands
     register_orchestra_commands(subparsers)
+    
+    # Register terminal multiplexer commands
+    register_terminal_commands(subparsers)
 
     return parser
 
