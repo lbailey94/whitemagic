@@ -30,6 +30,7 @@ from whitemagic.backup import BackupManager
 from whitemagic.cli_audit import audit_project, print_audit_report
 from whitemagic.cli_docs import docs_check_and_fix
 from whitemagic.cli_immune import register_immune_commands
+from whitemagic.cli_orchestra import register_orchestra_commands
 from whitemagic.cli_version import bump_version
 
 # ---------------------------------------------------------------------- #
@@ -1568,6 +1569,18 @@ def command_immune(manager: MemoryManager, args: argparse.Namespace) -> int:
         return 1
 
 
+def command_orchestra(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'orchestra' command with subcommands."""
+    if hasattr(args, 'func'):
+        # Call the subcommand function directly
+        args.func(args)
+        return 0
+    else:
+        print("Error: No orchestra subcommand specified")
+        print("Available subcommands: health, maintain, emergency")
+        return 1
+
+
 # Command dispatch table
 COMMAND_HANDLERS = {
     "ai-init": command_ai_init,
@@ -1620,6 +1633,7 @@ COMMAND_HANDLERS = {
     "confidence-stats": command_confidence_stats,
     "confidence-calibrate": command_confidence_calibrate,
     "immune": command_immune,
+    "orchestra": command_orchestra,
 }
 
 
@@ -2393,6 +2407,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Register immune system commands
     register_immune_commands(subparsers)
+    
+    # Register automation orchestra commands
+    register_orchestra_commands(subparsers)
 
     return parser
 

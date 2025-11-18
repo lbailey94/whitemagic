@@ -49,6 +49,7 @@ class ImmuneResponse:
     def __init__(self, antibody_library: AntibodyLibrary, immune_memory: ImmuneMemory = None):
         self.antibody_library = antibody_library
         self.immune_memory = immune_memory or ImmuneMemory()
+        self.regulator = ImmuneRegulator()  # Safety system
         self.response_history: List[ResponseOutcome] = []
     
     def respond_to_threat(self, threat: Threat, auto_heal: bool = True) -> ResponseOutcome:
@@ -90,6 +91,24 @@ class ImmuneResponse:
                 action_taken="Dry run - no fix applied",
                 metadata={"antibody": antibody.description}
             )
+            self._record_outcome(outcome)
+            return outcome
+        
+        # Safety check with immune regulator
+        suppress, reason = self.regulator.should_suppress_response(
+            threat, antibody, {"file": threat.location, "action": antibody.description}
+        )
+        
+        if suppress:
+            print(f"🛡️  Response SUPPRESSED: {reason}")
+            outcome = ResponseOutcome(
+                threat=threat,
+                antibody_used=antibody.name,
+                success=False,
+                action_taken=f"Suppressed for safety: {reason}",
+                error=reason
+            )
+            self.regulator.record_response(threat, antibody, False, True)
             self._record_outcome(outcome)
             return outcome
         

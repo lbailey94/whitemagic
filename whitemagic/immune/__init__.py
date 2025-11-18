@@ -16,6 +16,7 @@ from whitemagic.immune.detector import ThreatDetector, Threat, ThreatLevel
 from whitemagic.immune.antibodies import AntibodyLibrary, Antibody
 from whitemagic.immune.response import ImmuneResponse
 from whitemagic.immune.memory import ImmuneMemory
+from whitemagic.immune.dna import DNAValidator, ImmuneRegulator, DNAPrinciple
 
 __all__ = [
     "ThreatDetector",
@@ -25,6 +26,9 @@ __all__ = [
     "Antibody",
     "ImmuneResponse",
     "ImmuneMemory",
+    "DNAValidator",
+    "ImmuneRegulator",
+    "DNAPrinciple",
 ]
 
 __version__ = "2.2.9"
