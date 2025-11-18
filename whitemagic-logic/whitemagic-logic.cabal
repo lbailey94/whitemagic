@@ -1,0 +1,71 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.38.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           whitemagic-logic
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/whitemagic-logic#readme>
+homepage:       https://github.com/githubuser/whitemagic-logic#readme
+bug-reports:    https://github.com/githubuser/whitemagic-logic/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2025 Author name here
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/whitemagic-logic
+
+library
+  exposed-modules:
+      IChing
+      Transform
+      Query
+      FFI
+  other-modules:
+      Lib
+      Paths_whitemagic_logic
+  autogen-modules:
+      Paths_whitemagic_logic
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fPIC
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+
+executable whitemagic-logic-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_whitemagic_logic
+  autogen-modules:
+      Paths_whitemagic_logic
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , whitemagic-logic
+  default-language: Haskell2010
+
+test-suite whitemagic-logic-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_whitemagic_logic
+  autogen-modules:
+      Paths_whitemagic_logic
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , whitemagic-logic
+  default-language: Haskell2010

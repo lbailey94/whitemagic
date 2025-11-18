@@ -32,6 +32,7 @@ from whitemagic.cli_docs import docs_check_and_fix
 from whitemagic.cli_ai_help import register_ai_help_commands
 from whitemagic.cli_immune import register_immune_commands
 from whitemagic.cli_orchestra import register_orchestra_commands
+from whitemagic.cli_homeostasis import register_homeostasis_commands
 from whitemagic.cli_version import bump_version
 
 # ---------------------------------------------------------------------- #
@@ -1582,6 +1583,18 @@ def command_orchestra(manager: MemoryManager, args: argparse.Namespace) -> int:
         return 1
 
 
+def command_homeostasis(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'homeostasis' command with subcommands."""
+    if hasattr(args, 'func'):
+        # Call the subcommand function directly
+        args.func(args)
+        return 0
+    else:
+        print("Error: No homeostasis subcommand specified")
+        print("Available subcommands: check, balance, monitor")
+        return 1
+
+
 def command_ai_help(manager: MemoryManager, args: argparse.Namespace) -> int:
     """Handle 'ai-help' command with subcommands."""
     if hasattr(args, 'func'):
@@ -2424,6 +2437,9 @@ def build_parser() -> argparse.ArgumentParser:
     
     # Register automation orchestra commands
     register_orchestra_commands(subparsers)
+    
+    # Register homeostasis commands
+    register_homeostasis_commands(subparsers)
     
     # Register terminal multiplexer commands
     # register_terminal_commands(subparsers)  # TODO: Implement terminal CLI
