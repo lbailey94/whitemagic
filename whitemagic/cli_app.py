@@ -311,9 +311,15 @@ def command_resume(manager: MemoryManager, args: argparse.Namespace) -> int:
 
 
 def command_consolidate(manager: MemoryManager, args: argparse.Namespace) -> int:
-    """Handle 'consolidate' command."""
-    dry_run = not args.no_dry_run
-    result = manager.consolidate_short_term(dry_run=dry_run)
+    """Handle 'consolidate' command - now with automated intelligence!"""
+    # Use new automated consolidation engine
+    from whitemagic.automation.consolidation import consolidate_cli
+    consolidate_cli(args)
+    return 0
+    
+    # Old manual consolidation (kept as fallback)
+    # dry_run = not args.no_dry_run
+    # result = manager.consolidate_short_term(dry_run=dry_run)
 
     if args.json:
         print(json.dumps(result, indent=2))
