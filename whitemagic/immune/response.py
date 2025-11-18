@@ -22,6 +22,12 @@ from whitemagic.immune.antibodies import Antibody, AntibodyLibrary
 from whitemagic.immune.detector import Threat, ThreatLevel
 from whitemagic.immune.memory import ImmuneMemory
 
+# Import ImmuneRegulator only when needed to avoid circular imports
+try:
+    from whitemagic.immune.dna import ImmuneRegulator
+except ImportError:
+    ImmuneRegulator = None
+
 
 @dataclass
 class ResponseOutcome:
