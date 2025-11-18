@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  whitemagic:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://whitemagic:password@db:5432/whitemagic
+      - REDIS_URL=redis://redis:6379/0
+      - RUST_BACKTRACE=1
+      - ENVIRONMENT=development
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./memory:/app/memory
+      - ./whitemagic-rs/target/release:/app/rust-lib
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: whitemagic
+      POSTGRES_USER: whitemagic
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres_data:
+  redis_data:

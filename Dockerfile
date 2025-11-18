@@ -1,10 +1,16 @@
 # Hardened WhiteMagic Docker Image
 FROM python:3.10-slim
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq5 curl && \
-    rm -rf /var/lib/apt/lists/*
+# Install system dependencies including Rust
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    build-essential \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Create non-root user
 RUN groupadd -r -g 1000 whitemagic && \

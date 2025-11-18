@@ -1,0 +1,24 @@
+[build]
+builder = "nixpacks"
+
+[build.env]
+# Build with Rust support
+NIXPACKS_RUST_VERSION = "1.75.0"
+NIXPACKS_PYTHON_VERSION = "3.10"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+startCommand = "uvicorn whitemagic.api.main:app --host 0.0.0.0 --port $PORT"
+
+[deploy.env]
+# Environment variables
+ENVIRONMENT = "production"
+RUST_BACKTRACE = "1"
+PYTHONUNBUFFERED = "1"
+
+[[services]]
+name = "whitemagic-api"
+source = "."
