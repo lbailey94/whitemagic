@@ -219,8 +219,12 @@ def create_frontmatter(
     lines.append(f"created: {timestamp.isoformat(timespec='seconds')}Z")
 
     if tags:
-        tags_str = ", ".join(tags)
-        lines.append(f"tags: {tags_str}")
+        # Write as YAML list format for proper parsing
+        if len(tags) == 1:
+            lines.append(f"tags: [{tags[0]}]")
+        else:
+            tags_str = ", ".join(tags)
+            lines.append(f"tags: [{tags_str}]")
 
     if extra_fields:
         for key, value in extra_fields.items():
