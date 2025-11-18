@@ -39,6 +39,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fPIC
   build-depends:
       base >=4.7 && <5
+    , time >=1.9
   default-language: Haskell2010
 
 executable whitemagic-logic-exe
@@ -52,6 +53,7 @@ executable whitemagic-logic-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , time >=1.9
     , whitemagic-logic
   default-language: Haskell2010
 
@@ -67,5 +69,6 @@ test-suite whitemagic-logic-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , time >=1.9
     , whitemagic-logic
   default-language: Haskell2010
