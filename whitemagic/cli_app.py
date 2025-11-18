@@ -29,6 +29,7 @@ from whitemagic import MemoryManager
 from whitemagic.backup import BackupManager
 from whitemagic.cli_audit import audit_project, print_audit_report
 from whitemagic.cli_docs import docs_check_and_fix
+from whitemagic.cli_ai_help import register_ai_help_commands
 from whitemagic.cli_immune import register_immune_commands
 from whitemagic.cli_orchestra import register_orchestra_commands
 from whitemagic.cli_version import bump_version
@@ -1578,6 +1579,18 @@ def command_orchestra(manager: MemoryManager, args: argparse.Namespace) -> int:
     else:
         print("Error: No orchestra subcommand specified")
         print("Available subcommands: health, maintain, emergency")
+        return 1
+
+
+def command_ai_help(manager: MemoryManager, args: argparse.Namespace) -> int:
+    """Handle 'ai-help' command with subcommands."""
+    if hasattr(args, 'func'):
+        # Call the subcommand function directly
+        args.func(args)
+        return 0
+    else:
+        print("Error: No ai-help subcommand specified")
+        print("Available subcommands: show, export, session-start")
         return 1
 
 
