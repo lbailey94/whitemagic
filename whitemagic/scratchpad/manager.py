@@ -90,6 +90,82 @@ class ScratchpadManager:
 
         return content
 
+    async def list_all(self) -> List[Scratchpad]:
+        """List all scratchpads."""
+        scratchpads = []
+        if not self.base_dir.exists():
+            return scratchpads
+        
+        for path in self.base_dir.glob("*.json"):
+            try:
+                data = json.loads(path.read_text())
+                scratchpads.append(Scratchpad(**data))
+            except Exception:
+                continue
+        return scratchpads
+
+    async def cleanup_old(self, hours: int = 24, dry_run: bool = True) -> Dict[str, any]:
+        """
+        Auto-cleanup scratchpads older than specified hours.
+        
+        Args:
+            hours: Age threshold in hours (default: 24)
+            dry_run: If True, only report what would be cleaned
+            
+        Returns:
+            Dict with cleanup statistics
+        """
+        scratchpads = await self.list_all()
+        now = datetime.utcnow()
+        threshold = timedelta(hours=hours)
+        
+        old_scratchpads = []
+        for pad in scratchpads:
+            try:
+                updated = datetime.fromisoformat(pad.updated_at.replace('Z', ''))
+                age = now - updated
+                if age > threshold:
+                    old_scratchpads.append((pad, age))
+            except Exception:
+                continue
+        
+        results = {
+            "total_scratchpads": len(scratchpads),
+            "old_scratchpads": len(old_scratchpads),
+            "threshold_hours": hours,
+            "cleaned": [],
+            "dry_run": dry_run
+        }
+        
+        if not dry_run:
+            for pad, age in old_scratchpads:
+                try:
+                    # Finalize converts to memory and deletes
+                    content = await self.finalize(pad.id)
+                    results["cleaned"].append({
+                        "id": pad.id,
+                        "name": pad.name,
+                        "age_hours": age.total_seconds() / 3600,
+                        "finalized": bool(content)
+                    })
+                except Exception as e:
+                    results["cleaned"].append({
+                        "id": pad.id,
+                        "name": pad.name,
+                        "age_hours": age.total_seconds() / 3600,
+                        "error": str(e)
+                    })
+        else:
+            for pad, age in old_scratchpads:
+                results["cleaned"].append({
+                    "id": pad.id,
+                    "name": pad.name,
+                    "age_hours": age.total_seconds() / 3600,
+                    "would_finalize": True
+                })
+        
+        return results
+
     async def _save(self, scratchpad: Scratchpad) -> None:
         """Save scratchpad."""
         path = self.base_dir / f"{scratchpad.id}.json"

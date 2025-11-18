@@ -1,0 +1,63 @@
+{
+  "_comment": "WhiteMagic Configuration Template",
+  "_version": "2.2.8",
+  "_docs": "https://github.com/lbailey94/whitemagic/blob/main/docs/guides/AUTOMATION.md",
+  
+  "consolidation": {
+    "max_short_term": 40,
+    "max_age_days": 7,
+    "similarity_threshold": 0.85,
+    "enable_parallel": true,
+    "worker_count": 16,
+    "_worker_tiers": {
+      "tier_0": 8,
+      "tier_1": 16,
+      "tier_2": 32,
+      "tier_3": 64,
+      "tier_4": 128,
+      "tier_5": 256
+    }
+  },
+  
+  "scratchpad": {
+    "cleanup_hours": 24,
+    "auto_finalize": true
+  },
+  
+  "triggers": {
+    "session_end": true,
+    "session_end_threshold": 20,
+    "pre_commit": true,
+    "pre_commit_threshold": 35,
+    "version_release": true,
+    "memory_count": true,
+    "memory_count_threshold": 40
+  },
+  
+  "promotion": {
+    "tags": ["critical", "important", "permanent", "reference", "keep"],
+    "age_days": 30,
+    "min_words": 1000,
+    "title_keywords": ["comprehensive", "guide", "reference", "complete", "roadmap"]
+  },
+  
+  "metrics": {
+    "enabled": true,
+    "track_consolidation": true,
+    "track_sessions": true,
+    "track_performance": true
+  },
+  
+  "performance": {
+    "cache_enabled": true,
+    "cache_ttl_seconds": 300,
+    "batch_size": 50
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "file": "~/.whitemagic/logs/automation.log",
+    "max_size_mb": 10,
+    "backup_count": 5
+  }
+}

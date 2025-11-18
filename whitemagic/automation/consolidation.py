@@ -24,12 +24,15 @@ Usage:
 
 import asyncio
 import difflib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
 from whitemagic.core import MemoryManager
 from whitemagic.models import Memory
+from whitemagic.scratchpad.manager import ScratchpadManager
+from whitemagic.parallel.pools import ThreadingTier
 
 
 class ConsolidationEngine:
@@ -43,6 +46,11 @@ class ConsolidationEngine:
             "age_days": self.config.get("max_age_days", 7),
             "similarity": self.config.get("similarity_threshold", 0.85)
         }
+        self.scratchpad_manager = ScratchpadManager()
+        
+        # Parallel processing (use Tier 1: 16 threads for I/O-bound consolidation)
+        self.enable_parallel = self.config.get("enable_parallel", True)
+        self.worker_count = self.config.get("worker_count", ThreadingTier.TIER_1.value)
     
     def should_consolidate(self) -> Dict[str, any]:
         """Check if consolidation is needed (sync version)"""
@@ -79,6 +87,24 @@ class ConsolidationEngine:
             "duplicates": len(duplicates),
             "threshold": self.thresholds["count"]
         }
+    
+    def _archive_memory(self, memory: Memory, dry_run: bool = True) -> Dict:
+        """Archive a single memory (for parallel processing)."""
+        try:
+            if not dry_run:
+                self.manager.delete(memory.filename, permanent=False)
+            return {
+                "filename": memory.filename,
+                "title": getattr(memory, 'title', 'Unknown'),
+                "age_days": (datetime.now() - memory.created).days if hasattr(memory, 'created') else None,
+                "success": True
+            }
+        except Exception as e:
+            return {
+                "filename": memory.filename,
+                "success": False,
+                "error": str(e)
+            }
     
     def find_old_memories(self) -> List[Memory]:
         """Find memories older than age threshold"""
@@ -137,30 +163,57 @@ class ConsolidationEngine:
         return duplicates
     
     def auto_consolidate(self, dry_run: bool = True) -> Dict:
-        """Automatically consolidate memories"""
+        """Automatically consolidate memories and clean scratchpads"""
+        start_time = datetime.now()
+        
         results = {
             "archived": [],
             "promoted": [],
             "merged": [],
+            "scratchpads_cleaned": [],
             "dry_run": dry_run,
-            "errors": []
+            "errors": [],
+            "metrics": {
+                "start_time": start_time.isoformat(),
+                "parallel_enabled": self.enable_parallel,
+                "worker_count": self.worker_count
+            }
         }
         
         try:
-            # 1. Archive old memories
+            # 1. Archive old memories (parallel processing)
             old_memories = self.find_old_memories()
-            for memory in old_memories:
-                try:
-                    if not dry_run:
-                        # Delete (archives by default)
-                        self.manager.delete(memory.filename, permanent=False)
-                    results["archived"].append({
-                        "filename": memory.filename,
-                        "title": getattr(memory, 'title', 'Unknown'),
-                        "age_days": (datetime.now() - memory.created).days if hasattr(memory, 'created') else None
-                    })
-                except Exception as e:
-                    results["errors"].append(f"Archive failed for {memory.filename}: {str(e)}")
+            
+            if self.enable_parallel and len(old_memories) > 3:
+                # Use parallel processing for >3 memories
+                with ThreadPoolExecutor(max_workers=self.worker_count) as executor:
+                    futures = {
+                        executor.submit(self._archive_memory, memory, dry_run): memory 
+                        for memory in old_memories
+                    }
+                    
+                    for future in as_completed(futures):
+                        result = future.result()
+                        if result.get("success"):
+                            results["archived"].append({
+                                "filename": result["filename"],
+                                "title": result["title"],
+                                "age_days": result["age_days"]
+                            })
+                        else:
+                            results["errors"].append(f"Archive failed for {result['filename']}: {result.get('error', 'Unknown')}")
+            else:
+                # Sequential processing for small batches
+                for memory in old_memories:
+                    result = self._archive_memory(memory, dry_run)
+                    if result.get("success"):
+                        results["archived"].append({
+                            "filename": result["filename"],
+                            "title": result["title"],
+                            "age_days": result["age_days"]
+                        })
+                    else:
+                        results["errors"].append(f"Archive failed for {result['filename']}: {result.get('error', 'Unknown')}")
             
             # 2. Merge highly similar duplicates (top 5)
             duplicates = self.find_duplicates()[:5]
@@ -208,7 +261,7 @@ class ConsolidationEngine:
                 except Exception as e:
                     results["errors"].append(f"Merge failed for {mem1.filename} + {mem2.filename}: {str(e)}")
             
-            # 3. Auto-promote important/tagged memories
+            # 3. Auto-promote memories (enhanced logic)
             all_mem = self.manager.list_all_memories()
             short_term_files = all_mem.get("short_term", [])
             important_tags = ["critical", "important", "permanent", "reference", "keep"]
@@ -216,33 +269,101 @@ class ConsolidationEngine:
             for mem_data in short_term_files:
                 try:
                     memory_tags = mem_data.get('tags', [])
+                    content = mem_data.get('content', '')
+                    created_str = mem_data.get('created')
+                    
+                    # Calculate promotion score
+                    should_promote = False
+                    promotion_reason = []
+                    
+                    # Rule 1: Tag-based promotion
                     if any(tag.lower() in important_tags for tag in memory_tags):
+                        should_promote = True
+                        promotion_reason.append("important_tags")
+                    
+                    # Rule 2: Age-based promotion (>30 days)
+                    if created_str:
+                        try:
+                            created = datetime.fromisoformat(created_str.replace('Z', ''))
+                            age_days = (datetime.now() - created).days
+                            if age_days > 30:
+                                should_promote = True
+                                promotion_reason.append(f"age_{age_days}d")
+                        except Exception:
+                            pass
+                    
+                    # Rule 3: Size-based promotion (>1000 words)
+                    word_count = len(content.split())
+                    if word_count > 1000:
+                        should_promote = True
+                        promotion_reason.append(f"size_{word_count}w")
+                    
+                    # Rule 4: Title indicators (comprehensive, guide, reference)
+                    title = mem_data.get('title', '').lower()
+                    if any(keyword in title for keyword in ['comprehensive', 'guide', 'reference', 'complete', 'roadmap']):
+                        should_promote = True
+                        promotion_reason.append("comprehensive_doc")
+                    
+                    if should_promote:
                         if not dry_run:
                             # Promote to long-term
                             promoted = self.manager.create_memory(
                                 title=mem_data.get('title', "Promoted Memory"),
-                                content=mem_data.get('content', ''),
+                                content=content,
                                 type="long_term",
-                                tags=memory_tags
+                                tags=memory_tags + ["auto_promoted"]
                             )
                             self.manager.delete(mem_data.get('filename'), permanent=False)
                             
                             results["promoted"].append({
                                 "source": mem_data.get('filename'),
                                 "target": promoted.filename,
+                                "reason": ", ".join(promotion_reason),
                                 "tags": memory_tags
                             })
                         else:
                             results["promoted"].append({
                                 "source": mem_data.get('filename'),
+                                "reason": ", ".join(promotion_reason),
                                 "tags": memory_tags,
                                 "note": "Would be promoted"
                             })
                 except Exception as e:
-                    results["errors"].append(f"Promotion failed for {memory.filename}: {str(e)}")
+                    results["errors"].append(f"Promotion failed for {mem_data.get('filename', 'unknown')}: {str(e)}")
+            
+            # 4. Clean old scratchpads (>24 hours)
+            try:
+                # Create event loop if needed
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                
+                scratchpad_results = loop.run_until_complete(
+                    self.scratchpad_manager.cleanup_old(hours=24, dry_run=dry_run)
+                )
+                results["scratchpads_cleaned"] = scratchpad_results.get("cleaned", [])
+            except Exception as e:
+                results["errors"].append(f"Scratchpad cleanup failed: {str(e)}")
         
         except Exception as e:
             results["errors"].append(f"Consolidation failed: {str(e)}")
+        
+        # Add completion metrics
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        results["metrics"].update({
+            "end_time": end_time.isoformat(),
+            "duration_seconds": duration,
+            "total_actions": (
+                len(results["archived"]) + 
+                len(results["promoted"]) + 
+                len(results["merged"]) + 
+                len(results["scratchpads_cleaned"])
+            ),
+            "success": len(results["errors"]) == 0
+        })
         
         return results
     
@@ -343,9 +464,18 @@ def consolidate_cli(args):
     if results["promoted"]:
         print(f"  ⬆️  Promoted: {len(results['promoted'])} memories to long-term")
         for item in results["promoted"][:3]:
-            print(f"     - {item['source']}")
+            reason = item.get('reason', 'N/A')
+            print(f"     - {item['source']} ({reason})")
         if len(results["promoted"]) > 3:
             print(f"     ... and {len(results['promoted']) - 3} more")
+    
+    if results["scratchpads_cleaned"]:
+        print(f"  🧹 Scratchpads: {len(results['scratchpads_cleaned'])} cleaned (>24h old)")
+        for item in results["scratchpads_cleaned"][:3]:
+            age_hours = item.get('age_hours', 0)
+            print(f"     - {item['name']} ({age_hours:.1f}h old)")
+        if len(results["scratchpads_cleaned"]) > 3:
+            print(f"     ... and {len(results['scratchpads_cleaned']) - 3} more")
     
     if results["errors"]:
         print(f"\n⚠️  Errors: {len(results['errors'])}")
