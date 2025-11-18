@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-11-18 18:08:27",
+  "rust_available": true,
+  "similarity_benchmark": {
+    "iterations": 100,
+    "python_times": [],
+    "rust_times": [],
+    "python_total": 0.006432665999454912,
+    "python_avg": 6.432665999454912e-05,
+    "rust_total": 0.005663316002028296,
+    "rust_avg": 5.663316002028296e-05,
+    "speedup": 1.1358479726632023
+  },
+  "consolidation_benchmarks": [
+    {
+      "memory_count": 10,
+      "files_created": 10,
+      "python_time": 0.00018682199879549444,
+      "rust_time": 0.00014792900037718937,
+      "speedup": 1.262916658120691
+    },
+    {
+      "memory_count": 50,
+      "files_created": 50,
+      "python_time": 0.000674474002153147,
+      "rust_time": 0.0005716480009141378,
+      "speedup": 1.179876429331647
+    },
+    {
+      "memory_count": 100,
+      "files_created": 100,
+      "python_time": 0.0011624589969869703,
+      "rust_time": 0.0012335840001469478,
+      "speedup": 0.9423427969627485
+    },
+    {
+      "memory_count": 500,
+      "files_created": 500,
+      "python_time": 0.0011106569982075598,
+      "rust_time": 0.002405506998911733,
+      "speedup": 0.461714307507743
+    }
+  ]
+}
