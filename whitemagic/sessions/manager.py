@@ -3,6 +3,8 @@ Session Manager - Work Session State Management
 
 Manages work sessions with full lifecycle support including creation,
 checkpointing, resuming, and metrics tracking.
+
+Week 0 Day 2: Added automated consolidation on session end.
 """
 
 from __future__ import annotations
@@ -237,6 +239,20 @@ class SessionManager:
 
         # Remove from cache
         self._active_sessions.pop(session_id, None)
+
+        # Week 0 Day 2: Auto-consolidate on session end
+        try:
+            from whitemagic.automation.triggers import on_session_end
+            from whitemagic.core import MemoryManager
+            
+            manager = MemoryManager()
+            consolidation_result = on_session_end(manager, dry_run=False)
+            
+            if consolidation_result.get("triggered"):
+                print("✅ Automated consolidation completed on session end")
+        except Exception as e:
+            # Don't fail session end if consolidation fails
+            print(f"⚠️ Consolidation skipped: {e}")
 
         return session
 
