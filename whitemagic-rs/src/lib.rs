@@ -10,7 +10,7 @@
 //! Python where flexibility matters.
 
 use pyo3::prelude::*;
-use rayon::prelude::*;
+// use rayon::prelude::*;  // Reserved for future parallel operations
 use std::collections::HashMap;
 use std::path::PathBuf;
 

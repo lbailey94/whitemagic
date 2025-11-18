@@ -1,16 +1,18 @@
-//! Fast compression using LZ4
+//! Fast compression using flate2 (gzip)
 //! 
-//! LZ4 provides extremely fast compression:
-//! - 10x faster than gzip
-//! - Good compression ratio
+//! flate2 provides fast compression with good ratios:
+//! - Standard gzip/zlib compression
+//! - Good balance of speed and compression
 //! - Ideal for memory archives
 
+use flate2::write::{GzEncoder, GzDecoder};
+use flate2::Compression;
 use pyo3::prelude::*;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 
-/// Compress a file using LZ4
+/// Compress a file using gzip
 pub fn compress_file(input: &Path, output: &Path) -> PyResult<u64> {
     let mut input_file = File::open(input)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
@@ -20,8 +22,14 @@ pub fn compress_file(input: &Path, output: &Path) -> PyResult<u64> {
         .read_to_end(&mut input_data)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
     
-    // Use LZ4 compression
-    let compressed = lz4::block::compress(&input_data, None, false)
+    // Use gzip compression (fast level)
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+    encoder
+        .write_all(&input_data)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    
+    let compressed = encoder
+        .finish()
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
     
     let mut output_file = File::create(output)
@@ -34,7 +42,7 @@ pub fn compress_file(input: &Path, output: &Path) -> PyResult<u64> {
     Ok(compressed.len() as u64)
 }
 
-/// Decompress an LZ4 file
+/// Decompress a gzip file
 pub fn decompress_file(input: &Path, output: &Path) -> PyResult<u64> {
     let mut input_file = File::open(input)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
@@ -44,8 +52,14 @@ pub fn decompress_file(input: &Path, output: &Path) -> PyResult<u64> {
         .read_to_end(&mut compressed_data)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(e.to_string()))?;
     
-    // Decompress with LZ4
-    let decompressed = lz4::block::decompress(&compressed_data, None)
+    // Decompress with gzip
+    let mut decoder = GzDecoder::new(Vec::new());
+    decoder
+        .write_all(&compressed_data)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    
+    let decompressed = decoder
+        .finish()
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
     
     let mut output_file = File::create(output)
