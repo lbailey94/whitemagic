@@ -6,8 +6,8 @@ Tiered Memory Management for AI Agents with Native MCP + REST Support
 [![npm](https://img.shields.io/badge/npm-2.2.9-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](#-testing)
-[![Grade](https://img.shields.io/badge/grade-A%2B%20(99%2F100)-success.svg)](docs/reviews/v2.2.9/PRODUCTION_TEST_RESULTS.md)
+[![Tests](https://img.shields.io/badge/tests-238%20passing-brightgreen.svg)](#-testing)
+[![Test Coverage](https://img.shields.io/badge/coverage-99.6%25-success.svg)](#-testing)
 
 [![CodeQL](https://github.com/lbailey94/whitemagic/workflows/CodeQL%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/codeql.yml)
 [![Docker Security](https://github.com/lbailey94/whitemagic/workflows/Docker%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/docker-security.yml)
