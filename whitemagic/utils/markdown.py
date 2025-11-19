@@ -18,3 +18,7 @@ def parse_memory_content(text: str) -> dict:
 def sanitize_filename(name: str) -> str:
     """Sanitize filename"""
     return name.replace(" ", "_").replace("/", "-")
+
+def create_preview(text: str, length: int = 100) -> str:
+    """Create preview of text"""
+    return text[:length] + "..." if len(text) > length else text
