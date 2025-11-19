@@ -34,6 +34,14 @@ from whitemagic.cli_immune import register_immune_commands
 from whitemagic.cli_orchestra import register_orchestra_commands
 from whitemagic.cli_homeostasis import register_homeostasis_commands
 from whitemagic.cli_version import bump_version
+from whitemagic.cli_memory_capture import (
+    command_memory_status,
+    command_memory_capture_now,
+    command_memory_config,
+    command_memory_list,
+    command_memory_view,
+    command_memory_auto_capture
+)
 
 # ---------------------------------------------------------------------- #
 # Utility Functions & Decorators
@@ -1660,6 +1668,12 @@ COMMAND_HANDLERS = {
     "immune": command_immune,
     "orchestra": command_orchestra,
     "homeostasis": command_homeostasis,
+    "memory-status": command_memory_status,
+    "memory-capture": command_memory_capture_now,
+    "memory-config": command_memory_config,
+    "memory-list": command_memory_list,
+    "memory-view": command_memory_view,
+    "memory-auto-capture": command_memory_auto_capture,
     # "terminal": command_terminal,  # TODO: Implement terminal multiplexing CLI
 }
 
@@ -2440,14 +2454,49 @@ def build_parser() -> argparse.ArgumentParser:
     
     # Register homeostasis commands
     register_homeostasis_commands(subparsers)
+
+    # Memory capture commands (v2.3.1+)
+    memory_status_parser = subparsers.add_parser(
+        "memory-status",
+        help="Show memory capture system status"
+    )
     
+    memory_capture_parser = subparsers.add_parser(
+        "memory-capture",
+        help="Force capture current actions to short-term memory"
+    )
+    
+    memory_config_parser = subparsers.add_parser(
+        "memory-config",
+        help="Configure memory capture system"
+    )
+    memory_config_parser.add_argument("key", nargs='?', help="Config key to set")
+    memory_config_parser.add_argument("value", nargs='?', help="Value to set")
+    
+    memory_list_parser = subparsers.add_parser(
+        "memory-list",
+        help="List short-term memories"
+    )
+    memory_list_parser.add_argument("--limit", type=int, default=20, help="Max memories to show")
+    
+    memory_view_parser = subparsers.add_parser(
+        "memory-view",
+        help="View a specific memory by ID"
+    )
+    memory_view_parser.add_argument("memory_id", help="Memory action ID")
+    
+    memory_auto_capture_parser = subparsers.add_parser(
+        "memory-auto-capture",
+        help="Test auto-capture with simulated actions"
+    )
+
     # Register terminal multiplexer commands
     # register_terminal_commands(subparsers)  # TODO: Implement terminal CLI
 
     return parser
 
 
-# ---------------------------------------------------------------------- #
+# ----------------------------------------------------------------------
 # Main Entry Point
 # ---------------------------------------------------------------------- #
 
