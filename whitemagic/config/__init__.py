@@ -1,24 +1,12 @@
-"""
-WhiteMagic Configuration System.
+"""WhiteMagic Configuration Module."""
 
-Provides centralized configuration management via ~/.whitemagic/config.yaml
-with support for environment variable overrides.
-"""
-
-from .manager import ConfigManager
-from .schema import (
-    APIConfig,
-    EmbeddingsConfig,
-    SearchConfig,
-    TerminalConfig,
-    WhiteMagicConfig,
-)
+from .settings import *
 
 __all__ = [
-    "ConfigManager",
-    "WhiteMagicConfig",
-    "EmbeddingsConfig",
-    "SearchConfig",
-    "TerminalConfig",
-    "APIConfig",
+    "VERSION",
+    "VERSION_NAME",
+    "SYMBOLIC_COMPRESSION_ENABLED",
+    "RAPID_COGNITION_INTERVAL",
+    "show_config",
+    "get_config"
 ]

@@ -129,3 +129,9 @@ if __name__ == "__main__":
     # Can run standalone
     sharpener = ToolSharpener()
     sharpener.sharpen_all_tools()
+
+
+def sharpen_all():
+    """Quick entry point for sharpening all tools."""
+    sharpener = ToolSharpener()
+    return sharpener.sharpen_all_tools()

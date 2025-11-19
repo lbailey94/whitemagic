@@ -2,7 +2,10 @@
 from pathlib import Path
 from typing import Dict
 import time, threading
-from ..bindings import get_rust_bridge
+try:
+    from ..bindings import get_rust_bridge
+except ImportError:
+    get_rust_bridge = lambda: None
 
 class RapidCognition:
     def __init__(
