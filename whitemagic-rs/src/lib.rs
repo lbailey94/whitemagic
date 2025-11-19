@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 pub mod consolidation;
+pub mod memory_consolidation;
 pub mod search;
 pub mod compression;
 pub mod audit;
@@ -96,6 +97,28 @@ fn whitemagic_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(audit::audit_directory, m)?)?;
     m.add_function(wrap_pyfunction!(audit::read_files_fast, m)?)?;
     m.add_function(wrap_pyfunction!(audit::extract_summaries, m)?)?;
+    m.add_function(wrap_pyfunction!(consolidate_memories, m)?)?;
     m.add_class::<audit::FileInfo>()?;
     Ok(())
+}
+
+/// Auto-consolidate short-term memories (exposed to Python)
+#[pyfunction]
+fn consolidate_memories(
+    short_term_dir: String,
+    top_n: usize,
+    similarity_threshold: f64
+) -> PyResult<(usize, usize, usize, f64, Vec<String>)> {
+    let path = PathBuf::from(short_term_dir);
+    
+    let report = memory_consolidation::auto_consolidate(&path, top_n, similarity_threshold)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))?;
+    
+    Ok((
+        report.short_term_count,
+        report.long_term_created,
+        report.clusters_found,
+        report.duration_seconds,
+        report.top_memories
+    ))
 }
