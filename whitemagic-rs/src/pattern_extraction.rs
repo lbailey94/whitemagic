@@ -157,8 +157,9 @@ fn extract_solutions(content: &str) -> Vec<Pattern> {
                line_lower.contains(indicator2) || 
                line_lower.contains(indicator3) {
                 
-                // Extract context
-                if line.len() > 20 && line.len() < 200 {
+                // Extract context  
+                let char_len = line.chars().count();
+                if char_len > 20 && char_len < 200 {
                     solutions.push(Pattern {
                         pattern_type: PatternType::Solution,
                         title: extract_title(line),
@@ -191,7 +192,8 @@ fn extract_anti_patterns(content: &str) -> Vec<Pattern> {
         let line_lower = line.to_lowercase();
         
         for keyword in &warning_keywords {
-            if line_lower.contains(keyword) && line.len() > 20 && line.len() < 200 {
+            let char_len = line.chars().count();
+            if line_lower.contains(keyword) && char_len > 20 && char_len < 200 {
                 anti_patterns.push(Pattern {
                     pattern_type: PatternType::AntiPattern,
                     title: format!("Avoid: {}", extract_title(line)),
@@ -221,7 +223,8 @@ fn extract_heuristics(content: &str) -> Vec<Pattern> {
         let line_lower = line.to_lowercase();
         
         for pattern in &heuristic_patterns {
-            if line_lower.contains(pattern) && line.len() > 30 && line.len() < 200 {
+            let char_len = line.chars().count();
+            if line_lower.contains(pattern) && char_len > 30 && char_len < 200 {
                 heuristics.push(Pattern {
                     pattern_type: PatternType::Heuristic,
                     title: extract_title(line),
@@ -252,7 +255,8 @@ fn extract_optimizations(content: &str) -> Vec<Pattern> {
         let line_lower = line.to_lowercase();
         
         for keyword in &optimization_keywords {
-            if line_lower.contains(keyword) && line.len() > 30 && line.len() < 200 {
+            let char_len = line.chars().count();
+            if line_lower.contains(keyword) && char_len > 30 && char_len < 200 {
                 optimizations.push(Pattern {
                     pattern_type: PatternType::Optimization,
                     title: extract_title(line),
@@ -280,9 +284,11 @@ fn extract_title(line: &str) -> String {
         .trim_start_matches('-')
         .trim();
     
-    // Take first 80 chars
-    if clean.len() > 80 {
-        format!("{}...", &clean[..77])
+    // Take first 80 chars (UTF-8 safe)
+    let char_count: usize = clean.chars().count();
+    if char_count > 80 {
+        let truncated: String = clean.chars().take(77).collect();
+        format!("{}...", truncated)
     } else {
         clean.to_string()
     }
