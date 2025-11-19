@@ -1,18 +1,10 @@
-"""Utilities - Import all helpers"""
-from .markdown import *
-from .helpers import *
+"""Utility functions - export from whitemagic.utils directly."""
 
-try:
-    from .patterns import get_library
-except:
-    get_library = lambda: None
+# Functions are in utils.py itself, not submodules
+from whitemagic.utils import (
+    serialize_frontmatter,
+    split_frontmatter,
+    normalize_tags
+)
 
-__all__ = [
-    # Markdown
-    'clean_markdown', 'create_frontmatter', 'parse_memory_content',
-    'sanitize_filename', 'create_preview', 'normalize_tags',
-    # Helpers  
-    'now_iso', 'format_date', 'calculate_ttl_days',
-    # Patterns
-    'get_library'
-]
+__all__ = ["serialize_frontmatter", "split_frontmatter", "normalize_tags"]

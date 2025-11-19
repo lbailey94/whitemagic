@@ -1,0 +1,39 @@
+name: Version Consistency Check
+
+on: [push, pull_request]
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Check version consistency
+        run: |
+          VERSION=$(cat VERSION)
+          echo "Canonical version: $VERSION"
+          
+          # Check pyproject.toml
+          if \! grep -q "version = \"$VERSION\"" pyproject.toml; then
+            echo "❌ pyproject.toml version mismatch"
+            exit 1
+          fi
+          
+          # Check config
+          if \! grep -q "VERSION = \"$VERSION\"" whitemagic/config/settings.py; then
+            echo "❌ config/settings.py version mismatch"
+            exit 1
+          fi
+          
+          # Check README badge
+          if \! grep -q "version-$VERSION-" README.md; then
+            echo "❌ README.md badge version mismatch"  
+            exit 1
+          fi
+          
+          echo "✅ All versions consistent: $VERSION"
