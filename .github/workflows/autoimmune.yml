@@ -1,0 +1,10 @@
+name: Autoimmune Defense
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - run: pip install -e .
+      - run: python -c "from whitemagic.defense import get_immune_system; get_immune_system().scan_directory('.')"

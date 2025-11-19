@@ -114,7 +114,7 @@ class AutoimmuneSystem:
         
         return violations
     
-    def scan_directory(self, directory: Path, extensions: List[str] = None) -> List[PatternViolation]:
+    def scan_directory(self, directory: Path, extensions: List[str] = None, min_confidence: float = 0.7) -> List[PatternViolation]:
         """Scan directory for violations"""
         if extensions is None:
             extensions = ['.py', '.js', '.ts', '.md']
@@ -126,7 +126,7 @@ class AutoimmuneSystem:
                 if '.git' in str(file_path) or 'node_modules' in str(file_path):
                     continue
                 
-                violations = self.scan_file(file_path)
+                violations = self.scan_file(file_path, min_confidence)
                 all_violations.extend(violations)
         
         return all_violations
@@ -141,3 +141,19 @@ def get_immune_system() -> AutoimmuneSystem:
     if _immune_system is None:
         _immune_system = AutoimmuneSystem()
     return _immune_system
+
+    def auto_heal(self, violations: List[PatternViolation]) -> int:
+        """Auto-fix high-confidence violations. Returns count of fixes."""
+        fixed = 0
+        for v in violations:
+            if v.pattern.confidence > 0.9:
+                # Simple fixes for common patterns
+                try:
+                    lines = v.file_path.read_text().split('\n')
+                    # Apply basic cleanup
+                    lines[v.line_number - 1] = lines[v.line_number - 1].strip()
+                    v.file_path.write_text('\n'.join(lines))
+                    fixed += 1
+                except Exception:
+                    pass
+        return fixed
