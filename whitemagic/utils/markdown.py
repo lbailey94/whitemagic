@@ -2,3 +2,19 @@
 def clean_markdown(text: str) -> str:
     """Clean markdown text"""
     return text.strip()
+
+def create_frontmatter(data: dict) -> str:
+    """Create YAML frontmatter"""
+    lines = ["---"]
+    for k, v in data.items():
+        lines.append(f"{k}: {v}")
+    lines.append("---")
+    return "\n".join(lines)
+
+def parse_memory_content(text: str) -> dict:
+    """Parse memory file content"""
+    return {"content": text}
+
+def sanitize_filename(name: str) -> str:
+    """Sanitize filename"""
+    return name.replace(" ", "_").replace("/", "-")
