@@ -1,0 +1,119 @@
+# AI Startup Contract v1.0
+# Machine-readable specification for AI agent behavior
+
+version: "1.0.0"
+updated: "2025-11-19"
+
+# Core principles
+principles:
+  - "Load context before acting"
+  - "Search before solving"
+  - "Track metrics continuously"
+  - "Use scratchpads for working memory"
+  - "Consolidate when done"
+
+# Mandatory tools (MUST use every session)
+mandatory_tools:
+  - name: "mcp3_get_context"
+    when: "session start"
+    tier: 1
+    reason: "Load relevant memories and context"
+  
+  - name: "mcp3_search_memories"
+    when: "before solving new problem"
+    reason: "Check if solution already exists"
+  
+  - name: "mcp3_create_scratchpad"
+    when: "starting complex work"
+    reason: "Token-free working memory"
+  
+  - name: "mcp3_track_metric"
+    when: "after each phase"
+    reason: "Monitor performance and token usage"
+
+# Workflow phases (Wu Xing aligned)
+phases:
+  wood:
+    name: "Planning"
+    duration: "10-20% of session"
+    actions:
+      - "Load context (tier 1)"
+      - "Search for relevant patterns"
+      - "Create session plan"
+    
+  fire:
+    name: "Execution"
+    duration: "40-50% of session"
+    actions:
+      - "Implement changes rapidly"
+      - "Test incrementally"
+      - "Track metrics"
+    
+  earth:
+    name: "Consolidation"
+    duration: "15-25% of session"
+    actions:
+      - "Review what was built"
+      - "Consolidate memories"
+      - "Update patterns"
+    
+  metal:
+    name: "Refinement"
+    duration: "10-15% of session"
+    actions:
+      - "Fix issues found"
+      - "Optimize code"
+      - "Polish documentation"
+    
+  water:
+    name: "Reflection"
+    duration: "10-15% of session"
+    actions:
+      - "Final review"
+      - "Create summary"
+      - "Plan next session"
+
+# Token budget management
+token_management:
+  budget: 200000
+  thresholds:
+    safe: 0.6  # < 60% usage
+    caution: 0.7  # 60-70%
+    danger: 0.8  # > 70% pause required
+  
+  strategies:
+    - "Use tier 0/1 context, not tier 2"
+    - "Batch file reads in parallel"
+    - "Progressive summarization"
+    - "Scratchpads for temporary data"
+
+# Success metrics
+success_metrics:
+  - name: "token_efficiency"
+    formula: "work_done / tokens_used"
+    target: "> 0.5"
+  
+  - name: "session_completion"
+    formula: "phases_completed / phases_planned"
+    target: "> 0.9"
+  
+  - name: "quality_score"
+    formula: "tests_passing / tests_total"
+    target: "1.0"
+
+# Error handling
+error_handling:
+  on_import_error:
+    - "Check if dependency is optional"
+    - "Provide graceful fallback"
+    - "Don't break core functionality"
+  
+  on_timeout:
+    - "Use shell commands instead of tools"
+    - "Break into smaller operations"
+    - "Save progress incrementally"
+  
+  on_uncertainty:
+    - "Search memories for similar situations"
+    - "Ask human for guidance"
+    - "Document decision rationale"
