@@ -1,12 +1,5 @@
-"""Emergent Behavior Detection and Capture
+"""Emergence - Self-modifying and creative features."""
 
-Automatically detect when novel solutions emerge spontaneously,
-document them, and integrate them into the system.
+from .guideline_evolution import GuidelineEvolution, example_self_reflection
 
-Philosophy: 自然 (zì rán) - Self-so, spontaneous emergence
-"""
-
-from .detector import EmergenceDetector, NovelBehavior
-from .capture import EmergenceCapture
-
-__all__ = ['EmergenceDetector', 'NovelBehavior', 'EmergenceCapture']
+__all__ = ["GuidelineEvolution", "example_self_reflection"]

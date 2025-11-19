@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 # Version
-VERSION = "2.3.8"
+VERSION = "2.3.9"
 VERSION_NAME = "Autonomous Intelligence"
 
 # Memory directories
