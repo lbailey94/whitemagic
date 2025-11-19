@@ -25,10 +25,10 @@ echo ""
 
 # Step 2: Build Rust (if available)
 echo "🦀 Step 2/9: Building Rust core..."
-if [ -d "whitemagic-rust-core" ]; then
-    cd whitemagic-rust-core
-    if cargo build --release --lib; then
-        echo "✅ Rust library compiled"
+if [ -d "whitemagic-rs" ]; then
+    cd whitemagic-rs
+    if maturin build --release; then
+        echo "✅ Rust library compiled with maturin"
     else
         echo "⚠️  Rust build failed (continuing anyway)"
     fi
