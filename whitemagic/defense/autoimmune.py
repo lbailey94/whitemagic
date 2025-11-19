@@ -17,7 +17,13 @@ class AntiPattern:
     
     def matches(self, text: str) -> bool:
         """Check if text contains this anti-pattern"""
-        return any(kw.lower() in text.lower() for kw in self.keywords)
+        if not self.keywords:
+            return False
+        
+        text_lower = text.lower()
+        # Require at least 2 keywords to match (stricter matching)
+        matches = sum(1 for kw in self.keywords if kw.lower() in text_lower)
+        return matches >= min(2, len(self.keywords))
 
 
 @dataclass  
@@ -76,7 +82,7 @@ class AutoimmuneSystem:
         
         return keywords[:5]  # Top 5 keywords
     
-    def scan_file(self, file_path: Path) -> List[PatternViolation]:
+    def scan_file(self, file_path: Path, min_confidence: float = 0.7) -> List[PatternViolation]:
         """Scan a file for anti-pattern violations"""
         violations = []
         
@@ -87,14 +93,20 @@ class AutoimmuneSystem:
             content = file_path.read_text()
             lines = content.split('\n')
             
+            # Only check high-confidence patterns
+            high_conf_patterns = [
+                p for p in self.anti_patterns.values() 
+                if p.confidence >= min_confidence and p.keywords
+            ]
+            
             for line_num, line in enumerate(lines, 1):
-                for pattern in self.anti_patterns.values():
+                for pattern in high_conf_patterns:
                     if pattern.matches(line):
                         violations.append(PatternViolation(
                             file_path=file_path,
                             line_number=line_num,
                             pattern=pattern,
-                            matched_text=line.strip()
+                            matched_text=line.strip()[:100]  # Limit length
                         ))
         
         except Exception as e:
