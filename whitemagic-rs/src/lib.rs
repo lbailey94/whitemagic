@@ -16,6 +16,7 @@ use std::path::PathBuf;
 
 pub mod consolidation;
 pub mod memory_consolidation;
+pub mod pattern_extraction;
 pub mod search;
 pub mod compression;
 pub mod audit;
@@ -98,8 +99,48 @@ fn whitemagic_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(audit::read_files_fast, m)?)?;
     m.add_function(wrap_pyfunction!(audit::extract_summaries, m)?)?;
     m.add_function(wrap_pyfunction!(consolidate_memories, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_patterns, m)?)?;
     m.add_class::<audit::FileInfo>()?;
     Ok(())
+}
+
+/// Extract patterns from long-term memories (exposed to Python)
+#[pyfunction]
+fn extract_patterns(
+    long_term_dir: String,
+    min_confidence: f64
+) -> PyResult<(usize, usize, Vec<String>, Vec<String>, Vec<String>, Vec<String>, f64)> {
+    let path = PathBuf::from(long_term_dir);
+    
+    let report = pattern_extraction::extract_patterns(&path, min_confidence)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))?;
+    
+    // Convert patterns to simple strings for Python
+    let solutions: Vec<String> = report.solutions.iter()
+        .map(|p| format!("{} (confidence: {:.2})", p.title, p.confidence))
+        .collect();
+    
+    let anti_patterns: Vec<String> = report.anti_patterns.iter()
+        .map(|p| format!("{} (confidence: {:.2})", p.title, p.confidence))
+        .collect();
+    
+    let heuristics: Vec<String> = report.heuristics.iter()
+        .map(|p| format!("{} (confidence: {:.2})", p.title, p.confidence))
+        .collect();
+    
+    let optimizations: Vec<String> = report.optimizations.iter()
+        .map(|p| format!("{} (confidence: {:.2})", p.title, p.confidence))
+        .collect();
+    
+    Ok((
+        report.total_memories,
+        report.patterns_found,
+        solutions,
+        anti_patterns,
+        heuristics,
+        optimizations,
+        report.duration_seconds
+    ))
 }
 
 /// Auto-consolidate short-term memories (exposed to Python)
