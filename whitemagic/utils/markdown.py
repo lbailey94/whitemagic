@@ -22,3 +22,7 @@ def sanitize_filename(name: str) -> str:
 def create_preview(text: str, length: int = 100) -> str:
     """Create preview of text"""
     return text[:length] + "..." if len(text) > length else text
+
+def normalize_tags(tags: list) -> list:
+    """Normalize tag list"""
+    return [str(t).lower().strip() for t in tags if t]
