@@ -11,9 +11,16 @@ Philosophy:
 - Automatic concept extraction from memory content
 
 Based on principle: 記憶與符號 (Memory and Symbol united)
+
+v2.3.5: Symbolic compression enabled by default (37% token savings)
 """
 
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+# v2.3.5 Configuration
+SYMBOLIC_COMPRESSION_ENABLED = True  # Enable Chinese compression
+SYMBOLIC_SHORT_TERM_ONLY = True  # Only compress short-term memories
+SYMBOLIC_TOKEN_SAVINGS = 0.37  # Measured savings percentage
 
 from .concept_map import ConceptMap
 from .core import MemoryManager

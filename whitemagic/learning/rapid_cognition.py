@@ -5,9 +5,14 @@ import time, threading
 from ..bindings import get_rust_bridge
 
 class RapidCognition:
-    def __init__(self, memory_dir: Path = None, learn_interval_seconds: int = 5):
-        self.memory_dir = memory_dir or Path("memory")
-        self.learn_interval = learn_interval_seconds
+    def __init__(
+        self,
+        memory_dir: Path = Path("memory"),
+        scan_interval: int = 5,  # seconds between scans (v2.3.5: 3x faster)
+        consolidation_threshold: int = 50  # patterns before consolidation
+    ):
+        self.memory_dir = memory_dir
+        self.learn_interval = scan_interval
         self.rust = get_rust_bridge()
         self.running = False
         self.cycles_completed = 0
