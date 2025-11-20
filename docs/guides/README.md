@@ -1,325 +1,214 @@
-# WhiteMagic 🧠✨
+# WhiteMagic Guides - Master Index
 
-Tiered Memory Management for AI Agents with Native MCP + REST Support
-
-[![Version](https://img.shields.io/badge/version-2.2.8-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.2.8-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](#-testing)
-[![Grade](https://img.shields.io/badge/grade-A%2B%20(99%2F100)-success.svg)](docs/reviews/v2.1.3/PRODUCTION_TEST_RESULTS.md)
-
-[![CodeQL](https://github.com/lbailey94/whitemagic/workflows/CodeQL%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/codeql.yml)
-[![Docker Security](https://github.com/lbailey94/whitemagic/workflows/Docker%20Security%20Scan/badge.svg)](https://github.com/lbailey94/whitemagic/actions/workflows/docker-security.yml)
-[![Security Grade](https://img.shields.io/badge/security-A%2B-success.svg)](SECURITY.md)
-[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
-[![Dependabot](https://img.shields.io/badge/dependabot-enabled-success.svg)](https://github.com/lbailey94/whitemagic/network/updates)
-
-WhiteMagic is a production-ready memory infrastructure for AI agents. **Free and open source** with full features locally. Includes Python SDK + CLI, FastAPI backend, native MCP integration for Cursor/Windsurf/Claude, and the new v2.2.8 parallel infrastructure + scratchpads alongside v2.2.5 symbolic reasoning, Wu Xing workflow, and live metrics modules.
-
-## 🎁 Free & Open Source
-
-- ✅ **87% token reduction** via tiered context loading
-- ✅ **10-100x faster** direct file operations
-- ✅ **37-58% cost savings** for multi-session AI projects
-- ✅ Full feature set, no signup required
-- ✅ Local-first, Git-friendly markdown storage
-- ✅ MCP server + REST API included
-- ✅ Perfect for individuals and teams
-
-*Cloud sync and team features planned for v2.4.0+ (Q1 2026)*
+**Generated**: /home/lucas/Desktop/whitemagic  
+**Total Guides**: 41
 
 ---
 
-## 🚦 Getting Started (4 Steps)
-
-1. **Install**: `pip install whitemagic` or `git clone https://github.com/lbailey94/whitemagic`
-2. **Try CLI**: `whitemagic create "My first memory" --content "Hello WhiteMagic!"`
-3. **Load Symbolic & Parallel Tools** *(new in v2.2.8)*: follow the [Symbolic Reasoning guide](docs/guides/SYMBOLIC_REASONING.md) plus the Session/Parallel docs to enable Chinese concept compression, Wu Xing guidance, and the new I Ching-aligned thread pools.
-4. **Connect to IDE**: `npx whitemagic-mcp-setup` (auto-configures Cursor, Windsurf, Claude Desktop, VS Code)
+## All Guides
 
-→ **Full guides**: [User Guide](docs/USER_GUIDE.md) | [Quickstart](docs/guides/QUICKSTART.md) | [Cheat Sheet](docs/CHEATSHEET.md) | [Symbolic Reasoning](docs/guides/SYMBOLIC_REASONING.md) | [Wu Xing + Metrics](docs/guides/WU_XING_AND_METRICS.md) | [Semantic Search](docs/guides/SEMANTIC_SEARCH.md) | [Terminal Tool Hardening](docs/guides/TERMINAL_TOOL.md)
+### [AI Quickstart - Using WhiteMagic Effectively](AI_QUICKSTART.md)
 
----
+- **File**: `AI_QUICKSTART.md`
+- **Size**: 409 lines, 7738 bytes
 
-## ✨ Features
+### [Advanced Usage Guide](ADVANCED_USAGE.md)
 
-- **Tiered Memory**: Short-term, long-term, and archive storage
-- **MCP Integration**: 7 tools + 4 resources for Cursor/Windsurf/Claude
-- **⚡ Parallel Infrastructure** *(NEW v2.2.8)*: I Ching-aligned pools + schedulers (8→256 threads) with CLI/MCP hooks coming in v2.2.9.
-- **🧠 Symbolic Reasoning Engine** *(v2.2.5)*: Chinese logographic compression, concept mapping, and memory linking.
-- **🌊 Wu Xing Workflow Detection** *(v2.2.5)*: Automatic phase detection for adaptive prompts + recommendations.
-- **📈 Live Metrics Hooks** *(v2.2.5)*: `trackMetric` + `getMetricsSummary` MCP tools and JSONL dashboards.
-- **🛠️ Audit & Terminal Helpers** *(coming v2.2.8)*: `whitemagic audit`, `docs-check`, and `exec plan` commands to keep docs + commands in sync across IDEs and terminals.
-- **🔧 Terminal Tool**: Safe code execution with approval workflows
-- **🔍 Semantic Search**: Hybrid keyword + vector search with local embeddings (see [Semantic Search guide](docs/guides/SEMANTIC_SEARCH.md))
-- **🧠 Smart Features**: Setup wizard, templates, auto-tagging, relationships
-- **Smart Search**: Full-text search with tag filtering
-- **Context Generation**: 3-tier context system
-- **Type-Safe**: 100% type hints with Pydantic V2
-- **CLI + API**: Command-line and Python library
-- **Automated Tests**: 221 passing tests (194 Python + 27 MCP)
-- **Production Grade**: A+ (99/100) - All security vulnerabilities patched
+- **File**: `ADVANCED_USAGE.md`
+- **Size**: 420 lines, 9515 bytes
 
-## 🚀 Quick Start
+### [Answers to Key Questions - Session Nov 16, 2025](ANSWERS_TO_KEY_QUESTIONS.md)
 
-### Official SDKs (New in v2.1.4!) 📦
+- **File**: `ANSWERS_TO_KEY_QUESTIONS.md`
+- **Size**: 394 lines, 10183 bytes
 
-**TypeScript/JavaScript** - [npm](https://www.npmjs.com/package/whitemagic-client)
+### [CLI Metrics Guide (v2.2.7)](CLI_METRICS.md)
 
-```bash
-npm install whitemagic-client
-```
+- **File**: `CLI_METRICS.md`
+- **Size**: 633 lines, 16177 bytes
 
-```typescript
-import { WhiteMagicClient } from 'whitemagic-client';
+### [Cross-Model Compatibility Guide](CROSS_MODEL_COMPATIBILITY.md)
 
-const client = new WhiteMagicClient({ apiKey: process.env.WHITEMAGIC_API_KEY });
-const memory = await client.memories.create({
-  title: 'My memory',
-  content: 'Stored via SDK',
-  type: 'short_term'
-});
-```
+- **File**: `CROSS_MODEL_COMPATIBILITY.md`
+- **Size**: 436 lines, 9517 bytes
 
-**Python** - [PyPI](https://pypi.org/project/whitemagic-client/)
+### [Fast-Write Protocol: Error → Fast Rewrite](FAST_WRITE_PROTOCOL.md)
 
-```bash
-pip install whitemagic-client
-```
+- **File**: `FAST_WRITE_PROTOCOL.md`
+- **Size**: 117 lines, 2697 bytes
 
-```python
-from whitemagic_client import WhiteMagicClient
+### [Installation Guide · WhiteMagic v2.2.1](INSTALL.md)
 
-client = WhiteMagicClient(api_key='your-key')
-memory = client.create_memory({
-    'title': 'My memory',
-    'content': 'Stored via SDK',
-    'type': 'short_term'
-})
-```
+- **File**: `INSTALL.md`
+- **Size**: 267 lines, 7275 bytes
 
-📖 **Full SDK Documentation**: [TypeScript](docs/sdk/typescript.md) | [Python](docs/sdk/python.md)
+### [MCP CLI Auto-Setup](MCP_CLI_SETUP.md)
 
----
+- **File**: `MCP_CLI_SETUP.md`
+- **Size**: 361 lines, 6954 bytes
 
-### Auto-Configure Your IDE (New!)
+### [Memory System for Tiered AI Prompts](MEMORY_SYSTEM_README.md)
 
-```bash
-npx whitemagic-mcp-setup
-# Interactive wizard configures:
-# - Cursor, Windsurf, Claude Desktop, or VS Code
-# - API key & storage path
-# - Connection testing
-# Ready in < 2 minutes!
-```
+- **File**: `MEMORY_SYSTEM_README.md`
+- **Size**: 407 lines, 10483 bytes
 
-📖 **Full guide**: [MCP CLI Setup](docs/MCP_CLI_SETUP.md)
+### [Meta-Optimization Guide (v2.2.7)](META_OPTIMIZATION.md)
 
-### Install MCP Server Manually
+- **File**: `META_OPTIMIZATION.md`
+- **Size**: 334 lines, 8400 bytes
 
-```bash
-# Install from npm
-npm install -g whitemagic-mcp
+### [Parallel Memory Contexts](PARALLEL_CONTEXTS.md)
 
-# Package: https://www.npmjs.com/package/whitemagic-mcp
-```
+- **File**: `PARALLEL_CONTEXTS.md`
+- **Size**: 352 lines, 7087 bytes
 
-### Local Development
+### [Parallel Operations Guide](PARALLEL_OPERATIONS.md)
 
-```bash
-# Clone and install
-git clone https://github.com/lbailey94/whitemagic.git
-cd whitemagic
-pip install -e ".[api,dev]"
+- **File**: `PARALLEL_OPERATIONS.md`
+- **Size**: 287 lines, 6469 bytes
 
-# Or install the SDK directly
-pip install whitemagic
+### [Quickstart · Build Your First Memory in 5 Minutes](QUICKSTART.md)
 
-# Quick smoke test
-python -c "from whitemagic import MemoryManager; print('Ready:', MemoryManager().metadata['version'])"
-```
+- **File**: `QUICKSTART.md`
+- **Size**: 128 lines, 2892 bytes
 
-### Run the full stack locally
+### [Semantic Search Guide (v2.2.7)](SEMANTIC_SEARCH.md)
 
-```bash
-docker compose up -d
-# API:       http://localhost:8000
-# Dashboard: http://localhost:3000
-# Caddy:     http://localhost (reverse proxy for dashboard + API)
-```
+- **File**: `SEMANTIC_SEARCH.md`
+- **Size**: 119 lines, 3571 bytes
 
-### Cloud Deployment (Production)
+### [Session Management Guide](SESSION_MANAGEMENT.md)
 
-**Live Services:**
+- **File**: `SESSION_MANAGEMENT.md`
+- **Size**: 107 lines, 2259 bytes
 
-- 🌐 **API**: <https://api.whitemagic.dev> (Railway)
-- 📊 **Dashboard**: <https://app.whitemagic.dev> (Vercel)
-- 💬 **Discussions**: <https://github.com/lbailey94/whitemagic/discussions>
+### [Setup Wizard Design - v2.2.1](setup_wizard_design.md)
 
-**Stack:**
+- **File**: `setup_wizard_design.md`
+- **Size**: 62 lines, 1679 bytes
 
-- **Backend**: Railway (FastAPI + PostgreSQL + Redis)
-- **Frontend**: Vercel (Static dashboard)
-- **Payments**: Stripe (Coming soon)
+### [Setup Wizard Testing Guide](TESTING.md)
 
-For deployment guides, see `docs/archive/deployment/` or contact for enterprise setup.
+- **File**: `TESTING.md`
+- **Size**: 58 lines, 1180 bytes
 
-## 🔍 Semantic Search - Intelligent Retrieval
+### [Setup Wizard Testing Guide](TEST_WIZARD.md)
 
-Find memories by **meaning**, not just keywords:
+- **File**: `TEST_WIZARD.md`
+- **Size**: 58 lines, 1180 bytes
 
-```bash
-# One-time setup (downloads local model, ~90MB)
-whitemagic setup-embeddings
-# Choose: 1) local (privacy-first, no API key) or 2) openai (best quality)
+### [Start Here: WhiteMagic Quick Orientation](START_HERE.md)
 
-# Hybrid search (keyword + semantic - recommended)
-whitemagic search-semantic "debugging async race conditions"
+- **File**: `START_HERE.md`
+- **Size**: 184 lines, 4328 bytes
 
-# Pure semantic search
-whitemagic search-semantic --mode semantic "error handling patterns"
+### [Symbolic Reasoning & Concept Mapping (v2.2.7)](SYMBOLIC_REASONING.md)
 
-# Keyword-only search (traditional)
-whitemagic search-semantic --mode keyword "TODO"
-```
+- **File**: `SYMBOLIC_REASONING.md`
+- **Size**: 101 lines, 4055 bytes
 
-**Features**:
+### [Terminal Security Testing Guide (v2.2.7)](TERMINAL_SECURITY.md)
 
-- ✅ **Hybrid mode** combines keyword + semantic ranking (best results)
-- ✅ **Local embeddings** using sentence-transformers (no API key needed)
-- ✅ **OpenAI support** optional for production-quality vectors
-- ✅ **MCP integration** for semantic search in your IDE
+- **File**: `TERMINAL_SECURITY.md`
+- **Size**: 591 lines, 13301 bytes
 
-**Via API**:
+### [Terminal Tool Usage Guide](TERMINAL_TOOL_USAGE.md)
 
-```bash
-curl -X POST https://api.whitemagic.dev/api/v1/search/semantic \
-  -H "Authorization: Bearer YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "How do I debug race conditions?",
-    "mode": "hybrid",
-    "k": 10,
-    "threshold": 0.7
-  }'
-```
+- **File**: `TERMINAL_TOOL_USAGE.md`
+- **Size**: 293 lines, 5351 bytes
 
-**MCP Tool** (available in Cursor/Windsurf):
+### [Terminal Tool: Structured Execution for WhiteMagic](TERMINAL_TOOL_DESIGN.md)
 
-```javascript
-// Your AI assistant can now search semantically:
-"Find memories about debugging async issues"
-```
+- **File**: `TERMINAL_TOOL_DESIGN.md`
+- **Size**: 668 lines, 18690 bytes
 
----
+### [Tiered Prompt + Memory System - Complete Overview](SYSTEM_OVERVIEW.md)
 
-## 📚 Documentation
+- **File**: `SYSTEM_OVERVIEW.md`
+- **Size**: 465 lines, 13058 bytes
 
-### Core Docs
+### [Token Optimization Strategies - Order of Magnitude Improvements](TOKEN_OPTIMIZATION_STRATEGIES.md)
 
-- [VISION.md](docs/VISION.md) - **Philosophy, theory, and strategic direction**
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - **Technical design and system overview**
-- [INSTALL.md](INSTALL.md) - Installation guide
-- [whitemagic-mcp/README.md](whitemagic-mcp/README.md) - MCP setup for Cursor/Windsurf/Claude
-- [ROADMAP.md](ROADMAP.md) - Development roadmap
-- [CHANGELOG.md](CHANGELOG.md) - Version history
+- **File**: `TOKEN_OPTIMIZATION_STRATEGIES.md`
+- **Size**: 507 lines, 13734 bytes
 
-### Strategic & Reference
+### [Tool Wrappers Guide: AI Framework Integrations](TOOL_WRAPPERS_GUIDE.md)
 
-- [VISION_TO_REALITY.md](docs/VISION_TO_REALITY.md) - Vision vs current state comparison
-- [docs/reviews/v2.1.3/](docs/reviews/v2.1.3/) - Quality assurance reports
-- [docs/production/](docs/production/) - Production deployment guides
-- [docs/archive/](docs/archive/) - Historical documentation
+- **File**: `TOOL_WRAPPERS_GUIDE.md`
+- **Size**: 933 lines, 27246 bytes
 
-## 🧪 Testing
+### [What is WhiteMagic?](OVERVIEW.md)
 
-**196 Python + 27 MCP automated tests** - See [docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md](docs/reviews/v2.1.3/TEST_COVERAGE_SUMMARY.md)
+- **File**: `OVERVIEW.md`
+- **Size**: 347 lines, 7747 bytes
 
-```bash
-# Python tests (install with extras first)
-pip install -e ".[api,dev]"  # dev extra now pulls in openai for semantic-search tests
-python3 -m pytest tests -v
+### [What is WhiteMagic?](WHITEMAGIC_EXPLAINED.md)
 
-# MCP tests (25+ tests)
-cd whitemagic-mcp && npm test
+- **File**: `WHITEMAGIC_EXPLAINED.md`
+- **Size**: 347 lines, 7747 bytes
 
-# With coverage
-python3 -m pytest --cov=whitemagic --cov-report=html
-```
+### [WhiteMagic API - Production Deployment Guide](DEPLOYMENT_GUIDE_PRODUCTION.md)
 
-## 📊 Quality Assurance
+- **File**: `DEPLOYMENT_GUIDE_PRODUCTION.md`
+- **Size**: 553 lines, 10848 bytes
 
-WhiteMagic v2.1.3 underwent extensive security and stability reviews:
+### [WhiteMagic Automation System](AUTOMATION.md)
 
-- ✅ **260 automated tests** (100% passing)
-  - 196 Python unit tests
-  - 27 MCP integration tests
-  - 37 manual production tests
-- ✅ **Multiple independent security reviews**
-  - 4 critical vulnerabilities patched
-  - All runtime crashes fixed
-- ✅ **Production environment validation**
-  - Full Redis integration tested
-  - All endpoints verified in production-like environment
-- ✅ **Grade: A+ (99/100)** - Production ready
+- **File**: `AUTOMATION.md`
+- **Size**: 507 lines, 10415 bytes
 
-📁 **Full review documentation**: [docs/reviews/v2.1.3/](docs/reviews/v2.1.3/)
-📄 **Production test results**: [PRODUCTION_TEST_RESULTS.md](docs/reviews/v2.1.3/PRODUCTION_TEST_RESULTS.md)
+### [WhiteMagic Cheat Sheet](CHEATSHEET.md)
 
-## 🔌 Optional Integrations
+- **File**: `CHEATSHEET.md`
+- **Size**: 557 lines, 10650 bytes
 
-Need Sentry, Prometheus instrumentation, or JWT tooling? Install the plugin extras the moment you need them:
+### [WhiteMagic Deployment Guide](DEPLOYMENT.md)
 
-```bash
-pip install -r requirements-plugins.txt
-```
+- **File**: `DEPLOYMENT.md`
+- **Size**: 53 lines, 989 bytes
 
-Then follow the relevant instructions in `docs/production/OPTIONAL_INTEGRATIONS.md`.
+### [WhiteMagic Documentation Index](INDEX.md)
 
-**Configurable API base:** set `window.WHITEMAGIC_API_BASE` (or the `<meta name="whitemagic-api-base">` tag) before loading `dashboard/app.js` to point the dashboard at a different backend (staging, preview, etc.).
+- **File**: `INDEX.md`
+- **Size**: 180 lines, 6378 bytes
 
-## 🛡️ Guardrails
+### [WhiteMagic MCP - Quick Setup Guide](QUICK_SETUP_MCP.md)
 
-Security checks run locally and in CI to prevent regressions (e.g., wildcard CORS defaults). You can run them manually:
+- **File**: `QUICK_SETUP_MCP.md`
+- **Size**: 332 lines, 6110 bytes
 
-```bash
-# No wildcard CORS regressions
-python scripts/check_security_guards.py
-# Dependency manifest sanity
-python scripts/check_dependencies.py
-# or via pre-commit
-pre-commit run security-guards
-pre-commit run dependency-guards
-```
+### [WhiteMagic Troubleshooting Guide](TROUBLESHOOTING.md)
 
-- **Rate limiting** requires Redis. Leave `REDIS_URL` unset in development to disable limits; set it (e.g., Railway Redis) before production so quotas actually apply.
-- The terminal execution API is **disabled by default**. Only set `WM_ENABLE_EXEC_API=true` after you deploy it behind strong isolation/monitoring—it shells into your host.
+- **File**: `TROUBLESHOOTING.md`
+- **Size**: 805 lines, 12830 bytes
 
-## 📊 Stats
+### [WhiteMagic User Guide](USER_GUIDE.md)
 
-- **2,300+** lines Python
-- **770+** lines TypeScript
-- **40+** automated tests (CLI + API + integrations)
-- **Minimal deps**: FastAPI, SQLAlchemy, Pydantic, Redis, httpx
+- **File**: `USER_GUIDE.md`
+- **Size**: 723 lines, 15941 bytes
 
-## 🗺️ Roadmap
+### [WhiteMagic 🧠✨](README.md)
 
-- ✅ v2.1: Core Features (Python API, MCP, REST API)
-- ✅ v2.1.4: SDKs (TypeScript + Python clients)
-- ✅ v2.1.7: Smart Memory (Setup wizard, templates, auto-tagging, relationships)
-- ✅ v2.2.0: Critical Fixes (YAML parsing, enum serialization)
-- 🚧 v2.3: Stripe Integration (Cloud tiers, subscriptions)
-- 📅 v2.3: Semantic Search (Vector embeddings, AI-powered search)
-- 📅 v3.0: Team Features (Shared memories, collaboration)
+- **File**: `README.md`
+- **Size**: 326 lines, 12252 bytes
 
-See [ROADMAP.md](ROADMAP.md) for detailed plans.
+### [Why WhiteMagic Is 10x More Efficient](EFFICIENCY.md)
 
-## 📄 License
+- **File**: `EFFICIENCY.md`
+- **Size**: 107 lines, 2290 bytes
 
-MIT - See [LICENSE](LICENSE)
+### [Why WhiteMagic Is 10x More Efficient](EFFICIENCY_EXPLAINED.md)
 
-## 🔗 Links
+- **File**: `EFFICIENCY_EXPLAINED.md`
+- **Size**: 107 lines, 2290 bytes
 
-- Issues: <https://github.com/lbailey94/whitemagic/issues>
-- Discussions: <https://github.com/lbailey94/whitemagic/discussions>
+### [Workflow Rules v3.1 - Universal AI System](WORKFLOW_RULES_v3_UNIVERSAL.md)
+
+- **File**: `WORKFLOW_RULES_v3_UNIVERSAL.md`
+- **Size**: 642 lines, 15448 bytes
+
+### [Wu Xing Phases & Metrics Hooks (v2.2.7)](WU_XING_AND_METRICS.md)
+
+- **File**: `WU_XING_AND_METRICS.md`
+- **Size**: 117 lines, 4561 bytes
+
