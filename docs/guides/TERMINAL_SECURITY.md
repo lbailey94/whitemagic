@@ -1,6 +1,6 @@
-# Terminal Security Testing Guide (v2.2.7)
+# Terminal Security Testing Guide (v2.6.5)
 
-WhiteMagic v2.2.7 includes comprehensive security testing for the terminal/exec functionality, ensuring safe command execution without introducing vulnerabilities. This guide covers the security model, test suite, and best practices.
+WhiteMagic v2.6.5 includes comprehensive security testing for the terminal/exec functionality, ensuring safe command execution without introducing vulnerabilities. This guide covers the security model, test suite, and best practices.
 
 ---
 
@@ -290,7 +290,7 @@ def test_password_url_redaction():
 
 ## 4. Test Coverage Report
 
-**As of v2.2.7**:
+**As of v2.6.5**:
 
 ```
 Module: whitemagic/cli/exec.py
@@ -564,7 +564,7 @@ WhiteMagic terminal security follows:
 
 ## Summary
 
-Terminal security in v2.2.7 provides comprehensive protection:
+Terminal security in v2.6.5 provides comprehensive protection:
 
 ✅ **Input validation** - Block dangerous patterns
 ✅ **Command sanitization** - Prevent injection

@@ -1,7 +1,7 @@
 # Parallel Memory Contexts
 
 **Feature**: Multiple independent memory spaces running simultaneously
-**Status**: Available in v2.2.7+
+**Status**: Available in v2.6.5+
 
 ---
 
@@ -345,7 +345,7 @@ cp ~/.whitemagic/projectA/memory/short_term/*.md ~/.whitemagic/projectB/memory/s
 
 ---
 
-**Status**: ✅ Feature complete in v2.2.7
+**Status**: ✅ Feature complete in v2.6.5
 **Documentation**: Up to date
 **Examples**: See above
 **Support**: File issues on GitHub

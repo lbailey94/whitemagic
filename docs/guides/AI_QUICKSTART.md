@@ -1,7 +1,7 @@
 # AI Quickstart - Using WhiteMagic Effectively
 
 **For**: AI agents, assistants, and language models
-**Version**: 2.2.7
+**Version**: 2.6.5
 **Philosophy**: Parallel-first, memory-aware, philosophically aligned
 
 ---
@@ -45,7 +45,7 @@ mcp3_create_memory(
     title="What I just learned",
     content="...",
     type="long_term",
-    tags=["insight", "v2.2.7"]
+    tags=["insight", "v2.6.5"]
 )
 ```
 
@@ -111,7 +111,7 @@ Tier 2: Deep dive (10K tokens) - Only when you need everything
 - track_metric
 ... and 11 more
 
-# P0 New (8 in v2.2.7)
+# P0 New (8 in v2.6.5)
 - parallel_search       # Multi-query (8x faster)
 - batch_create_memories # Atomic batch
 - create_session        # Work sessions

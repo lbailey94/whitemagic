@@ -1,6 +1,6 @@
 # Cross-Model Compatibility Guide
 
-**Version**: 2.2.7
+**Version**: 2.6.5
 **Date**: November 16, 2025
 **Audience**: AI models (GPT, Gemini, Claude, local) and human developers
 

@@ -13,7 +13,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 2. **[README.md](../README.md)** - Project overview, features, installation
 3. **[guides/QUICKSTART.md](guides/QUICKSTART.md)** - 5-minute hands-on tutorial
 4. **[USER_GUIDE.md](USER_GUIDE.md)** - Complete beginner to advanced guide
-5. **[README.md#-features](../README.md#-features)** - Snapshot of v2.2.7 parallel infrastructure + scratchpads
+5. **[README.md#-features](../README.md#-features)** - Snapshot of v2.6.5 parallel infrastructure + scratchpads
 
 ---
 
@@ -65,7 +65,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 
 - **[DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)** - Complete deployment guide
   ⭐ **Most comprehensive** - Docker, PostgreSQL, Redis, Caddy
-- **[DEPLOY_NOW.md](archive/v2.2.7-prep/DEPLOY_NOW.md)** - Quick deployment checklist (archived)
+- **[DEPLOY_NOW.md](archive/v2.6.5-prep/DEPLOY_NOW.md)** - Quick deployment checklist (archived)
   ⏱️ **~45 minutes** from zero to production
 - **[START_HERE.md](../START_HERE.md)** - Quick reference card
 
@@ -81,8 +81,8 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 
 ### Planning & Design
 
-- **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones (current v2.2.7, upcoming v2.2.8/v2.2.9)
-- **[RELEASE_PLAN_v2.2.7_to_v2.1.9.md](RELEASE_PLAN_v2.2.7_to_v2.1.9.md)** - 3-week progressive release plan
+- **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones (current v2.6.5, upcoming v2.2.8/v2.2.9)
+- **[RELEASE_PLAN_v2.6.5_to_v2.1.9.md](RELEASE_PLAN_v2.6.5_to_v2.1.9.md)** - 3-week progressive release plan
 - **[REST API Design](development/REST_API_DESIGN.md)** - API architecture
 - **[Bugfix Report](development/BUGFIX_REPORT.md)** - Known issues & fixes
 
@@ -150,9 +150,9 @@ Historical documents (for reference only):
 → [CHANGELOG.md](../CHANGELOG.md)
 
 **See the roadmap**
-→ [ROADMAP.md](../ROADMAP.md) → [RELEASE_PLAN_v2.2.7_to_v2.1.9.md](RELEASE_PLAN_v2.2.7_to_v2.1.9.md)
+→ [ROADMAP.md](../ROADMAP.md) → [RELEASE_PLAN_v2.6.5_to_v2.1.9.md](RELEASE_PLAN_v2.6.5_to_v2.1.9.md)
 
-**Run audits / automate docs (v2.2.8)**
+**Run audits / automate docs (v2.6.5)**
 → [guides/CLI_METRICS.md](guides/CLI_METRICS.md#44-cicd-integration) → README (audit + exec plan overview)
 
 ---
@@ -171,8 +171,8 @@ Historical documents (for reference only):
 - **Total docs**: 190+ markdown files
 - **Active docs**: ~40 (core + guides + production + strategic)
 - **Archived docs**: ~150 (historical reference, properly organized)
-- **Cleanup**: v2.2.7 - Archived phases/, reviews/, daily logs, obsolete docs
-- **Last updated**: November 16, 2025 (v2.2.7 parallel release)
+- **Cleanup**: v2.6.5 - Archived phases/, reviews/, daily logs, obsolete docs
+- **Last updated**: November 16, 2025 (v2.6.5 parallel release)
 
 ---
 

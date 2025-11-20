@@ -281,21 +281,21 @@ def generate_summary(content: str, max_tokens: int) -> str:
 ```python
 # Step 1: Parallel batch read (one-time cost)
 results = parallel_read([
-    grep_search("v2.2.7", docs/),
+    grep_search("v2.6.5", docs/),
     grep_search("missing features", roadmap/),
     read_file(vision.md),
-    read_file(v2.2.7_plan.md),
+    read_file(v2.6.5_plan.md),
 ])  # 30K tokens
 
 # Step 2: Generate consolidated summary (500-1K tokens)
 summary = generate_batch_summary(results, focus=[
     "missing features",
-    "v2.2.7 scope",
+    "v2.6.5 scope",
     "implementation timeline"
 ])
 
 # Step 3: Cache summary for session
-cache.set("session/v2.2.7_context", summary)
+cache.set("session/v2.6.5_context", summary)
 
 # Step 4: Future references use summary (95% savings)
 # Instead of re-reading 30K, reference 500-token summary
@@ -439,7 +439,7 @@ Total: 45-63K tokens (79-85% reduction)
 | Tier | Description | Token Budget | Use Case |
 |------|-------------|--------------|----------|
 | **0** | Quick scan | 500-2K | "What memories do I have?" |
-| **1** | Balanced | 5-15K | "Find missing features in v2.2.7" |
+| **1** | Balanced | 5-15K | "Find missing features in v2.6.5" |
 | **2** | Deep | 20-40K | "Full audit of all documentation" |
 | **3** | Exhaustive | 50-100K | "Complete codebase analysis" |
 
@@ -494,7 +494,7 @@ Total: 45-63K tokens (79-85% reduction)
 ## Next Steps
 
 1. **Implement Phase 1** (session cache + summaries)
-2. **Test with v2.2.7 work** (real-world validation)
+2. **Test with v2.6.5 work** (real-world validation)
 3. **Measure token savings** (before/after comparison)
 4. **Iterate based on results**
 5. **Document patterns** for future optimization

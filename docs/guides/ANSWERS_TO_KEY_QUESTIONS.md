@@ -41,7 +41,7 @@ read_file(".windsurf/rules/whitemagic-project.md")
 **Fix needed** (add after line 96):
 
 ```python
-# Meta-optimization exports (v2.2.7)
+# Meta-optimization exports (v2.6.5)
 from .workspace_loader import WorkspaceLoader, load_workspace_for_task
 from .session_templates import StartHereTemplate, create_start_here_memory, SessionSnapshot
 from .delta_tracking import DeltaTracker, track_session_changes, SessionDelta
@@ -169,7 +169,7 @@ else:
 - Load "start-here" tagged memories
 - Load "personality" tagged memories
 - Load "current-status" tagged memories
-- Search for current version (e.g., "v2.2.7")
+- Search for current version (e.g., "v2.6.5")
 
 # Stage 2: Task-Specific Context (~2-5K tokens)
 - Search for keywords from task description

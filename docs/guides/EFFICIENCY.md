@@ -48,7 +48,7 @@ content = open(path).read()
 
 ```bash
 # Find relevant memories in <10ms
-grep -r "v2.2.7" memory/long_term/
+grep -r "v2.6.5" memory/long_term/
 # Returns: Only matching files (200 tokens)
 # vs loading all memories (27K tokens)
 ```

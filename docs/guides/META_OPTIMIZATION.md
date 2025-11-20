@@ -1,6 +1,6 @@
-# Meta-Optimization Guide (v2.2.7)
+# Meta-Optimization Guide (v2.6.5)
 
-WhiteMagic v2.2.7 introduces **meta-optimization**: a hierarchical context loading system that reduces token burn by 60-97% while maintaining task relevance. This guide shows you how to leverage it.
+WhiteMagic v2.6.5 introduces **meta-optimization**: a hierarchical context loading system that reduces token burn by 60-97% while maintaining task relevance. This guide shows you how to leverage it.
 
 ---
 
@@ -226,7 +226,7 @@ ctx = loader.load_for_task("Add GraphQL endpoint", tier=1)
 
 ## 7. Integration with Symbolic Reasoning
 
-Meta-optimization pairs with symbolic reasoning (v2.2.7) to further compress context:
+Meta-optimization pairs with symbolic reasoning (v2.6.5) to further compress context:
 
 ```python
 from whitemagic import SymbolicMemoryBuilder
@@ -301,7 +301,7 @@ Expected results:
 
 ---
 
-## 10. Future Enhancements (v2.2.7+)
+## 10. Future Enhancements (v2.6.5+)
 
 Planned improvements:
 
@@ -314,7 +314,7 @@ Planned improvements:
 
 ## Summary
 
-Meta-optimization is **the** foundational efficiency technique in WhiteMagic v2.2.7+:
+Meta-optimization is **the** foundational efficiency technique in WhiteMagic v2.6.5+:
 
 ✅ **Start with Tier 0 or 1** - save 90-97% tokens
 ✅ **Use task descriptions** - get relevant context automatically

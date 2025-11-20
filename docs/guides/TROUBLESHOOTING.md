@@ -43,7 +43,7 @@ ERROR: Could not find a version that satisfies the requirement whitemagic
 3. Try with version specified:
 
    ```bash
-   pip install whitemagic==2.2.7
+   pip install whitemagic==2.6.5
    ```
 
 ---
@@ -75,7 +75,7 @@ ImportError: No module named 'whitemagic'
 
    ```bash
    pip uninstall whitemagic
-   pip install whitemagic[api]==2.2.7
+   pip install whitemagic[api]==2.6.5
    ```
 
 ---
@@ -95,7 +95,7 @@ ERROR: pip's dependency resolver does not currently take into account all the pa
    ```bash
    python -m venv fresh_env
    source fresh_env/bin/activate  # On Windows: fresh_env\Scripts\activate
-   pip install whitemagic[api]==2.2.7
+   pip install whitemagic[api]==2.6.5
    ```
 
 2. Check for conflicts:
@@ -631,7 +631,7 @@ docker run -d -p 6379:6379 redis:7-alpine
 
 ```bash
 mkdir -p memory/short_term memory/long_term memory/archive
-echo '{"version": "2.2.7", "memories": []}' > memory/metadata.json
+echo '{"version": "2.6.5", "memories": []}' > memory/metadata.json
 ```
 
 ---
@@ -798,7 +798,7 @@ ls -lah memory/
 ---
 
 **Last Updated**: November 14, 2025
-**Version**: 2.2.7
+**Version**: 2.6.5
 
 **Quick Reference**: [CHEATSHEET.md](CHEATSHEET.md)
 **User Guide**: [USER_GUIDE.md](USER_GUIDE.md)

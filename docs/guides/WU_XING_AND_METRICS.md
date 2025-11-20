@@ -1,6 +1,6 @@
-# Wu Xing Phases & Metrics Hooks (v2.2.7)
+# Wu Xing Phases & Metrics Hooks (v2.6.5)
 
-WhiteMagic v2.2.7 adds a continuous-operations layer that detects which phase of the Wu Xing cycle you're currently in, while streaming quantitative metrics through new MCP tools. This guide shows how to use both.
+WhiteMagic v2.6.5 adds a continuous-operations layer that detects which phase of the Wu Xing cycle you're currently in, while streaming quantitative metrics through new MCP tools. This guide shows how to use both.
 
 ## 1. Wu Xing Cycle Detection
 
@@ -57,7 +57,7 @@ await trackMetric(
   "token_efficiency",
   "usage_percent",
   48.2,
-  "v2.2.7 Phase 2",
+  "v2.6.5 Phase 2",
 );
 ```
 

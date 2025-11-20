@@ -82,7 +82,7 @@ The wizard will guide you through:
    ```
    🔌 Testing connection...
    ✅ Connection successful!
-   📦 API Version: 2.2.7
+   📦 API Version: 2.6.5
    ```
 
 6. **Config Writing**

@@ -1,11 +1,11 @@
 # Parallel Operations Guide
 
-**Version**: v2.2.7
+**Version**: v2.6.5
 **Status**: Production Ready
 
 ## Overview
 
-WhiteMagic v2.2.7 introduces a comprehensive parallel processing infrastructure that delivers **40x speedup** on batch operations and **8x faster** multi-query search.
+WhiteMagic v2.6.5 introduces a comprehensive parallel processing infrastructure that delivers **40x speedup** on batch operations and **8x faster** multi-query search.
 
 ## Quick Start
 

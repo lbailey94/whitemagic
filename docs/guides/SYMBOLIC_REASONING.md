@@ -1,6 +1,6 @@
-# Symbolic Reasoning & Concept Mapping (v2.2.7)
+# Symbolic Reasoning & Concept Mapping (v2.6.5)
 
-WhiteMagic v2.2.7 introduces a symbolic reasoning stack that encodes high-value concepts in both English and Chinese to deliver 30–50% token savings while enriching semantic search.
+WhiteMagic v2.6.5 introduces a symbolic reasoning stack that encodes high-value concepts in both English and Chinese to deliver 30–50% token savings while enriching semantic search.
 
 ## Why Symbolic Reasoning?
 

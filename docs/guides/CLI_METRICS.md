@@ -1,6 +1,6 @@
-# CLI Metrics Guide (v2.2.7)
+# CLI Metrics Guide (v2.6.5)
 
-WhiteMagic v2.2.7 keeps the comprehensive metrics stack introduced in earlier releases and pairs it with the new parallel/scratchpad infrastructure. This guide covers all metrics commands, how to pair them with the upcoming `whitemagic audit`, `docs-check`, and `exec plan` helpers, and best practices for keeping AI workflows measurable.
+WhiteMagic v2.6.5 keeps the comprehensive metrics stack introduced in earlier releases and pairs it with the new parallel/scratchpad infrastructure. This guide covers all metrics commands, how to pair them with the upcoming `whitemagic audit`, `docs-check`, and `exec plan` helpers, and best practices for keeping AI workflows measurable.
 
 ---
 
@@ -43,7 +43,7 @@ whitemagic track token_efficiency usage_percent 38.5 "After Tier 1 load"
 whitemagic track token_efficiency efficiency_ratio 17.9 "Tier 1 vs baseline"
 ```
 
-Pair this with the `whitemagic audit` command (v2.2.8) to ensure every session records token deltas before and after parallel pool bursts.
+Pair this with the `whitemagic audit` command (v2.6.5) to ensure every session records token deltas before and after parallel pool bursts.
 
 ### 2.2 Velocity
 
@@ -59,7 +59,7 @@ Pair this with the `whitemagic audit` command (v2.2.8) to ensure every session r
 **Example** *(align sprint plans with Wu Xing + threading tiers so the audit report can map strategic progress to terrain assessments)*:
 
 ```bash
-whitemagic track velocity features_per_day 3 "v2.2.7 week 1"
+whitemagic track velocity features_per_day 3 "v2.6.5 week 1"
 whitemagic track velocity bugs_fixed_per_session 5 "Debug marathon"
 ```
 
@@ -95,7 +95,7 @@ whitemagic track tactical tasks_complete 7 "Phase 1 done"
 **Example** *(log review + documentation coverage before/after running `whitemagic docs-check`)*:
 
 ```bash
-whitemagic track strategic version_progress 75 "v2.2.7 75% complete"
+whitemagic track strategic version_progress 75 "v2.6.5 75% complete"
 whitemagic track strategic timeline_variance -12 "12 hours ahead"
 ```
 
@@ -152,7 +152,7 @@ whitemagic track <category> <metric> <value> [context]
 - `category` - One of: token_efficiency, velocity, tactical, strategic, quality, fatigue
 - `metric` - Short metric name (e.g., `usage_percent`, `tests_passing`)
 - `value` - Numeric value (float or int)
-- `context` - Optional description (e.g., "Phase 2", "v2.2.7")
+- `context` - Optional description (e.g., "Phase 2", "v2.6.5")
 
 **Examples**:
 
@@ -322,7 +322,7 @@ whitemagic track tactical tasks_complete 4 "Phase 1: CLI commands"
 whitemagic track token_efficiency usage_percent 35 "Post-Phase 1"
 
 # Phase 2 start
-whitemagic track strategic version_progress 40 "40% v2.2.7 complete"
+whitemagic track strategic version_progress 40 "40% v2.6.5 complete"
 ```
 
 ### 4.3 Git Hooks
@@ -432,7 +432,7 @@ EOF
 Export to dashboard (e.g., Grafana, custom React app):
 
 ```bash
-# Export for v2.2.7 React dashboard
+# Export for v2.6.5 React dashboard
 whitemagic export --format json --pretty --output dashboard/data/metrics.json
 
 # Or serve via API
@@ -468,7 +468,7 @@ fi
 
 Use consistent, meaningful context strings:
 
-- ✅ `"v2.2.7 Phase 1 complete"`
+- ✅ `"v2.6.5 Phase 1 complete"`
 - ✅ `"After Tier 1 optimization"`
 - ✅ `"Debug session - auth bug"`
 - ❌ `"stuff"`
@@ -572,7 +572,7 @@ Usage:
 
 ## 9. Integration with Wu Xing
 
-Metrics pair with Wu Xing phase detection (v2.2.7) for adaptive workflows:
+Metrics pair with Wu Xing phase detection (v2.6.5) for adaptive workflows:
 
 ```python
 from whitemagic import WuXingDetector, Activity
@@ -594,7 +594,7 @@ elif phase.value == "WATER":
 
 ---
 
-## 10. Future Enhancements (v2.2.7+)
+## 10. Future Enhancements (v2.6.5+)
 
 Planned improvements:
 
@@ -608,7 +608,7 @@ Planned improvements:
 
 ## Summary
 
-CLI metrics in v2.2.7 provide quantitative visibility into your AI workflow:
+CLI metrics in v2.6.5 provide quantitative visibility into your AI workflow:
 
 ✅ **Track 6 categories** - token efficiency, velocity, tactical, strategic, quality, fatigue
 ✅ **Simple commands** - `track`, `summary`, `export`

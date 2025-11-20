@@ -101,7 +101,7 @@ token_efficiency_pct: 49.7%
 tokens_per_feature: ~25000
 
 # Strategic Progress
-version_target: v2.2.7
+version_target: v2.6.5
 features_complete: 7/7
 timeline_vs_estimate: "50% faster"
 
@@ -349,12 +349,12 @@ git tag v$NEW_VERSION
 Feature: "Get Context at Tier"
 
 Implementations:
-1. CLI: whitemagic context --tier 1 --query "v2.2.7"
-2. MCP: Call tool "get_context" with tier=1, query="v2.2.7"
-3. Python: manager.get_context(tier=1, query="v2.2.7")
-4. REST: GET /api/v1/context?tier=1&query=v2.2.7
-5. TS SDK: client.context.get({ tier: 1, query: "v2.2.7" })
-6. TUI: Navigate → Context → Set tier: 1 → Search: "v2.2.7"
+1. CLI: whitemagic context --tier 1 --query "v2.6.5"
+2. MCP: Call tool "get_context" with tier=1, query="v2.6.5"
+3. Python: manager.get_context(tier=1, query="v2.6.5")
+4. REST: GET /api/v1/context?tier=1&query=v2.6.5
+5. TS SDK: client.context.get({ tier: 1, query: "v2.6.5" })
+6. TUI: Navigate → Context → Set tier: 1 → Search: "v2.6.5"
 ```
 
 ---
@@ -474,7 +474,7 @@ When similar problem detected:
      category: "token_efficiency",
      metric: "usage_percent",
      value: 49.7,
-     context: "v2.2.7 Phase 1"
+     context: "v2.6.5 Phase 1"
    })
    ```
 
@@ -563,7 +563,7 @@ When similar problem detected:
 3. **`get_context`** - Add metrics to response
 
    ```typescript
-   get_context({tier: 1, query: "v2.2.7"})
+   get_context({tier: 1, query: "v2.6.5"})
    // Returns context + {
    //   metrics: {
    //     tokens_used: 3500,
@@ -584,7 +584,7 @@ whitemagic dashboard
 │                                                              │
 │  Token Efficiency         Strategic Progress                │
 │  ─────────────────       ─────────────────                 │
-│  Budget: 200K            Version: v2.2.7                    │
+│  Budget: 200K            Version: v2.6.5                    │
 │  Used: 99.4K (49.7%)     Features: 7/7 ✅                  │
 │  Efficiency: ✅ Good     Timeline: 50% faster 🚀           │
 │                                                              │
@@ -610,14 +610,14 @@ Last updated: 2025-11-16 09:45 AM
 
 ## 🚀 Implementation Roadmap
 
-### v2.2.7 (Current)
+### v2.6.5 (Current)
 
 - [x] Parallel threading validation
 - [x] Token optimizations Phase 1
 - [ ] SDK realignment
 - [ ] Metrics tracking system (basic)
 
-### v2.2.7 (Next)
+### v2.6.5 (Next)
 
 - [ ] Problem-solving framework
 - [ ] Scratchpad system

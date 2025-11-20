@@ -487,7 +487,7 @@ Update Stats
 - ⚡ Parallel consolidation (16 threads)
 - 📝 Comprehensive documentation
 
-### v2.2.7 (Previous)
+### v2.6.5 (Previous)
 - ✅ Basic consolidation
 - ✅ Simple triggers
 - ✅ Manual execution

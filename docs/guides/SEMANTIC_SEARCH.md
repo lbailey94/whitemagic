@@ -1,4 +1,4 @@
-# Semantic Search Guide (v2.2.7)
+# Semantic Search Guide (v2.6.5)
 
 WhiteMagic ships a hybrid search stack that combines classic keyword filters with embedding-powered semantic ranking. This guide shows how to set it up, run it from the CLI/API/MCP, and interpret the results.
 
