@@ -177,6 +177,10 @@ class ImmuneResponse:
             )
         
         self._record_outcome(outcome)
+        
+        # Emit resonance event (Gan Ying sympathetic vibration)
+        self._emit_resonance_event(threat, antibody, outcome)
+        
         return outcome
     
     def respond_to_threats(self, threats: List[Threat], auto_heal: bool = True) -> List[ResponseOutcome]:

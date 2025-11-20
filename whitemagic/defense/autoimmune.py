@@ -6,6 +6,26 @@ from dataclasses import dataclass, field
 import json
 import re
 
+"""
+Autoimmune Protection
+
+Prevents the immune system from attacking WhiteMagic itself.
+Like biological immune tolerance, this ensures self-recognition.
+
+Also includes multi-agent coordination to prevent conflicts when
+multiple AI instances work with WhiteMagic simultaneously.
+"""
+
+from __future__ import annotations
+
+from typing import Dict, List, Set
+
+# Import multi-agent coordinator (optional)
+try:
+    from whitemagic.defense.multi_agent import get_coordinator
+except ImportError:
+    get_coordinator = None
+
 
 @dataclass
 class AntiPattern:
