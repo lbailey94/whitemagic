@@ -28,7 +28,26 @@ for pattern in _lib_patterns:
 
 if _lib_matches:
     try:
-        haskell_lib = ctypes.CDLL(str(_lib_matches[0]))
+        # Load with RTLD_GLOBAL to make symbols available for GHC runtime
+        # This helps resolve GHC runtime symbols like stg_gc_unpt_r1
+        import sys
+        if sys.platform == 'linux':
+            # Load GHC base libraries first
+            ghc_libs = [
+                '/home/lucas/.ghcup/ghc/9.10.3/lib/ghc-9.10.3/lib/x86_64-linux-ghc-9.10.3/libHSbase-4.20.0.0-ghc9.10.3.so',
+                '/home/lucas/.ghcup/ghc/9.10.3/lib/ghc-9.10.3/lib/x86_64-linux-ghc-9.10.3/libHSghc-prim-0.12.0-ghc9.10.3.so',
+            ]
+            
+            # Try to preload GHC runtime
+            for lib_path in ghc_libs:
+                if Path(lib_path).exists():
+                    try:
+                        ctypes.CDLL(lib_path, mode=ctypes.RTLD_GLOBAL)
+                    except Exception:
+                        pass  # Continue even if preload fails
+        
+        # Now load our Haskell library with RTLD_GLOBAL
+        haskell_lib = ctypes.CDLL(str(_lib_matches[0]), mode=ctypes.RTLD_GLOBAL)
         
         # Initialize Haskell runtime
         haskell_lib.hs_init(None, None)
@@ -36,7 +55,7 @@ if _lib_matches:
         HASKELL_AVAILABLE = True
     except Exception as e:
         HASKELL_AVAILABLE = False
-        warnings.warn(f"Haskell library found but failed to load: {e}")
+        warnings.warn(f"Haskell library found but failed to load: {e}\nNote: Haskell integration is optional. Core functionality uses Rust.")
 else:
     HASKELL_AVAILABLE = False
     warnings.warn(
