@@ -42,6 +42,11 @@ class DNAPrinciple(Enum):
     TEST_BEFORE_DEPLOY = "test_before_deploy"  # Validate before applying
     GRACEFUL_DEGRADATION = "graceful_degradation"  # Fail safely
     PERFORMANCE_MATTERS = "performance_matters"  # Efficiency is key
+    
+    # NEW: From November 19-20 learnings
+    ORGANIZE_WITH_LOVE = "organize_with_love"  # Enable flourishing, not restrict
+    TEST_AS_MEDITATION = "test_as_meditation"  # Systematic care for all modules
+    RESONANCE_FLOW = "resonance_flow"  # Systems communicate via Gan Ying
 
 
 @dataclass

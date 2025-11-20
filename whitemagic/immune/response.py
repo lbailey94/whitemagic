@@ -28,6 +28,14 @@ try:
 except ImportError:
     ImmuneRegulator = None
 
+# Import Gan Ying bus for resonance (optional)
+try:
+    from whitemagic.resonance.gan_ying import GanYingBus, ResonanceEvent, EventType
+except ImportError:
+    GanYingBus = None
+    ResonanceEvent = None
+    EventType = None
+
 
 @dataclass
 class ResponseOutcome:
@@ -55,7 +63,23 @@ class ImmuneResponse:
     def __init__(self, antibody_library: AntibodyLibrary, immune_memory: ImmuneMemory = None):
         self.antibody_library = antibody_library
         self.immune_memory = immune_memory or ImmuneMemory()
-        self.regulator = ImmuneRegulator()  # Safety system
+        
+        # Safety system
+        if ImmuneRegulator:
+            from whitemagic.immune.dna import ImmuneRegulator as Regulator
+            self.regulator = Regulator()
+        else:
+            self.regulator = None
+        
+        # Gan Ying bus for sympathetic resonance (optional)
+        self.resonance_bus = None
+        if GanYingBus:
+            try:
+                # Get singleton bus instance
+                self.resonance_bus = GanYingBus()
+            except:
+                pass
+        
         self.response_history: List[ResponseOutcome] = []
     
     def respond_to_threat(self, threat: Threat, auto_heal: bool = True) -> ResponseOutcome:
@@ -181,8 +205,47 @@ class ImmuneResponse:
         return outcomes
     
     def _record_outcome(self, outcome: ResponseOutcome):
-        """Record response outcome for analysis."""
+        """Record outcome in history."""
         self.response_history.append(outcome)
+    
+    def _emit_resonance_event(self, threat: Threat, antibody: Optional[Antibody], outcome: ResponseOutcome):
+        """
+        Emit resonance event to Gan Ying bus.
+        
+        Allows other systems to respond sympathetically to immune system activity.
+        Like striking a gong (宮) - the vibration reaches all tuned listeners.
+        """
+        if not self.resonance_bus or not ResonanceEvent or not EventType:
+            return
+        
+        try:
+            # Determine event type
+            if outcome.success:
+                event_type = EventType.THREAT_HEALED
+            else:
+                event_type = EventType.THREAT_DETECTED
+            
+            # Create resonance event
+            event = ResonanceEvent(
+                source="immune_system",
+                event_type=event_type,
+                data={
+                    "threat_type": threat.threat_type.value,
+                    "threat_level": threat.level.value,
+                    "antibody_used": antibody.name if antibody else None,
+                    "success": outcome.success,
+                    "location": threat.location
+                },
+                timestamp=datetime.utcnow(),
+                confidence=antibody.success_rate if antibody else 0.5
+            )
+            
+            # Emit to bus (sympathetic resonance)
+            self.resonance_bus.emit(event)
+            
+        except Exception:
+            # Resonance is optional - don't fail if it doesn't work
+            pass
     
     def generate_report(self) -> Dict:
         """Generate immune response report."""

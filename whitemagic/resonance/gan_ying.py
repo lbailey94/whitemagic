@@ -48,6 +48,12 @@ class EventType(Enum):
     NOVEL_PATTERN = "novel_pattern"
     SYNCHRONICITY = "synchronicity"
     INSIGHT_FLASH = "insight_flash"
+    
+    # Immune system events (NEW)
+    THREAT_DETECTED = "threat_detected"
+    THREAT_HEALED = "threat_healed"
+    ANTIBODY_APPLIED = "antibody_applied"
+    SYSTEM_HEALTH_CHANGED = "system_health_changed"
 
 
 @dataclass

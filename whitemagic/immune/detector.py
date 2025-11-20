@@ -39,6 +39,13 @@ class ThreatType(Enum):
     CONFIGURATION_DRIFT = "configuration_drift"
     MEMORY_LEAK = "memory_leak"
     QUALITY_DEGRADATION = "quality_degradation"
+    
+    # NEW: From November 19-20 learnings
+    TEST_COVERAGE_LOW = "test_coverage_low"  # <80% test coverage
+    DOC_FRAGMENTATION = "doc_fragmentation"  # Too many scattered docs
+    MODULE_ISOLATION = "module_isolation"  # Built but never integrated
+    RESONANCE_BLOCKED = "resonance_blocked"  # Gan Ying not flowing
+    ZODIAC_INCOMPLETE = "zodiac_incomplete"  # Missing core connections
 
 
 @dataclass
