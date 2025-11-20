@@ -27,3 +27,10 @@ __all__ = [
 ]
 
 __version__ = '2.6.5'
+
+# Add narrative_engine exports
+try:
+    from .narrative_engine import get_narrative_engine, NarrativeEngine, NarrativeArc, NarrativeThread
+    __all__.extend(['get_narrative_engine', 'NarrativeEngine', 'NarrativeArc', 'NarrativeThread'])
+except ImportError:
+    pass
