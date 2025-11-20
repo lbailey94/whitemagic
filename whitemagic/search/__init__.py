@@ -17,4 +17,4 @@ from .semantic import SearchMode, SearchResult, SemanticSearcher, semantic_searc
 
 __all__ = ["semantic_search", "SemanticSearcher", "SearchMode", "SearchResult"]
 
-__version__ = "2.2.8"
+__version__ = "2.6.5"

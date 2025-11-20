@@ -72,7 +72,7 @@ def check_documentation() -> Dict[str, Any]:
     for doc in docs_path.rglob("*.md"):
         try:
             content = doc.read_text()
-            # Find old version patterns (2.2.0 through 2.2.6)
+            # Find old version patterns (2.6.5 through 2.6.5)
             old_versions = re.findall(r"2\.2\.[0-6](?![0-9])", content)
             if old_versions:
                 issues.append(

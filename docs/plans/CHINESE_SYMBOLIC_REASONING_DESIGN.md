@@ -1,6 +1,6 @@
 # Chinese Symbolic Reasoning: Deep Dive Design
 
-**Version**: Pre-v2.2.5 Research  
+**Version**: Pre-2.6.5 Research  
 **Date**: November 16, 2025  
 **Purpose**: Explore symbolic reasoning with Chinese logographs
 
@@ -11,7 +11,7 @@
 ### **User Requirements**
 1. **Toggle-able feature** - Not forced on users
 2. **English by default** - Most memories stay in native language
-3. **Language support** - Full i18n in v2.2.6
+3. **Language support** - Full i18n in 2.6.5
 4. **Smart usage** - Chinese for short-term working memories
 5. **Efficiency focus** - Measure impact on AI reasoning
 
@@ -33,8 +33,8 @@
 # Short-term working memory (Chinese core + English context)
 
 ## 當前任務 (Current Task)
-實施戰略規劃模組 v2.2.5
-(Implementing strategic planning module v2.2.5)
+實施戰略規劃模組 2.6.5
+(Implementing strategic planning module 2.6.5)
 
 ## 五事檢查 (Five Factors)
 - 道 ✅ Aligned with white magic principles
@@ -301,7 +301,7 @@ $ whitemagic metrics compare --modes symbolic,standard
 title: "工作記憶_v2.2.5_Dashboard_Implementation"
 type: short_term
 mode: symbolic
-tags: [工作記憶, dashboard, v2.2.5, implementation]
+tags: [工作記憶, dashboard, 2.6.5, implementation]
 ---
 
 ## 當前任務 (Current Task)
@@ -380,7 +380,7 @@ Build metrics dashboard with real-time visualization
 
 ### **Challenge 4: Community**
 
-**Long-term solution** (v2.2.6):
+**Long-term solution** (2.6.5):
 - Full i18n support
 - User chooses language
 - Chinese = one of many options
@@ -388,7 +388,7 @@ Build metrics dashboard with real-time visualization
 
 ---
 
-## 🎯 **v2.2.5 Implementation Plan**
+## 🎯 **2.6.5 Implementation Plan**
 
 ### **Phase 1: Foundation** (Week 1)
 - Symbolic reasoning module
@@ -408,7 +408,7 @@ Build metrics dashboard with real-time visualization
 - Document findings
 - Publish results
 
-### **Phase 4: Optional Feature** (v2.2.5 release)
+### **Phase 4: Optional Feature** (2.6.5 release)
 - Toggle in config
 - Documentation
 - Examples

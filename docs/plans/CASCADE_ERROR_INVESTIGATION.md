@@ -1,14 +1,14 @@
-# Cascade Error Investigation - v2.2.9
+# Cascade Error Investigation - 2.6.5
 
 **Date**: November 17, 2025
-**Issue**: 20% of AI models (Kimi K2, Qwen 3) caused Cascade internal errors during v2.2.8 testing
+**Issue**: 20% of AI models (Kimi K2, Qwen 3) caused Cascade internal errors during 2.6.5 testing
 **Impact**: Reduces AI compatibility from potential 100% to 70%
 
 ---
 
 ## 🔍 Problem Statement
 
-During multi-AI testing of WhiteMagic v2.2.8:
+During multi-AI testing of WhiteMagic 2.6.5:
 
 - **7/10 AIs succeeded** (GPT-5.1, GPT Codex, o3, DeepSeek R1, Grok 3 mini, Claude Haiku, Gemini)
 - **2/10 AIs failed** (Kimi K2, Qwen 3) - Cascade internal errors
@@ -109,7 +109,7 @@ except Exception as e:
 
 ---
 
-## 🔧 Immediate Actions (v2.2.9)
+## 🔧 Immediate Actions (2.6.5)
 
 ### 1. Add Response Size Limits
 
@@ -222,21 +222,21 @@ track_metric("mcp_latency", "p99_ms", p99_latency)
 
 ## 🎯 Expected Outcomes
 
-### Short-Term (v2.2.9)
+### Short-Term (2.6.5)
 
 - Add size limits and timeouts
 - Improve error messages
 - Add debug logging
 - **Goal**: Reduce error rate from 20% → 10%
 
-### Medium-Term (v2.3.0)
+### Medium-Term (2.6.5)
 
 - Test with Kimi K2 and Qwen 3 specifically
 - Implement model-specific optimizations
 - Add auto-tuning based on model capabilities
 - **Goal**: Reduce error rate from 10% → 5%
 
-### Long-Term (v2.4.0)
+### Long-Term (2.6.5)
 
 - Full compatibility matrix
 - Automatic compatibility detection

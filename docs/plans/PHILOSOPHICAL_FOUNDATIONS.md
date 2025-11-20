@@ -257,7 +257,7 @@ Exploration → Action → Integration → Refinement → Reflection → Explora
 
 ## 💎 Practical Implementation Ideas
 
-### For v2.2.7-2.3.0: I Ching-Inspired Features
+### For 2.6.5-2.6.5: I Ching-Inspired Features
 
 #### 1. **Hexagram State Tracking**
 
@@ -370,7 +370,7 @@ Tier 3 = ☰ Heaven (111) - Complete, full knowledge
 
 ## 📚 Ancient Philosophies to Explore
 
-### Short Term (v2.2.x - v2.3.0)
+### Short Term (v2.2.x - 2.6.5)
 
 1. **道 (Dào)** - The Way
    - Natural flow vs forced action
@@ -389,7 +389,7 @@ Tier 3 = ☰ Heaven (111) - Complete, full knowledge
    - Fundamental states
    - Applied to: System states, transitions
 
-### Medium Term (v2.3.x - v2.4.0)
+### Medium Term (v2.3.x - 2.6.5)
 
 5. **易 (Yì)** - Change/transformation
    - I Ching hexagrams
@@ -407,7 +407,7 @@ Tier 3 = ☰ Heaven (111) - Complete, full knowledge
    - Balance, moderation
    - Applied to: Resource allocation, optimization
 
-### Long Term (v2.5.0+)
+### Long Term (2.6.5+)
 
 9. **感應 (Gǎnyìng)** - Mutual resonance
    - Sympathetic response
@@ -518,7 +518,7 @@ Ancient philosophies provide:
 
 ---
 
-## 🎯 Immediate Application (v2.2.7)
+## 🎯 Immediate Application (2.6.5)
 
 ### Already Implemented (Unconsciously!)
 
@@ -539,7 +539,7 @@ Ancient philosophies provide:
 
 **We were already following Dao** (natural way) **without realizing it!** 🌟
 
-### Conscious Enhancement (v2.2.7+)
+### Conscious Enhancement (2.6.5+)
 
 1. Name the patterns explicitly
 2. Formalize the transformations

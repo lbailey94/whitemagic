@@ -409,23 +409,23 @@ WhiteMagic is well-positioned if we:
 
 1. 🚧 **Monetization**: Plus/Pro tiers not live yet
 2. 🚧 **Distribution**: Product ready, but not widely known
-3. ✅ **Terminal Tool**: **SHIPPED in v2.2.1** (CLI + API + MCP, read/write modes, approval workflow)
-4. ✅ **Semantic Search**: **SHIPPED in v2.2.1** (Local embeddings + OpenAI, hybrid mode, CLI + API + MCP)
+3. ✅ **Terminal Tool**: **SHIPPED in 2.6.5** (CLI + API + MCP, read/write modes, approval workflow)
+4. ✅ **Semantic Search**: **SHIPPED in 2.6.5** (Local embeddings + OpenAI, hybrid mode, CLI + API + MCP)
 5. 📅 **Team Features**: Roadmap item, no code yet
 
 ### The Path Forward
 
-**Next 30 Days** (v2.2.1-2.1.9):
+**Next 30 Days** (2.6.5-2.6.5):
 1. UX polish: Nested Learning, onboarding wizard, memory browser TUI
 2. Build community hub (Discord)
 3. Launch campaign (PH + HN + communities)
 
-**Next 90 Days** (v2.2.0):
+**Next 90 Days** (2.6.5):
 1. Activate Plus tier (Stripe + cloud sync)
 2. Framework integrations (LangChain, etc.)
 3. Reach 1,000 users, 50+ paying
 
-**Next 180 Days** (v2.3.0+):
+**Next 180 Days** (2.6.5+):
 1. Pro tier + team workspaces
 2. OCI sandbox for Terminal Tool
 3. Agent marketplace

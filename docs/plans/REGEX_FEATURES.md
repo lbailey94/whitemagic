@@ -1,7 +1,7 @@
 # Regex Features & Performance Optimization
 
 **Topic**: Lookahead/Lookbehind and Advanced Regex
-**Version**: 2.2.7
+**Version**: 2.6.5
 **Status**: Educational + Future Enhancement
 
 ---
@@ -59,11 +59,11 @@ test(?!\.py)  # "test" NOT followed by ".py"
 ```regex
 # Without lookahead (matches too much):
 version.*2\.2\.[0-9]
-# Matches: "version 2.2.7" AND "version 2.2.77"
+# Matches: "version 2.6.5" AND "version 2.6.5"
 
 # With lookahead (precise):
 version.*2\.2\.[0-9](?!\d)
-# Matches: "version 2.2.7" only
+# Matches: "version 2.6.5" only
 ```
 
 ### 2. **Context-Aware Extraction**
@@ -89,8 +89,8 @@ api_key.*=.*(?!example|test|xxx)[\w\-]{32}
 ```regex
 # Replace version numbers except in URLs:
 (?<!https?://)version.*2\.2\.[0-9]
-# Updates: "version 2.2.7" → "version 2.2.7"
-# Skips: "https://example.com/version/2.2.7"
+# Updates: "version 2.6.5" → "version 2.6.5"
+# Skips: "https://example.com/version/2.6.5"
 ```
 
 ---
@@ -186,7 +186,7 @@ filtered = [
 
 ```python
 # For version checking:
-def find_outdated_versions(target='2.2.7'):
+def find_outdated_versions(target='2.6.5'):
     results = []
     for match in grep(r'2\.\d+\.\d+'):
         version = extract_version(match)
@@ -199,7 +199,7 @@ def find_outdated_versions(target='2.2.7'):
 
 ## 🎯 Recommendations for WhiteMagic
 
-### Short Term (v2.2.7/2.2.8)
+### Short Term (2.6.5/2.6.5)
 
 **Use hybrid approach**:
 
@@ -224,7 +224,7 @@ def search(pattern, path, allow_complex=False):
         return search_with_ripgrep(pattern, path)  # Fast path
 ```
 
-### Medium Term (v2.2.9)
+### Medium Term (2.6.5)
 
 **Add PCRE2 support as optional**:
 
@@ -238,7 +238,7 @@ else:
     warn("Install ripgrep with PCRE2 for advanced regex")
 ```
 
-### Long Term (v2.3.0+)
+### Long Term (2.6.5+)
 
 **Optimize common patterns**:
 
@@ -278,7 +278,7 @@ ripgrep --pcre2: 0.08s
 
 ---
 
-## 🛠️ Implementation for v2.2.8
+## 🛠️ Implementation for 2.6.5
 
 ### Add to `whitemagic/utils/regex.py`
 
@@ -410,7 +410,7 @@ data = yaml.safe_load(content)
 
 ### Recommendation
 
-**Implement hybrid approach in v2.2.8**:
+**Implement hybrid approach in 2.6.5**:
 
 - Fast path: ripgrep for simple patterns
 - Smart fallback: PCRE2 or Python for complex

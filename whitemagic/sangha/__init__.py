@@ -16,4 +16,4 @@ __all__ = [
     'get_community_dharma',
 ]
 
-__version__ = "2.4.1"
+__version__ = "2.6.5"

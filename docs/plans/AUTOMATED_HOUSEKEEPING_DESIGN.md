@@ -79,7 +79,7 @@ whitemagic normalize-tags --dry-run
 **Rules**:
 - Convert CamelCase → snake_case
 - Remove duplicate tags
-- Suggest common typos (v2.2.7 vs v2_2_7)
+- Suggest common typos (2.6.5 vs v2_2_7)
 
 ### 4. Scratchpad Cleanup
 ```bash
@@ -153,14 +153,14 @@ whitemagic docs-check --report
 Documentation Drift Report
 ==========================
 Version References:
-  ✓ README.md: 2.2.8
-  ✓ ROADMAP.md: 2.2.8
-  ✓ ARCHITECTURE.md: 2.2.8
-  ⚠ 3 guides reference 2.2.7 → Updated
+  ✓ README.md: 2.6.5
+  ✓ ROADMAP.md: 2.6.5
+  ✓ ARCHITECTURE.md: 2.6.5
+  ⚠ 3 guides reference 2.6.5 → Updated
 
 Outdated Sections:
   ⚠ docs/guides/QUICKSTART.md mentions removed feature
-  ⚠ docs/OVERVIEW.md has 2.2.6 example
+  ⚠ docs/OVERVIEW.md has 2.6.5 example
   → Run: whitemagic docs-check --fix
 ```
 
@@ -216,7 +216,7 @@ echo "✓ CHANGELOG.md updated for v$VERSION"
 ### 5. Memory Archival
 ```bash
 # Archive old version memories
-whitemagic search --query "v2.2.5 OR v2.2.6" --type short_term | \
+whitemagic search --query "2.6.5 OR 2.6.5" --type short_term | \
   xargs -I {} whitemagic update {} --archive
 
 echo "✓ Archived memories for old versions"
@@ -412,7 +412,7 @@ echo "✓ Backup created: $BACKUP_FILE"
 
 ## 🤖 Implementation Plan
 
-### Phase 1: Core Scripts (v2.2.9)
+### Phase 1: Core Scripts (2.6.5)
 
 **Create**:
 1. `scripts/housekeeping/session_checkpoint.sh`
@@ -424,7 +424,7 @@ echo "✓ Backup created: $BACKUP_FILE"
 - Verify output
 - Add to git hooks
 
-### Phase 2: Automation Integration (v2.3.0)
+### Phase 2: Automation Integration (2.6.5)
 
 **Add to**:
 1. `.git/hooks/pre-commit` → Session checkpoint
@@ -432,7 +432,7 @@ echo "✓ Backup created: $BACKUP_FILE"
 3. `scripts/release.sh` → Version-level housekeeping
 4. GitHub Actions → Weekly housekeeping
 
-### Phase 3: AI-Powered Housekeeping (v2.4.0+)
+### Phase 3: AI-Powered Housekeeping (2.6.5+)
 
 **Features**:
 1. AI detects when consolidation needed
@@ -452,8 +452,8 @@ whitemagic housekeep --level session
 whitemagic checkpoint --with-housekeeping
 
 # Version housekeeping
-whitemagic housekeep --level version --version 2.2.9
-whitemagic release 2.2.9  # Includes version housekeeping
+whitemagic housekeep --level version --version 2.6.5
+whitemagic release 2.6.5  # Includes version housekeeping
 
 # Project housekeeping
 whitemagic housekeep --level project --deep
@@ -461,7 +461,7 @@ whitemagic organize --dry-run  # Show what would be reorganized
 
 # Specific tasks
 whitemagic consolidate-memories --auto
-whitemagic sync-versions 2.2.9
+whitemagic sync-versions 2.6.5
 whitemagic organize-docs --dry-run
 whitemagic check-vision-gaps
 ```
@@ -479,8 +479,8 @@ $ whitemagic checkpoint --with-housekeeping
   - Metrics recorded
 
 # Before release
-$ whitemagic release 2.2.9
-✓ Version synced to 2.2.9 across all files
+$ whitemagic release 2.6.5
+✓ Version synced to 2.6.5 across all files
 ✓ Documentation drift fixed (3 files updated)
 ✓ CHANGELOG.md updated
 ✓ Old version memories archived
@@ -522,7 +522,7 @@ $ whitemagic housekeep --level project --deep
   "metric": "version_sync",
   "value": 1,
   "context": {
-    "version": "2.2.9",
+    "version": "2.6.5",
     "files_updated": 15,
     "docs_fixed": 3,
     "duration_seconds": 45
@@ -644,20 +644,20 @@ whitemagic backup
 
 ## 💡 Future Enhancements
 
-### v2.4.0: AI-Powered Housekeeping
+### 2.6.5: AI-Powered Housekeeping
 
 - AI detects consolidation opportunities
 - AI generates missing documentation
 - AI suggests roadmap updates
 - AI reviews code quality
 
-### v2.5.0: Federated Housekeeping
+### 2.6.5: Federated Housekeeping
 
 - Team workspace cleanup
 - Shared memory consolidation
 - Cross-project organization
 
-### v3.0.0: Self-Healing System
+### 2.6.5: Self-Healing System
 
 - Automatic error recovery
 - Self-testing and validation
@@ -667,5 +667,5 @@ whitemagic backup
 ---
 
 **Design Complete**: November 17, 2025  
-**Next**: Implement Phase 1 in v2.2.9  
+**Next**: Implement Phase 1 in 2.6.5  
 **Status**: Ready for review and implementation

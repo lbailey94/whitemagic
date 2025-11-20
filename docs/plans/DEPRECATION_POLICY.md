@@ -1,6 +1,6 @@
 # WhiteMagic API Deprecation Policy
 
-**Version**: 2.2.7
+**Version**: 2.6.5
 **Last Updated**: November 10, 2025
 
 ---
@@ -24,7 +24,7 @@ We use Semantic Versioning (SemVer): `MAJOR.MINOR.PATCH`
 ### **Current Version**
 
 - **API Version**: `v1`
-- **Release**: `2.1.1`
+- **Release**: `2.6.5`
 
 ---
 
@@ -91,7 +91,7 @@ Link: <https://docs.whitemagic.dev/migrations/v2>; rel="deprecation"
 
 ### **When We Introduce Breaking Changes**
 
-1. Release new major version (e.g., v2.0.0)
+1. Release new major version (e.g., 2.6.5)
 2. Support previous version for minimum 12 months
 3. Provide automated migration tools when possible
 
@@ -125,7 +125,7 @@ Questions about deprecations? Contact:
 
 | Version | Release Date | Support Until |
 |---------|-------------|---------------|
-| v1      | 2.2.7       | Current       |
+| v1      | 2.6.5       | Current       |
 | Nov 10, 2025 | Active        |
-| 2.1.0   | Nov 9, 2025  | Active        |
-| 2.0.0   | Nov 1, 2025  | Nov 1, 2026   |
+| 2.6.5   | Nov 9, 2025  | Active        |
+| 2.6.5   | Nov 1, 2025  | Nov 1, 2026   |

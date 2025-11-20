@@ -34,7 +34,7 @@ Session end  → Create session snapshot + consolidate short-term
 
 **Consolidation triggers**:
 - Every phase completion
-- Every version release (v2.2.x → v2.3.0)
+- Every version release (v2.2.x → 2.6.5)
 - Every 3-4 hour session
 - After major breakthroughs
 
@@ -108,7 +108,7 @@ Comprehensive audit:
 loader.get_context(tier=0)
 
 # Targeted work
-loader.get_context(tier=1, query="v2.2.3 features")
+loader.get_context(tier=1, query="2.6.5 features")
 
 # Deep dive
 loader.get_context(tier=2, query="architecture design")
@@ -402,6 +402,6 @@ context = loader.get_context(tier=1, query="task")
 
 **Status**: Active and proven  
 **Effectiveness**: 40-50x vs baseline workflows  
-**Next Review**: After v2.2.3 release
+**Next Review**: After 2.6.5 release
 
 **Last Updated**: November 16, 2025, 9:15 AM

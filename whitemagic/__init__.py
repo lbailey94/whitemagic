@@ -1,7 +1,7 @@
 """
 WhiteMagic - Memory Infrastructure for AI Agents
 
-v2.3.6 "Autonomous Intelligence"
+2.6.5 "Autonomous Intelligence"
 """
 
 from .core import MemoryManager

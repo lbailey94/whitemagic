@@ -356,5 +356,5 @@ After setup:
 ---
 
 **Last Updated**: November 12, 2025
-**Version**: 2.1.4
+**Version**: 2.6.5
 **Status**: ✅ Ready to use

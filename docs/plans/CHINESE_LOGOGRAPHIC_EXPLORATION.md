@@ -60,4 +60,4 @@ class StrategicPlanner:
 - Git diff readability
 - Community barrier
 
-**Verdict**: Worth exploring in v2.2.7! 🌟
+**Verdict**: Worth exploring in 2.6.5! 🌟

@@ -27,4 +27,4 @@ __all__ = [
     'WisdomIntegrator',
 ]
 
-__version__ = "2.4.4"
+__version__ = "2.6.5"

@@ -242,7 +242,7 @@ ls -l whitemagic-hs/dist/
 
 ---
 
-**Built for v2.4.0 "Dharma Foundation"**  
+**Built for 2.6.5 "Dharma Foundation"**  
 **Part of token-negative optimization initiative**
 
 🌸⚡🙏

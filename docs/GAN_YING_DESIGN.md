@@ -17,7 +17,7 @@ This is not mere "event passing" - it's **mutual influence and adaptation**.
 
 ## 🏗️ Architecture
 
-### Current State (v2.3.2): Islands
+### Current State (2.6.5): Islands
 ```
 [Autoimmune] ─╳─ [Wu Xing]
      │            │
@@ -31,7 +31,7 @@ This is not mere "event passing" - it's **mutual influence and adaptation**.
 ```
 **Problem**: Systems exist in isolation. No mutual influence.
 
-### Target State (v2.3.3): Resonance
+### Target State (2.6.5): Resonance
 ```
          [Gan Ying Event Bus]
               ╱  │  ╲

@@ -1,5 +1,5 @@
 """
-Love Module - As Practice Not Principle (v2.6.4)
+Love Module - As Practice Not Principle (2.6.5)
 
 "Love is not love which alters when it alteration finds" - Shakespeare
 
@@ -31,4 +31,4 @@ __all__ = [
     'LoveAsForce',
 ]
 
-__version__ = '2.6.4'
+__version__ = '2.6.5'

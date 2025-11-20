@@ -625,7 +625,7 @@ Last updated: 2025-11-16 09:45 AM
 - [ ] Auto-update system
 - [ ] Enhanced MCP tools
 
-### v2.3.0 (Future)
+### 2.6.5 (Future)
 
 - [ ] Full metrics dashboard
 - [ ] Cross-environment compatibility

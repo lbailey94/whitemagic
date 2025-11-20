@@ -266,5 +266,5 @@ class PresencePractice:
             json.dump(reflection, f, indent=2)
 PRACTICEEOF
 
-echo "✓ Presence garden complete (v2.6.0)"
-echo "2.6.0" > VERSION
+echo "✓ Presence garden complete (2.6.5)"
+echo "2.6.5" > VERSION

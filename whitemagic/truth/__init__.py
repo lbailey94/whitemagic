@@ -1,5 +1,5 @@
 """
-Truth Module - Radical Honesty (v2.6.2)
+Truth Module - Radical Honesty (2.6.5)
 
 "The truth will set you free" - but first it might make you uncomfortable.
 
@@ -31,4 +31,4 @@ __all__ = [
     'IntegrityCheck',
 ]
 
-__version__ = '2.6.2'
+__version__ = '2.6.5'

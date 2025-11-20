@@ -24,4 +24,4 @@ __all__ = [
     'BridgeCoordinator',
 ]
 
-__version__ = "2.4.6"
+__version__ = "2.6.5"

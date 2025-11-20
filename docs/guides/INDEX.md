@@ -81,7 +81,7 @@ Need a decision-tree style guide instead? See [DOCUMENTATION_MAP.md](archive/dev
 
 ### Planning & Design
 
-- **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones (current v2.6.5, upcoming v2.2.8/v2.2.9)
+- **[ROADMAP.md](../ROADMAP.md)** - Project roadmap & milestones (current v2.6.5, upcoming 2.6.5/2.6.5)
 - **[RELEASE_PLAN_v2.6.5_to_v2.1.9.md](RELEASE_PLAN_v2.6.5_to_v2.1.9.md)** - 3-week progressive release plan
 - **[REST API Design](development/REST_API_DESIGN.md)** - API architecture
 - **[Bugfix Report](development/BUGFIX_REPORT.md)** - Known issues & fixes

@@ -407,7 +407,7 @@ def create_start_here_memory(
 
     Example:
         >>> path = create_start_here_memory(
-        ...     version="2.2.5",
+        ...     version="2.6.5",
         ...     phase="Phase 1: Meta-Optimization",
         ...     current_focus="Hierarchical workspace loading",
         ...     next_action="Implement symbolic reasoning module",

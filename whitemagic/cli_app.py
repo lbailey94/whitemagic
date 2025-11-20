@@ -503,7 +503,7 @@ def command_backup(manager: MemoryManager, args: argparse.Namespace) -> int:
     )
 
     try:
-        # v2.2.2: Incremental backups re-enabled (implementation complete)
+        # 2.6.5: Incremental backups re-enabled (implementation complete)
         result = backup_mgr.create_backup(
             output_path=output_path,
             incremental=args.incremental if hasattr(args, "incremental") else False,
@@ -1946,7 +1946,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         help="Output path for backup file (default: backups/backup_TIMESTAMP.tar.gz).",
     )
-    # TODO v2.1.7: Implement incremental backups
+    # TODO 2.6.5: Implement incremental backups
     # Incremental flag removed until manifest diffing is implemented
     # See: docs/development/SECURITY_REVIEW_NOV14_2025.md #3
     backup_parser.add_argument(
@@ -2314,7 +2314,7 @@ def build_parser() -> argparse.ArgumentParser:
         "version",
         help="Bump version across all files.",
     )
-    version_parser.add_argument("new_version", help="New version (e.g., 2.2.9)")
+    version_parser.add_argument("new_version", help="New version (e.g., 2.6.5)")
     version_parser.add_argument("--no-commit", action="store_true", help="Don't auto-commit")
 
     # precommit-fix
@@ -2455,7 +2455,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Register homeostasis commands
     register_homeostasis_commands(subparsers)
 
-    # Memory capture commands (v2.3.1+)
+    # Memory capture commands (2.6.5+)
     memory_status_parser = subparsers.add_parser(
         "memory-status",
         help="Show memory capture system status"

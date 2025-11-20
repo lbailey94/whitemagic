@@ -251,7 +251,7 @@ which node
 # Output examples:
 # /usr/local/bin/node
 # /opt/homebrew/bin/node
-# ~/.nvm/versions/node/v20.0.0/bin/node
+# ~/.nvm/versions/node/2.6.5/bin/node
 
 # For global npm packages
 npm root -g

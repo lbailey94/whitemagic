@@ -1,6 +1,6 @@
 # Terminal Tool Usage Guide
 
-**Version**: 0.1.0
+**Version**: 2.6.5
 **Status**: Production Ready
 
 ---

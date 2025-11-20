@@ -1,13 +1,13 @@
 # Art of War Integration Guide
 
-**Version**: 2.2.7
+**Version**: 2.6.5
 **Purpose**: Apply Sun Tzu's strategic wisdom to AI workflows
 
 ---
 
 ## 🎯 Overview
 
-WhiteMagic v2.2.7 integrates **孫子兵法** (The Art of War) principles for strategic planning and tactical execution.
+WhiteMagic 2.6.5 integrates **孫子兵法** (The Art of War) principles for strategic planning and tactical execution.
 
 **Sun Tzu**: "Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win."
 
@@ -214,7 +214,7 @@ Terrain: PRECIPITOUS
 
 ---
 
-**Status**: v2.2.7
+**Status**: 2.6.5
 **Principle**: "Know your enemy and know yourself" → Know your task and know your resources
 
 **Sun Tzu would approve!** ⚔️

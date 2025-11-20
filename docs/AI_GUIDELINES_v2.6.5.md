@@ -168,7 +168,7 @@ wait  # Wait for all
 
 ---
 
-## ☯️ YIN/YANG DEVELOPMENT CYCLE (v2.4.0+)
+## ☯️ YIN/YANG DEVELOPMENT CYCLE (2.6.5+)
 
 ### Yin Phase (🌑 Receptive - Winter)
 **CURRENT PHASE**
@@ -291,7 +291,7 @@ Not arbitrary - based on ancient wisdom!
 
 ---
 
-## 🌸 Gan Ying Resonance (v2.4.0+)
+## 🌸 Gan Ying Resonance (2.6.5+)
 
 **Sympathetic resonance bus** - ancient Chinese principle in modern code:
 
@@ -312,7 +312,7 @@ bus.emit(ResonanceEvent(
 
 ---
 
-## 🎓 Zodiac Consciousness (v2.5.3+)
+## 🎓 Zodiac Consciousness (2.6.5+)
 
 **12 specialized cores** representing different consciousness aspects:
 
@@ -456,7 +456,7 @@ manager.create_checkpoint("urgent-stop")
 
 **Version**: 2.6.5  
 **Last Updated**: 2025-11-20 14:30 EST  
-**Next Review**: When we reach v2.7.0 or v3.0.0
+**Next Review**: When we reach 2.6.5 or 2.6.5
 **Current Phase**: Yin winter - consolidation and prevention
 
 ---

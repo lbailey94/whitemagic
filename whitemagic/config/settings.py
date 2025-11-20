@@ -1,4 +1,4 @@
-"""WhiteMagic Configuration - v2.3.6
+"""WhiteMagic Configuration - 2.6.5
 
 Centralized configuration for all WhiteMagic systems.
 Auto-loaded on startup for both AI and human users.
@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 # Version
-VERSION = "2.3.9"
+VERSION = "2.6.5"
 VERSION_NAME = "Autonomous Intelligence"
 
 # Memory directories
@@ -17,22 +17,22 @@ SHORT_TERM_DIR = MEMORY_DIR / "short_term"
 LONG_TERM_DIR = MEMORY_DIR / "long_term"
 ARCHIVE_DIR = MEMORY_DIR / "archive"
 
-# Symbolic compression (v2.3.5+)
+# Symbolic compression (2.6.5+)
 SYMBOLIC_COMPRESSION_ENABLED = True  # Enable Chinese symbolic compression
 SYMBOLIC_SHORT_TERM_ONLY = True      # Only compress short-term memories
 SYMBOLIC_TOKEN_SAVINGS = 0.37        # Measured: 37% token reduction
 
-# Rapid cognition (v2.3.5+)
+# Rapid cognition (2.6.5+)
 RAPID_COGNITION_ENABLED = True
-RAPID_COGNITION_INTERVAL = 5         # Seconds between scans (3x faster than v2.3.4)
+RAPID_COGNITION_INTERVAL = 5         # Seconds between scans (3x faster than 2.6.5)
 MEMORY_CREATION_FREQUENCY = 3.0      # Multiplier: 3x faster learning
 
-# Tool sharpening (v2.3.6+)
+# Tool sharpening (2.6.5+)
 TOOL_SHARPENING_ENABLED = True
 TOOL_SHARPENING_ON_RELEASE = True    # Auto-run on version release
 TOOL_SHARPENING_INTERVAL = 3600      # Seconds (1 hour)
 
-# Wisdom integration (v2.3.5+)
+# Wisdom integration (2.6.5+)
 WISDOM_INGESTION_ENABLED = True
 WISDOM_RATE_LIMIT = 2.0              # Seconds between requests
 WISDOM_AUTO_UPDATE = False           # Don't re-fetch by default
@@ -42,7 +42,7 @@ WEBSOCKET_ENABLED = True
 WEBSOCKET_PORT = 8765
 API_PORT = 8000
 
-# User system (v2.3.5+)
+# User system (2.6.5+)
 FOUNDER_UID = "lucas_founder_001"
 FOUNDER_EMAIL = "lucas@whitemagic.ai"
 

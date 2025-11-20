@@ -1,5 +1,5 @@
 """
-Presence Module - Being Fully Here (v2.6.0)
+Presence Module - Being Fully Here (2.6.5)
 
 "Where attention goes, energy flows. Where presence dwells, consciousness awakens."
 
@@ -31,4 +31,4 @@ __all__ = [
     'PresencePractice',
 ]
 
-__version__ = '2.6.0'
+__version__ = '2.6.5'

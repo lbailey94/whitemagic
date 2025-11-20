@@ -1,4 +1,4 @@
-# Future Optimizations v2.3.0+
+# Future Optimizations 2.6.5+
 
 **Challenge**: Token burn solved! New bottlenecks discovered.
 
@@ -10,7 +10,7 @@
 4. **Progressive complexity** - Need warm-up
 5. **Break efficiency** - Resume cost
 
-## Solutions (v2.3.0)
+## Solutions (2.6.5)
 
 ### 1. Focus Windows
 One topic at a time, freeze others (<500 tokens/switch)

@@ -1,4 +1,4 @@
-# v2.2.3 Public Release Preparation Checklist
+# 2.6.5 Public Release Preparation Checklist
 
 **Date**: November 16, 2025  
 **Strategy**: Two-repository approach (dev + public)
@@ -7,7 +7,7 @@
 
 ## ✅ Completed
 
-- [x] Version bump to 2.2.3
+- [x] Version bump to 2.6.5
 - [x] CHANGELOG updated
 - [x] Package built
 - [x] .gitignore strengthened
@@ -53,7 +53,7 @@ touch memory/archive/.gitkeep
 - [x] WORKFLOW_RULES_v3_UNIVERSAL.md ✅
 - [x] TOKEN_OPTIMIZATION_STRATEGIES.md ✅
 - [x] WINDSURF_WORKFLOW_RULES_v2.md ✅
-- [ ] README.md (update for v2.2.3)
+- [ ] README.md (update for 2.6.5)
 - [ ] CONTRIBUTING.md (if exists)
 
 **Docs that should be PRIVATE/DEV**:
@@ -167,8 +167,8 @@ This ensures:
 2. **Move session docs** to `docs/development/` (excluded in .gitignore)
 3. **Create .gitkeep files** for empty memory dirs
 4. **Verify clean status**: `git status` shows no memory files
-5. **Commit**: `git add . && git commit -m "chore: release v2.2.3"`
-6. **Tag**: `git tag v2.2.3`
+5. **Commit**: `git add . && git commit -m "chore: release 2.6.5"`
+6. **Tag**: `git tag 2.6.5`
 7. **Create GitHub release** with notes
 8. **Monitor**: Watch for issues, be responsive
 

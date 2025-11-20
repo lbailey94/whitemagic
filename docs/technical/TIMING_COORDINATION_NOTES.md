@@ -52,9 +52,9 @@ execute_with_dependencies(ops)
 
 ## Implementation
 
-For v2.3.0: Document the issue
-For v2.3.1: Add explicit coordination layer
-For v2.4.0: Full dependency graph execution
+For 2.6.5: Document the issue
+For 2.6.5: Add explicit coordination layer
+For 2.6.5: Full dependency graph execution
 
 ## Workaround (Now)
 

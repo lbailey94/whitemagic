@@ -29,7 +29,7 @@
 ### The Concerning News ⚠️
 
 **Quality Gates Are Failing**:
-- v2.2.8 shipped with import errors
+- 2.6.5 shipped with import errors
 - "Production ready" claimed before basic testing
 - Version drift across 40% of files
 - Premature "complete" declarations
@@ -141,7 +141,7 @@ Looking at WhiteMagic through five-phase theory:
 
 **Overall Balance**: Imbalanced - too much Wood/Fire, not enough Earth
 
-**Recommendation**: v2.2.9 should focus on Earth (stability) and Metal (refinement)
+**Recommendation**: 2.6.5 should focus on Earth (stability) and Metal (refinement)
 
 ---
 
@@ -156,12 +156,12 @@ Looking at WhiteMagic through five-phase theory:
 
 **Current Progress**: Strong but risky
 - Excellent innovations (Terminal Scratchpad, philosophy integration)
-- Rapid development (v2.1.5 → v2.2.8 in 4 days)
+- Rapid development (2.6.5 → 2.6.5 in 4 days)
 - But quality issues could damage reputation
 - Version drift creates confusion
 
 **Recommendation**: Slow down to speed up
-- Take 2 weeks for v2.2.9 quality release
+- Take 2 weeks for 2.6.5 quality release
 - Fix quality gates
 - Close vision gaps
 - THEN resume velocity
@@ -187,12 +187,12 @@ Looking at WhiteMagic through five-phase theory:
 **Current**: 90% new features, 10% quality/stability
 **Recommended**: 50% quality/stability, 30% vision gaps, 20% new features
 
-For v2.2.9:
+For 2.6.5:
 - Week 1: Quality gates (smoke tests, import tests, version sync)
 - Week 2: Vision features (pick 2-3 P0 features)
 - Week 3: Documentation (close gaps, reorganize)
 
-For v2.3.0:
+For 2.6.5:
 - Resume normal velocity with quality gates in place
 - 70% tactical, 30% strategic
 - Automated housekeeping running
@@ -216,7 +216,7 @@ From memories, Lucas values:
 
 ---
 
-## 🚀 v2.2.9 Planning
+## 🚀 2.6.5 Planning
 
 ### Theme: **Quality, Vision, Foundation**
 
@@ -229,7 +229,7 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 **Tasks**:
 - [ ] Add import resolution tests to CI
 - [ ] Create CLI smoke test suite (test all commands)
-- [ ] Run `whitemagic version 2.2.8` and verify
+- [ ] Run `whitemagic version 2.6.5` and verify
 - [ ] Add pre-commit hook for version sync
 - [ ] Create KNOWN_ISSUES.md
 - [ ] Fix existing import bugs
@@ -267,7 +267,7 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 
 **Success Metric**: 90% documentation coverage, housekeeping automated
 
-### Release: v2.2.9 (Dec 8-9)
+### Release: 2.6.5 (Dec 8-9)
 
 **Checklist**:
 - [ ] All quality gates passing
@@ -336,13 +336,13 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 
 ### Immediate (This Week)
 
-1. **Run version sync**: `whitemagic version 2.2.8`
+1. **Run version sync**: `whitemagic version 2.6.5`
 2. **Fix import bugs**: Verify all imports resolve
 3. **Update ROADMAP.md**: Add vision features
 4. **Move planning docs**: Root → private/
 5. **Create KNOWN_ISSUES.md**: Transparent about bugs
 
-### Short-Term (v2.2.9 - 3 weeks)
+### Short-Term (2.6.5 - 3 weeks)
 
 1. **Add quality gates**: Import tests, smoke tests, pre-commit hooks
 2. **Implement 2-3 vision P0 features**: Typed memories or Git integration
@@ -350,7 +350,7 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 4. **Automate housekeeping**: Phase 1 implementation
 5. **Reorganize docs/**: Proposed structure
 
-### Medium-Term (v2.3.0 - 6 weeks)
+### Medium-Term (2.6.5 - 6 weeks)
 
 1. **Website launch**: Landing page, philosophy showcase
 2. **Complete vision alignment**: All P0 features done or deferred
@@ -406,7 +406,7 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 
 6. **This Reflection**: `YIN_REFLECTION_NOV_17_2025.md`
    - Strategic assessment
-   - v2.2.9 planning
+   - 2.6.5 planning
    - Meta-insights
 
 ---
@@ -415,7 +415,7 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 
 **For You (Lucas)**:
 1. Review the comprehensive findings report
-2. Decide on v2.2.9 focus (quality vs features vs both)
+2. Decide on 2.6.5 focus (quality vs features vs both)
 3. Choose 2-3 vision P0 features to implement
 4. Approve automated housekeeping design
 5. Set timeline expectations (2-3 weeks vs 1 week)
@@ -424,7 +424,7 @@ Not "slow down" but **"build the foundation for sustainable velocity"**
 1. Start with: `whitemagic context --tier 1 --query "comprehensive audit nov 17"`
 2. Read: `COMPREHENSIVE_AUDIT_FINDINGS_NOV_17_2025.md`
 3. Read: `YIN_REFLECTION_NOV_17_2025.md`
-4. Review: v2.2.9 plan
+4. Review: 2.6.5 plan
 5. Execute: Quality gates + vision alignment
 
 ---
@@ -451,6 +451,6 @@ You don't need to rush. The market window is 12-18 months. Taking 3 weeks for qu
 **Yin Reflection Complete**: November 17, 2025, 11:30 PM EST  
 **Token Status**: 112K/200K (56% used, 44% remaining)  
 **Session Status**: ALL PHASES COMPLETE ✅  
-**Recommendation**: Review findings, plan v2.2.9, execute with quality focus
+**Recommendation**: Review findings, plan 2.6.5, execute with quality focus
 
 **May your code be elegant, your tests be green, and your releases be stable.** 🧘✨🚀

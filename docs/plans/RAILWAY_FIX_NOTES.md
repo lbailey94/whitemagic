@@ -1,7 +1,7 @@
-# Railway Deployment Issue - v2.2.6
+# Railway Deployment Issue - 2.6.5
 
 **Date**: November 16, 2025
-**Status**: Fixed for v2.2.7
+**Status**: Fixed for 2.6.5
 
 ## Issue
 
@@ -20,18 +20,18 @@ Railway sets `PORT` environment variable, but the CMD in Dockerfile wasn't inter
 Changed Dockerfile CMD from:
 
 ```dockerfile
-CMD uvicorn whitemagic.api.app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+CMD uvicorn whitemagic.api.app:app --host 2.6.5.0 --port ${PORT:-8000} --workers 2
 ```
 
 To:
 
 ```dockerfile
-CMD sh -c "uvicorn whitemagic.api.app:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"
+CMD sh -c "uvicorn whitemagic.api.app:app --host 2.6.5.0 --port ${PORT:-8000} --workers 2"
 ```
 
 Using `sh -c` ensures proper environment variable expansion.
 
-## Verification for v2.2.7
+## Verification for 2.6.5
 
 - ✅ Dockerfile updated with explicit shell invocation
 - ✅ Maintains default port 8000 fallback

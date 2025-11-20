@@ -250,7 +250,7 @@ while True:
 ### Async Context Manager (Future)
 
 ```python
-# Coming in v2.2.7
+# Coming in 2.6.5
 from whitemagic_client import AsyncWhiteMagicClient
 
 async with AsyncWhiteMagicClient(api_key='your-key') as client:

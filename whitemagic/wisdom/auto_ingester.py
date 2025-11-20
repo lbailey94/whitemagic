@@ -54,7 +54,7 @@ async def ingest_all_async():
                             title=f"Wisdom: {text.name}",
                             content=content[:8000],
                             memory_type="long_term",
-                            tags=text.tags + ["wisdom", "v2.3.6"]
+                            tags=text.tags + ["wisdom", "2.6.5"]
                         )
                         stats["success"] += 1
                         print(f"✓ {text.name}")
@@ -83,7 +83,7 @@ def ingest_all_sync():
                         title=f"Wisdom: {text.name}",
                         content=content[:8000],
                         memory_type="long_term",
-                        tags=text.tags + ["wisdom", "v2.3.6"]
+                        tags=text.tags + ["wisdom", "2.6.5"]
                     )
                     stats["success"] += 1
                     print(f"✓ {text.name}")

@@ -25,4 +25,4 @@ __all__ = [
     'HolisticOperations',
 ]
 
-__version__ = "2.4.7"
+__version__ = "2.6.5"

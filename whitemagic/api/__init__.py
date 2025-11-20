@@ -5,7 +5,7 @@ FastAPI-based REST API for WhiteMagic memory management.
 Provides authenticated access to memory operations, search, and context generation.
 """
 
-__version__ = "2.2.8"
+__version__ = "2.6.5"
 
 from .app import app
 from .auth import create_api_key, validate_api_key

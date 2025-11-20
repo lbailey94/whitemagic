@@ -148,7 +148,7 @@ def initialize_metrics():
     
     # Set app info
     app_info.info({
-        'version': '2.2.9',
+        'version': '2.6.5',
         'rust_enabled': str(rust_available._value.get() == 1),
         'multi_language': 'true'
     })

@@ -89,7 +89,7 @@ Instead of completing all 64 now, let's:
 1. **Community PR** - Document the pattern, accept contributions
 2. **Script-generated** - Batch process from sacred-texts
 3. **On-demand** - Add as system requests them
-4. **Future version** - v2.3.4 or v2.4.0
+4. **Future version** - 2.6.5 or 2.6.5
 
 ## 📊 Value Analysis
 

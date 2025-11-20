@@ -335,7 +335,7 @@ cp ~/.whitemagic/projectA/memory/short_term/*.md ~/.whitemagic/projectB/memory/s
 
 ---
 
-## Future Enhancements (v2.3.0+)
+## Future Enhancements (2.6.5+)
 
 - **Context discovery**: Auto-list available contexts
 - **Context templates**: Quick setup from templates

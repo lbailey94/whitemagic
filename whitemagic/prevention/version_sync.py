@@ -111,7 +111,7 @@ class VersionSyncSystem:
         """Update to new version and sync across project
         
         Args:
-            new_version: New version string (e.g. "2.6.6")
+            new_version: New version string (e.g. "2.6.5")
             update_all: If True, update all references automatically
         """
         # Validate version format

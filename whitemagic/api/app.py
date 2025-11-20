@@ -737,4 +737,4 @@ async def get_current_user_info(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="2.6.5.0", port=8000)

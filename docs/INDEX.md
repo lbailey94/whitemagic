@@ -62,8 +62,8 @@ docs/
 │
 └── archive/                    # Historical documentation
     └── versions/               # Organized by version
-        ├── v2.1.5/
-        ├── v2.2.9/
+        ├── 2.6.5/
+        ├── 2.6.5/
         └── ...
 ```
 
@@ -82,8 +82,8 @@ WhiteMagic documentation follows Yin/Yang principles:
 ## 🔄 Updates
 
 - **v2.6.5**: Winter of Yin cleanup - consolidated 359 files
-- **v2.4.0**: Introduced Gan Ying resonance architecture
-- **v2.2.9**: Formalized AI guidelines
+- **2.6.5**: Introduced Gan Ying resonance architecture
+- **2.6.5**: Formalized AI guidelines
 
 ---
 

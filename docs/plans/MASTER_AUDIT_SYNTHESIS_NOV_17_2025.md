@@ -25,7 +25,7 @@
 ### 3. **Phase 2: Documentation Audit**
 - **File**: `/tmp/whitemagic_phase2_docs_analysis.md`
 - **Scope**: ~80 markdown files
-- **Key Finding**: Version drift (ROADMAP at 2.2.7 vs 2.2.8), 7 missing guides
+- **Key Finding**: Version drift (ROADMAP at 2.6.5 vs 2.6.5), 7 missing guides
 - **Recommendation**: Reorganize docs structure, auto-fix versions
 
 ### 4. **Phase 3: Comprehensive Findings Report** ⭐
@@ -38,17 +38,17 @@
 - **File**: `AUTOMATED_HOUSEKEEPING_DESIGN.md`
 - **Concept**: 3-layer automation (session/version/project)
 - **Goal**: Self-maintaining system
-- **Implementation**: v2.2.9 Phase 1
+- **Implementation**: 2.6.5 Phase 1
 
 ### 6. **Phase 5: Yin Reflection**
 - **File**: `YIN_REFLECTION_NOV_17_2025.md`
 - **Assessment**: Wu Xing imbalance (too much Wood/Fire, not enough Earth)
-- **v2.2.9 Plan**: 3 weeks - quality, vision, foundation
+- **2.6.5 Plan**: 3 weeks - quality, vision, foundation
 - **Theme**: Build foundation for sustainable velocity
 
 ### 7. **Phase 6: Evolutionary Analysis** ⭐
 - **File**: `EVOLUTIONARY_ANALYSIS_NOV_17_2025.md`
-- **Scope**: v0.2 → v2.2.1 → v2.2.7 → v2.2.8
+- **Scope**: v0.2 → 2.6.5 → 2.6.5 → 2.6.5
 - **Finding**: 5 recurring patterns identified across all versions
 - **Insight**: Vision was right from day one, execution evolved beautifully
 
@@ -58,19 +58,19 @@
 
 ### Discovery 1: Recurring Patterns Are Systemic
 
-**Pattern appears in**: v2.2.1 audit + v2.2.8 audit (today)
+**Pattern appears in**: 2.6.5 audit + 2.6.5 audit (today)
 
 **Version Drift**:
-- v2.2.1: SDK 2.1.4 vs main 2.2.1, 11 files with wrong versions
-- v2.2.8: ROADMAP 2.2.7 vs VERSION 2.2.8, 40% files incorrect
+- 2.6.5: SDK 2.6.5 vs main 2.6.5, 11 files with wrong versions
+- 2.6.5: ROADMAP 2.6.5 vs VERSION 2.6.5, 40% files incorrect
 
 **Documentation Lag**:
-- v2.2.1: "Missing ALL v2.2.1 features" in README
-- v2.2.8: 7 features implemented but undocumented
+- 2.6.5: "Missing ALL 2.6.5 features" in README
+- 2.6.5: 7 features implemented but undocumented
 
 **Premature "Complete"**:
-- v2.2.1: "Ready for release (with minor fixes)" = NOT ready
-- v2.2.8: "Production ready" → import errors found immediately
+- 2.6.5: "Ready for release (with minor fixes)" = NOT ready
+- 2.6.5: "Production ready" → import errors found immediately
 
 **Conclusion**: Not individual failures. **Systemic patterns from velocity.**
 
@@ -89,7 +89,7 @@
 > **Key Innovation**: Automated knowledge management,  
 > not manual bookkeeping.
 
-**Still true in v2.2.8** (November 17, 2025):
+**Still true in 2.6.5** (November 17, 2025):
 - Tiered prompts → Tiered context → Terminal scratchpad ✓
 - External memory → Persistent markdown → Philosophy-grounded ✓
 - Manual management → Automated → Agentic ✓
@@ -102,9 +102,9 @@
 
 **Timeline**:
 - v0.2: None (purely technical)
-- v2.2.1: Implicit (tiered thinking)
-- v2.2.7: Explicit (I Ching, Wu Xing, Ganying)
-- v2.2.8: Deepened (Art of War, Yin/Yang, terminal = outside token economy)
+- 2.6.5: Implicit (tiered thinking)
+- 2.6.5: Explicit (I Ching, Wu Xing, Ganying)
+- 2.6.5: Deepened (Art of War, Yin/Yang, terminal = outside token economy)
 
 **Evidence it works**:
 - From memories: "We were following Dao without realizing it!"
@@ -119,8 +119,8 @@
 ### Discovery 4: Velocity Is Real (And Creates Real Problems)
 
 **Validated Speed Claims**:
-- v2.2.7: 4 weeks → 5 hours (134x faster)
-- v2.2.8: 7-9 hours → 3 hours (67% faster)
+- 2.6.5: 4 weeks → 5 hours (134x faster)
+- 2.6.5: 7-9 hours → 3 hours (67% faster)
 - Token usage: Consistently 40-60% of budget
 - Sessions: 5-10 per 200K budget (vs 2-3 baseline)
 
@@ -141,11 +141,11 @@
 ```
 v0.2: Tiered prompts (conceptual)
   ↓
-v2.2.1: 87% reduction (27K → 3.5K tokens)
+2.6.5: 87% reduction (27K → 3.5K tokens)
   ↓
-v2.2.7: 94.4% reduction + Chinese compression
+2.6.5: 94.4% reduction + Chinese compression
   ↓
-v2.2.8: ∞ reduction (terminal scratchpad = FREE)
+2.6.5: ∞ reduction (terminal scratchpad = FREE)
 ```
 
 **Each innovation built on previous**:
@@ -163,14 +163,14 @@ v2.2.8: ∞ reduction (terminal scratchpad = FREE)
 ### Problem 1: Version Drift ⚠️ (EVERY VERSION)
 
 **History**:
-- v2.2.1: SDK drift, 11 files wrong
-- v2.2.8: ROADMAP drift, 40% files wrong
+- 2.6.5: SDK drift, 11 files wrong
+- 2.6.5: ROADMAP drift, 40% files wrong
 
 **Root Cause**: Manual updates at AI speed (40-134x) = impossible
 
 **Attempted Solutions**:
-- v2.2.1: Manual checklist (failed)
-- v2.2.8: `whitemagic version` command (exists but not run/enforced)
+- 2.6.5: Manual checklist (failed)
+- 2.6.5: `whitemagic version` command (exists but not run/enforced)
 
 **Real Solution**:
 ```bash
@@ -181,7 +181,7 @@ whitemagic version-check || exit 1
 whitemagic audit --version || exit 1
 
 # Auto-fix on bump
-whitemagic version 2.2.9 --auto-update-all
+whitemagic version 2.6.5 --auto-update-all
 ```
 
 **Status**: Solvable. Needs enforcement.
@@ -191,8 +191,8 @@ whitemagic version 2.2.9 --auto-update-all
 ### Problem 2: Documentation Lag 📚 (ALWAYS)
 
 **History**:
-- v2.2.1: README missing all v2.2.1 features
-- v2.2.8: 7 implemented features undocumented
+- 2.6.5: README missing all 2.6.5 features
+- 2.6.5: 7 implemented features undocumented
 
 **Root Cause**: Implementation (AI speed) >> Documentation (human speed)
 
@@ -219,8 +219,8 @@ doc_coverage = documented_features / total_features
 ### Problem 3: Quality Gates Failing 🚧 (RECURRING)
 
 **History**:
-- v2.2.1: "Ready for release" → needed fixes
-- v2.2.8: "Production ready" → import errors
+- 2.6.5: "Ready for release" → needed fixes
+- 2.6.5: "Production ready" → import errors
 
 **Root Cause**: High confidence ≠ validated readiness
 
@@ -246,7 +246,7 @@ whitemagic cli-smoketest || echo "NOT READY"
 
 **History**:
 - Original vision (v0.2 + historical): Typed memories, hygiene agents, git integration
-- Current roadmap (v2.2.8): Missing 35% of vision features
+- Current roadmap (2.6.5): Missing 35% of vision features
 
 **Root Cause**: Tactical features crowd out strategic vision
 
@@ -276,8 +276,8 @@ Innovate (Fast) → Drift accumulates → Audit (Painful) →
 ```
 
 **History**:
-- v2.2.1 audit: 26 files archived, 11 fixed
-- v2.2.8 audit: Multiple issues found
+- 2.6.5 audit: 26 files archived, 11 fixed
+- 2.6.5 audit: Multiple issues found
 
 **This is NOT a bug. It's HOW velocity works.**
 
@@ -295,7 +295,7 @@ Innovate (Fast) → Drift accumulates → Audit (Painful) →
 ### Idea 1: Self-Healing Version System
 
 **Problem**: Version drift recurring  
-**Inspired by**: Both v2.2.1 + v2.2.8 audits
+**Inspired by**: Both 2.6.5 + 2.6.5 audits
 
 **Concept**: Git hooks that auto-fix version drift
 
@@ -356,7 +356,7 @@ else:
 
 ```json
 {
-  "version": "2.2.8",
+  "version": "2.6.5",
   "innovations": ["terminal_scratchpad"],
   "problems_solved": ["import_errors"],
   "problems_recurring": ["version_drift"],
@@ -390,28 +390,28 @@ def check_wu_wei(code):
 
 ### Growth (Oct 30 → Nov 17 = 18 days)
 
-| Metric | v0.2 | v2.2.8 | Growth |
+| Metric | v0.2 | 2.6.5 | Growth |
 |--------|------|--------|--------|
 | Files | 7 | ~320 | 45x |
 | LOC | ~500 | ~16,000 | 32x |
 | Tests | 0 | 221 | ∞ |
-| Versions | 0.2 | 2.2.8 | 28 minor! |
+| Versions | 0.2 | 2.6.5 | 28 minor! |
 
 ### Innovation Progression
 
 | Version | Token Efficiency | Key Innovation |
 |---------|-----------------|----------------|
 | v0.2 | Conceptual | Tiered prompts |
-| v2.2.1 | 87% (27K→3.5K) | Quantified reduction |
-| v2.2.7 | 94.4% (63K→3.5K) | Philosophy integration |
-| v2.2.8 | ∞ (free thinking) | Terminal scratchpad |
+| 2.6.5 | 87% (27K→3.5K) | Quantified reduction |
+| 2.6.5 | 94.4% (63K→3.5K) | Philosophy integration |
+| 2.6.5 | ∞ (free thinking) | Terminal scratchpad |
 
 ### Quality Scores
 
 | Version | Audit Score | Critical Issues | Status |
 |---------|-------------|-----------------|--------|
-| v2.2.1 | 8.5/10 | 0 | Release-ready* |
-| v2.2.8 | B+ (85/100) | 3 | Needs quality work |
+| 2.6.5 | 8.5/10 | 0 | Release-ready* |
+| 2.6.5 | B+ (85/100) | 3 | Needs quality work |
 
 *with fixes
 
@@ -431,7 +431,7 @@ def check_wu_wei(code):
 
 ### Immediate (This Week)
 
-1. **Run `whitemagic version 2.2.8`** - Sync all versions
+1. **Run `whitemagic version 2.6.5`** - Sync all versions
 2. **Fix import bugs** - Test all imports
 3. **Update ROADMAP.md** - Add vision features
 4. **Move planning docs** - Root → private/
@@ -442,7 +442,7 @@ def check_wu_wei(code):
 
 ---
 
-### Short-Term (v2.2.9 - 3 weeks)
+### Short-Term (2.6.5 - 3 weeks)
 
 **Theme**: Quality + Vision + Foundation
 
@@ -466,7 +466,7 @@ def check_wu_wei(code):
 
 ---
 
-### Medium-Term (v2.3.0+ - 6 weeks)
+### Medium-Term (2.6.5+ - 6 weeks)
 
 **Focus**: Automation + Self-Healing
 
@@ -550,7 +550,7 @@ Innovation (Fast) + Automation (Safety) = Sustainable Velocity
 3. **Documentation Audit** - Organization recommendations
 4. **Comprehensive Findings** - B+ (85/100), actionable plan
 5. **Automated Housekeeping** - 3-layer system design
-6. **Yin Reflection** - Strategic assessment, v2.2.9 plan
+6. **Yin Reflection** - Strategic assessment, 2.6.5 plan
 7. **Evolutionary Analysis** - 5 patterns, 5 solutions, 5 new ideas
 
 ### Key Artifacts
@@ -592,7 +592,7 @@ Innovation (Fast) + Automation (Safety) = Sustainable Velocity
 
 ## 🎯 Final Recommendation
 
-**v2.2.9 should be the "Foundation Release"**
+**2.6.5 should be the "Foundation Release"**
 
 **Goal**: Eliminate recurring problems permanently
 
@@ -601,7 +601,7 @@ Innovation (Fast) + Automation (Safety) = Sustainable Velocity
 - Week 2: Close vision gap
 - Week 3: Self-maintaining systems
 
-**Result**: Sustainable velocity for v2.3.0+
+**Result**: Sustainable velocity for 2.6.5+
 
 **Why**: Speed is validated. Quality needs automation. Vision needs attention.
 

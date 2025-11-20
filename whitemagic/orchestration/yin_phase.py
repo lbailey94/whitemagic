@@ -201,7 +201,7 @@ class YinPhase:
         for md_file in md_files:
             content = md_file.read_text()
             # Simple check - would be more sophisticated
-            if '2.2.7' in content or '2.2.8' in content:
+            if '2.6.5' in content or '2.6.5' in content:
                 outdated.append(str(md_file.relative_to(self.base_dir)))
         
         return {

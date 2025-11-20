@@ -106,7 +106,7 @@ mv docs/SESSION_DISCUSSION_SUMMARY.md private/sessions/
 - docs/TOKEN_OPTIMIZATION_STRATEGIES.md ✅
 
 ### Review Needed
-- [ ] Check if README.md needs updating for v2.2.3
+- [ ] Check if README.md needs updating for 2.6.5
 - [ ] Verify all public docs are polished
 - [ ] Remove any personal references
 - [ ] Check for clarity and accessibility

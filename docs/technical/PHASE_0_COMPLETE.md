@@ -197,7 +197,7 @@ else:
 ## 🐛 Issues Resolved
 
 ### 1. Zorin OS `python-apt` Version Error
-**Problem**: Invalid version "2.4.0-ubuntu4-zorin1"
+**Problem**: Invalid version "2.6.5-ubuntu4-zorin1"
 
 **Solution**:
 ```python

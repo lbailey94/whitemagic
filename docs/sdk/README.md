@@ -7,7 +7,7 @@ Official SDKs for WhiteMagic - Memory infrastructure for AI agents.
 ### TypeScript/JavaScript SDK
 
 **Package**: `whitemagic-client`
-**Status**: ✅ Published (v2.2.7)
+**Status**: ✅ Published (2.6.5)
 **Install**: `npm install whitemagic-client`
 **npm**: <https://www.npmjs.com/package/whitemagic-client>
 
@@ -16,7 +16,7 @@ Official SDKs for WhiteMagic - Memory infrastructure for AI agents.
 ### Python SDK
 
 **Package**: `whitemagic-client`
-**Status**: ✅ Published (v2.2.7)
+**Status**: ✅ Published (2.6.5)
 **Install**: `pip install whitemagic-client`
 **PyPI**: <https://pypi.org/project/whitemagic-client/>
 
@@ -85,8 +85,8 @@ Both SDKs provide:
 | Get User Profile | ✅ | ✅ | Ready |
 | Get Usage Stats | ✅ | ✅ | Ready |
 | Health Check | ✅ | ✅ | Ready |
-| Collections | 🚧 | 🚧 | v2.2.7 |
-| Webhooks | 🚧 | 🚧 | v2.2.7 |
+| Collections | 🚧 | 🚧 | 2.6.5 |
+| Webhooks | 🚧 | 🚧 | 2.6.5 |
 
 ---
 

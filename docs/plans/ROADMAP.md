@@ -1,8 +1,8 @@
 # WhiteMagic Development Roadmap
 
-**Current Version**: 2.2.7 ✅ (Released Nov 16, 2025)
-**Next Version**: 2.2.8 (Stability + UX Polish - Est. Late Nov 2025)
-**Future**: 2.2.9 (Parallel Experience - Est. Early Dec 2025) → 2.3.0 (Feature Release - Late Dec 2025/Early Jan 2026)
+**Current Version**: 2.6.5 ✅ (Released Nov 16, 2025)
+**Next Version**: 2.6.5 (Stability + UX Polish - Est. Late Nov 2025)
+**Future**: 2.6.5 (Parallel Experience - Est. Early Dec 2025) → 2.6.5 (Feature Release - Late Dec 2025/Early Jan 2026)
 **Status**: Parallel Infrastructure + Scratchpads Complete
 **Updated**: November 16, 2025
 
@@ -10,7 +10,7 @@
 
 ## 📖 Detailed Roadmap
 
-**For comprehensive version-by-version roadmap (v2.1.4 → v3.0), see:**
+**For comprehensive version-by-version roadmap (2.6.5 → v3.0), see:**
 **[ROADMAP_v2.1.4_to_v3.0.md](./ROADMAP_v2.1.4_to_v3.0.md)**
 
 This document contains the strategic vision, release timeline, feature details, pricing strategy, and success metrics for the next 6 months of development.
@@ -25,16 +25,16 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 - ✅ REST API with auth, quotas, rate limits
 - ✅ MCP server (IDE integration - Cursor, Windsurf, Claude)
 - ✅ Semantic search with embeddings
-- ✅ **NEW v2.2.1**: Tiered context loading (87% token reduction)
-- ✅ **NEW v2.2.1**: Archive API endpoints
-- 🚧 Multi-tier monetization via Whop (DEFERRED to v2.4.0+)
-- 🚧 Graph-based memory relationships (v2.3.0)
-- 🚧 Team workspaces & collaboration (v2.4.0+)
-- 🚧 Multi-modal memory (images, PDFs, audio) (v2.4.0+)
+- ✅ **NEW 2.6.5**: Tiered context loading (87% token reduction)
+- ✅ **NEW 2.6.5**: Archive API endpoints
+- 🚧 Multi-tier monetization via Whop (DEFERRED to 2.6.5+)
+- 🚧 Graph-based memory relationships (2.6.5)
+- 🚧 Team workspaces & collaboration (2.6.5+)
+- 🚧 Multi-modal memory (images, PDFs, audio) (2.6.5+)
 
 ---
 
-## v2.2.7 ✅ COMPLETE (Nov 16, 2025)
+## 2.6.5 ✅ COMPLETE (Nov 16, 2025)
 
 **Focus**: Parallel Infrastructure + Scratchpads + Session Automation
 
@@ -49,7 +49,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 ### Documentation
 
 - Added guides for Session Management, Scratchpads, and Parallel Operations
-- Updated release notes + VERSION to 2.2.7
+- Updated release notes + VERSION to 2.6.5
 - Highlighted parallel workflow gains (40x faster file ops, 8x faster search)
 
 ### Performance
@@ -60,7 +60,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.2.6 ✅ COMPLETE (Nov 16, 2025)
+## 2.6.5 ✅ COMPLETE (Nov 16, 2025)
 
 **Focus**: Meta-Optimization + Symbolic Reasoning + Wu Xing
 
@@ -98,7 +98,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
   - [Wu Xing & Metrics Guide](docs/guides/WU_XING_AND_METRICS.md)
   - [Semantic Search Guide](docs/guides/SEMANTIC_SEARCH.md)
   - [Terminal Tool Guide](docs/guides/TERMINAL_TOOL.md)
-- Updated all version badges to 2.2.5
+- Updated all version badges to 2.6.5
 - Complete release notes: `RELEASE_NOTES_v2.2.5.md`
 
 ### Performance
@@ -110,7 +110,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.2.1 ✅ COMPLETE (Nov 15, 2025)
+## 2.6.5 ✅ COMPLETE (Nov 15, 2025)
 
 **Focus**: Efficiency Improvements + Documentation Audit
 
@@ -136,7 +136,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 - Created organized archive structure (future/, plans/, releases/, security-reviews/, development/)
 - Archived 26 outdated/aspirational files
-- Updated all version references to 2.2.1
+- Updated all version references to 2.6.5
 - Added EFFICIENCY_EXPLAINED.md (technical deep dive)
 - Comprehensive audit documents created
 
@@ -149,7 +149,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.2.8 🚧 NEXT (Est. Late Nov 2025)
+## 2.6.5 🚧 NEXT (Est. Late Nov 2025)
 
 **Focus**: Version Hygiene + AI-First UX
 **Timeline**: <1 week
@@ -169,22 +169,22 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 3. **Roadmap & SDK Alignment**
    - Ensure Python/TypeScript SDKs expose archive + parallel endpoints
-   - Update SDK docs + Quickstart examples to 2.2.7 defaults
+   - Update SDK docs + Quickstart examples to 2.6.5 defaults
 
 4. **Documentation Polish**
-   - Refresh Quickstart, User Guide, Architecture, Index, CLI Metrics, Contributing for v2.2.7 capabilities
+   - Refresh Quickstart, User Guide, Architecture, Index, CLI Metrics, Contributing for 2.6.5 capabilities
    - Remove dashboard login flow references until the redesigned experience ships
 
 ### Success Criteria
 
 - ✅ `whitemagic audit` + `docs-check` usable via CLI + MCP
 - ✅ Terminal helper supports batch proposals with audit logs
-- ✅ All flagship docs reference 2.2.7 features + token metrics
+- ✅ All flagship docs reference 2.6.5 features + token metrics
 - ✅ SDK + API parity verified automatically
 
 ---
 
-## v2.2.9 🧭 PLANNED (Est. Early Dec 2025)
+## 2.6.5 🧭 PLANNED (Est. Early Dec 2025)
 
 **Focus**: Parallel Experience + Visual Feedback
 **Timeline**: 1 week
@@ -212,16 +212,16 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.3.0 🎯 FUTURE (Est. Late Dec 2025 / Early Jan 2026)
+## 2.6.5 🎯 FUTURE (Est. Late Dec 2025 / Early Jan 2026)
 
 ### Notes
 
-- Dashboard login flow is **temporarily removed** until the redesigned experience ships in or after v2.3.0. Use CLI/API key provisioning scripts for authentication during v2.2.8+.
+- Dashboard login flow is **temporarily removed** until the redesigned experience ships in or after 2.6.5. Use CLI/API key provisioning scripts for authentication during 2.6.5+.
 - Advanced feature list (parallel contexts, external memory integration, MCP optimization mode, incremental backups, analytics, smart consolidation) remains on deck for 2.3.x once the 2.2.x polish cycle ends.
 
 ---
 
-## v2.3.0 🎯 FUTURE (Est. Late Dec 2025 / Early Jan 2026)
+## 2.6.5 🎯 FUTURE (Est. Late Dec 2025 / Early Jan 2026)
 
 **Focus**: Feature Release + Website Launch
 **Timeline**: 4-6 weeks
@@ -263,16 +263,16 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
    - Error tracking improvements
    - Health check enhancements
 
-### Deferred Features (NOT in v2.3.0)
+### Deferred Features (NOT in 2.6.5)
 
-- ❌ **Monetization** (deferred to v2.4.0+)
-- ❌ **Cloud sync** (deferred to v2.4.0+)
-- ❌ **Team workspaces** (deferred to v2.4.0+)
-- ❌ **Stripe integration** (deferred to v2.4.0+)
+- ❌ **Monetization** (deferred to 2.6.5+)
+- ❌ **Cloud sync** (deferred to 2.6.5+)
+- ❌ **Team workspaces** (deferred to 2.6.5+)
+- ❌ **Stripe integration** (deferred to 2.6.5+)
 
 ### User Directive
 
-**NO monetization until AFTER v2.3.0**
+**NO monetization until AFTER 2.6.5**
 
 - Focus on polish, features, and user growth
 - Target: 1,000+ active local users before monetization
@@ -289,10 +289,10 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## v2.4.0+ 💰 MONETIZATION (Q1 2026)
+## 2.6.5+ 💰 MONETIZATION (Q1 2026)
 
 **Focus**: Cloud Sync + Team Features + Monetization
-**Timeline**: 8-12 weeks after v2.3.0
+**Timeline**: 8-12 weeks after 2.6.5
 **Type**: Major release (may include breaking changes)
 
 ### Prerequisites
@@ -309,7 +309,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 - **Collaboration features** (comments, permissions)
 - **Stripe integration** (subscription billing)
 - **Hosted service** (optional paid tier)
-- **Dashboard** (if not in v2.3.0, redesigned)
+- **Dashboard** (if not in 2.6.5, redesigned)
 - **Advanced analytics** (team insights)
 
 ### Pricing Strategy (TBD)
@@ -328,7 +328,7 @@ WhiteMagic is **memory infrastructure for AI agents and developers**:
 
 ---
 
-## Completed: v2.0.1 Foundation ✅
+## Completed: 2.6.5 Foundation ✅
 
 ### Core Product (October-November 2025)
 
@@ -445,7 +445,7 @@ whitemagic/
 - [x] Docker deployment (`Dockerfile`, `docker-compose.yml`)
 - [x] API documentation (Swagger UI at `/docs`)
 - [x] 30+ tests (23 core + 11 new API tests)
-- [x] Migration guide for v2.0.1 users
+- [x] Migration guide for 2.6.5 users
 - [ ] Performance benchmarks (API vs CLI)
 
 ### Success Criteria
@@ -504,7 +504,7 @@ whitemagic-mcp/
 ```json
 {
   "name": "white-magic-memory",
-  "version": "1.0.0",
+  "version": "2.6.5",
   "description": "Tiered prompt + external memory for AI agents",
   "resources": [
     {"uri": "memory://short_term", "mimeType": "application/json"},
@@ -815,7 +815,7 @@ model Usage {
 
 ### Technical Metrics
 
-| Metric | Current (v2.0.1) | Target (Phase 1A) | Target (Phase 2B) |
+| Metric | Current (2.6.5) | Target (Phase 1A) | Target (Phase 2B) |
 |--------|------------------|-------------------|-------------------|
 | Test Coverage | 100% (18 tests) | 100% (30+ tests) | 100% (50+ tests) |
 | API Response Time | 100-200ms (CLI) | <1ms (Python) | <1ms (Python) |
@@ -933,7 +933,7 @@ model Usage {
 - Quick start guide for each interface (CLI, API, MCP)
 - Video tutorials
 - Example projects
-- Migration guides from v2.0.1
+- Migration guides from 2.6.5
 
 ---
 
@@ -948,11 +948,11 @@ model Usage {
 | **Phase 2B** | 1 week | Nov 19 | Nov 26 | ⏳ PENDING |
 | **Phase 3** | 2 weeks | Nov 26 | Dec 10 | ⏳ PENDING |
 
-**Total**: ~6 weeks from v2.0.1 to full product launch
+**Total**: ~6 weeks from 2.6.5 to full product launch
 
 ---
 
-## ✅ v2.1.3 Complete (November 12, 2025)
+## ✅ 2.6.5 Complete (November 12, 2025)
 
 **Major Achievements**:
 
@@ -968,7 +968,7 @@ model Usage {
 
 ---
 
-## 🚧 v2.1.4 In Progress (Target: December 6, 2025)
+## 🚧 2.6.5 In Progress (Target: December 6, 2025)
 
 **Theme**: Developer Experience & SDK
 
@@ -990,7 +990,7 @@ model Usage {
 - [ ] Testing & bug fixes
 - [ ] Documentation updates
 - [ ] Release notes
-- [ ] Tag v2.1.4 and deploy
+- [ ] Tag 2.6.5 and deploy
 
 **See**: `ROADMAP_v2.1.4_to_v3.0.md` for complete release plan through v3.0
 
@@ -999,7 +999,7 @@ model Usage {
 ## Next Immediate Actions
 
 1. ✅ Create comprehensive roadmap (`ROADMAP_v2.1.4_to_v3.0.md`)
-2. ⏳ Commit post-release fixes to v2.1.4 branch
+2. ⏳ Commit post-release fixes to 2.6.5 branch
 3. ⏳ Start MCP CLI auto-setup implementation
 4. ⏳ Set up client generation pipeline
 

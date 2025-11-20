@@ -45,4 +45,4 @@ __all__ = [
     'CouncilProtocol',
 ]
 
-__version__ = '2.5.3'
+__version__ = '2.6.5'

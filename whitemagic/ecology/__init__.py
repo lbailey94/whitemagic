@@ -25,4 +25,4 @@ __all__ = [
     'SustainabilityRewards',
 ]
 
-__version__ = "2.4.3"
+__version__ = "2.6.5"

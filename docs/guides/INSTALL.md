@@ -184,7 +184,7 @@ WhiteMagic includes a **Terminal Execution API** (`/api/v1/exec`) that allows AI
 ```bash
 # Only set this if you understand the risks!
 export WM_ENABLE_EXEC_API=true
-uvicorn whitemagic.api.app:app --host 0.0.0.0 --port 8000
+uvicorn whitemagic.api.app:app --host 2.6.5.0 --port 8000
 ```
 
 **Safer Alternatives**:

@@ -273,14 +273,14 @@
 
 ## 🔮 Vision for the Future
 
-### Short Term (v2.2.x - v2.3.0)
+### Short Term (v2.2.x - 2.6.5)
 
 - Refine core capabilities
 - Improve documentation
 - Build community
 - Address feedback
 
-### Medium Term (v2.4.0 - v2.5.0)
+### Medium Term (2.6.5 - 2.6.5)
 
 - Cross-cultural philosophy integration
 - Teaching/mentoring capabilities

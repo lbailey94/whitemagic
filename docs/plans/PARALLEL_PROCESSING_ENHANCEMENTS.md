@@ -1,7 +1,7 @@
 # Parallel Processing & Threading Enhancements
 
 **Date**: November 16, 2025  
-**Version**: Proposed for v2.2.7  
+**Version**: Proposed for 2.6.5  
 **Status**: Design Phase
 
 ---
@@ -679,18 +679,18 @@ class ParallelPipeline:
 
 ## 🎯 Implementation Roadmap
 
-### v2.2.7 (This Release)
+### 2.6.5 (This Release)
 - ✅ Phase 1: Enhanced parallel primitives
 - ✅ Phase 2: 8 new MCP tools
 - ✅ Phase 3: Threading infrastructure
 - ⏳ Phase 4: Basic caching (Redis required)
 
-### v2.2.8 (Future)
+### 2.6.5 (Future)
 - ⏳ Advanced caching strategies
 - ⏳ Distributed task execution
 - ⏳ GPU acceleration for embeddings
 
-### v2.3.0 (Future)
+### 2.6.5 (Future)
 - ⏳ Full distributed system
 - ⏳ Multi-node coordination
 - ⏳ Advanced scheduling algorithms
@@ -759,6 +759,6 @@ parallel:
 
 ---
 
-**Status**: Ready for implementation in v2.2.7  
+**Status**: Ready for implementation in 2.6.5  
 **Dependencies**: None (uses existing infrastructure)  
 **Risk**: Low (additive changes, backwards compatible)

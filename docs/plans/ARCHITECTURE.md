@@ -1,6 +1,6 @@
 # WhiteMagic Architecture
 
-**Version**: 2.2.7
+**Version**: 2.6.5
 **Last Updated**: November 16, 2025
 
 ---
@@ -92,7 +92,7 @@ CREATE → ACTIVE → [PROMOTED to long_term | ARCHIVED]
 - `search_memories()` - Full-text search
 - `get_context()` - Generate tiered context
 - `consolidate_memories()` - Archive old, promote important
-- `get_parallel_status()` *(v2.2.9 planned)* - Report threading tiers + queues
+- `get_parallel_status()` *(2.6.5 planned)* - Report threading tiers + queues
 
 ### Parallel Infrastructure (whitemagic/parallel/)
 
@@ -103,7 +103,7 @@ CREATE → ACTIVE → [PROMOTED to long_term | ARCHIVED]
 - `fileops.py` / `memoryops.py` - 40x faster file IO and 8x faster search orchestrators
 - `sessions/` + `scratchpad/` - Auto-checkpointing, resume, and working memory helpers
 
-**Usage**: Currently invoked by IDE agents; v2.2.9 adds CLI (`whitemagic parallel status/run`) + MCP telemetry so humans can trigger the same flows outside IDEs.
+**Usage**: Currently invoked by IDE agents; 2.6.5 adds CLI (`whitemagic parallel status/run`) + MCP telemetry so humans can trigger the same flows outside IDEs.
 
 ### API (whitemagic/api/)
 
@@ -170,9 +170,9 @@ uvicorn whitemagic.api.app:app --reload
 
 ## Future Enhancements
 
-1. **Semantic Search** - pgvector + embeddings (shipping in 2.3.0)
-2. **Audit & Docs Automation** - `whitemagic audit`, `docs-check`, `exec plan` (v2.2.8) exposed via CLI + MCP
-3. **Parallel CLI Surfaces** - `whitemagic parallel status/run` + scratchpad dashboards (v2.2.9)
+1. **Semantic Search** - pgvector + embeddings (shipping in 2.6.5)
+2. **Audit & Docs Automation** - `whitemagic audit`, `docs-check`, `exec plan` (2.6.5) exposed via CLI + MCP
+3. **Parallel CLI Surfaces** - `whitemagic parallel status/run` + scratchpad dashboards (2.6.5)
 4. **Workspaces** - Team collaboration
 5. **Nested Learning** - Multi-speed memory tiers
 

@@ -11,13 +11,13 @@
 
 ### Primary Goals
 1. ✅ **Validate parallel threading** - 5.6x speedup, perfect clarity
-2. ✅ **Simplify v2.2.3 scope** - Discovered features exist, 50% timeline reduction
+2. ✅ **Simplify 2.6.5 scope** - Discovered features exist, 50% timeline reduction
 3. ✅ **Design token optimizations** - 4 comprehensive strategies
 4. ✅ **Implement Phase 1** - Smart reading + tiered summaries deployed
 
 ### Stretch Goals
 1. ✅ **Create workflow rules** - New v2.0 workflow guide
-2. ✅ **Package & verify** - v2.2.1 with optimizations installed
+2. ✅ **Package & verify** - 2.6.5 with optimizations installed
 3. ✅ **Document everything** - 5 comprehensive docs created
 
 ---
@@ -38,11 +38,11 @@
 
 ### 2. **Most Features Already Exist**
 
-**Surprise**: v2.2.3 scope was 50% smaller than expected!
+**Surprise**: 2.6.5 scope was 50% smaller than expected!
 
 **Why this happened**:
 - Features implemented but not packaged properly
-- v2.2.0 installed vs v2.2.1 source code mismatch
+- 2.6.5 installed vs 2.6.5 source code mismatch
 - Documentation lag
 
 **Lesson**: Always verify installed version vs source before planning.
@@ -52,7 +52,7 @@
 **Realization**: Strategies multiply rather than add:
 
 ```
-v2.2.1 (87% reduction)
+2.6.5 (87% reduction)
 × Parallel threading (5.6x speedup)  
 × Phase 1 optimizations (5-7x efficiency)
 = 40-50x improvement vs baseline ✨
@@ -246,7 +246,7 @@ The parallel model is actually **more natural** - similar to how humans multitas
 2. **LLM-powered summaries** - Quality improvement
 3. **Memory consolidation** - 43 → 15-20 memories
 
-### Phase 3 (v2.2.4)
+### Phase 3 (2.6.5)
 1. **Auto-tier selection** - AI chooses tier based on task
 2. **Predictive caching** - Anticipate likely reads
 3. **Cross-session optimization** - Learn usage patterns
@@ -274,7 +274,7 @@ The parallel model is actually **more natural** - similar to how humans multitas
 
 ### Next Consolidation Trigger
 - 5-10 more short-term memories, OR
-- End of v2.2.3 release, OR
+- End of 2.6.5 release, OR
 - End of today's session
 
 ### Proposed Pattern

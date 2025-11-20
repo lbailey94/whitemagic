@@ -60,4 +60,4 @@ __all__ = [
     "auto_calibrate",
 ]
 
-__version__ = "2.2.8"
+__version__ = "2.6.5"

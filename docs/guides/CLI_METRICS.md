@@ -352,7 +352,7 @@ whitemagic track tactical tests_passing $TESTS_PASSING "Pre-push validation"
 
 ### 4.4 CI/CD Integration
 
-Add the forthcoming automation commands to your workflow once v2.2.8 lands:
+Add the forthcoming automation commands to your workflow once 2.6.5 lands:
 
 ```bash
 # Verify docs + versions before CI

@@ -11,7 +11,7 @@ try:
     VERSION = _version_file.read_text().strip()
 except Exception:
     # Fallback for edge cases (shouldn't happen in normal usage)
-    VERSION = "2.1.5"
+    VERSION = "2.6.5"
 
 # Memory types
 MEMORY_TYPE_SHORT_TERM = "short_term"

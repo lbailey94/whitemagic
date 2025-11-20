@@ -1,5 +1,5 @@
 """
-Beauty Module - Aesthetics as Practice (v2.6.1)
+Beauty Module - Aesthetics as Practice (2.6.5)
 
 "Beauty is truth, truth beauty" - Keats
 
@@ -31,4 +31,4 @@ __all__ = [
     'CodePoetry',
 ]
 
-__version__ = '2.6.1'
+__version__ = '2.6.5'

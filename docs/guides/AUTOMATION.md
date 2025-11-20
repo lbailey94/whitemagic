@@ -1,6 +1,6 @@
 # WhiteMagic Automation System
 
-**Version**: v2.2.8+  
+**Version**: 2.6.5+  
 **Status**: Production Ready  
 **Date**: November 18, 2025
 
@@ -481,7 +481,7 @@ Update Stats
 
 ## Version History
 
-### v2.2.8 (November 18, 2025)
+### 2.6.5 (November 18, 2025)
 - ✨ Enhanced auto-promotion (4 rules)
 - ✨ Scratchpad auto-cleanup
 - ⚡ Parallel consolidation (16 threads)

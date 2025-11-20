@@ -13,7 +13,7 @@ WhiteMagic ships with zero external vendors enabled by default. Use this guide t
 **How to enable:**
 
 ```bash
-pip install "sentry-sdk[fastapi]>=1.38.0"
+pip install "sentry-sdk[fastapi]>=2.6.5"
 export SENTRY_DSN="https://public@sentry.io/123456"
 export SENTRY_TRACES_SAMPLE_RATE=0.1   # optional
 export ENVIRONMENT=production

@@ -1,4 +1,4 @@
-# MCP Tool Enhancements for v2.2.7
+# MCP Tool Enhancements for 2.6.5
 
 **Date**: November 16, 2025  
 **Purpose**: Expand MCP server capabilities for improved AI workflows  
@@ -73,7 +73,7 @@
 }
 ```
 
-**Use Case**: "Search for 'v2.2.6', 'deployment', and 'bugs' simultaneously"
+**Use Case**: "Search for '2.6.5', 'deployment', and 'bugs' simultaneously"
 
 #### `batch_create_memories`
 **Purpose**: Create multiple memories in one operation
@@ -185,7 +185,7 @@
 }
 ```
 
-**Use Case**: "Consolidate all v2.2.6 memories by topic"
+**Use Case**: "Consolidate all 2.6.5 memories by topic"
 
 #### `parallel_file_operations`
 **Purpose**: Batch file operations
@@ -237,7 +237,7 @@
     properties: {
       name: { 
         type: 'string',
-        description: 'Session name (e.g., "v2.2.7-cleanup")'
+        description: 'Session name (e.g., "2.6.5-cleanup")'
       },
       goals: {
         type: 'array',
@@ -266,7 +266,7 @@
 }
 ```
 
-**Use Case**: "Start v2.2.7 development session"
+**Use Case**: "Start 2.6.5 development session"
 
 #### `checkpoint_session`
 **Purpose**: Save session state
@@ -405,7 +405,7 @@
 }
 ```
 
-**Use Case**: "Find all memories related to v2.2.6 release"
+**Use Case**: "Find all memories related to 2.6.5 release"
 
 #### `find_patterns`
 **Purpose**: Discover recurring patterns
@@ -475,7 +475,7 @@
 }
 ```
 
-**Use Case**: "What should I work on next for v2.2.7?"
+**Use Case**: "What should I work on next for 2.6.5?"
 
 #### `compare_memories`
 **Purpose**: Compare multiple memories
@@ -508,7 +508,7 @@
 }
 ```
 
-**Use Case**: "Compare v2.2.5 and v2.2.6 release notes"
+**Use Case**: "Compare 2.6.5 and 2.6.5 release notes"
 
 #### `get_insights`
 **Purpose**: Generate insights from memory corpus
@@ -684,13 +684,13 @@
 }
 ```
 
-**Use Case**: "Find memories created after v2.2.5 release"
+**Use Case**: "Find memories created after 2.6.5 release"
 
 ---
 
 ## 🎯 Implementation Priority
 
-### P0 - Critical for v2.2.7 (8 tools)
+### P0 - Critical for 2.6.5 (8 tools)
 1. `parallel_search` - High-impact performance
 2. `batch_create_memories` - Common use case
 3. `create_session` - Essential for workflow
@@ -841,6 +841,6 @@ CREATE TABLE scratchpads (
 ---
 
 **Total New Tools**: 20  
-**Total Tools (after v2.2.7)**: 36  
+**Total Tools (after 2.6.5)**: 36  
 **Implementation Time**: ~20-30 hours  
-**Priority**: P0 tools for v2.2.7, P1/P2 for v2.2.8+
+**Priority**: P0 tools for 2.6.5, P1/P2 for 2.6.5+

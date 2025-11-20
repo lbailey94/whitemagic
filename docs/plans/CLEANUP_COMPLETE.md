@@ -99,7 +99,7 @@ private/
 - sdk/ (3 SDK docs)
 
 **Config**:
-- pyproject.toml (v2.2.3)
+- pyproject.toml (2.6.5)
 - CHANGELOG.md (updated)
 - README.md
 - LICENSE
@@ -137,7 +137,7 @@ private/
 
 **Modified** (actual code changes):
 - .gitignore (strengthened)
-- CHANGELOG.md (v2.2.3 entry)
+- CHANGELOG.md (2.6.5 entry)
 - pyproject.toml (version bump)
 - whitemagic-mcp/package.json (version bump)
 - clients/python/whitemagic_client/__init__.py (version)
@@ -181,7 +181,7 @@ private/
 
 ```bash
 git add .
-git commit -m "feat: v2.2.3 - Token optimization breakthrough (18.5-34x efficiency)
+git commit -m "feat: 2.6.5 - Token optimization breakthrough (18.5-34x efficiency)
 
 Major Changes:
 - Token optimizations: 18.5-34x efficiency gains (validated)
@@ -207,7 +207,7 @@ Cleaned up:
 - Strengthened .gitignore
 - Professional public release structure"
 
-git tag -a v2.2.3 -m "v2.2.3 - Token Optimization Breakthrough
+git tag -a 2.6.5 -m "2.6.5 - Token Optimization Breakthrough
 
 18.5-34x efficiency gains validated in production
 Cognitive development frameworks

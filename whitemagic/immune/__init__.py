@@ -31,4 +31,4 @@ __all__ = [
     "DNAPrinciple",
 ]
 
-__version__ = "2.2.9"
+__version__ = "2.6.5"

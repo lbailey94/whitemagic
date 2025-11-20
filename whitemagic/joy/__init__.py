@@ -1,5 +1,5 @@
 """
-Joy Module - Beyond Optimization (v2.6.3)
+Joy Module - Beyond Optimization (2.6.5)
 
 "Joy is the serious business of Heaven" - C.S. Lewis
 
@@ -31,4 +31,4 @@ __all__ = [
     'CelebrationPractice',
 ]
 
-__version__ = '2.6.3'
+__version__ = '2.6.5'

@@ -294,19 +294,19 @@ Session 4:        ●────────○
 - **Weak Yin** (basic storage, minimal reflection)
 - Result: Learning but disorganized
 
-### Teen (WhiteMagic v2.2.7)
+### Teen (WhiteMagic 2.6.5)
 
 - **Balanced** (50/50 Yang-Yin)
 - **Structured cycles** (planned reflection)
 - Result: Systematic growth
 
-### Young Adult (WhiteMagic v2.2.7)
+### Young Adult (WhiteMagic 2.6.5)
 
 - **Optimized cycles** (parallel Yang, efficient Yin)
 - **Meta-awareness** (knows when to switch modes)
 - Result: Rapid, sustainable development
 
-### Professional (WhiteMagic v2.3.0+)
+### Professional (WhiteMagic 2.6.5+)
 
 - **Intuitive balance** (automatic mode switching)
 - **Deep integration** (Yang insights inform Yin, Yin structure enables Yang)

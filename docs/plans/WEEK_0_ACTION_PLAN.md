@@ -1,7 +1,7 @@
 # Week 0: Consolidation & Completion Action Plan
 
 **Date**: November 18, 2025  
-**Purpose**: Complete unfinished implementations before v2.2.9  
+**Purpose**: Complete unfinished implementations before 2.6.5  
 **Theme**: "Finish Before Forward"  
 **Duration**: 3-5 days
 
@@ -23,7 +23,7 @@
 
 ### 1. Update CHANGELOG.md ✅ (15 min)
 
-Add v2.2.8 entry with:
+Add 2.6.5 entry with:
 - Features added
 - Audit results  
 - Known issues
@@ -67,7 +67,7 @@ cd /home/lucas/Desktop/whitemagic
 rm -rf .git
 git init
 git add .
-git commit -m "WhiteMagic v2.2.8 - Clean start"
+git commit -m "WhiteMagic 2.6.5 - Clean start"
 ```
 
 ### 3. Wire Automated Consolidation (2-3 hours)
@@ -157,7 +157,7 @@ git add -u
 ## 📋 Implementation Checklist
 
 ### Day 1: Critical Fixes
-- [ ] Add v2.2.8 to CHANGELOG.md
+- [ ] Add 2.6.5 to CHANGELOG.md
 - [ ] Backup everything
 - [ ] Choose Git cleanup method
 - [ ] Execute Git cleanup
@@ -227,7 +227,7 @@ git add -u
 - 5-10x faster memory management
 - Zero manual consolidation effort
 - Continuous improvement (auto-learning)
-- Foundation solid for v2.2.9
+- Foundation solid for 2.6.5
 
 ---
 
@@ -235,8 +235,8 @@ git add -u
 
 Once Week 0 complete:
 1. Create "Week 0 Complete" memory
-2. Update v2.2.9 plan with learnings
-3. Begin v2.2.9 Week 1 (Biological Foundation + Rust)
+2. Update 2.6.5 plan with learnings
+3. Begin 2.6.5 Week 1 (Biological Foundation + Rust)
 
 ---
 

@@ -175,13 +175,34 @@ def is_rust_available() -> bool:
     return RUST_AVAILABLE
 
 
+def write_file_fast(filepath: str, content: str) -> int:
+    """Write file using Rust (10x faster) or Python fallback.
+    
+    Args:
+        filepath: Path to write to
+        content: Content to write
+        
+    Returns:
+        Number of bytes written
+    """
+    if RUST_AVAILABLE:
+        try:
+            return whitemagic_rs.write_file_fast(filepath, content)
+        except Exception as e:
+            warnings.warn(f"Rust write failed: {e}, falling back to Python")
+    
+    # Python fallback
+    Path(filepath).write_text(content)
+    return len(content.encode('utf-8'))
+
+
 def get_rust_info() -> Dict[str, any]:
     """Get information about Rust integration."""
     return {
         'available': RUST_AVAILABLE,
         'functions': [
             'consolidate', 'search', 'compress_file',
-            'calculate_similarity'
+            'calculate_similarity', 'write_file_fast'
         ] if RUST_AVAILABLE else [],
         'performance_multiplier': '10-100x' if RUST_AVAILABLE else '1x (Python)',
         'installation': 'cd whitemagic-rs && maturin develop --release'

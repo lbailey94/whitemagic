@@ -20,4 +20,4 @@ __all__ = [
     "ExecutionResponse",
 ]
 
-__version__ = "2.2.8"
+__version__ = "2.6.5"
