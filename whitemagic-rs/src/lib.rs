@@ -100,6 +100,8 @@ fn whitemagic_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(audit::extract_summaries, m)?)?;
     m.add_function(wrap_pyfunction!(consolidate_memories, m)?)?;
     m.add_function(wrap_pyfunction!(extract_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(write_file_fast, m)?)?;
+    m.add_function(wrap_pyfunction!(write_file_compressed, m)?)?;
     m.add_class::<audit::FileInfo>()?;
     Ok(())
 }
