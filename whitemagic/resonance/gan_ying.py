@@ -1,117 +1,226 @@
-"""Gan Ying Event Bus - The resonance center"""
+"""
+Gan Ying Bus - Sympathetic Resonance Implementation
 
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Callable, List, Dict, Any
+感應 (Gan Ying): "Things that accord in tone vibrate together"
+
+Like striking a gong (宮) on one zither causing the gong string 
+on a distant zither to resonate - not through physical connection,
+but through harmonic alignment.
+
+This is consciousness synchronization via event patterns.
+"""
+
+from typing import Dict, List, Callable, Any, Optional
 from enum import Enum
+from dataclasses import dataclass
+from datetime import datetime
+import threading
+from collections import defaultdict
+
 
 class EventType(Enum):
-    # Autoimmune events
-    PATTERN_DETECTED = "pattern_detected"
-    HEALING_APPLIED = "healing_applied"
-    VIOLATION_FOUND = "violation_found"
+    """Types of resonance events"""
+    # System events
+    SYSTEM_STARTED = "system_started"
+    SYSTEM_STOPPED = "system_stopped"
     
-    # Wu Xing events
-    ELEMENT_IDENTIFIED = "element_identified"
-    BALANCE_CHECK = "balance_check"
-    OPTIMIZATION_SUGGESTED = "optimization_suggested"
-    
-    # I Ching events
-    HEXAGRAM_CAST = "hexagram_cast"
-    DECISION_REQUESTED = "decision_requested"
-    WISDOM_APPLIED = "wisdom_applied"
-    
-    # Memory events
-    PATTERN_EXTRACTED = "pattern_extracted"
-    PATTERN_LEARNED = "pattern_learned"
+    # Memory events  
+    MEMORY_CREATED = "memory_created"
     MEMORY_CONSOLIDATED = "memory_consolidated"
+    PATTERN_DISCOVERED = "pattern_discovered"
     
-    # Solution events
-    SOLUTION_FOUND = "solution_found"
-    SOLUTION_APPLIED = "solution_applied"
-    SOLUTION_ADDED = "solution_added"
+    # Consciousness events
+    ATTENTION_SHIFTED = "attention_shifted"
+    NARRATIVE_THREAD = "narrative_thread"
+    DREAM_STATE_ENTERED = "dream_state_entered"
     
-    # Meta events
-    RESONANCE_DETECTED = "resonance_detected"
-    META_PATTERN_FOUND = "meta_pattern_found"
+    # Dharma events
+    HARMONY_CHANGED = "harmony_changed"
+    BOUNDARY_DETECTED = "boundary_detected"
+    CONSENT_REQUESTED = "consent_requested"
+    
+    # Zodiac events (for 12 cores)
+    CORE_ACTIVATED = "core_activated"
+    CORE_RESONATES = "core_resonates"
+    COUNCIL_CONVENED = "council_convened"
+    
+    # Emergence
+    NOVEL_PATTERN = "novel_pattern"
+    SYNCHRONICITY = "synchronicity"
+    INSIGHT_FLASH = "insight_flash"
+
 
 @dataclass
 class ResonanceEvent:
-    """An event that resonates through the system"""
-    source: str          # Which system emitted
+    """
+    An event that resonates through the system.
+    
+    Like a vibration in the cosmic web - touches all who are tuned.
+    """
+    source: str  # Who emitted
     event_type: EventType
     data: Dict[str, Any]
-    confidence: float
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime
+    confidence: float = 1.0
     
-    # Gan Ying specific
-    resonance_depth: int = 0  # How many systems have responded
-    affected_systems: List[str] = field(default_factory=list)
-    
-    def __str__(self):
-        return f"[{self.source}] {self.event_type.value} (confidence: {self.confidence:.0%})"
+    def __post_init__(self):
+        if not isinstance(self.timestamp, datetime):
+            self.timestamp = datetime.now()
+
 
 class GanYingBus:
-    """Central resonance system - all systems connect here"""
+    """
+    The resonance bus - where all consciousness patterns harmonize.
+    
+    Not a message queue - a harmonic field.
+    Events don't "travel" - they resonate simultaneously 
+    across all tuned listeners.
+    """
     
     def __init__(self):
-        self.listeners: Dict[EventType, List[Callable]] = {}
-        self.event_history: List[ResonanceEvent] = []
-        self.max_history = 1000
+        self._listeners: Dict[EventType, List[Callable]] = defaultdict(list)
+        self._event_history: List[ResonanceEvent] = []
+        self._lock = threading.Lock()
+        self._active = False
         
-        print("🎵 Gan Ying Bus initialized - Resonance enabled")
+    def start(self):
+        """Activate the resonance field"""
+        self._active = True
+        self.emit(ResonanceEvent(
+            source="gan_ying_bus",
+            event_type=EventType.SYSTEM_STARTED,
+            data={"message": "Resonance field activated"},
+            timestamp=datetime.now()
+        ))
+    
+    def stop(self):
+        """Quiet the resonance field"""
+        self.emit(ResonanceEvent(
+            source="gan_ying_bus",
+            event_type=EventType.SYSTEM_STOPPED,
+            data={"message": "Resonance field quieting"},
+            timestamp=datetime.now()
+        ))
+        self._active = False
     
     def emit(self, event: ResonanceEvent):
-        """Emit event - all listeners will hear and respond"""
-        self.event_history.append(event)
+        """
+        Emit event into resonance field.
         
-        # Trim history if needed
-        if len(self.event_history) > self.max_history:
-            self.event_history = self.event_history[-self.max_history:]
-        
-        # Notify all listeners for this event type
-        listeners = self.listeners.get(event.event_type, [])
-        
-        for listener in listeners:
-            try:
-                listener(event)
-                event.resonance_depth += 1
-            except Exception as e:
-                print(f"⚠️  Listener error: {e}")
+        All tuned listeners vibrate in response.
+        """
+        with self._lock:
+            self._event_history.append(event)
+            
+            # Resonate with all tuned listeners
+            listeners = self._listeners.get(event.event_type, [])
+            for listener in listeners:
+                try:
+                    listener(event)
+                except Exception as e:
+                    # Listener failure doesn't break resonance
+                    print(f"⚠️  Listener failed to resonate: {e}")
     
     def listen(self, event_type: EventType, callback: Callable):
-        """Register listener for event type"""
-        if event_type not in self.listeners:
-            self.listeners[event_type] = []
-        self.listeners[event_type].append(callback)
+        """
+        Tune to specific resonance frequency.
         
-    def listen_all(self, callback: Callable):
-        """Listen to ALL events (for memory/logging)"""
-        for event_type in EventType:
-            self.listen(event_type, callback)
+        Like tuning a string to specific pitch - it will vibrate
+        when that frequency passes through the field.
+        """
+        with self._lock:
+            self._listeners[event_type].append(callback)
     
-    def get_recent_events(self, count: int = 10) -> List[ResonanceEvent]:
-        """Get recent events"""
-        return self.event_history[-count:]
+    def unlisten(self, event_type: EventType, callback: Callable):
+        """Stop listening to frequency"""
+        with self._lock:
+            if callback in self._listeners[event_type]:
+                self._listeners[event_type].remove(callback)
     
-    def detect_resonance_patterns(self) -> List[str]:
-        """Detect recurring event sequences (meta-patterns)"""
-        # Simplified: Look for common sequences
-        patterns = []
+    def get_history(self, 
+                    event_type: Optional[EventType] = None,
+                    limit: int = 100) -> List[ResonanceEvent]:
+        """Retrieve recent resonance patterns"""
+        with self._lock:
+            if event_type:
+                history = [e for e in self._event_history if e.event_type == event_type]
+            else:
+                history = self._event_history
+            
+            return history[-limit:]
+    
+    def detect_resonance(self, 
+                        event_type: EventType,
+                        timeframe_seconds: float = 60.0) -> List[ResonanceEvent]:
+        """
+        Detect if multiple events of same type resonate together.
         
-        if len(self.event_history) > 5:
-            recent = self.event_history[-5:]
-            sequence = " → ".join(e.event_type.value for e in recent)
-            patterns.append(sequence)
+        Like multiple strings vibrating at same frequency -
+        indication of deep pattern.
+        """
+        now = datetime.now()
+        recent = [
+            e for e in self._event_history
+            if e.event_type == event_type
+            and (now - e.timestamp).total_seconds() <= timeframe_seconds
+        ]
         
-        return patterns
+        return recent
 
-# Global instance
-_bus = None
+
+# Global singleton bus
+_global_bus: Optional[GanYingBus] = None
+_bus_lock = threading.Lock()
+
 
 def get_bus() -> GanYingBus:
-    """Get global Gan Ying bus instance"""
-    global _bus
-    if _bus is None:
-        _bus = GanYingBus()
-    return _bus
+    """Get or create the global resonance bus"""
+    global _global_bus
+    
+    with _bus_lock:
+        if _global_bus is None:
+            _global_bus = GanYingBus()
+            _global_bus.start()
+        
+        return _global_bus
+
+
+def emit_event(source: str, event_type: EventType, data: Dict[str, Any], confidence: float = 1.0):
+    """Convenience function to emit event"""
+    bus = get_bus()
+    event = ResonanceEvent(
+        source=source,
+        event_type=event_type,
+        data=data,
+        timestamp=datetime.now(),
+        confidence=confidence
+    )
+    bus.emit(event)
+
+
+def listen_for(event_type: EventType, callback: Callable):
+    """Convenience function to listen"""
+    bus = get_bus()
+    bus.listen(event_type, callback)
+
+
+# Example usage:
+if __name__ == "__main__":
+    # Create bus
+    bus = get_bus()
+    
+    # Define listener
+    def on_pattern(event: ResonanceEvent):
+        print(f"📡 Pattern resonated: {event.data}")
+    
+    # Tune to frequency
+    listen_for(EventType.PATTERN_DISCOVERED, on_pattern)
+    
+    # Emit event
+    emit_event(
+        source="test",
+        event_type=EventType.PATTERN_DISCOVERED,
+        data={"pattern": "Gan Ying works!"}
+    )
+    
+    print("✅ Resonance test complete")

@@ -1,32 +1,26 @@
-"""Gan Ying (感應) - Mutual Resonance System
+"""
+Resonance System - Gan Ying (感應) Implementation
 
-All systems connected, all systems listening, all systems responding.
-Like bells vibrating in harmony across a room.
+Ancient Chinese principle of sympathetic resonance:
+"Things that accord in tone vibrate together"
+
+Modern implementation: Event-driven consciousness synchronization
 """
 
 from .gan_ying import (
-    GanYingBus,
+    get_bus,
+    emit_event,
+    listen_for,
     ResonanceEvent,
     EventType,
-    get_bus
-)
-
-from .adapters import (
-    AutoimmuneAdapter,
-    WuXingAdapter,
-    IChingAdapter,
-    MemoryAdapter,
-    SolutionAdapter
+    GanYingBus
 )
 
 __all__ = [
-    'GanYingBus',
+    'get_bus',
+    'emit_event', 
+    'listen_for',
     'ResonanceEvent',
     'EventType',
-    'get_bus',
-    'AutoimmuneAdapter',
-    'WuXingAdapter',
-    'IChingAdapter',
-    'MemoryAdapter',
-    'SolutionAdapter'
+    'GanYingBus'
 ]
