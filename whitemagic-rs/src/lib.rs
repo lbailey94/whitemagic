@@ -163,3 +163,9 @@ fn consolidate_memories(
         report.top_memories
     ))
 }
+
+// File operations module
+mod file_ops;
+
+// Export file ops functions
+use file_ops::{write_file_fast, write_file_compressed};

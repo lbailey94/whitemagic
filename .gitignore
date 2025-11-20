@@ -151,3 +151,7 @@ docs/audits/
 !docs/audits/.gitkeep
 backups/
 !backups/.gitkeep
+
+# Personal notes and writing folders (Nov 19, 2025)
+notes3-clean/
+writing3/

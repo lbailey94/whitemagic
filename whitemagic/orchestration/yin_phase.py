@@ -14,12 +14,23 @@ from datetime import datetime
 import json
 
 class YinPhase:
-    """Automated deep reflection and analysis"""
+    """Automated deep reflection and analysis with Gan Ying resonance"""
     
     def __init__(self, base_dir: Path = None):
         self.base_dir = base_dir or Path(".")
         self.analysis_dir = self.base_dir / "memory" / "yin_analyses"
         self.analysis_dir.mkdir(parents=True, exist_ok=True)
+        self.bus = None
+        self._connect_to_gan_ying()
+    
+    def _connect_to_gan_ying(self):
+        """Connect to Gan Ying Event Bus"""
+        try:
+            from whitemagic.resonance.gan_ying import get_bus
+            self.bus = get_bus()
+            print("🎵 Yin Phase connected to Gan Ying Bus")
+        except ImportError:
+            pass  # Graceful degradation
     
     def run_full_cycle(self) -> Dict[str, Any]:
         """Execute complete Yin cycle"""
@@ -58,8 +69,58 @@ class YinPhase:
         # Save analysis
         self._save_analysis(results)
         
+        # Emit insights to Gan Ying Bus for orchestration
+        self._emit_insights(results)
+        
         print("🌕 Yin Phase complete: All patterns observed")
         return results
+    
+    def _emit_insights(self, results: Dict[str, Any]):
+        """Emit Yin insights to Gan Ying Bus to trigger orchestration
+        
+        Args:
+            results: Analysis results to emit
+        """
+        if not self.bus:
+            return
+        
+        try:
+            from whitemagic.resonance.gan_ying import ResonanceEvent, EventType
+            
+            # Emit pattern extraction event
+            self.bus.emit(ResonanceEvent(
+                source="yin_phase",
+                event_type=EventType.PATTERN_EXTRACTED,
+                data={
+                    "gaps_found": results['analyses']['gaps']['gaps_found'],
+                    "total_patterns": results['analyses']['patterns']['total'],
+                    "consolidation_candidates": len(results['analyses']['consolidation'].get('consolidation_candidates', [])),
+                    "doc_updates_needed": results['analyses']['docs'].get('potentially_outdated', 0),
+                    "status": "analysis_complete"
+                },
+                confidence=0.9
+            ))
+            
+            # If significant gaps or issues, emit additional event
+            gaps = results['analyses']['gaps']['gaps_found']
+            old_memories = len(results['analyses']['consolidation'].get('old_memories', []))
+            
+            if gaps > 5 or old_memories > 20:
+                self.bus.emit(ResonanceEvent(
+                    source="yin_phase",
+                    event_type=EventType.OPTIMIZATION_SUGGESTED,
+                    data={
+                        "issue": "gaps_or_consolidation_needed",
+                        "gaps": gaps,
+                        "old_memories": old_memories,
+                        "recommendation": "Trigger orchestra for cleanup"
+                    },
+                    confidence=0.85
+                ))
+                
+            print("🎵 Yin insights emitted to Gan Ying Bus - Orchestra can respond")
+        except Exception as e:
+            print(f"⚠️  Could not emit to Gan Ying: {e}")
     
     def _analyze_patterns(self) -> Dict[str, Any]:
         """Analyze all patterns in system"""

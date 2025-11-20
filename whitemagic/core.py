@@ -39,7 +39,7 @@ from .exceptions import (
     InvalidTierError,
 )
 from .fileio import atomic_write, file_lock
-from .utils import (
+from whitemagic.utils import (
     clean_markdown,
     create_frontmatter,
     create_preview,

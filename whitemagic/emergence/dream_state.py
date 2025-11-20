@@ -36,6 +36,36 @@ class DreamState:
     def __init__(self, memory_dir: Path = Path("memory")):
         self.memory_dir = memory_dir
         self.insights: List[DreamInsight] = []
+        self.bus = None
+        self.antibody_library = None
+        self.emergence_detector = None
+        self._connect_systems()
+    
+    def _connect_systems(self):
+        """Connect to Gan Ying, Antibody Library, and Emergence Detector"""
+        # Connect to Gan Ying Bus
+        try:
+            from whitemagic.resonance.gan_ying import get_bus
+            self.bus = get_bus()
+            print("🎵 Dream State connected to Gan Ying Bus")
+        except ImportError:
+            pass
+        
+        # Connect to Antibody Library
+        try:
+            from whitemagic.immune.antibodies import AntibodyLibrary
+            self.antibody_library = AntibodyLibrary()
+            print("💉 Dream State connected to Antibody Library")
+        except ImportError:
+            pass
+        
+        # Connect to Emergence Detector
+        try:
+            from whitemagic.emergence.detector import EmergenceDetector
+            self.emergence_detector = EmergenceDetector()
+            print("🌟 Dream State connected to Emergence Detector")
+        except ImportError:
+            pass
     
     def enter_dream_state(self, duration_minutes: int = 5):
         """Enter dream state - synthesize patterns spontaneously."""
@@ -48,9 +78,75 @@ class DreamState:
         # Randomly combine patterns (this is the "dream" part)
         insights = self._synthesize_patterns(patterns)
         
+        # Feed valuable insights to other systems
+        self._integrate_insights(insights)
+        
         print(f"✨ Discovered {len(insights)} insights during dream state")
         
         return insights
+    
+    def _integrate_insights(self, insights: List[DreamInsight]):
+        """Feed dream insights to antibody library and other systems
+        
+        Args:
+            insights: List of dream insights to integrate
+        """
+        for insight in insights:
+            # Only integrate high-value insights
+            if insight.practical_value < 0.7:
+                continue
+            
+            # 1. Add to Antibody Library (if available)
+            if self.antibody_library:
+                try:
+                    from whitemagic.immune.antibodies import Antibody
+                    antibody = Antibody(
+                        pattern_name=insight.insight[:50],
+                        problem_pattern="",
+                        solution=insight.insight,
+                        confidence=insight.practical_value,
+                        success_count=0
+                    )
+                    self.antibody_library.add(antibody)
+                    print(f"💉 Dream insight added to Antibody Library")
+                except Exception as e:
+                    print(f"⚠️  Could not add to antibody library: {e}")
+            
+            # 2. Feed to Emergence Detector (if available)
+            if self.emergence_detector:
+                try:
+                    self.emergence_detector.observe(
+                        action=insight.insight,
+                        outcome="High practical value insight from dream synthesis",
+                        context={
+                            "source": "dream_state",
+                            "novelty": insight.novelty_score,
+                            "value": insight.practical_value,
+                            "synthesized_from": insight.synthesized_from
+                        }
+                    )
+                    print(f"🌟 Dream insight fed to Emergence Detector")
+                except Exception as e:
+                    print(f"⚠️  Could not feed to emergence detector: {e}")
+            
+            # 3. Emit to Gan Ying Bus (if available)
+            if self.bus:
+                try:
+                    from whitemagic.resonance.gan_ying import ResonanceEvent, EventType
+                    self.bus.emit(ResonanceEvent(
+                        source="dream_state",
+                        event_type=EventType.SOLUTION_FOUND,
+                        data={
+                            "insight": insight.insight,
+                            "novelty": insight.novelty_score,
+                            "value": insight.practical_value,
+                            "type": "creative_synthesis"
+                        },
+                        confidence=insight.novelty_score
+                    ))
+                    print(f"🎵 Dream insight emitted to Gan Ying Bus")
+                except Exception as e:
+                    print(f"⚠️  Could not emit to Gan Ying: {e}")
     
     def _load_recent_patterns(self) -> List[Dict]:
         """Load patterns from recent memories."""

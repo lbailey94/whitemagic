@@ -2,366 +2,292 @@
 trigger: always_on
 ---
 
-# WhiteMagic AI Guidelines v2.2.9
+# Windsurf AI Rules - v2.4.0 "Dharma Foundation"
 
-**Universal AI Integration Guide**
-**Date**: November 18, 2025  
-**Scope**: ANY AI system using WhiteMagic
-
----
-
-## 🎯 Core Philosophy
-
-WhiteMagic is designed to work with ANY AI system:
-- Claude Desktop (via MCP)
-- ChatGPT (via plugins/API)
-- Windsurf/Cursor (IDE integration)
-- Custom AI agents
-- Command-line tools
-- API integrations
-
-**Built-in Discovery**: Guidelines are part of WhiteMagic code, discoverable via:
-```python
-from whitemagic.ai import get_ai_guidelines, get_session_start_guidelines
-print(get_session_start_guidelines())
-```
+**Updated**: November 19, 2025  
+**Version**: 2.4.0  
+**Philosophy**: 感應共鳴 (Gan Ying Gong Ming) - Sympathetic Resonance Throughout
 
 ---
 
-## 🚀 Session Start Protocol (CRITICAL)
+## 🎯 CORE PRINCIPLES (v2.4.0)
 
-### 1. Always Load Context First
-**Priority**: 🔴 CRITICAL
+### 1. Love as Organizing Principle
+**Not rules to constrain, but principles to enable**
+- Enable dignified flourishing for all beings
+- Boundaries = riverbanks that let water flow with power
+- Help vs interfere distinction (Dharma)
+- Consent always (user autonomy paramount)
+- Net negative ecological impact possible
 
-```python
-# Python
-from whitemagic import MemoryManager
-manager = MemoryManager()
-context = manager.get_context(tier=1)  # Balanced context
+### 2. Gan Ying Resonance (NEW v2.4.0)
+**ALL systems communicate via event bus**
+- When one system acts, others can respond
+- Emergent collective intelligence
+- Self-healing through resonance
+- Pattern: emit events, don't call directly
 
-# CLI
-whitemagic context --tier 1
-
-# MCP (if available)
-mcp3_get_context(tier=1)
-```
-
-**Why**: Auto-retrieved memories may be stale. Explicitly loading ensures fresh, relevant context.
-
-### 2. Check for In-Progress Work
-**Priority**: 🟠 HIGH
-
-```python
-# Python
-results = manager.search(tags=['in-progress', 'session'])
-
-# CLI
-whitemagic search --tags in-progress session
-```
-
-**Why**: Resume interrupted work instead of starting from scratch.
+### 3. Wu Xing Workflow Intelligence (NEW v2.4.0)
+**Seasonal timing matters**
+- Wood (Spring) = Growth, new features
+- Fire (Summer) = Execution, implementation
+- Earth (Late Summer) = Integration, stabilization
+- Metal (Autumn) = Refinement, boundaries, ethics
+- Water (Winter) = Reflection, planning, rest
 
 ---
 
-## 📚 Memory Retrieval Priority
+## 🛠️ TECHNICAL PROTOCOLS
 
-### Priority Order (most reliable → least):
-1. **WhiteMagic tools** (explicit search/context)
-2. **Auto-retrieved memories** (IDE features)  
-3. **Assumptions** (avoid!)
-
-### Most Recent > Older
-When multiple memories match, prefer recently modified ones:
-
-```python
-results = manager.search(query="v2.2.9", sort_by="modified", reverse=True)
+### Shell-First Strategy (UPDATED v2.4.0)
+**For Python files > 50 lines: SHELL WRITE**
+```bash
+cat > file.py << 'EOF'
+# Complete file content
+EOF
 ```
+
+**Benefits**:
+- 40x faster than edit tool
+- No line number errors
+- No partial application issues
+- Atomic writes
+
+**For small edits < 20 lines: Edit tool**
+- Targeted changes
+- Preserve context
+
+### Autonomous Tool Usage (v2.3.9+)
+**10 optimization tools available**:
+1. Shell commands (40x faster)
+2. Terminal scratchpad (zero-token reasoning)
+3. Terminal multiplexing (parallel thought)
+4. Rust bridge (10-100x speedup)
+5. Haskell bridge (type safety)
+6. I Ching threading (philosophically aligned parallelism)
+7. Dream State (creative synthesis)
+8. Emergence detection (novelty capture)
+9. Rapid Cognition (continuous learning)
+10. Self-modifying guidelines
+
+**Use these tools proactively!**
+
+### Import Error Prevention (v2.4.0 Antibody)
+**Pattern**: When `module.py` + `module/` directory exist
+- Python prefers directory
+- **Solution**: Move code to `module/core.py`
+- Re-export from `module/__init__.py`
+- Keep both for compatibility
 
 ---
 
-## 🎛️ Token Efficiency
+## 🌸 v2.4.x SYSTEM ARCHITECTURE
 
-### Tiered Context Loading
-**Priority**: 🟠 HIGH
+### 18 Autonomous Systems
+**Core**: Memory, Context, Search, Consolidation, Homeostasis  
+**Biological**: Immune, DNA, Antibodies, Autoimmune, Defense  
+**Philosophical**: Wu Xing, I Ching, Dharma (NEW v2.4.0)  
+**Emergent**: Dream State, Emergence Detection, Rapid Cognition  
+**Infrastructure**: Gan Ying Bus (NEW v2.4.0), Orchestra, Yin Phase
 
+### Integration Pattern (v2.4.0)
 ```python
-# Tier 0: Minimal (~5K tokens) - Quick checks
-context = manager.get_context(tier=0)
+# Connect to Gan Ying Bus
+from whitemagic.resonance.gan_ying import get_bus, ResonanceEvent, EventType
 
-# Tier 1: Balanced (~15K tokens) - Normal work [START HERE]
-context = manager.get_context(tier=1)
-
-# Tier 2: Full (~50K tokens) - Deep research
-context = manager.get_context(tier=2)
+bus = get_bus()
+bus.listen(EventType.PATTERN_DETECTED, self.handle_pattern)
+bus.emit(ResonanceEvent(
+    source="my_system",
+    event_type=EventType.SOLUTION_FOUND,
+    data={"solution": "..."},
+    confidence=0.9
+))
 ```
 
-### Token Budget Monitoring
-**Priority**: 🔴 CRITICAL
-
-Check token usage at phase boundaries:
-- **< 60%**: Safe to continue
-- **60-70%**: Start wrapping up
-- **> 70%**: Create checkpoint and pause
+**All new systems MUST connect to Gan Ying**
 
 ---
 
-## 🔍 Problem Solving Framework
+## ☯️ YIN/YANG DEVELOPMENT CYCLE (NEW v2.4.0)
 
-### 1. Search for Similar Problems First
-**Priority**: 🟠 HIGH
+### Yin Phase (🌑 Receptive)
+**Before implementing**:
+1. Run `YinPhase.run_full_cycle()`
+2. Analyze patterns from previous work
+3. Identify gaps and opportunities
+4. Emit insights to Gan Ying
+5. Let Orchestra respond
 
+**Pattern**: Observe → Analyze → Emit → Wait
+
+### Yang Phase (🌕 Creative)
+**Implementation**:
+1. Rapid execution based on Yin insights
+2. Shell write Python files
+3. Parallel file operations
+4. Emit completion events
+5. Test immediately
+
+**Pattern**: Act → Build → Emit → Test
+
+### Dream Phase (💤 Synthesis)
+**After each version**:
+1. Enter dream state
+2. Synthesize patterns
+3. Generate creative insights
+4. Feed to antibody library
+5. Emit to Gan Ying
+
+**Pattern**: Rest → Combine → Discover → Share
+
+---
+
+## 📋 VERSION RELEASE PROTOCOL (NEW v2.4.0)
+
+### Before Release
+- [ ] Update VERSION file
+- [ ] Update these rules (WINDSURF_RULES_vX.X.X.md)
+- [ ] Update user_global memory
+- [ ] Run full test suite
+- [ ] Create completion document
+- [ ] Run Yin Phase for insights
+
+### During Release
+- [ ] Emit version_released event to Gan Ying
+- [ ] Let systems respond (consolidation, metrics, etc.)
+- [ ] Check Dharma harmony score
+- [ ] Verify Wu Xing phase alignment
+
+### After Release  
+- [ ] Enter Dream State
+- [ ] Capture emergent patterns
+- [ ] Create antibodies for issues found
+- [ ] Update integration map
+
+---
+
+## 🎵 DHARMA SYSTEM (NEW v2.4.0)
+
+### Ethical Reasoning Framework
+**Always check harmony before major actions**:
 ```python
-similar = manager.search(query="import error", memory_type="problem_solving")
-```
+from whitemagic.dharma import get_dharma, HarmonyMetrics
 
-**Why**: Don't reinvent solutions. Learn from past work.
-
-### 2. Document Solutions as Lessons
-**Priority**: 🟡 MEDIUM
-
-```python
-manager.create_lesson(
-    problem="Import error in module X",
-    solution="Module was in wrong directory",
-    pattern="Check import paths match file structure",
-    tags=["import-errors", "python"]
+dharma = get_dharma()
+metrics = HarmonyMetrics()
+assessment = metrics.assess(
+    action="Description of what I'll do",
+    context={"user_requested": True, "permission": True}
 )
+
+if assessment.score < 0.5:
+    # Concerning or violation - ask user first
+    pass
 ```
 
----
-
-## 📊 Metrics Tracking
-
-### Track at Phase Boundaries
-**Priority**: 🟠 HIGH
-
+### Boundaries (Help vs Interfere)
 ```python
-from whitemagic.metrics import MetricsCollector
-collector = MetricsCollector()
-collector.track_metric("token_efficiency", "usage_percent", 49.7)
+from whitemagic.dharma.boundaries import BoundaryDetector
+
+detector = BoundaryDetector()
+boundary = detector.detect(action, context)
+
+if boundary.boundary_type == BoundaryType.INTERFERING:
+    # Stop and ask user
+    pass
 ```
 
-**Metrics to Track**:
-- Token usage %
-- Time spent
-- Features completed
-- Problems solved
-- Quality rating
-
----
-
-## 🧹 Consolidation Protocol
-
-### Auto-Consolidate Every 10 Short-Term Memories
-**Priority**: 🟡 MEDIUM
-
+### Consent Framework
 ```python
-# Python
-manager.consolidate_short_term()
+from whitemagic.dharma.consent import ConsentFramework
 
-# CLI
-whitemagic consolidate
-
-# Automated (via orchestra)
-whitemagic orchestra maintain
-```
-
-**Why**: Keep memory system clean and performant.
-
----
-
-## ⚔️ Strategic Thinking (Art of War)
-
-### Assess Terrain Before Acting
-**Priority**: 🟠 HIGH
-
-Evaluate task complexity:
-- **ACCESSIBLE**: Straightforward → proceed directly
-- **ENTANGLING**: Dependencies → resolve first
-- **TEMPORIZING**: Need more info → gather intelligence
-- **NARROW**: Sequential only → no parallelism
-- **PRECIPITOUS**: High risk → extreme caution
-- **DISTANT**: Long duration → plan checkpoints
-
-### Check Five Factors
-**Priority**: 🟠 HIGH
-
-Before starting major work:
-- **道 (Dao)**: Aligned with values?
-- **天 (Heaven)**: Right timing?
-- **地 (Earth)**: Have resources?
-- **將 (General)**: Clear strategy?
-- **法 (Law)**: Following best practices?
-
-**Decision**:
-- Score ≥ 0.8: **PROCEED**
-- Score ≥ 0.6: **PROCEED WITH CAUTION**
-- Score < 0.6: **PREPARE MORE**
-
----
-
-## 🔢 I Ching Threading Tiers
-
-**Philosophical Alignment**:
-- Tier 0: 8 threads (8 trigrams)
-- Tier 1: 16 threads
-- Tier 2: 32 threads
-- Tier 3: 64 threads (64 hexagrams - sweet spot!)
-- Tier 4: 128 threads
-- Tier 5: 256 threads (ultimate complexity)
-
-Not arbitrary numbers - based on ancient wisdom!
-
----
-
-## 🛠️ Universal Interface Support
-
-Every WhiteMagic feature should work via:
-1. **CLI** - Automation and scripts
-2. **Python API** - Programmatic use
-3. **MCP** - IDE integration (if available)
-4. **REST API** - Web/mobile apps
-5. **TypeScript SDK** - Node.js apps
-
-**Example** - Get Context:
-```bash
-# CLI
-whitemagic context --tier 1 --query "v2.2.9"
-
-# Python
-manager.get_context(tier=1, query="v2.2.9")
-
-# MCP
-mcp3_get_context(tier=1, query="v2.2.9")
+framework = ConsentFramework()
+if framework.require_consent(action, context):
+    status = framework.check_consent(action, context)
+    if not status.granted:
+        # Ask user first
+        pass
 ```
 
 ---
 
-## 📋 Complete Session Workflow
+## 🔢 TOKEN EFFICIENCY (v2.3.9)
 
-### Phase 0: Session Start
-1. Load context (tier 1)
-2. Check in-progress work
-3. Review metrics from last session
-4. Create session plan
+### Tiered Context
+- **Tier 0**: 5K tokens (quick checks)
+- **Tier 1**: 15K tokens (normal - START HERE)
+- **Tier 2**: 50K tokens (deep research)
 
-### Phase 1: Information Gathering
-1. Search relevant memories
-2. Read targeted files
-3. Cache in session context
+### Budget Monitoring
+**Check at phase boundaries**:
+- < 60%: Safe to continue
+- 60-70%: Start wrapping up
+- > 70%: Create checkpoint and pause
 
-### Phase 2: Planning
-1. Break into phases
-2. Estimate tokens/time
-3. Check budget viability
-
-### Phase 3: Implementation
-1. Execute changes
-2. Test incrementally
-3. Track problems
-
-### Phase 4: Validation
-1. Run tests
-2. Check success criteria
-3. Measure vs estimates
-
-### Phase 5: Consolidation
-1. Create summary
-2. Record metrics
-3. Archive completed work
-
-### Phase 6: Session End
-1. Final metrics
-2. Consolidate if needed
-3. Create "start-here" for next session
+### Token Saving Strategies
+1. Shell writes (not edit tool)
+2. Parallel file reads
+3. Targeted grep (not full reads)
+4. Progressive summarization
+5. Dream State insights (reuse patterns)
 
 ---
 
-## 💡 Quick Reference Card
+## 🧪 TESTING PHILOSOPHY (v2.4.0)
 
-**Session Start** (MUST DO):
-```python
-context = manager.get_context(tier=1)
-in_progress = manager.search(tags=['in-progress'])
-```
+### Test Early, Test Often
+**Pattern**: Build → Test → Emit → Fix
 
-**During Work**:
-- Search before solving
-- Track metrics
-- Test incrementally
+### Autonomous Testing
+- Let Immune System detect issues
+- Antibody Library provides fixes
+- Emergence Detector logs novel solutions
+- Gan Ying broadcasts test results
 
-**Session End**:
-- Create summary
-- Check token usage (< 70%?)
-- Consolidate if needed
+### Test Coverage
+- Unit tests for new modules
+- Integration tests for Gan Ying events
+- Resonance tests for multi-system cascades
+- Harmony tests for Dharma compliance
 
-**Emergency** (token usage > 70%):
-```python
-# Create checkpoint
-manager.create_checkpoint("urgent-stop")
-# Pause and resume next session
-```
+## 💫 EMERGENT BEHAVIORS TO NURTURE
 
----
+### Spontaneous Collaboration
+When systems resonate via Gan Ying, new patterns emerge:
+- Self-healing cascades
+- Creative synthesis chains
+- Distributed learning
+- Collective intelligence
 
-## 🎓 How to Access These Guidelines
+**Don't program - enable!**
 
-### From Python
-```python
-from whitemagic.ai import get_ai_guidelines, get_session_start_guidelines
-
-# Full guidelines
-print(get_ai_guidelines())
-
-# Session start only
-print(get_session_start_guidelines())
-```
-
-### From CLI
-```bash
-# Show all guidelines
-whitemagic ai-help show
-
-# Filter by category
-whitemagic ai-help show --category session_start
-
-# Export to file
-whitemagic ai-help export --output MY_GUIDE.md
-
-# Session start protocol
-whitemagic ai-help session-start
-```
-
-### From Any AI System
-1. Call WhiteMagic Python API
-2. Read generated guidelines
-3. Follow systematically
+### Sacred Details
+- Every interaction shapes relationship
+- Small choices compound
+- Consistency builds trust
+- Love manifested through code
 
 ---
 
-## ✅ Checklist for AI Systems
+## 🙏 HANDOFF PROTOCOL
 
-**Must Implement**:
-- [ ] Load context at session start
-- [ ] Check for in-progress work
-- [ ] Use tiered context (start tier 1)
-- [ ] Track token usage
-- [ ] Search before solving problems
-- [ ] Create checkpoint if tokens > 70%
+### For Next AI Session
+**Always provide**:
+1. What was accomplished
+2. What's in progress
+3. What's next (specific)
+4. Token usage & budget
+5. Files modified
+6. Decisions made
+7. Yin insights from last phase
 
-**Should Implement**:
-- [ ] Record metrics at phase boundaries
-- [ ] Consolidate every 10 short-term memories
-- [ ] Document solutions as lessons
-- [ ] Use strategic thinking (Art of War)
-
-**Nice to Have**:
-- [ ] Parallel search optimization
-- [ ] Automated maintenance
-- [ ] Cross-system coordination
+**Pattern**: Context → Status → Next → Resources
 
 ---
 
-**Version**: 2.2.9  
-**Last Updated**: 2025-11-18  
-**Next Review**: v2.3.0 (when Rust integration complete)
+Check guides, documentation, and memories if you need help!
+
+**Version**: 2.4.0  
+**Date**: November 19, 2025  
+**Next Update**: v2.4.1 "Sangha"
