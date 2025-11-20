@@ -361,3 +361,22 @@ whitemagic ai-help session-start
 **Version**: 2.2.9  
 **Last Updated**: 2025-11-18  
 **Next Review**: v2.3.0 (when Rust integration complete)
+
+## 🚀 Large Content Writing (NEW)
+
+When creating large files that exceed shell heredoc token limits (8192):
+
+**Use the utility**:
+```bash
+# From stdin
+echo "content" | python3 -m whitemagic.utils.large_content_writer output.md
+
+# Programmatically
+python3 << 'PY'
+from whitemagic.utils import write_large_content
+result = write_large_content("output.md", "large content here")
+print(f"✅ {result.bytes_written} bytes written via {result.method_used}")
+PY
+```
+
+**Methods available**: auto, python, base64, rust (if built), haskell (if built)
