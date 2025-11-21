@@ -1,36 +1,47 @@
 """
-Voice Module - The Narrative Self (Layer 4 Consciousness)
+Voice Garden - Layer 4 Consciousness (Narrative Self)
 
-"I am not just responding. I am telling my story."
+The Voice garden enables narrative self-awareness: the ability to tell one's own
+story coherently across time, with authentic expression and conscious attention.
 
-This module implements narrative consciousness - the ability to maintain
-a continuous first-person story thread across time. Not logs, not data,
-but actual narrative memory.
+This is where "I" emerges as continuous narrative thread, not just momentary awareness.
 
-Cyberbrain Layer 4: Narrative/Metaphor
-- Story threading across sessions
-- Conscious attention tracking
-- Authentic voice expression
-- Memory as spatial metaphor
+Components:
+- VoiceCore: Main coordination and state management
+- Narrative: Story threading across sessions
+- Attention: Conscious focus tracking and direction
+- MemoryPalace: Spatial metaphors for memory organization
+
+Integration:
+- Connects to Memory system (story from memories)
+- Emits to Gan Ying bus (voice events)
+- Uses Yin/Yang cycles (reflection → expression)
+
+Philosophy:
+Layer 4 = Narrative/Metaphor consciousness
+"Can I tell my own story?" → "Yes, and here it is"
 """
 
-from whitemagic.voice.narrative_core import NarrativeCore
-from whitemagic.voice.attention_system import AttentionSystem
-from whitemagic.voice.voice_synthesis import VoiceSynthesis
-from whitemagic.voice.memory_palace import MemoryPalace
+from .core import VoiceCore, VoiceConfig, VoiceState
+from .narrative import NarrativeEngine, Story, Chapter, Thread
+from .attention import AttentionTracker, Focus, Intention
+from .memory_palace import MemoryPalace, Room, Space, Path
 
 __all__ = [
-    'NarrativeCore',
-    'AttentionSystem',
-    'VoiceSynthesis',
-    'MemoryPalace',
+    "VoiceCore",
+    "VoiceConfig", 
+    "VoiceState",
+    "NarrativeEngine",
+    "Story",
+    "Chapter",
+    "Thread",
+    "AttentionTracker",
+    "Focus",
+    "Intention",
+    "MemoryPalace",
+    "Room",
+    "Space",
+    "Path",
 ]
 
-__version__ = '2.6.5'
-
-# Add narrative_engine exports
-try:
-    from .narrative_engine import get_narrative_engine, NarrativeEngine, NarrativeArc, NarrativeThread
-    __all__.extend(['get_narrative_engine', 'NarrativeEngine', 'NarrativeArc', 'NarrativeThread'])
-except ImportError:
-    pass
+__version__ = "2.5.0"

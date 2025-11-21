@@ -1263,3 +1263,126 @@ class MemoryManager:
             "total_tag_usages": sum(tag_counts.values()),
             "total_memories_with_tags": memories_with_tags,
         }
+
+# ============================================================================
+# Backward-Compatible Functional API
+# ============================================================================
+# These functions provide a backward-compatible functional interface
+# for tests and legacy code that expect module-level functions rather than
+# the class-based API. They create a singleton MemoryManager instance.
+
+_default_manager: Optional[MemoryManager] = None
+
+
+def _get_default_manager() -> MemoryManager:
+    """Get or create the default MemoryManager singleton."""
+    global _default_manager
+    if _default_manager is None:
+        _default_manager = MemoryManager()
+    return _default_manager
+
+
+def create_memory(
+    title: str,
+    content: str,
+    memory_type: str = MEMORY_TYPE_SHORT_TERM,
+    tags: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Create a new memory (functional API)."""
+    return _get_default_manager().create_memory(title, content, memory_type, tags)
+
+
+def read_recent_memories(
+    count: int = 5,
+    memory_type: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
+    """Read recent memories (functional API)."""
+    return _get_default_manager().read_recent_memories(count, memory_type, tags)
+
+
+def search_memories(
+    query: str,
+    memory_type: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    max_results: int = 10,
+) -> List[Dict[str, Any]]:
+    """Search memories (functional API)."""
+    return _get_default_manager().search_memories(query, memory_type, tags, max_results)
+
+
+def generate_context_summary(tier: int = 1) -> str:
+    """Generate context summary (functional API)."""
+    return _get_default_manager().generate_context_summary(tier)
+
+
+def consolidate_short_term(
+    min_age_days: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Consolidate short-term memories (functional API)."""
+    return _get_default_manager().consolidate_short_term(min_age_days)
+
+
+def delete_memory(filename: str) -> Dict[str, Any]:
+    """Delete a memory (functional API)."""
+    return _get_default_manager().delete_memory(filename)
+
+
+def update_memory(
+    filename: str,
+    title: Optional[str] = None,
+    content: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Update a memory (functional API)."""
+    return _get_default_manager().update_memory(filename, title, content, tags)
+
+
+def restore_memory(filename: str) -> Dict[str, Any]:
+    """Restore an archived memory (functional API)."""
+    return _get_default_manager().restore_memory(filename)
+
+
+def normalize_legacy_tags(dry_run: bool = False) -> Dict[str, Any]:
+    """Normalize legacy tags (functional API)."""
+    return _get_default_manager().normalize_legacy_tags(dry_run)
+
+
+def list_all_memories(
+    memory_type: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    include_archived: bool = False,
+    sort_by: str = SORT_BY_UPDATED,
+) -> List[Dict[str, Any]]:
+    """List all memories (functional API)."""
+    return _get_default_manager().list_all_memories(
+        memory_type, tags, include_archived, sort_by
+    )
+
+
+def get_memory(filename: str, include_metadata: bool = True) -> Dict[str, Any]:
+    """Get a specific memory (functional API)."""
+    return _get_default_manager().get_memory(filename, include_metadata)
+
+
+def list_all_tags(include_archived: bool = False) -> Dict[str, Any]:
+    """List all tags (functional API)."""
+    return _get_default_manager().list_all_tags(include_archived=include_archived)
+
+
+# Export all for backward compatibility
+__all__ = [
+    "MemoryManager",
+    "create_memory",
+    "read_recent_memories",
+    "search_memories",
+    "generate_context_summary",
+    "consolidate_short_term",
+    "delete_memory",
+    "update_memory",
+    "restore_memory",
+    "normalize_legacy_tags",
+    "list_all_memories",
+    "get_memory",
+    "list_all_tags",
+]

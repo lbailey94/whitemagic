@@ -1,0 +1,23 @@
+{
+  "lucas_founder_001": {
+    "uid": "lucas_founder_001",
+    "email": "lucas@whitemagic.ai",
+    "tier": "founder",
+    "permissions": [
+      "all_metrics",
+      "admin_panel",
+      "pattern_hub_admin",
+      "full_api_access",
+      "unlimited_storage",
+      "priority_compute",
+      "dev_tools",
+      "autonomous_testing"
+    ],
+    "created_at": "2025-11-19T16:11:23.877740",
+    "metadata": {
+      "role": "creator",
+      "version_created": "v2.3.5",
+      "special_access": true
+    }
+  }
+}

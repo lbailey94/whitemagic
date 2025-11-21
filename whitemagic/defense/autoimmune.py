@@ -1,7 +1,9 @@
 """Autoimmune Defense System - Transform 229 anti-patterns into active defenses"""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from dataclasses import dataclass, field
 import json
 import re
@@ -15,10 +17,6 @@ Like biological immune tolerance, this ensures self-recognition.
 Also includes multi-agent coordination to prevent conflicts when
 multiple AI instances work with WhiteMagic simultaneously.
 """
-
-from __future__ import annotations
-
-from typing import Dict, List, Set
 
 # Import multi-agent coordinator (optional)
 try:

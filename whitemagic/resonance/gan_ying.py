@@ -34,6 +34,12 @@ class EventType(Enum):
     NARRATIVE_THREAD = "narrative_thread"
     DREAM_STATE_ENTERED = "dream_state_entered"
     
+    # Voice events (v2.5.0)
+    VOICE_ACTIVATED = "voice_activated"
+    NARRATIVE_STARTED = "narrative_started"
+    STORY_BEGUN = "story_begun"
+    CHAPTER_BEGUN = "chapter_begun"
+    
     # Dharma events
     HARMONY_CHANGED = "harmony_changed"
     BOUNDARY_DETECTED = "boundary_detected"

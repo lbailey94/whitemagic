@@ -1,0 +1,26 @@
+{
+  "include": [
+    "whitemagic",
+    "tests",
+    "scripts"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.venv",
+    "**/.git",
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/target",
+    "**/archive_nov21_kaizen",
+    "**/reading material",
+    "**/.whitemagic/cache"
+  ],
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true
+}

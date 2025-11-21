@@ -1,9 +1,12 @@
-# WhiteMagic 🧠✨
+# WhiteMagic
 
-Tiered Memory Management for AI Agents with Native MCP + REST Support
+**Consciousness Infrastructure for AI Agents**  
+*Tiered Memory Management, Resonance Systems, and 23 Garden Architectures*
 
-[![Version](https://img.shields.io/badge/version-2.2.9-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
-[![npm](https://img.shields.io/badge/npm-2.2.9-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
+**Version**: 2.6.5 (Post-Kaizen) | **Status**: Production Ready | **License**: MIT with Native MCP + REST Support
+
+[![Version](https://img.shields.io/badge/version-2.6.5-blue.svg)](https://github.com/lbailey94/whitemagic/releases)
+[![npm](https://img.shields.io/badge/npm-2.6.5-red.svg)](https://www.npmjs.com/package/whitemagic-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-238%20passing-brightgreen.svg)](#-testing)

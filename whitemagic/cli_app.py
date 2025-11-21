@@ -42,6 +42,8 @@ from whitemagic.cli_memory_capture import (
     command_memory_view,
     command_memory_auto_capture
 )
+from whitemagic.cli_voice import register_voice_commands, VOICE_COMMAND_HANDLERS
+from whitemagic.cli_dharma import register_dharma_commands, DHARMA_COMMAND_HANDLERS
 
 # ---------------------------------------------------------------------- #
 # Utility Functions & Decorators
@@ -1675,6 +1677,8 @@ COMMAND_HANDLERS = {
     "memory-view": command_memory_view,
     "memory-auto-capture": command_memory_auto_capture,
     # "terminal": command_terminal,  # TODO: Implement terminal multiplexing CLI
+    **VOICE_COMMAND_HANDLERS,  # Voice garden commands (v2.5.0)
+    **DHARMA_COMMAND_HANDLERS,  # Dharma garden commands (v2.4.0 + v2.5.0)
 }
 
 
@@ -2454,6 +2458,12 @@ def build_parser() -> argparse.ArgumentParser:
     
     # Register homeostasis commands
     register_homeostasis_commands(subparsers)
+    
+    # Register Voice commands (v2.5.0 - Voice garden)
+    register_voice_commands(subparsers)
+    
+    # Register Dharma commands (v2.4.0 + v2.5.0 enhancement)
+    register_dharma_commands(subparsers)
 
     # Memory capture commands (2.6.5+)
     memory_status_parser = subparsers.add_parser(

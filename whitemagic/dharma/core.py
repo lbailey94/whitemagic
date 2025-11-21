@@ -120,14 +120,15 @@ class DharmaSystem:
             from whitemagic.resonance.gan_ying import get_bus, EventType
             self.bus = get_bus()
             
-            # Listen to key event types
-            self.bus.listen(EventType.VIOLATION_FOUND, self.handle_violation)
-            self.bus.listen(EventType.BALANCE_CHECK, self.check_harmony)
-            self.bus.listen(EventType.PATTERN_DETECTED, self.assess_ethics)
-            self.bus.listen(EventType.HEALING_APPLIED, self.verify_healing)
-            
-            print("🎵 Dharma connected to Gan Ying Bus - Ethical resonance enabled")
-        except ImportError:
+            # Listen to key event types (using existing EventType values)
+            try:
+                self.bus.listen(EventType.PATTERN_DETECTED, self.assess_ethics)
+                # TODO: Add more event type listeners when those types are added to EventType enum
+                print("🎵 Dharma connected to Gan Ying Bus - Ethical resonance enabled")
+            except AttributeError:
+                # EventType not fully implemented yet
+                print("⚠️  Some EventTypes not available - Dharma running in limited mode")
+        except (ImportError, AttributeError):
             print("⚠️  Gan Ying Bus not available - Dharma running standalone")
     
     def handle_violation(self, event):
@@ -223,6 +224,61 @@ class DharmaSystem:
             "violations_logged": len(self.violation_log),
             "status": "healthy" if self.harmony_metrics.get_overall_harmony() > 0.8 else "needs_attention"
         }
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get system status"""
+        return {
+            "overall_harmony": self.harmony_metrics.get_overall_harmony(),
+            "total_assessments": len(self.harmony_metrics.assessments),
+            "violations_logged": len(self.violation_log),
+            "status": "healthy" if self.harmony_metrics.get_overall_harmony() > 0.8 else "needs_attention"
+        }
+    
+    def check_action(self, action: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Check if action is ethically allowed
+        
+        Args:
+            action: Description of action
+            context: Context dict with user_requested, permission, etc.
+            
+        Returns:
+            Dict with allowed, harmony_score, level, reasoning
+        """
+        assessment = self.harmony_metrics.assess(action, context)
+        
+        return {
+            "allowed": assessment.score >= 0.5,
+            "harmony_score": assessment.score,
+            "level": assessment.level.name,
+            "reasoning": assessment.reasoning,
+            "aligned_principles": assessment.aligned_principles,
+            "violated_principles": assessment.violated_principles,
+            "timestamp": assessment.timestamp.isoformat()
+        }
+    
+    def get_history(self, limit: int = 100) -> List[Dict]:
+        """Get assessment history
+        
+        Args:
+            limit: Maximum number of assessments to return
+            
+        Returns:
+            List of assessment dicts
+        """
+        recent = self.harmony_metrics.assessments[-limit:]
+        
+        return [
+            {
+                "action": "Assessment performed",  # Could be enhanced to store action text
+                "harmony_score": a.score,
+                "level": a.level.name,
+                "allowed": a.score >= 0.5,
+                "timestamp": a.timestamp.isoformat(),
+                "aligned_principles": a.aligned_principles,
+                "violated_principles": a.violated_principles
+            }
+            for a in recent
+        ]
 
 
 # Global instance

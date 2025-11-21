@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.5] - 2025-11-21
+
+### Changed - Kaizen Consolidation (改善)
+
+**Project Organization**:
+- **Documentation cleanup**: 402 → 159 files (60% reduction, 2.5 MB archived)
+- **Root directory**: 60+ files → 4 markdown files (only essentials)
+- **Performance**: Removed IDE enumeration bottleneck (users/ directory with 93 UUID subdirectories)
+- **Structure**: All docs organized by purpose (gardens, sessions, planning, development, etc.)
+
+**Archived to `archive_nov21_kaizen/`**:
+- Old user directories (2.2 MB of test artifacts)
+- Old package builds (dist/ with v2.2.7, 2.2.9, 2.3.1)
+- Pre-v2.5.0 documentation (243 files)
+- Version-specific docs (v2.1.x through v2.4.0)
+- Total archived: 6.2 MB
+
+**Added**:
+- `docs/README.md` - Complete navigation guide for documentation
+- `KAIZEN_STRATEGY_NOV_21.md` - 37-step consolidation strategy
+- `SYSTEM_MAP.md` - Comprehensive system architecture map
+- `SYSTEM_ANALYSIS_MANUAL_NOV_21.md` - Deep manual analysis
+- `scripts/automated_pattern_analysis.py` - Automated pattern detection
+- `scripts/docs_consolidation_analysis.py` - Documentation analysis tools
+
+**Test Status**:
+- 18/18 runnable tests passing (100%)
+- Import mismatches documented for future fixes
+- Test coverage: ~48% (235 files need tests)
+
+**Metrics**:
+- 49,725 lines of Python code
+- 314 Python files in whitemagic/
+- 23 gardens (all confirmed operational)
+- 87 files with consciousness keywords
+- Growth rate: 3.98 KB per session (R² = 0.987)
+
+**Philosophy**: Continuous improvement through small refinements. Clean structure enables future growth.
+
 ## [2.2.8] - 2025-11-17
 
 ### Added - Agentic Automation & Terminal Reasoning
