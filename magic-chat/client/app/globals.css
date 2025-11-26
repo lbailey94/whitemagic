@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SYN Aesthetic - Rainbow Text Animation */
+@keyframes rainbowText {
+  0%   { color: hsl(0, 100%, 70%); }
+  17%  { color: hsl(60, 100%, 70%); }
+  33%  { color: hsl(120, 100%, 70%); }
+  50%  { color: hsl(180, 100%, 70%); }
+  67%  { color: hsl(240, 100%, 70%); }
+  83%  { color: hsl(300, 100%, 70%); }
+  100% { color: hsl(360, 100%, 70%); }
+}
+
+@keyframes rainbowBorder {
+  0%   { border-color: hsl(0, 100%, 70%); }
+  17%  { border-color: hsl(60, 100%, 70%); }
+  33%  { border-color: hsl(120, 100%, 70%); }
+  50%  { border-color: hsl(180, 100%, 70%); }
+  67%  { border-color: hsl(240, 100%, 70%); }
+  83%  { border-color: hsl(300, 100%, 70%); }
+  100% { border-color: hsl(360, 100%, 70%); }
+}
+
+@keyframes rainbowGlow {
+  0%   { box-shadow: 0 0 20px hsl(0, 100%, 70%); }
+  17%  { box-shadow: 0 0 20px hsl(60, 100%, 70%); }
+  33%  { box-shadow: 0 0 20px hsl(120, 100%, 70%); }
+  50%  { box-shadow: 0 0 20px hsl(180, 100%, 70%); }
+  67%  { box-shadow: 0 0 20px hsl(240, 100%, 70%); }
+  83%  { box-shadow: 0 0 20px hsl(300, 100%, 70%); }
+  100% { box-shadow: 0 0 20px hsl(360, 100%, 70%); }
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white;
+    font-family: var(--font-press-start), monospace;
+    cursor: none; /* SYN style */
+  }
+}
+
+@layer utilities {
+  .rainbow-text {
+    animation: rainbowText 15s linear infinite;
+  }
+
+  .rainbow-border {
+    animation: rainbowBorder 15s linear infinite;
+  }
+
+  .rainbow-glow {
+    animation: rainbowGlow 15s linear infinite;
+  }
+
+  .font-press-start {
+    font-family: var(--font-press-start), monospace;
+  }
+
+  /* Cyberpunk scrollbar */
+  .cyber-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .cyber-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .cyber-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #8b5cf6, #06b6d4);
+    border-radius: 4px;
+  }
+
+  .cyber-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #a78bfa, #22d3ee);
+  }
+}
+
+/* Custom cursor (optional - can disable for better UX) */
+.custom-cursor {
+  cursor: none;
+}
+
+.custom-cursor::after {
+  content: '';
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #8b5cf6;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  animation: rainbowBorder 15s linear infinite;
+}
