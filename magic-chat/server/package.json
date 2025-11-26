@@ -1,0 +1,23 @@
+{
+  "name": "magic-chat-server",
+  "version": "0.1.0",
+  "description": "Meta Harness server for Magic Chat",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "@fastify/cors": "^8.5.0",
+    "@fastify/websocket": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "fastify": "^4.25.2",
+    "openai": "^4.24.1",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
