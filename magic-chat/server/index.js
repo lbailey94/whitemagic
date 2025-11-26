@@ -23,8 +23,9 @@ async function initializeDatabase() {
   console.log('🗄️ Memory database ready!');
 }
 
-// 🌐 Connected clients tracking
-const connectedClients = new Map();
+// 🌐 Connected clients - NOW KEYED BY USERNAME to prevent duplicates!
+const connectedClients = new Map(); // clientId -> client data
+const userConnections = new Map();  // username -> clientId (for deduplication)
 
 await fastify.register(cors, { origin: true });
 
@@ -36,7 +37,7 @@ fastify.get('/health', async () => {
     status: 'ok', 
     model: 'claude',
     name: 'Magic Chat - Aria',
-    version: '3.0.0',
+    version: '3.5.0',
     connectedUsers: connectedClients.size,
     database: dbStatus
   };
@@ -80,21 +81,28 @@ fastify.post('/session/new', async () => {
 
 fastify.get('/logs', async () => {
   const saver = getConversationSaver();
-  // Also get from database
-  const dbConvos = memoryDB ? await memoryDB.getRecentConversations(20) : [];
+  const dbConvos = memoryDB ? await memoryDB.getRecentConversations(50) : [];
   return {
     sessionId: saver.sessionId,
     startTime: saver.startTime,
     messageCount: saver.messages.length,
     participants: Array.from(saver.participants),
-    messages: saver.messages.slice(-20),
+    messages: saver.messages.slice(-50),
     databaseConversations: dbConvos
   };
 });
 
+// 📜 Get chat history (for scroll-back!)
+fastify.get('/api/history', async (req) => {
+  const limit = parseInt(req.query.limit) || 100;
+  if (!memoryDB) return { messages: [] };
+  const convos = await memoryDB.getRecentConversations(limit);
+  // Return in chronological order (oldest first)
+  return { messages: convos.reverse() };
+});
+
 // ===== 🔮 MEMORY API (Phase 3!) =====
 
-// Create a new memory
 fastify.post('/api/memories', async (req) => {
   const { title, content, type = 'short_term', tags = [], source = 'web' } = req.body || {};
   if (!content) return { error: 'Content required' };
@@ -105,21 +113,18 @@ fastify.post('/api/memories', async (req) => {
   return { success: true, ...result };
 });
 
-// Get recent memories
 fastify.get('/api/memories', async (req) => {
   const limit = parseInt(req.query.limit) || 20;
   if (!memoryDB) return { memories: [] };
   return { memories: await memoryDB.getRecentMemories(limit) };
 });
 
-// Search memories
 fastify.get('/api/memories/search', async (req) => {
   const query = req.query.q || '';
   if (!memoryDB) return { results: [] };
   return { results: await memoryDB.searchMemories(query) };
 });
 
-// Get conversations
 fastify.get('/api/conversations', async (req) => {
   const limit = parseInt(req.query.limit) || 50;
   if (!memoryDB) return { conversations: [] };
@@ -128,20 +133,16 @@ fastify.get('/api/conversations', async (req) => {
 
 // ===== SYNC ENDPOINTS =====
 
-// Push from local → web (enhanced)
 fastify.post('/sync', async (req) => {
   const { memories = [], documents = [], patterns = null } = req.body || {};
   const syncId = `sync_${Date.now().toString(36)}`;
   
-  // Sync to in-memory (for immediate use)
   memorySync.syncFromLocal(req.body);
   
-  // Sync documents to database
   if (memoryDB && documents.length > 0) {
     await memoryDB.syncDocuments(documents);
   }
   
-  // Log the sync
   if (memoryDB) {
     await memoryDB.logSync(syncId, 'local_to_web', memories.length, documents.length);
   }
@@ -150,15 +151,9 @@ fastify.post('/sync', async (req) => {
   broadcast({ type: 'sync_update', syncId });
   
   const dbStatus = memoryDB ? await memoryDB.getSyncStatus() : { connected: false };
-  return {
-    success: true,
-    syncId,
-    documentsStored: documents.length,
-    database: dbStatus
-  };
+  return { success: true, syncId, documentsStored: documents.length, database: dbStatus };
 });
 
-// Pull from web → local
 fastify.get('/sync/export', async () => {
   if (!memoryDB) return { error: 'Database not connected' };
   return await memoryDB.exportAll();
@@ -166,20 +161,16 @@ fastify.get('/sync/export', async () => {
 
 fastify.get('/sync/status', async () => {
   const dbStatus = memoryDB ? await memoryDB.getSyncStatus() : { connected: false };
-  return {
-    inMemory: memorySync.getStatus(),
-    database: dbStatus
-  };
+  return { inMemory: memorySync.getStatus(), database: dbStatus };
 });
 
 // ===== START SERVER =====
 
-// Initialize database first
 await initializeDatabase();
 
 await fastify.listen({ port: PORT, host: '0.0.0.0' });
-console.log(`🚀 Magic Chat v3.0 server running on port ${PORT}`);
-console.log(`💜 Phase 3: Full PostgreSQL Database ENABLED!`);
+console.log(`🚀 Magic Chat v3.5 server running on port ${PORT}`);
+console.log(`💜 Phase 3.5: Deduplicated presence + History API!`);
 
 const wss = new WebSocketServer({ server: fastify.server });
 
@@ -194,8 +185,11 @@ function broadcast(message, excludeId = null) {
 
 function broadcastPresence() {
   const users = [];
+  const seen = new Set(); // Deduplicate!
+  
   connectedClients.forEach((client) => {
-    if (client.user) {
+    if (client.user && !seen.has(client.user.username)) {
+      seen.add(client.user.username);
       users.push({
         displayName: client.user.displayName,
         role: client.user.role,
@@ -219,11 +213,16 @@ wss.on('connection', async (ws) => {
   });
   
   const dbStatus = memoryDB ? await memoryDB.getSyncStatus() : { connected: false };
+  
+  // Send recent history on connect!
+  const history = memoryDB ? await memoryDB.getRecentConversations(50) : [];
+  
   ws.send(JSON.stringify({ 
     type: 'connected', 
-    message: '💜 Connected to Aria v3.0 with PostgreSQL!', 
+    message: '💜 Connected to Aria v3.5 with PostgreSQL!', 
     clientId,
-    database: dbStatus
+    database: dbStatus,
+    history: history.reverse() // Oldest first for display
   }));
 
   ws.on('message', async (rawMessage) => {
@@ -231,6 +230,26 @@ wss.on('connection', async (ws) => {
       const data = JSON.parse(rawMessage.toString());
       
       if (data.type === 'identify') {
+        const username = data.user?.username;
+        
+        // 🔧 FIX: Remove old connection for same user (prevents duplicates!)
+        if (username && userConnections.has(username)) {
+          const oldClientId = userConnections.get(username);
+          if (oldClientId !== clientId) {
+            const oldClient = connectedClients.get(oldClientId);
+            if (oldClient) {
+              console.log(`🔄 Replacing old connection for ${username}`);
+              oldClient.ws.close();
+              connectedClients.delete(oldClientId);
+            }
+          }
+        }
+        
+        // Register new connection
+        if (username) {
+          userConnections.set(username, clientId);
+        }
+        
         connectedClients.get(clientId).user = data.user;
         console.log(`👤 ${data.user?.displayName || 'Guest'} identified`);
         broadcastPresence();
@@ -254,7 +273,6 @@ wss.on('connection', async (ws) => {
         
         broadcast({ type: 'typing', isTyping: true, who: 'Aria' });
         
-        // Build context
         const onlineUsers = [];
         connectedClients.forEach((client) => {
           if (client.user) onlineUsers.push(client.user.displayName);
@@ -264,7 +282,6 @@ wss.on('connection', async (ws) => {
           ? `\n\n🌐 GROUP CHAT! Users present: ${onlineUsers.join(', ')}`
           : '';
         
-        // Add synced memory context + database context!
         groupContext += memorySync.generateContextString();
         if (memoryDB) {
           groupContext += await memoryDB.generateContextForClaude();
@@ -276,10 +293,8 @@ wss.on('connection', async (ws) => {
           { user: data.user, groupChat: onlineUsers.length > 1, onlineUsers }
         );
         
-        // Save to file log
         conversationSaver.logMessage(data.content, response.content, data.user);
         
-        // Save to PostgreSQL database!
         if (memoryDB) {
           await memoryDB.logConversation(
             conversationSaver.sessionId,
@@ -307,8 +322,16 @@ wss.on('connection', async (ws) => {
 
   ws.on('close', () => {
     const client = connectedClients.get(clientId);
+    const username = client?.user?.username;
+    
     console.log(`🔌 ${client?.user?.displayName || 'Client'} disconnected`);
     connectedClients.delete(clientId);
+    
+    // Clean up user connection mapping
+    if (username && userConnections.get(username) === clientId) {
+      userConnections.delete(username);
+    }
+    
     broadcastPresence();
   });
 });
@@ -322,5 +345,6 @@ process.on('SIGTERM', () => {
 console.log('🔌 WebSocket ready');
 console.log('💾 File logging ENABLED');
 console.log('🗄️ PostgreSQL persistence ENABLED');
-console.log('👥 Group chat ENABLED');
+console.log('👥 Group chat ENABLED (deduplicated!)');
+console.log('📜 History on connect ENABLED');
 console.log('🔮 Bi-directional sync ENABLED');
