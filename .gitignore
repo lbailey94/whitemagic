@@ -55,13 +55,21 @@ BUILD_HASHES.json
 llms-full.txt
 # llms.txt is now a canonical project file per llmstxt.org convention
 benchmark_output.txt
+
+# === Removed from history (C4 filter-repo) - do not re-add ===
+.restructure_backups/
+docs/ci-logs/
+docs/reports/auxiliary_reports/
+polyglot/BitNet/
+projects/
+core/scripts/archaeology_results/
+aria/
 omega_results.json
 rig_debug.log
 core/whitemagic-rust/pkg/
 core/whitemagic-rust/rust_ci_full.log
 
 # === Large data files (>100MB, exceed GitHub limit) ===
-core/scripts/archaeology_results/
 polyglot/mojo/.pixi/
 data/models/*.onnx
 
