@@ -422,9 +422,9 @@ WM_STATE_ROOT=./.whitemagic
 # Ollama endpoint for local LLM inference
 # OLLAMA_HOST=http://localhost:11434
 
-# XRP receive address for gratitude tips
-# Default project address (tips go to WhiteMagic development):
-# WM_XRP_ADDRESS=raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy
+# XRP receive address for gratitude tips (opt-in)
+# Leave blank to disable tipping feature:
+# WM_XRP_ADDRESS=
 # Set your own address to receive tips for your deployment:
 """
 

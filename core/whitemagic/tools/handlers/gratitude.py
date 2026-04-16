@@ -73,7 +73,14 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
     # Generate payment link for XRPL if manual/failed
     payment_link = ""
     if channel == "xrpl" and not verified:
-        xrp_address = os.environ.get("WM_XRP_ADDRESS", "raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy")
+        xrp_address = get_recipient_address()
+        if not xrp_address:
+            return {
+                "recorded": False,
+                "error_code": "not_configured",
+                "message": "Set WM_XRP_ADDRESS to enable gratitude tips",
+                "instruction": f"To enable tipping, set your XRP address: export WM_XRP_ADDRESS=<your_address>",
+            }
         # Generate Xaman (XUMM) payment link
         payment_link = f"https://xumm.app/detect/request:{xrp_address}?amount={int(amount * 1_000_000)}"
         if kwargs.get("dest_tag"):
@@ -110,6 +117,14 @@ def handle_gratitude_stats(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_gratitude_benefits(**kwargs: Any) -> dict[str, Any]:
+    """Check gratitude benefits for an agent."""
+    from whitemagic.gratitude.proof import get_gratitude_benefits
+
+    agent_id = kwargs.get("agent_id", "default")
+    result = get_gratitude_benefits(agent_id)
+    if isinstance(result, dict):
+        return result
+    return {"agent_id": agent_id, "benefits": []}
     """Check gratitude benefits for an agent."""
     from whitemagic.gratitude.proof import get_gratitude_benefits
 
