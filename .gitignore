@@ -1,0 +1,188 @@
+# WhiteMagic Workspace .gitignore
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# === Virtual Environments ===
+.venv/
+venv/
+env/
+lib/
+
+# === Rust ===
+core/whitemagic-rust/target/
+core/whitemagic-math/target/
+core/haskell/dist-newstyle/
+**/Cargo.lock
+
+# === Databases ===
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite3-journal
+
+# === Logs ===
+*.log
+*.stats
+*.jsonl
+
+# === Build Artifacts ===
+*.bak
+*.backup
+*.bak.*
+dist/wasm/
+BUILD_HASHES.json
+# Runtime dump files (avoid committing by accident)
+llms-full.txt
+llms.txt
+benchmark_output.txt
+omega_results.json
+rig_debug.log
+core/whitemagic-rust/pkg/
+core/whitemagic-rust/rust_ci_full.log
+
+# === Large data files (>100MB, exceed GitHub limit) ===
+core/scripts/archaeology_results/
+polyglot/mojo/.pixi/
+data/models/*.onnx
+
+# === Mojo compiled binaries ===
+polyglot/mojo/association_miner
+polyglot/mojo/batch_encoder
+polyglot/mojo/bench_cosine
+polyglot/mojo/bench_cosine_mojo
+polyglot/mojo/causal_miner
+polyglot/mojo/clone_accelerator
+polyglot/mojo/community_detection
+polyglot/mojo/embedding_engine
+polyglot/mojo/embedding_index
+polyglot/mojo/emergence_detection
+polyglot/mojo/gpu_*
+polyglot/mojo/graph_search
+polyglot/mojo/hrr
+polyglot/mojo/hrr_engine
+polyglot/mojo/knowledge_graph
+polyglot/mojo/ml_pipeline
+polyglot/mojo/mojo_compat
+polyglot/mojo/pattern_matching
+polyglot/mojo/predictive_analytics
+polyglot/mojo/reasoning_accelerator
+polyglot/mojo/semantic_clustering
+polyglot/mojo/surprise_gate
+polyglot/mojo/synthesis_engine
+polyglot/mojo/temporal_analysis
+polyglot/mojo/test_hello
+polyglot/mojo/vector_index
+polyglot/mojo/workflow_accelerator
+
+# === Koka compiled binaries (no extension) ===
+polyglot/whitemagic-koka/.koka_build/
+polyglot/whitemagic-koka/*
+!polyglot/whitemagic-koka/*.kk
+!polyglot/whitemagic-koka/*.md
+!polyglot/whitemagic-koka/*.sh
+!polyglot/whitemagic-koka/*.mk
+!polyglot/whitemagic-koka/*.toml
+!polyglot/whitemagic-koka/*.lock
+!polyglot/whitemagic-koka/.gitattributes
+!polyglot/whitemagic-koka/.gitignore
+!polyglot/whitemagic-koka/.koka/
+!polyglot/whitemagic-koka/src/
+!polyglot/whitemagic-koka/docs/
+!polyglot/whitemagic-koka/cache/
+
+# === Rust specific binaries ===
+core/whitemagic-rust/libwhitemagic_rs.so
+core/whitemagic-rust/wm-seed
+core/whitemagic-rust/target/debug/whitemagic_rust
+core/whitemagic-rust/target/release/whitemagic_rust
+
+# === Rust auto-generated stubs (prevent re-creation) ===
+core/whitemagic-rust/src/enterprise_*.rs
+core/whitemagic-rust/src/memory_safe_*.rs
+core/whitemagic-rust/src/ml_inference_*.rs
+core/whitemagic-rust/src/optimized_*.rs
+core/whitemagic-rust/src/simd_advanced_*.rs
+core/whitemagic-rust/src/*_v[0-9].rs
+core/whitemagic-rust/src/*_v[0-9][0-9].rs
+core/whitemagic-rust/src/*_final.rs
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.windsurf_conversations/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Sensitive ===
+.env
+.mcp.json
+
+# === Private / Not for public release ===
+aria/
+core/whitemagic/legacy/
+data/
+projects/
+core/.github/
+
+# === Polyglot build artifacts ===
+polyglot/whitemagic-koka/.koka_build/
+polyglot/whitemagic-koka/.koka/
+polyglot/mojo/*.so
+polyglot/mojo/*.ll
+polyglot/mojo/.pixi/
+polyglot/rust/
+polyglot/whitemagic-zig/zig-out/
+polyglot/whitemagic-zig/zig-cache/
+polyglot/whitemagic-zig/.zig-cache/
+polyglot/whitemagic-zig/lib/
+polyglot/whitemagic-zig/*.so
+polyglot/whitemagic-zig/*.a
+polyglot/whitemagic-zig/*.o
+
+# === Docs: Three-tier structure ===
+# Ignore internal and private docs, keep public un-ignored
+docs/internal/
+docs/private/
+docs/README.md
+
+# === Public docs (un-ignored) ===
+# These are the ONLY docs visible in public releases
+!docs/public/
+!docs/public/*.md
+!docs/public/guides/
+!docs/public/changelogs/
+!docs/public/community/
+!docs/public/design/
+!docs/public/misc/
+
+# === Temporary ===
+tmp/
+temp_venv/
+scratch/
+wm
+.restructure_backups/whitemagic-legacy-v21.0.0.tar.gz

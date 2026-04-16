@@ -1,0 +1,71 @@
+# WhiteMagic WASM Docker Image
+# =============================
+# One-command deployment for the polyglot memory ecosystem
+#
+# Usage:
+#   docker build -t whitemagic/wasm:21.0.0 .
+#   docker run -p 8080:8080 whitemagic/wasm:21.0.0
+#
+# Or use docker-compose for full stack
+
+FROM python:3.11-slim
+
+LABEL maintainer="WhiteMagic AI"
+LABEL version="21.0.0"
+LABEL description="WhiteMagic WASM - Edge inference engine"
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy WASM package
+COPY whitemagic-rust/pkg/web/ /app/wasm/
+
+# Copy Python package (copy all at once)
+COPY . /app/source/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir numpy 2>/dev/null || true
+
+# Create a simple HTTP server for the WASM demo
+RUN cat > /app/server.py << 'EOF'
+#!/usr/bin/env python3
+import http.server
+import socketserver
+import os
+
+PORT = 8080
+DIRECTORY = "/app/wasm"
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=DIRECTORY, **kwargs)
+    
+    def end_headers(self):
+        # Add CORS headers for WASM
+        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
+        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
+        super().end_headers()
+
+with socketserver.TCPServer(("", PORT), Handler) as httpd:
+    print(f"✨ WhiteMagic WASM Server running at http://localhost:{PORT}")
+    print(f"   Demo: http://localhost:{PORT}/demo.html")
+    httpd.serve_forever()
+EOF
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
+# Start server
+CMD ["python3", "/app/server.py"]

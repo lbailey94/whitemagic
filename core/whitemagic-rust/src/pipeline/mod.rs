@@ -1,0 +1,46 @@
+// Active modules
+pub mod continuous_daemon;
+pub mod massive_deployer;
+pub mod reasoning_engine;
+pub mod recursive_intelligence;
+pub mod synthesis_engine;
+pub mod tokio_clones;
+
+// Modules pending dependency resolution (not yet compiled)
+// pub mod advanced_scheduler;
+// pub mod batch_processor;
+// pub mod campaign_executor;
+// pub mod clone_army;
+// pub mod clone_engine;
+// pub mod clone_lifecycle;
+// pub mod clones;
+// pub mod code_writing_clone;
+// pub mod compression;
+// pub mod dependency_resolver;
+// pub mod dispatch_table;
+// pub mod event_bus;
+// pub mod event_processor;
+// pub mod event_ring;
+// pub mod gana_router;
+// pub mod identity_synthesis;
+// pub mod infrastructure;
+// pub mod lieutenant;
+// pub mod load_balancer;
+// pub mod middleware_pipeline;
+// pub mod orchestration_engine;
+// pub mod parallel_executor;
+// pub mod performance_monitor;
+// pub mod predictive_engine;
+// pub mod resource_manager;
+// pub mod shared_state;
+// pub mod state_board;
+// pub mod state_machine;
+// pub mod synthesis;
+// pub mod system_coordinator;
+// pub mod task_scheduler;
+// pub mod throughput_optimizer;
+// pub mod tool_dispatcher;
+// pub mod unified_zodiac_army;
+// pub mod wm2_clone_army;
+// pub mod work_distribution;
+// pub mod workflow_engine;

@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "dockerfile"
+  },
+  "deploy": {
+    "startCommand": "export PYTHONPATH=$PYTHONPATH:. && python3 whitemagic/interfaces/dashboard/server.py --port $PORT --host 0.0.0.0",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 60
+  }
+}

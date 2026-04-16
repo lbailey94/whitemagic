@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+    inputs:
+      run_network_tests:
+        description: "Run live network-marked tests"
+        required: false
+        default: false
+        type: boolean
+
+defaults:
+  run:
+    working-directory: core
+
+jobs:
+  core:
+    name: Core (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    env:
+      WM_SILENT_INIT: "1"
+      WM_STATE_ROOT: /tmp/whitemagic_state
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest tests/ -q --timeout=60 --ignore=tests/adhoc
+
+  lint:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff mypy
+          python -m pip install -e ".[dev]"
+      - name: Ruff Check
+        run: ruff check whitemagic/ --select E,F --ignore E501,F401,E402
+      - name: Mypy (public surface — strict, CI-blocking)
+        # F-18: This step BLOCKS CI. Fix type errors in tools/ and interfaces/ before merging.
+        run: |
+          mypy whitemagic/tools/ whitemagic/interfaces/ \
+            --ignore-missing-imports --no-error-summary \
+            --disallow-untyped-defs --warn-return-any
+      - name: Mypy (full codebase — blocking CI)
+        # Full-codebase scan; now blocking for v22.
+        run: mypy whitemagic/ --ignore-missing-imports --no-error-summary
+
+  rust-quality:
+    name: Rust Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core/whitemagic-rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/whitemagic-rust/target
+          key: rust-${{ runner.os }}-${{ hashFiles('core/whitemagic-rust/Cargo.lock') }}
+      - name: Install Python dev libraries
+        run: sudo apt-get update && sudo apt-get install -y python3-dev libpython3-dev pkg-config
+      - name: Clippy
+        run: cargo clippy -- -W warnings -A clippy::all -D unused -D dead_code
+      # Note: cargo test skipped - requires libpython linking in CI
+      # - name: Cargo Test
+      #   run: cargo test
+
+  security:
+    name: Security Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" bandit pip-audit
+      - name: Bandit (security scanner)
+        run: |
+          bandit -r whitemagic/ \
+            --exclude whitemagic/_archived \
+            -ll -ii --skip B101,B404,B603 2>&1 | tail -50
+      - name: pip-audit (dependency vulnerabilities)
+        run: pip-audit --strict --desc 2>&1 | tail -20
+
+  extras:
+    name: Extras (mcp+cli)
+    runs-on: ubuntu-latest
+    env:
+      WM_SILENT_INIT: "1"
+      WM_STATE_ROOT: /tmp/whitemagic_state_extras
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install (extras)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,mcp,cli]"
+      - name: MCP Import Check
+        run: python -c "import fastmcp; print('fastmcp ok')"
+
+  packaging:
+    name: Build & Install Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify mcp-registry.json is current
+        run: python3 scripts/generate_mcp_registry.py --check
+      - name: Build Wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Install Wheel (Clean)
+        run: python -m pip install dist/*.whl
+      - name: Verify Installation
+        run: |
+          WM_SILENT_INIT=1 WM_STATE_ROOT=/tmp/wm_pack_test python -c "import whitemagic; print(whitemagic.__version__)"
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: whitemagic-wheel
+          path: core/dist/*.whl
+          retention-days: 30

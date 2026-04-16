@@ -1,0 +1,1 @@
+whitemagic/tools/registry_defs/gana.py:    return ToolDefinition(name=name, description=desc, category=ToolCategory.GANA, safety=safety, input_schema=schema)

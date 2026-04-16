@@ -1,0 +1,104 @@
+{
+  "name": "whitemagic-vscode",
+  "displayName": "WhiteMagic",
+  "description": "WhiteMagic AI assistant integration for VSCode - Memory-powered development companion",
+  "version": "20.0.0",
+  "publisher": "whitemagic",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "assistant",
+    "memory",
+    "whitemagic",
+    "mcp"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "whitemagic.start",
+        "title": "Start WhiteMagic",
+        "category": "WhiteMagic"
+      },
+      {
+        "command": "whitemagic.chat",
+        "title": "Open Chat",
+        "category": "WhiteMagic",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "whitemagic.search",
+        "title": "Search Memories",
+        "category": "WhiteMagic",
+        "icon": "$(search)"
+      },
+      {
+        "command": "whitemagic.status",
+        "title": "Show Status",
+        "category": "WhiteMagic"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "whitemagic.sidebar",
+          "name": "WhiteMagic",
+          "when": "whitemagic.enabled"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "WhiteMagic",
+      "properties": {
+        "whitemagic.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "WhiteMagic server URL"
+        },
+        "whitemagic.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-start WhiteMagic on VSCode launch"
+        },
+        "whitemagic.enableInlineSuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable inline AI suggestions"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "20.x",
+    "typescript": "^5.3.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8"
+  },
+  "dependencies": {
+    "@whitemagic/wasm": "^18.1.0",
+    "@whitemagic/sdk": "^0.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whitemagic-ai/whitemagic"
+  },
+  "license": "MIT"
+}

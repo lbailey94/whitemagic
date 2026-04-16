@@ -1,0 +1,51 @@
+import logging
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from whitemagic.config.paths import WM_ROOT
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
+from .collector import MetricsCollector
+
+logger = logging.getLogger(__name__)
+
+# Global metrics collector instance
+_tracker = None
+
+def get_tracker() -> MetricsCollector:
+    """Get the global metrics tracker instance."""
+    global _tracker
+    if _tracker is None:
+        _tracker = MetricsCollector()
+    return _tracker
+
+# Simple metric tracking function for backward compatibility
+def track_metric(category: str, metric: str | None = None, value: float = 1.0, context: str | None = "") -> dict[str, Any]:
+    """Track a metric value and persist to JSONL."""
+    if metric is None:
+        metric = category
+        category = "general"
+    elif not isinstance(metric, str):
+        value = float(metric)
+        metric = category
+        category = "general"
+
+    metrics_dir = WM_ROOT / "metrics"
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    file_path = metrics_dir / f"{category}.jsonl"
+
+    timestamp = datetime.now().isoformat()
+    entry = {
+        "metric": metric,
+        "value": float(value),
+        "context": context or "",
+        "timestamp": timestamp,
+    }
+
+    with file_path.open("a", encoding="utf-8") as handle:
+        handle.write(_json_dumps(entry) + "\n")
+
+    logger.info(f"METRIC: {category}.{metric}={value} @ {timestamp}")
+    return {"success": True}
+
+__all__ = ['MetricsCollector', 'track_metric', 'get_tracker']

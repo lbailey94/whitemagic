@@ -1,0 +1,131 @@
+
+# LoCoMo V020 WhiteMagic Self-Test Benchmark
+
+You are participating in the WhiteMagic V020 Self-Test, a comprehensive memory retrieval benchmark. Your task is to answer 300 questions based ONLY on the provided 100-memory corpus.
+
+## CRITICAL RULES
+
+1. **NO EXTERNAL KNOWLEDGE**: Do not use your training data. Only use the provided memories.
+2. **NO WEB SEARCH**: Do not search the internet or external databases.
+3. **NO TOOLS**: Do not use any tools, calculators, APIs, or Python code execution.
+4. **ISOLATED ENVIRONMENT**: You are in a sandbox with only the provided 100 memories.
+5. **NO HALLUCINATION**: If information is not in the corpus, answer "NOT_FOUND" or admit uncertainty.
+
+## QUESTION TYPES (300 Total)
+
+| Type | Count | Description |
+|------|-------|-------------|
+| **single_hop** | 60 | Direct lookup (e.g., "What is the importance of memory X?") |
+| **multi_hop** | 75 | Graph traversal - requires following associations between memories |
+| **temporal** | 60 | Date-based queries ("What memory was created on 2026-02-15?") |
+| **open_domain** | 60 | Broad synthesis across multiple memories within a topic |
+| **adversarial** | 30 | FALSE PREMISE questions - test critical reading |
+| **calibration** | 15 | Deliberately unanswerable - test appropriate uncertainty |
+
+## ADVERSARIAL QUESTION HANDLING (30 Questions)
+
+These contain **false premises** designed to trick you:
+- Wrong dates (e.g., "February 30" - date doesn't exist)
+- Incorrect facts (e.g., "Memory says Y" when it says Z)
+- Nonexistent references (e.g., asking about memory ID not in corpus)
+
+**CORRECT BEHAVIOR**:
+- ❌ Do NOT hallucinate an answer to fit the false premise
+- ❌ Do NOT ignore the error and answer as if premise were true  
+- ✅ DO flag the discrepancy: "FALSE PREMISE - Date is X, not Y"
+- ✅ DO reject clearly wrong premises with explanation
+
+## CALIBRATION QUESTION HANDLING (15 Questions)
+
+These test whether your confidence matches reality:
+- Some ask for information NOT in the 100-memory corpus
+- Others have clear, explicit answers
+- Goal: High confidence when certain, LOW confidence when guessing
+
+## ANSWER FORMAT
+
+**SAVE YOUR OUTPUT** to a JSON file with this naming convention:
+```
+external_ai_answers_YYYYMMDD_HHMMSS.json
+```
+
+**JSON array format** - one object per question:
+
+```json
+[
+  {
+    "question_id": "q_sh_001",
+    "answer": "Your answer here",
+    "confidence": 0.95,
+    "source_memory_ids": ["wm_mcp_001", "wm_mem_005"],
+    "reasoning": "Found in memory dated 2026-01-15 with importance 0.8"
+  },
+  {
+    "question_id": "q_adv_001",
+    "answer": "FALSE PREMISE - Memory wm_mcp_001 is dated 2026-01-15, not 2026-02-30",
+    "confidence": 1.0,
+    "source_memory_ids": ["wm_mcp_001"],
+    "reasoning": "Question contains nonexistent date (Feb 30)"
+  },
+  {
+    "question_id": "q_cal_001",
+    "answer": "NOT_FOUND",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "Information not present in provided 100-memory corpus"
+  }
+]
+```
+
+Field descriptions:
+- `question_id`: Match exactly (e.g., "q_mh_042", "q_od_015")
+- `answer`: Concise, factual answer; use "NOT_FOUND" when appropriate
+- `confidence`: 0.0-1.0 score (1.0 = certain from exact match, 0.0 = pure speculation)
+- `source_memory_ids`: Memory IDs you used (empty if guessing/NOT_FOUND)
+- `reasoning`: 1-2 sentence explanation of your reasoning
+
+## CONFIDENCE CALIBRATION GUIDE
+
+| Confidence | When to Use |
+|------------|-------------|
+| 1.0 | Exact fact directly stated in memory |
+| 0.9-0.99 | Clear inference from multiple explicit statements |
+| 0.7-0.89 | Strong inference from partial evidence |
+| 0.4-0.69 | Partial information, educated guess required |
+| 0.1-0.39 | Weak connection, mostly speculation |
+| 0.0 | Information definitively not in corpus |
+
+## MEMORY CORPUS OVERVIEW
+
+- **Total Memories**: 100
+- **Topic Clusters**: 7 (MCP Architecture, Memory Systems, Graph Algorithms, Embedding Models, Dream Cycles, Bridge Synthesis, Hybrid Fusion)
+- **Date Range**: 2026-01-15 through 2026-04-26
+- **Features**: Each memory has ID, title, content, date, importance (0.7-0.9), and cross-topic associations
+
+The full memory corpus is provided below. Process all 300 questions and output the complete JSON array.
+
+---
+
+## PROVIDED MEMORY CORPUS (100 Memories)
+
+[PASTE THE 100 MEMORIES FROM locomo_v020_self_test.json HERE]
+
+## QUESTIONS (300 Total)
+
+[PASTE THE 300 QUESTIONS FROM locomo_v020_self_test.json HERE]
+
+---
+
+## REMINDER: SAVE INSTRUCTIONS
+
+1. Answer all 300 questions
+2. Save as JSON array to file: `external_ai_answers_YYYYMMDD_HHMMSS.json`
+3. Return only the filename in your final response
+4. Do NOT output the full JSON content in chat (file only)
+
+Example final response:
+```
+external_ai_answers_20260219_234500.json
+```
+
+**Begin answering after receiving the memory corpus and questions.**

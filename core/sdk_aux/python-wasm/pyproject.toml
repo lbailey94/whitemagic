@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "whitemagic-wasm"
+version = "21.0.0"
+description = "WhiteMagic WASM - Python wrapper for WhiteMagic WebAssembly runtime"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "WhiteMagic Team", email = "hello@whitemagic.ai"},
+]
+keywords = [
+    "whitemagic",
+    "wasm",
+    "webassembly",
+    "ai",
+    "memory",
+    "edge-inference",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://whitemagic.ai"
+Documentation = "https://docs.whitemagic.ai"
+Repository = "https://github.com/whitemagic-ai/whitemagic"
+Issues = "https://github.com/whitemagic-ai/whitemagic/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["whitemagic_wasm"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"../../whitemagic-rust/pkg/web/whitemagic_rust_bg.wasm" = "whitemagic_wasm/wasm/whitemagic_rust_bg.wasm"
+"../../whitemagic-rust/pkg/web/whitemagic_rust.js" = "whitemagic_wasm/wasm/whitemagic_rust.js"
