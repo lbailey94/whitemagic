@@ -1,5 +1,10 @@
 """Tests for Phase 1: Constellation Recall Boost (v14.3).
 
+import pytest
+
+# Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
+pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
+
 Validates:
 - constellation_membership table creation and CRUD
 - get_constellation_centroids() and get_memory_constellation()

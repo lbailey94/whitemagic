@@ -1,3 +1,10 @@
+from __future__ import annotations
+
+import pytest
+
+# Skip this test module - whitemagic.core.memory.galactic_map module removed in v22
+pytest.skip("whitemagic.core.memory.galactic_map module removed in v22", allow_module_level=True)
+
 """
 Tests for the Galactic Map system:
   - GalacticMap distance computation and zone classification

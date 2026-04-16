@@ -111,6 +111,8 @@ class EventType(Enum):
     GROUNDING_ESTABLISHED = "grounding_established"
     DHARMA_ASSESSED = "dharma_assessed"
     BOUNDARY_VIOLATED = "boundary_violated"
+    BOUNDARY_DETECTED = "boundary_detected"
+    BOUNDARY_SET = "boundary_set"
     ANOMALY_DETECTED = "anomaly_detected"
     WARNING_ISSUED = "warning_issued"
     SOLUTION_FOUND = "solution_found"
