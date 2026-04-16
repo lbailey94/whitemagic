@@ -53,7 +53,7 @@ dist/wasm/
 BUILD_HASHES.json
 # Runtime dump files (avoid committing by accident)
 llms-full.txt
-llms.txt
+# llms.txt is now a canonical project file per llmstxt.org convention
 benchmark_output.txt
 omega_results.json
 rig_debug.log

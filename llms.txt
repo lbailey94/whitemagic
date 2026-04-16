@@ -1,0 +1,28 @@
+# llms.txt — WhiteMagic for LLM Context
+# Format per: https://llmstxt.org/
+
+# Project
+WhiteMagic is a Python-first, polyglot-accelerated MCP (Model Context Protocol) server and tool substrate for AI agents.
+
+## Overview
+- 28 "Gana" meta-tools (PRAT mode) routing to ~420 nested tools
+- Tool envelope contract with idempotency, `now`-determinism, stable error codes
+- 8-stage middleware pipeline (sanitizer → circuit breaker → rate limiter → permissions → maturity gate → governor → core router → feedback)
+- 5D holographic memory with Galactic Map lifecycle (no-delete policy)
+- Dharma governance (YAML rules, Karma ledger, Harmony Vector)
+- Polyglot accelerators: Rust + Go (production); Koka, Zig, Mojo, Elixir, Haskell (experimental)
+
+## Entry Points
+- `python -m whitemagic.run_mcp` — MCP server (canonical)
+- `wm doctor` — health check
+- `wm init` — project scaffolding
+
+## Key Documentation
+- AI_PRIMARY.md — authoritative contract
+- SYSTEM_MAP.md — repo layout + runtime state resolution
+- QUICKSTART.md — 5-minute setup
+- docs/GLOSSARY.md — terminology
+- docs/ARCHITECTURE.md — design docs
+
+## License
+MIT License — see LICENSE file

@@ -1,0 +1,11 @@
+# Funding configuration for WhiteMagic
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+
+# GitHub Sponsors (add usernames when enrolled)
+github: []
+
+# Custom funding methods
+custom:
+  - "https://github.com/whitemagic-ai/whitemagic/blob/main/SECURITY.md#reporting-a-vulnerability"
+  # XRPL tipping is opt-in via WM_XRP_ADDRESS environment variable
+  # See: https://xrpl.org/send.html
