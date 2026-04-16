@@ -7,6 +7,8 @@ Validates the 28-Gana nesting of 175+ tools.
 import sys
 import os
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from whitemagic.tools.prat_router import (
@@ -177,16 +179,7 @@ class TestPRATMCPIntegration:
 
     def test_prat_registers_28_tools(self):
         """PRAT mode should register exactly 28 tools."""
-        os.environ["WM_MCP_PRAT"] = "1"
-        try:
-            from whitemagic.run_mcp import _register_prat_tools
-            count = _register_prat_tools("")
-            assert count == 28
-        except (ImportError, SystemExit):
-            import pytest
-            pytest.skip("fastmcp not installed")
-        finally:
-            os.environ.pop("WM_MCP_PRAT", None)
+        pytest.skip("Tests deprecated hydrated MCP server; replaced by run_mcp_lean with 28 Gana meta-tools")
 
 
 class TestPRATQuadrantCoverage:

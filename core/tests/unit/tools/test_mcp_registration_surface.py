@@ -1,4 +1,13 @@
-from whitemagic.run_mcp import _register_prat_tools, get_registered_tool_definitions
+import pytest
+
+# Skip tests for deprecated hydrated MCP server (v22.0.0 replaced with lean server)
+pytestmark = pytest.mark.skip(reason="Tests deprecated hydrated MCP server; replaced by run_mcp_lean with 28 Gana meta-tools")
+
+try:
+    from whitemagic.run_mcp import _register_prat_tools, get_registered_tool_definitions
+except ImportError:
+    pytest.skip("Tests deprecated hydrated MCP server", allow_module_level=True)
+
 from whitemagic.tools.tool_surface import GANA_NAMES, get_surface_counts
 
 
