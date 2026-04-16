@@ -1,7 +1,8 @@
 [package]
 name = "whitemagic-rust"
-version = "21.0.0"
+version = "22.0.0"
 edition = "2021"
+license = "MIT"
 autobins = false
 
 [lib]
@@ -9,7 +10,7 @@ name = "whitemagic_rust"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["python", "arrow", "iceoryx2"]
+default = ["python", "arrow"]
 iceoryx2 = ["dep:iceoryx2"]
 python = ["pyo3", "numpy", "pyo3-build-config", "tokio"]
 arrow = ["dep:arrow"]

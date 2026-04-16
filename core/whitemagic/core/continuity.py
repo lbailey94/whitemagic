@@ -21,8 +21,15 @@ except ImportError:
     _PSUTIL_AVAILABLE = False
 
 from whitemagic.config.paths import WM_ROOT
-from whitemagic.core.memory.memory_matrix.seen_registry import get_seen_registry
 from whitemagic.utils.fileio import atomic_write, file_lock
+
+# Stub for missing seen_registry module (removed in v22)
+def get_seen_registry():
+    """Stub for removed seen_registry module."""
+    class _SeenRegistryStub:
+        def mark_seen(self, path, context=None):
+            pass
+    return _SeenRegistryStub()
 
 logger = logging.getLogger(__name__)
 

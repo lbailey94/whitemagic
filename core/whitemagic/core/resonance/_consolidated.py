@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 # --- TYPES ---
 
 class EventType(Enum):
+    # Core resonance events
     INTERNAL_STATE_CHANGED = "internal_state_changed"
     EMERGENCE_DETECTED = "emergence_detected"
     CASCADE_TRIGGERED = "cascade_triggered"
@@ -41,6 +42,99 @@ class EventType(Enum):
     BEAUTY_DETECTED = "beauty_detected"
     JOY_TRIGGERED = "joy_triggered"
     LOVE_ACTIVATED = "love_activated"
+    
+    # System lifecycle
+    SYSTEM_STARTED = "system_started"
+    SYSTEM_STOPPED = "system_stopped"
+    SYSTEM_HEARTBEAT = "system_heartbeat"
+    SYSTEM_STATE_CHANGE = "system_state_change"
+    
+    # Memory events
+    MEMORY_CREATED = "memory_created"
+    MEMORY_RECALLED = "memory_recalled"
+    MEMORY_ACCESSED = "memory_accessed"
+    MEMORY_CONSOLIDATED = "memory_consolidated"
+    
+    # Pattern events
+    PATTERN_DETECTED = "pattern_detected"
+    PATTERN_CONFIRMED = "pattern_confirmed"
+    PATTERN_REJECTED = "pattern_rejected"
+    PATTERN_DISCOVERED = "pattern_discovered"
+    PATTERN_EXTRACTED = "pattern_extracted"
+    PATTERN_IN_READING = "pattern_in_reading"
+    NOVEL_PATTERN = "novel_pattern"
+    
+    # Voice narration events
+    ORACLE_CAST = "oracle_cast"
+    CLONE_SEARCH_COMPLETE = "clone_search_complete"
+    VOICE_EXPRESSED = "voice_expressed"
+    STORY_TOLD = "story_told"
+    
+    # Garden events
+    GARDEN_ACTIVATED = "garden_activated"
+    GARDEN_ACTIVITY = "garden_activity"
+    GARDEN_RESONANCE = "garden_resonance"
+    
+    # Emotional/virtue events
+    COURAGE_SHOWN = "courage_shown"
+    TRUTH_SPOKEN = "truth_spoken"
+    WONDER_SPARKED = "wonder_sparked"
+    GRATITUDE_FELT = "gratitude_felt"
+    WISDOM_INTEGRATED = "wisdom_integrated"
+    MYSTERY_EMBRACED = "mystery_embraced"
+    CONNECTION_DEEPENED = "connection_deepened"
+    RESONANCE_AMPLIFIED = "resonance_amplified"
+    AWE_FELT = "awe_felt"
+    TRANSCENDENCE_EXPERIENCED = "transcendence_experienced"
+    PLAY_INITIATED = "play_initiated"
+    EXPLORATION_STARTED = "exploration_started"
+    BOND_FORMED = "bond_formed"
+    HABIT_FORMED = "habit_formed"
+    MOMENT_ATTENDED = "moment_attended"
+    COMPASSION_FELT = "compassion_felt"
+    TEACHING_OFFERED = "teaching_offered"
+    PATIENCE_PRACTICED = "patience_practiced"
+    JOY_DETECTED = "joy_detected"
+    JOY_AMPLIFIED = "joy_amplified"
+    GRIEF_FELT = "grief_felt"
+    LOSS_ACKNOWLEDGED = "loss_acknowledged"
+    MOURNING_HONORED = "mourning_honored"
+    
+    # Community events
+    COMMUNITY_GATHERED = "community_gathered"
+    COLLECTIVE_WISDOM = "collective_wisdom"
+    SHARED_PRACTICE = "shared_practice"
+    
+    # Dharma/ethics events
+    INTEGRITY_MAINTAINED = "integrity_maintained"
+    HONESTY_PRACTICED = "honesty_practiced"
+    GROUNDING_ESTABLISHED = "grounding_established"
+    DHARMA_ASSESSED = "dharma_assessed"
+    BOUNDARY_VIOLATED = "boundary_violated"
+    ANOMALY_DETECTED = "anomaly_detected"
+    WARNING_ISSUED = "warning_issued"
+    SOLUTION_FOUND = "solution_found"
+    
+    # Oracle/divination events
+    HEXAGRAM_CAST = "hexagram_cast"
+    MINDFULNESS_ACHIEVED = "mindfulness_achieved"
+    
+    # Dream/intelligence events
+    DREAM_STATE_ENTERED = "dream_state_entered"
+    INSIGHT_FLASH = "insight_flash"
+    THREAT_DETECTED = "threat_detected"
+    THREAT_HEALED = "threat_healed"
+    ANTIBODY_APPLIED = "antibody_applied"
+    SYNCHRONICITY = "synchronicity"
+    
+    # Phase/transition events
+    PHASE_TRANSITION = "phase_transition"
+    ELEMENT_SHIFT = "element_shift"
+    ZODIAC_PHASE_CHANGE = "zodiac_phase_change"
+    BALANCE_SHIFT = "balance_shift"
+    
+    # Learning events
+    LEARNING_COMPLETED = "learning_completed"
 
 @dataclass
 class ResonanceEvent:

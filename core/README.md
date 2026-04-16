@@ -1,4 +1,4 @@
-# WhiteMagic — Agentic AI Platform (v21.0.0)
+# WhiteMagic — Agentic AI Platform (v22.0.0)
 
 A polyglot agentic AI platform with Python core, Rust performance bridges, and multi-language support for AI agents, memory systems, and distributed orchestration.
 
@@ -92,4 +92,4 @@ See `docs/` for detailed documentation.
 
 ## License
 
-Licensed under the [Apache License 2.0](LICENSE).
+[MIT License](../LICENSE) — see LICENSE file at repository root.

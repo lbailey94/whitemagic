@@ -1,7 +1,7 @@
 # WhiteMagic Polyglot Bridge Status
 
 **Last Updated**: 2026-04-14  
-**Version**: v21.0.0
+**Version**: v22.0.0
 
 ## Overview
 

@@ -147,7 +147,6 @@ aria/
 core/whitemagic/legacy/
 data/
 projects/
-core/.github/
 
 # === Polyglot build artifacts ===
 polyglot/whitemagic-koka/.koka_build/
