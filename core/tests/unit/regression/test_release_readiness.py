@@ -6,6 +6,8 @@ Tests verify that critical issues from RELEASE_READINESS_PLAN.md do not regress.
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 # Get repository root (go up from core/tests/unit/regression/ to repo root)
@@ -165,6 +167,185 @@ class TestH9_ArchiveDeleted:
         """core/whitemagic/archive/ should not exist."""
         archive_path = os.path.join(REPO_ROOT, "core", "whitemagic", "archive")
         assert not os.path.exists(archive_path)
+
+
+class TestH5_CIConfiguration:
+    """H5: Verify .github/workflows/ci.yml is valid YAML with expected jobs,
+    and that B603 has been removed from bandit's skip list.
+    """
+
+    def test_ci_yaml_parses(self):
+        """ci.yml must be parseable YAML."""
+        import yaml
+        ci_path = os.path.join(REPO_ROOT, ".github", "workflows", "ci.yml")
+        with open(ci_path) as f:
+            doc = yaml.safe_load(f)
+        assert doc is not None
+        assert "jobs" in doc
+
+    def test_ci_has_core_and_lint_jobs(self):
+        """ci.yml must define the canonical job set."""
+        import yaml
+        ci_path = os.path.join(REPO_ROOT, ".github", "workflows", "ci.yml")
+        with open(ci_path) as f:
+            doc = yaml.safe_load(f)
+        jobs = set(doc["jobs"].keys())
+        # Must at minimum include:
+        assert {"core", "lint", "security", "packaging"}.issubset(jobs), jobs
+
+    def test_bandit_b603_not_skipped(self):
+        """B603 (subprocess without shell=False) must not be in bandit skip list."""
+        ci_path = os.path.join(REPO_ROOT, ".github", "workflows", "ci.yml")
+        with open(ci_path) as f:
+            content = f.read()
+        # Look for the --skip line and ensure B603 isn't in it.
+        for line in content.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("--skip") or "bandit" in stripped.lower() and "--skip" in stripped:
+                # The skip directive itself must not mention B603.
+                # Comments about B603 are fine (e.g., "# B603: audited").
+                if line.lstrip().startswith("#"):
+                    continue
+                assert "B603" not in line, f"B603 must not be in bandit skip list: {line!r}"
+
+
+class TestM6_XRPLTipOptIn:
+    """M6: Verify XRPL tip address has no hardcoded maintainer default."""
+
+    def test_no_hardcoded_maintainer_address_in_source(self):
+        """No .py file outside tests/ may hardcode the upstream maintainer XRP address.
+
+        The address may appear as a commented example or in gratitude-config
+        error messages, but never as a runtime default.
+        """
+        MAINTAINER_ADDR = "raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy"
+        pkg_root = os.path.join(REPO_ROOT, "core", "whitemagic")
+        offenders = []
+        for root, _, files in os.walk(pkg_root):
+            if "/tests/" in root or "/_archived/" in root or "/archive/" in root:
+                continue
+            for name in files:
+                if not name.endswith(".py"):
+                    continue
+                p = os.path.join(root, name)
+                with open(p) as f:
+                    for lineno, line in enumerate(f, 1):
+                        if MAINTAINER_ADDR in line:
+                            # Allow clearly-labeled advisory constants.
+                            if "_UPSTREAM_MAINTAINER" in line or "_EXAMPLE_ADDR" in line:
+                                continue
+                            offenders.append(f"{p}:{lineno}: {line.rstrip()}")
+        assert not offenders, "Hardcoded maintainer address found:\n" + "\n".join(offenders)
+
+    def test_wallet_manager_disabled_without_env(self):
+        """WalletManager must be disabled and have no fallback when WM_XRP_ADDRESS is unset."""
+        import importlib
+        saved = os.environ.pop("WM_XRP_ADDRESS", None)
+        try:
+            # Re-import to pick up env change
+            from whitemagic.core.economy import wallet_manager as wm_mod
+            importlib.reload(wm_mod)
+            w = wm_mod.WalletManager()
+            assert w.enabled is False, "Wallet must be disabled without WM_XRP_ADDRESS"
+            assert w.public_address == "", f"Wallet address must be empty, got {w.public_address!r}"
+        finally:
+            if saved is not None:
+                os.environ["WM_XRP_ADDRESS"] = saved
+
+
+class TestM7_SecurityContact:
+    """M7: Verify security contact is consistent and canonical."""
+
+    def test_security_md_has_correct_versions(self):
+        """SECURITY.md should list 22.x as supported, not 21.x."""
+        security_path = os.path.join(REPO_ROOT, "SECURITY.md")
+        with open(security_path) as f:
+            content = f.read()
+        assert "| 22.x    | :white_check_mark: |" in content or "22.x" in content
+        # Should NOT say 21.x is current supported
+        assert "| 21.x    | :white_check_mark: |" not in content
+
+    def test_security_md_prefers_github_advisory(self):
+        """SECURITY.md should list GitHub Security Advisory as preferred contact."""
+        security_path = os.path.join(REPO_ROOT, "SECURITY.md")
+        with open(security_path) as f:
+            content = f.read()
+        # Should mention GitHub Security Advisory and mark it preferred
+        assert "GitHub Security Advisory" in content
+        # Should have clear instructions NOT to file public issues
+        assert "Do NOT file a public issue" in content
+
+
+class TestM11_CodeQualityAttribution:
+    """M11: Verify no misleading external attribution in code quality review."""
+
+    def test_no_deepmind_or_antigravity_attribution(self):
+        """CODE_QUALITY_REVIEW*.md must not claim Google DeepMind or Antigravity AI authorship."""
+        review_path = os.path.join(REPO_ROOT, "docs", "CODE_QUALITY_REVIEW_2026-04-15.md")
+        if not os.path.exists(review_path):
+            pytest.skip("Code quality review file not found")
+        with open(review_path) as f:
+            content = f.read()
+        # Must not claim Google DeepMind endorsement/involvement
+        assert "Google DeepMind" not in content, "Misleading attribution to Google DeepMind"
+        assert "Antigravity AI" not in content, "Misleading attribution to Antigravity AI"
+
+
+class TestL2_CitationCff:
+    """L2: Verify CITATION.cff exists and is valid."""
+
+    def test_citation_cff_exists(self):
+        """CITATION.cff should exist at repo root."""
+        cff_path = os.path.join(REPO_ROOT, "CITATION.cff")
+        assert os.path.exists(cff_path)
+
+    def test_citation_cff_valid_yaml(self):
+        """CITATION.cff must be valid YAML with required fields."""
+        import yaml
+        cff_path = os.path.join(REPO_ROOT, "CITATION.cff")
+        with open(cff_path) as f:
+            data = yaml.safe_load(f)
+        assert data is not None
+        assert data.get("title") == "WhiteMagic"
+        assert data.get("version") == "22.0.0"
+        assert data.get("license") == "MIT"
+
+
+class TestL3_FundingYml:
+    """L3: Verify .github/FUNDING.yml exists."""
+
+    def test_funding_yml_exists(self):
+        """.github/FUNDING.yml should exist."""
+        funding_path = os.path.join(REPO_ROOT, ".github", "FUNDING.yml")
+        assert os.path.exists(funding_path)
+
+    def test_funding_yml_valid_yaml(self):
+        """FUNDING.yml must be valid YAML."""
+        import yaml
+        funding_path = os.path.join(REPO_ROOT, ".github", "FUNDING.yml")
+        with open(funding_path) as f:
+            data = yaml.safe_load(f)
+        assert data is not None
+        # Should define either github sponsors or custom funding
+        assert "github" in data or "custom" in data
+
+
+class TestL8_LlmsTxt:
+    """L8: Verify llms.txt exists per llmstxt.org convention."""
+
+    def test_llms_txt_exists(self):
+        """llms.txt should exist at repo root."""
+        llms_path = os.path.join(REPO_ROOT, "llms.txt")
+        assert os.path.exists(llms_path)
+
+    def test_llms_txt_has_key_sections(self):
+        """llms.txt should have project overview and key documentation links."""
+        llms_path = os.path.join(REPO_ROOT, "llms.txt")
+        with open(llms_path) as f:
+            content = f.read()
+        assert "WhiteMagic" in content
+        assert "MCP" in content
+        assert "AI_PRIMARY.md" in content or "QUICKSTART.md" in content
 
 
 class TestH10_RustLicenseAndFeatures:
