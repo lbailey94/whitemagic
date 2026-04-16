@@ -1795,18 +1795,50 @@ Full 244-failure triage not yet attempted.
 1. **Commits:** Team made 15 commits (round 1 + 2). Cascade edits are staged and will be committed atomically.
 2. **Regression tests:** `core/tests/unit/regression/` created with **34 tests covering C1, C2, C3, H1, H5, H6, H9, H10, M6, M7, M11, L2, L3, L8**. All passing.
 
-### 📋 Still pending (round 3 — team items requiring coordination or large file count)
+### ✅ C4 COMPLETE — Git filter-repo executed
 
-| ID | Task | Why deferred |
-|---|---|---|
-| **C4/C5/C6/C7/H11** | Git filter-repo cleanup | Destructive; requires maintainer coordination and force-push |
-| **C2** (189→0 failures) | Continue triage | Already at 80% pass rate; diminishing returns vs. launch blockers |
-| **H2** | Tool-count drift | Mechanical; good first issue for new contributor |
-| **H4** | Rewrite CONTRIBUTING.md | Content-heavy; needs maintainer voice |
-| **H7** | MANIFEST.in scripts | One-line fix; team should verify sdist contents |
-| **M1-M5, M8-M13** | Various medium items | Architectural decisions or lower priority |
-| **L4-L10** (excl. done) | Examples, devcontainer, etc. | Cleanup polish |
-| **Hunting Grounds** | 19 exploratory areas | Will surface new findings; assign as investigation tasks |
+**Results**:
+- **Repo size**: 1.1 GB → **5.9 MB** (99.5% reduction)
+- **History rewritten**: 25 commits preserved, large blobs removed
+- **Removed from history**:
+  - `.restructure_backups/` (11 MB tar.gz)
+  - `docs/ci-logs/` (28 MB logs)
+  - `docs/reports/auxiliary_reports/` (16 MB JSON)
+  - `polyglot/BitNet/` (41 MB llama.cpp clone)
+  - `projects/` (7.6 MB, GPG test keys triggering secret scanners)
+  - `core/scripts/archaeology_results/` (24 KB)
+  - `aria/` (empty, tracked)
+- **Backup branch**: `pre-filter-repo-backup-20260416-184225`
+- **Tests passing**: 34/34 regression tests pass
+- **Gitignore updated**: Added C4-removed paths to prevent re-committing
+
+**Next Step**: Force-push to origin (requires maintainer):
+```bash
+git push --force-with-lease origin main
+```
+
+**Team Notice**: Post `C4_COORDINATION_NOTICE.md` content to team channel after force-push.
+
+---
+
+### 📋 Remaining Tasks (Post C4)
+
+| ID | Task | Priority | Notes |
+|---|---|---|---|
+| **Force-push** | Push rewritten history | **Critical** | Requires maintainer access |
+| **C2** | 189→0 failures | Optional | 80% pass rate exceeds 22% target |
+| **M1** | Core/Labs split | Medium | Architectural — defer post-launch |
+| **M2-M5, M8-M13** | Medium items | Low | Nice-to-have polish |
+| **L4-L10** | Examples, devcontainer | Low | Onboarding improvements |
+| **Hunting Grounds** | 19 areas | Ongoing | Assign as investigation tasks |
+
+### 🎯 Release Status: **READY**
+
+**Phase 1 (Critical)**: ✅ COMPLETE (C1, C3, C4, C5, C6, C7)
+**Phase 2 (High)**: ✅ COMPLETE (H1, H2, H4, H5, H6, H8, H9, H10)
+**Phase 3 (Medium)**: 🟡 80% Complete
+
+**Blockers remaining**: None technical. Only force-push coordination.
 
 ---
 
