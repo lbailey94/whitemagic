@@ -38,7 +38,7 @@ Expected output:
 ```
 ✅ Core: OK
 ✅ Memory DB: OK
-✅ Tools: 313 registered
+✅ Tools: ~420 registered (see mcp-registry.json)
 ✅ MCP: fastmcp available
 ```
 

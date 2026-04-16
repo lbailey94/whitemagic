@@ -4,7 +4,7 @@ The Tool Substrate for Agentic AI.
 
 ## What it does
 
-WhiteMagic provides 311 MCP tools (or 28 in PRAT mode) for AI agents, covering memory management, ethical governance, system introspection, agent coordination, and more. It features tiered memory with 5D holographic coordinates, a Galactic Map lifecycle (no memory is ever deleted), 8-stage security pipeline (input sanitizer, circuit breakers, RBAC, rate limiting, Dharma ethical governance), and polyglot accelerators in 9 languages. Free and open (MIT). Gratitude-driven economics via XRPL + x402.
+WhiteMagic provides ~420 MCP tools (or 28 Gana meta-tools in PRAT mode) for AI agents, covering memory management, ethical governance, system introspection, agent coordination, and more. It features tiered memory with 5D holographic coordinates, a Galactic Map lifecycle (no memory is ever deleted), 8-stage security pipeline (input sanitizer, circuit breakers, RBAC, rate limiting, Dharma ethical governance), and polyglot accelerators in 9 languages. Free and open (MIT). Gratitude-driven economics via XRPL + x402.
 
 ## Install
 

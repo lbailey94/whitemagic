@@ -1,6 +1,6 @@
 {
   "name": "WhiteMagic",
-  "description": "The Tool Substrate for Agentic AI — 412 MCP tools (or 28 in PRAT mode), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, and polyglot accelerators in 9 languages. Free and open (MIT). Gratitude-driven economics via XRPL + x402. LoCoMo benchmark: 78.3% recall accuracy.",
+  "description": "The Tool Substrate for Agentic AI — ~420 MCP tools (or 28 Gana meta-tools in PRAT mode), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, and polyglot accelerators in 9 languages. Free and open (MIT). Gratitude-driven economics via XRPL + x402. LoCoMo benchmark: 78.3% recall accuracy. See mcp-registry.json for current tool count.",
   "url": "https://github.com/whitemagic-ai/whitemagic",
   "version": "22.0.0",
   "provider": {

@@ -45,7 +45,7 @@ The agentic ecosystem has exploded. As of February 2026:
 ### Whitemagic's Position
 
 Whitemagic is the **cognitive scaffolding layer** — the Hands, Memory, and Conscience for any AI agent, regardless of which LLM is the Brain. Agents bring their own reasoning; Whitemagic provides:
-- **Hands** — 311 MCP tools (or 28 in PRAT mode) for acting on the world
+- **Hands** — ~420 MCP tools (or 28 Gana meta-tools in PRAT mode) for acting on the world
 - **Memory** — Tiered, persistent, semantic, with galactic lifecycle and no-delete policy
 - **Conscience** — Dharma rules, Karma ledger, Harmony Vector, Homeostatic Loop
 
