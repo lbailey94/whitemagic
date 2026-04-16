@@ -103,10 +103,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.
 | [QUICKSTART.md](QUICKSTART.md) | Getting started guide |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup and guidelines |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
-| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Terminology reference |
-| [docs/STRATEGY_2026-04-14.md](docs/STRATEGY_2026-04-14.md) | Project roadmap |
-| [docs/WAVE4_STRATEGY.md](docs/WAVE4_STRATEGY.md) | Long-term release strategy |
-| [docs/LITE_VS_HEAVY.md](docs/LITE_VS_HEAVY.md) | Installation tier comparison |
+| [docs/public/GLOSSARY.md](docs/public/GLOSSARY.md) | Terminology reference |
+| [docs/public/LITE_VS_HEAVY.md](docs/public/LITE_VS_HEAVY.md) | Installation tier comparison |
 
 ## License
 
