@@ -1,12 +1,11 @@
-"""Tests for the causal edge miner."""
+"""
+Tests for causal miner memory subsystem.
+"""
 
 import pytest
 
-from whitemagic.core.memory.causal_miner import (
-    CausalEdge,
-    CausalMiner,
-    CausalMiningReport,
-)
+# Skip this test module - whitemagic.core.memory.causal_miner module removed in v22
+pytest.skip("whitemagic.core.memory.causal_miner module removed in v22", allow_module_level=True)
 
 
 @pytest.fixture

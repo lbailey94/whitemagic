@@ -260,10 +260,8 @@ def _doctor_fix() -> None:
 def doctor_command(ctx, fix: bool) -> None:
     """Run consolidated system diagnostics via health_report tool"""
     from whitemagic.tools.dispatch_table import dispatch
-import sqlite3
-import sqlite3
-import sqlite3
-import sqlite3
+    import sqlite3
+
     json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
 
     if fix:

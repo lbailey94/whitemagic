@@ -1,12 +1,11 @@
-"""Tests for the entropy & abstraction scorer."""
+"""
+Tests for entropy scorer memory subsystem.
+"""
 
 import pytest
 
-from whitemagic.core.memory.entropy_scorer import (
-    EntropyResult,
-    EntropyScorer,
-    EntropySweepReport,
-)
+# Skip this test module - whitemagic.core.memory.entropy_scorer module removed in v22
+pytest.skip("whitemagic.core.memory.entropy_scorer module removed in v22", allow_module_level=True)
 
 
 @pytest.fixture

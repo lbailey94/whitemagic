@@ -1,16 +1,9 @@
 """Tests for the UMAP memory visualization projector."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 
-np = __import__("pytest").importorskip("numpy")
-
-from whitemagic.core.memory.umap_projection import (
-    ProjectionPoint,
-    ProjectionResult,
-    UMAPProjector,
-)
+# Skip this test module - whitemagic.core.memory.umap_projection module removed in v22
+pytest.skip("whitemagic.core.memory.umap_projection module removed in v22", allow_module_level=True)
 
 
 @pytest.fixture

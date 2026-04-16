@@ -1,4 +1,11 @@
-"""Tests for StateBoard Bridge (Leap 7a)."""
+"""
+Tests for state board bridge acceleration.
+"""
+
+import pytest
+
+# Skip this test module - whitemagic.core.acceleration.state_board_bridge module removed in v22
+pytest.skip("whitemagic.core.acceleration.state_board_bridge module removed in v22", allow_module_level=True)
 
 from whitemagic.core.acceleration.state_board_bridge import (
     BreakerState,
