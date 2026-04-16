@@ -24,7 +24,10 @@ recursive-exclude whitemagic-koka *
 
 # Exclude scripts (development tools, not part of public package)
 recursive-exclude scripts *
+# Include verification scripts referenced by CI/Make
 include scripts/check_ship.py
+include scripts/check_versions.py
+include scripts/generate_mcp_registry.py
 
 # Exclude top-level runtime/operational directories (never ship)
 recursive-exclude _aria *
