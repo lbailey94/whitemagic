@@ -40,19 +40,17 @@ jobs:
           python -m pip install -e ".[dev,mcp,cli]"
 
       - name: Omega Test Gauntlet
-        run: |
-          python scripts/omega_test.py --ci
+        run: python scripts/omega_test.py --ci
 
       - name: Eval Harness
-        run: |
-          python -m eval.run_eval --now 2026-01-01T00:00:00Z
+        run: python -m eval.run_eval --now 2026-01-01T00:00:00Z
 
-  lidefaults:
-      run:
-        working-directory: ./core
-    nt:
+  lint:
     name: Lint & Typecheck
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +91,9 @@ jobs:
   rust-quality:
     name: Rust Quality
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     steps:
       - uses: actions/checkout@v4
 
@@ -110,6 +111,9 @@ jobs:
   security:
     name: Security Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     steps:
       - uses: actions/checkout@v4
 
@@ -121,23 +125,25 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e "]" bandit pip-audit
+          python -m pip install -e ".[dev]" bandit pip-audit
 
+      # B603: subprocess without shell=False. Removed from skip list per
+      # H5 (release readiness). Audit each subprocess call explicitly.
       - name: Bandit (security scanner)
         run: |
           bandit -r whitemagic/ \
             --exclude whitemagic/_archived \
-            -ll -ii --skip B101,B404,B603 2>&1 | tail -50
+            -ll -ii --skip B101,B404 2>&1 | tail -50
 
-    defaults:
-      run:
-        working-directory: ./core
       - name: pip-audit (dependency vulnerabilities)
         run: pip-audit --strict --desc 2>&1 | tail -20
 
   extras:
     name: Extras (mcp+cli)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     env:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_extras
@@ -155,17 +161,11 @@ jobs:
           python -m pip install -e ".[dev,mcp,cli]"
 
       - name: Doctor Check
-        run: |
-          # Run doctor and fail if health check fails
-          wm doctor
+        run: wm doctor
 
       - name: MCP Import Check
-        run: |
-          python -c "import fastmcp; print('fastmcp ok')"
+        run: python -c "import fastmcp; print('fastmcp ok')"
 
-    defaults:
-      run:
-        working-directory: ./core
       - name: CLI JSON Smoke
         run: |
           python -m whitemagic.cli.cli_app --json status > /tmp/wm_status.json
@@ -175,6 +175,9 @@ jobs:
     name: Optional API Extras
     runs-on: ubuntu-latest
     continue-on-error: true
+    defaults:
+      run:
+        working-directory: ./core
     env:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_api
@@ -192,9 +195,6 @@ jobs:
           python -m pip install -e ".[dev,api]"
 
       - name: FastAPI-gated tests
-    defaults:
-      run:
-        working-directory: ./core
         run: |
           set -eo pipefail
           pytest -q -rs \
@@ -207,6 +207,9 @@ jobs:
   optional-opt:
     name: Optional Optimizer Extras
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     env:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_opt
@@ -217,10 +220,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-defaults:
-      run:
-        working-directory: ./core
-    
+
       - name: Install (opt extras)
         run: |
           python -m pip install --upgrade pip
@@ -235,6 +235,9 @@ defaults:
   packaging:
     name: Build & Install Validation
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     steps:
       - uses: actions/checkout@v4
 
@@ -249,13 +252,8 @@ defaults:
           python -m build
 
       - name: Install Wheel (Clean)
-        run: |
-          # Install the built wheel into a clean environment
-          python -m pip install dist/*.whl
-defaults:
-      run:
-        working-directory: ./core
-    
+        run: python -m pip install dist/*.whl
+
       - name: Verify Installation
         run: |
           WM_SILENT_INIT=1 WM_STATE_ROOT=/tmp/wm_pack_test wm --json status
@@ -266,13 +264,16 @@ defaults:
         uses: actions/upload-artifact@v4
         with:
           name: whitemagic-wheel
-          path: dist/*.whl
+          path: core/dist/*.whl
           retention-days: 30
 
   reproducible-build:
     name: Reproducible Build Verification
     runs-on: ubuntu-latest
     continue-on-error: true
+    defaults:
+      run:
+        working-directory: ./core
     steps:
       - uses: actions/checkout@v4
 
@@ -327,9 +328,6 @@ defaults:
           hashes = {f.name: hashlib.sha256(f.read_bytes()).hexdigest() for f in files}
           epoch = subprocess.check_output(['git', 'log', '-1', '--format=%ct']).decode().strip()
           sha = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
-    defaults:
-      run:
-        working-directory: ./core
           data = {
               'hashes': hashes,
               'source_date_epoch': epoch,
@@ -344,13 +342,16 @@ defaults:
         uses: actions/upload-artifact@v4
         with:
           name: build-hashes
-          path: BUILD_HASHES.json
+          path: core/BUILD_HASHES.json
           retention-days: 90
 
   network-optin:
     name: Live Network Tests (Opt-in)
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_network_tests == true }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./core
     env:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_network
@@ -373,3 +374,17 @@ defaults:
           set -eo pipefail
           pytest -q -rs -m network tests/unit/test_web_research.py | tee /tmp/pytest_network.out
           python scripts/verification/check_skip_policy.py /tmp/pytest_network.out --profile optional-network
+
+  version-consistency:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check version drift
+        run: python core/scripts/check_versions.py
