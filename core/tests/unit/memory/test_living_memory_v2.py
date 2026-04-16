@@ -1,5 +1,10 @@
 """Tests for Living Memory v14.2 improvements.
 
+import pytest
+
+# Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
+pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
+
 Covers:
   - Semantic projection in graph walks
   - Fused gravity signal

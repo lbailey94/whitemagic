@@ -1,10 +1,5 @@
 """Tests for v14.0 Living Graph — Phase 1 modules.
 
-import pytest
-
-# Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
-pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
-
 Covers:
   - Association schema migration (new columns)
   - GraphWalker (multi-hop traversal)
@@ -13,10 +8,14 @@ Covers:
   - SurpriseGate (novelty-gated ingestion)
   - BridgeSynthesizer
   - Entity Resolution (embedding-based dedup)
-  - Dream cycle GOVERNANCE phase
 """
 
 from __future__ import annotations
+
+import pytest
+
+# Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
+pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
 
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch

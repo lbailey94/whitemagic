@@ -1,5 +1,10 @@
 from whitemagic.core.memory.models import Memory
 
+import pytest
+
+# Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
+pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
+
 from whitemagic.core.memory.sqlite_backend import SQLiteMemoryBackend
 
 backend = SQLiteMemoryBackend("whitemagic.db")

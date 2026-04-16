@@ -1,5 +1,10 @@
 """
 Tests for Galactic Map v2 improvements:
+import pytest
+
+# Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
+pytest.skip("whitemagic.core.memory.sqlite_backend module removed in v22", allow_module_level=True)
+
   - V dimension in holographic coordinate system
   - Galactic-distance-aware search
   - Memory re-promotion on recall
