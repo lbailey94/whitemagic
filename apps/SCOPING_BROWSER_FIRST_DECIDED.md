@@ -250,21 +250,17 @@ many repos?" analysis.
 
 ### Immediate (before I start coding)
 
-1. **Approve the Librarian name** or propose alternative. Working name
-   is `Librarian`; also considered: `Scribe`, `Steward`, `Usher`,
-   `Guide`, or unnamed ("Assistant"). My pick: Librarian — fits the
-   grimoire aesthetic, role-accurate, non-mystical.
+1. ~~Approve the Librarian name~~ **LOCKED: Librarian.**
 2. **OpenRouter API key** (or confirmation you'll create one this weekend).
    Goes in Vercel env as `OPENROUTER_API_KEY`, never committed.
 3. **Upstash Redis account** (free tier — for rate limiting). 2-minute setup.
 4. **Private repo for `whitemagic-site`** created on GitHub under your
    account (or the `whitemagic-ai` org, set to private). Give me the
    repo URL and I'll configure push.
-5. **Confirm hard budget cap for the Librarian**, so I can set the
-   admin panel threshold. Suggestion: $50/month hard cap to start.
-   At Claude Sonnet 4.5 pricing and ~5K tokens/conversation, that's
-   ~600 conversations/month before cutoff. Reasonable for a marketing
-   tool.
+5. ~~Confirm hard budget cap~~ **LOCKED: $25/month hard cap.** At
+   Claude Sonnet 4.5 pricing and ~5K tokens/conversation that's
+   ~300 conversations/month before auto-cutoff. Admin panel will
+   show current month spend + % of cap used, with email alert at 80%.
 
 ### This weekend (while I code Phase L)
 
