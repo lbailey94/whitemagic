@@ -66,7 +66,9 @@ export function MatrixRain() {
 
     const FONT_SIZE = 16;
     const COLUMN_STRIDE = 22; // wider than font to accommodate double-width glyphs
-    const FRAME_MS = 80;
+    const FRAME_MS = 140; // slower than before (was 80) — ~7 fps, calmer feel
+    const FADE_ALPHA = 0.06; // lower = longer trails (was effectively ~0.09)
+    const DROP_STEP = FONT_SIZE * 0.75; // slower descent (was = FONT_SIZE)
 
     let drops: number[] = [];
     let raf = 0;
@@ -97,11 +99,18 @@ export function MatrixRain() {
       if (!running) return;
       if (t - last > FRAME_MS) {
         const dark = isDark();
-        // Trail fade
-        ctx.fillStyle = dark
-          ? "rgba(26, 20, 16, 0.08)"
-          : "rgba(245, 240, 232, 0.10)";
+
+        // Trail fade using destination-out composite. This actually SUBTRACTS
+        // alpha from existing pixels each frame instead of painting a
+        // translucent color over them. On a transparent canvas, source-over
+        // fading can never reach alpha=0 — trails accumulate as permanent
+        // column stripes over time. destination-out properly decays pixels
+        // back to transparent, so no ghost stripes build up regardless of
+        // how long the site is left open.
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = `rgba(0,0,0,${FADE_ALPHA})`;
         ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+        ctx.globalCompositeOperation = "source-over";
 
         ctx.fillStyle = dark
           ? "rgba(184, 169, 212, 0.42)"
@@ -122,7 +131,7 @@ export function MatrixRain() {
           if (y > window.innerHeight && Math.random() > 0.975) {
             drops[i] = 0;
           } else {
-            drops[i] = y + FONT_SIZE;
+            drops[i] = y + DROP_STEP;
           }
         }
         last = t;
