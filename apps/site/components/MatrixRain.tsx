@@ -66,9 +66,9 @@ export function MatrixRain() {
 
     const FONT_SIZE = 16;
     const COLUMN_STRIDE = 22; // wider than font to accommodate double-width glyphs
-    const FRAME_MS = 140; // slower than before (was 80) — ~7 fps, calmer feel
-    const FADE_ALPHA = 0.06; // lower = longer trails (was effectively ~0.09)
-    const DROP_STEP = FONT_SIZE * 0.75; // slower descent (was = FONT_SIZE)
+    const FRAME_MS = 70; // slightly faster than the original 80
+    const FADE_ALPHA = 0.12; // high enough that trails fully clear within ~1.5s
+    const DROP_STEP = FONT_SIZE; // full row per frame — original cadence
 
     let drops: number[] = [];
     let raf = 0;
@@ -89,6 +89,10 @@ export function MatrixRain() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
+      // Wipe any stale pixels from prior effect runs (HMR in dev keeps the
+      // canvas DOM element alive; without this clear, edits to fade logic
+      // don't visually take effect until a hard refresh).
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       const columns = Math.ceil(window.innerWidth / COLUMN_STRIDE);
       drops = new Array(columns)
         .fill(0)
