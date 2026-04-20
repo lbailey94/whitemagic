@@ -29,6 +29,13 @@ each session. Preserve the "Decisions log" and append to it.
   recommendation (Railway face + NixOS showpiece), six-island
   compounding graph, concrete 30-day plan —
   `@docs/strategy_manifestos/AGENT_FIRST_LAB_STRATEGY.md`.
+- **Island C v0.1 — first agent-addressable surfaces live**
+  (2026-04-20): `/.well-known/agent-economy.json` +
+  `/.well-known/ai-agent-policy` served as live JSON endpoints
+  (`@apps/site/app/api/well-known/*`). Both specs published
+  under `@docs/spec/` as draft v0.1. MandalaOS vision spec
+  also published at `@docs/spec/MANDALA_OS.md` — spec-before-
+  code posture.
 - **Late tonight** (2026-04-19, ~23:40 UTC-4):
   - Reconciled Vercel → Hetzner across `apps/README.md`,
     `apps/site/PHASE_ROADMAP.md`, `apps/site/README.md`,
