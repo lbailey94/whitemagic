@@ -6,7 +6,9 @@ import { LangToggle } from "./LangToggle";
 const NAV = [
   { href: "/services", label: "Services" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/ladder", label: "Ladder" },
   { href: "/timeline", label: "Timeline" },
+  { href: "/economy", label: "Economy" },
   { href: "/librarian", label: "Librarian" },
   { href: "/work", label: "Work" },
   { href: "/writing", label: "Writing" },

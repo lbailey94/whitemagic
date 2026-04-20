@@ -26,12 +26,12 @@ export const PRICING_TIERS: Record<TierSlug, PricingTier> = {
   "office-hours": {
     slug: "office-hours",
     name: "Office Hours",
-    price: "$250",
+    price: "$700",
     priceNote: "per 60-minute session",
     oneLiner:
       "One specific question: deployment decision, governance risk, or MCP architecture review.",
     bestFor:
-      "Teams that need a senior second opinion before making a decision worth more than $250 to get right.",
+      "Teams that need a senior second opinion before making a decision worth more than $700 to get right.",
     whatIsIncluded: [
       "60-minute video call, recorded if you want",
       "Written notes within 48 hours",
@@ -45,7 +45,7 @@ export const PRICING_TIERS: Record<TierSlug, PricingTier> = {
   "architecture-review": {
     slug: "architecture-review",
     name: "Architecture Review",
-    price: "$2,500",
+    price: "$7,000",
     priceNote: "flat, 5-day turnaround",
     oneLiner:
       "Full written review of your agent / MCP / private-AI architecture mapped to OWASP Agentic Top 10 and EU AI Act Article 14.",
@@ -66,7 +66,7 @@ export const PRICING_TIERS: Record<TierSlug, PricingTier> = {
   engagement: {
     slug: "engagement",
     name: "Engagement",
-    price: "From $15,000",
+    price: "From $30,000",
     priceNote: "4–8 week fixed-scope",
     oneLiner:
       "Fixed-scope implementation on one of the three service tracks: Private AI, Governance, or MCP.",

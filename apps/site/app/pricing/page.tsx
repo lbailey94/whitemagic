@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Check, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { JsonLd } from "@/components/JsonLd";
+import { pricingProductsLd, faqLd, PRICING_FAQ } from "@/lib/jsonld";
 
 export const metadata = {
   title: "Pricing — WhiteMagic Labs",
@@ -30,7 +32,7 @@ interface Tier {
 const TIERS: Tier[] = [
   {
     name: "Office Hours",
-    price: "$250",
+    price: "$700",
     cadence: "per 60-min session",
     description:
       "One specific question, one focused session. Deployment decisions, governance risk, MCP architecture, a second opinion before you commit engineering weeks to a direction.",
@@ -51,7 +53,7 @@ const TIERS: Tier[] = [
   },
   {
     name: "Architecture Review",
-    price: "$2,500",
+    price: "$7,000",
     cadence: "flat · 5-day turnaround",
     description:
       "I read your agent or MCP codebase against the governance patterns that shipped 4 weeks before Microsoft AGT, and return a written deliverable you can act on Monday morning.",
@@ -74,7 +76,7 @@ const TIERS: Tier[] = [
   },
   {
     name: "Engagement",
-    price: "From $15,000",
+    price: "From $30,000",
     cadence: "4–8 week implementation",
     description:
       "Multi-week implementation on one of three tracks: Private AI Deployment, Agent Governance, or MCP Engineering. Weekly delivery, Friday demo, no hand-wave billing.",
@@ -92,6 +94,7 @@ const TIERS: Tier[] = [
 export default function PricingPage() {
   return (
     <>
+      <JsonLd data={[pricingProductsLd(), faqLd(PRICING_FAQ)]} />
       <PageHeader
         eyebrow="Pricing"
         title="Three tiers. One principle."
@@ -150,7 +153,7 @@ export default function PricingPage() {
           <div className="space-y-6">
             <Faq q="Why are the lower tiers so accessible?">
               Because the best CTO engagements start with someone inside the
-              company doing their own diligence first. A $250 session beats a
+              company doing their own diligence first. A $700 session beats a
               $50K mistake. If you later bring me in for a real engagement,
               the Office Hours fee gets credited to the scope.
             </Faq>

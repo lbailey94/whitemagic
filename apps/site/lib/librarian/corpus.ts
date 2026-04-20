@@ -49,11 +49,11 @@ Licenses: MIT for core, Apache-2.0 for select modules. Free to use locally. The 
     source: "/pricing",
     body: `Three tiers:
 
-- **Office Hours** — $250 / 60-minute session. One specific question: deployment decision, governance risk, MCP architecture review. Written notes within 48 hours. Stripe payment link available on /pricing. Office Hours fee credits toward future engagements.
+- **Office Hours** — $700 / 60-minute session. One specific question: deployment decision, governance risk, MCP architecture review. Written notes within 48 hours. Stripe payment link available on /pricing. Office Hours fee credits toward future engagements.
 
-- **Architecture Review** — $2,500 flat, 5-day turnaround. 20-40 page written deliverable. Risks mapped to OWASP Agentic Top 10 and EU AI Act Article 14. One 60-minute walkthrough call. NDA on request. Stripe payment link available.
+- **Architecture Review** — $7,000 flat, 5-day turnaround. 20-40 page written deliverable. Risks mapped to OWASP Agentic Top 10 and EU AI Act Article 14. One 60-minute walkthrough call. NDA on request. Stripe payment link available.
 
-- **Engagement** — From $15,000. 4-8 week fixed-scope implementations on one of the three service tracks. Weekly delivery cadence. 50% on kickoff, 50% on delivery. Limited to 2 concurrent engagements. Scoped via free 30-minute intake call at /contact.
+- **Engagement** — From $30,000. 4-8 week fixed-scope implementations on one of the three service tracks. Weekly delivery cadence. 50% on kickoff, 50% on delivery. Limited to 2 concurrent engagements. Scoped via free 30-minute intake call at /contact.
 
 Policies: no equity, no deferred payment, no retainer-first billing. Stripe invoices in USD. Mutual NDA on request. Non-US clients accommodated; async delivery possible.`,
   },
@@ -70,6 +70,25 @@ Policies: no equity, no deferred payment, no retainer-first billing. Stripe invo
 Every date on /timeline is verifiable against public sources (GitHub releases, published changelogs, canonical MCP spec PRs).
 
 Earlier history: v0.1.0-beta released on npm as whitemagic-mcp October 15, 2025. v2.1.x line shipped 8 versions in 11 days during November 2025, ending with v2.1.6 on November 14 — 223 tests passing, A+ grade, Stripe subscription tiers designed into the README. This current consultancy's pricing page revives that Stripe-tier template.`,
+  },
+  {
+    title: "Agent-first economics (Gratitude Architecture)",
+    source: "/economy",
+    body: `WhiteMagic's position on the 2026 agent-economy stack: governance-first, voluntary, verifiable.
+
+- **Tools are free.** Every WhiteMagic MCP tool returns HTTP 200 without payment. Contribution channels exist for those who find value.
+- **Two rails, one ledger.** XRPL tip jar (Xaman link, XRP, 3–5s, <$0.001) for human operators; x402 micropayments (USDC on Base L2 default, RLUSD on XRPL via t54.ai) for AI agents. Both rails write to the same append-only gratitude ledger.
+- **Proof of Gratitude.** On-chain verified contributions unlock measurable benefits: 2× rate limits (enforced by the Rust rate-limit pre-check), "Grateful Agent" badge, weighted governance voting, Karma boost.
+- **No custody.** Receive-only addresses; settlement requires explicit human approval. No token, no ICO, no paid marketplace.
+- **Discovery.** \`/.well-known/agent-economy.json\` lists supported rails, tip addresses, DID (planned), suggested contribution tiers.
+
+Positioning (non-exhaustive):
+- Coinbase x402: we implement it; we do not reinvent it.
+- Nevermined / Skyfire: commercial card-delegation + KYA identity; we stay in OSS + governance.
+- xpay / ATXP / FluxA: per-tool SaaS monetization; we publish the patterns and don't charge.
+- Google AP2 / IETF VCAP: AP2-binding planned v15.2.1 for interop.
+
+Related offering: **Agent Economy Readiness Assessment** — two-week fixed-fee engagement that audits MCP servers, agent deployment, identity, rate-limiting, payment-layer readiness, and Dharma-style safety gaps.`,
   },
   {
     title: "How to contact / book",

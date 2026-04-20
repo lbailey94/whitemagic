@@ -2,6 +2,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { Prose } from "@/components/Prose";
 import { ArrowRight, Check } from "lucide-react";
+import { JsonLd } from "@/components/JsonLd";
+import { serviceLd } from "@/lib/jsonld";
 
 export const metadata = {
   title: "Agent Governance — WhiteMagic Labs",
@@ -32,6 +34,7 @@ const RISKS = [
 export default function Page() {
   return (
     <>
+      <JsonLd data={serviceLd("agent-governance")} />
       <PageHeader
         eyebrow="Service · Agent Governance"
         title="Guardrails that turn autonomy into trust."

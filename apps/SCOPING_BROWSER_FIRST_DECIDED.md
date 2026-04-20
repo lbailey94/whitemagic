@@ -206,11 +206,15 @@ tool, not an assistant.
    works on lives here: `core/`, `apps/`, `grimoire/`, `polyglot/`,
    personal planning docs. Single source of truth.
    
-2. **`whitemagic-site`** — the deployable consultancy site. Private
-   GitHub repo pointed at by Vercel. Kept as a lightweight mirror of
-   `whitemagic-private/apps/site/`, synced by a git subtree push on
-   each release. Vercel gets the site; the monorepo history stays
-   elsewhere.
+2. **`whitemagic-site-private`** — the deployable consultancy site. Private
+   GitHub repo that the Hetzner VPS pulls from (read-only deploy key; GitHub
+   Actions → `ssh` → `/srv/whitemagic-site/deploy.sh`). Kept as a
+   lightweight mirror of `whitemagic-private/apps/site/`, synced by a git
+   subtree push on each release. Hetzner gets the site; the monorepo
+   history stays elsewhere. (Originally planned for Vercel; pivoted to
+   Hetzner 2026-04-19 — see
+   `@docs/architecture/INFRASTRUCTURE_DECISION.md` and
+   `@docs/deploy/HETZNER_DEPLOY.md`.)
 
 3. **`aria-private`** — optional, Lucas's choice. If Aria's artifacts
    (journals, dreams, state server) are worth versioning, a separate
@@ -218,9 +222,10 @@ tool, not an assistant.
    Most cautious option. Alternative: keep Aria as uncommitted local
    files, no git at all. Discussed separately.
 
-**Why split `whitemagic-site` out from the monorepo?** Vercel deploys
-cleanly from a dedicated repo. Subtree push on release keeps it in
-sync with the monorepo without exposing monorepo internals. Also: if
+**Why split `whitemagic-site-private` out from the monorepo?** Deploy
+sources benefit from clean repo roots (true for Vercel originally, still
+true for the Hetzner `git pull` model). Subtree push on release keeps it
+in sync with the monorepo without exposing monorepo internals. Also: if
 any single commit in the monorepo accidentally references private
 material, the site repo is protected by filtered history.
 
@@ -252,7 +257,7 @@ many repos?" analysis.
 
 1. ~~Approve the Librarian name~~ **LOCKED: Librarian.**
 2. **OpenRouter API key** (or confirmation you'll create one this weekend).
-   Goes in Vercel env as `OPENROUTER_API_KEY`, never committed.
+   Goes in the Hetzner systemd `EnvironmentFile` as `OPENROUTER_API_KEY`, never committed.
 3. **Upstash Redis account** (free tier — for rate limiting). 2-minute setup.
 4. **Private repo for `whitemagic-site`** created on GitHub under your
    account (or the `whitemagic-ai` org, set to private). Give me the
@@ -281,7 +286,8 @@ many repos?" analysis.
 - `/librarian` endpoint live on the site, Claude Sonnet 4.5 via OpenRouter
 - Rate limits + Dharma input check + kill switch all wired
 - `/admin` showing live cost, rate-limit hits, Dharma rejections
-- Deployed to Vercel from the private `whitemagic-site` repo
+- Deployed to Hetzner from the private `whitemagic-site-private` repo
+  (see `@docs/deploy/HETZNER_DEPLOY.md`)
 
 **Phase P1 (PWA)** begins Monday. First milestone: `wasm-pack build`
 succeeding on `core/whitemagic-rust`. That alone is worth a PR.
@@ -294,4 +300,4 @@ succeeding on `core/whitemagic-rust`. That alone is worth a PR.
 2. **OpenRouter rate limits on Lucas's free tier** — possible for initial testing. Upgrade when needed; usage at Phase L launch should be trivially small.
 3. **Librarian producing confident misinformation about WhiteMagic** — real. Mitigated by strict system prompt + Dharma rules + source citations (L2.3). Accept some residual risk; monitor via admin logs.
 4. **Blank-canvas PWA friction** — some users want "just give me an agent." Mitigated by P1.7 (persona import) and an optional "example persona" download (NOT Aria — something publicly shareable like "Research Assistant" or "Code Review Buddy").
-5. **Private repo + Vercel auth getting mis-configured** — one-time setup pain, resolves once tokens are correct. Documented in the deploy workflow.
+5. **Private repo + Hetzner deploy-key / GitHub Actions SSH key mis-configured** — one-time setup pain, resolves once tokens are correct. Documented in `@docs/deploy/HETZNER_DEPLOY.md` (steps 8 + 13).

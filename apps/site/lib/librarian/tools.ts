@@ -22,7 +22,7 @@ import {
   CAPABILITIES_LIST,
 } from "@/lib/data/platform";
 import { TIMELINE_DATA, type TimelineEntry } from "@/components/timeline-data";
-import { getKV } from "./rate-limit";
+import { storeContactRequest } from "@/lib/contact";
 
 // ---------------------------------------------------------------------------
 // Tool result types (discriminated union — client renders one card per kind)
@@ -107,7 +107,7 @@ export const TOOL_SCHEMAS = [
     function: {
       name: "get_platform_capability",
       description:
-        "Get technical details about a WhiteMagic platform capability — e.g. Dharma Rules, Karma Ledger, Harmony Vector, Circuit Breaker, 28-Gana MCP compression, Gnosis Portal, Galaxy Backup, Tiered Memory. Use this when a visitor asks how something works or wants specifics about a feature.",
+        "Get technical details about a WhiteMagic platform capability — e.g. Dharma Rules, Karma Ledger, Harmony Vector, Circuit Breaker, 28-Gana MCP compression, Gnosis Portal, Galaxy Backup, Tiered Memory, Gratitude Architecture (agent-first economics / x402 + XRPL voluntary payment rails). Use this when a visitor asks how something works or wants specifics about a feature.",
       parameters: {
         type: "object",
         properties: {
@@ -211,14 +211,6 @@ type ToolHandler = (
   args: Record<string, unknown>,
   ctx: ToolContext,
 ) => Promise<ToolResult>;
-
-function isEmail(s: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-}
-
-function genReference(): string {
-  return `wm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
 
 const HANDLERS: Record<string, ToolHandler> = {
   async get_service_detail(args) {
@@ -331,68 +323,34 @@ const HANDLERS: Record<string, ToolHandler> = {
   },
 
   async submit_contact_request(args, ctx) {
-    const email =
-      typeof args.email === "string" ? args.email.trim().toLowerCase() : "";
-    const topic = typeof args.topic === "string" ? args.topic.trim() : "";
-    const summary = typeof args.summary === "string" ? args.summary.trim() : "";
-    if (!isEmail(email)) {
-      return {
-        kind: "error",
-        data: {
-          message: "Invalid email address. Ask the visitor to provide a valid email.",
-        },
-      };
-    }
-    if (topic.length < 3 || summary.length < 10) {
+    const email = typeof args.email === "string" ? args.email : "";
+    const topic = typeof args.topic === "string" ? args.topic : "";
+    const summary = typeof args.summary === "string" ? args.summary : "";
+    const stored = await storeContactRequest({
+      email,
+      topic,
+      summary,
+      source: "librarian",
+      sessionId: ctx.sessionId,
+      pagePath: ctx.pageContext?.path,
+    });
+    if (!stored.ok || !stored.reference) {
       return {
         kind: "error",
         data: {
           message:
-            "Topic must be at least 3 chars and summary at least 10 chars.",
+            stored.error ??
+            "Could not record contact request. Ask the visitor to try /contact directly.",
         },
       };
     }
-    if (summary.length > 2000) {
-      return {
-        kind: "error",
-        data: { message: "Summary too long — keep it under 2000 chars." },
-      };
-    }
-    const reference = genReference();
-    const kv = getKV();
-    const entry = {
-      reference,
-      timestamp: Date.now(),
-      email,
-      topic: topic.slice(0, 200),
-      summary: summary.slice(0, 2000),
-      sessionId: ctx.sessionId,
-      pagePath: ctx.pageContext?.path,
-    };
-    // Store to a list so /admin can surface recent submissions
-    try {
-      await kv.set(
-        `contact:${reference}`,
-        JSON.stringify(entry),
-        60 * 60 * 24 * 30,
-      );
-      // Also push onto a lightweight index list (capped by timestamp sort)
-      const indexRaw = (await kv.get("contact:index")) ?? "[]";
-      const index: string[] = JSON.parse(indexRaw);
-      index.unshift(reference);
-      await kv.set(
-        "contact:index",
-        JSON.stringify(index.slice(0, 200)),
-        60 * 60 * 24 * 90,
-      );
-    } catch (e) {
-      console.error("[librarian/tools] contact submit KV write failed:", e);
-    }
-    // TODO: when RESEND_API_KEY is configured, also send an email to Lucas.
-    // For now, /admin is the notification surface.
     return {
       kind: "contact_submitted",
-      data: { reference, topic, summary },
+      data: {
+        reference: stored.reference,
+        topic: topic.trim(),
+        summary: summary.trim(),
+      },
     };
   },
 };

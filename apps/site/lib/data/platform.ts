@@ -12,7 +12,8 @@ export type CapabilitySlug =
   | "gnosis-portal"
   | "gana-mcp-compression"
   | "galaxy-backup"
-  | "tiered-memory";
+  | "tiered-memory"
+  | "gratitude-architecture";
 
 export interface Capability {
   slug: CapabilitySlug;
@@ -105,6 +106,22 @@ export const CAPABILITIES: Record<CapabilitySlug, Capability> = {
     what: "Hot = in-process cache; warm = SQLite + FTS5; cold = object storage with lazy load. Access patterns drive tier placement; explicit pinning supported.",
     why: "Not every memory needs to be retrievable in 10ms. Tiered storage scales agent memory without ballooning cost.",
     status: "shipped",
+  },
+  "gratitude-architecture": {
+    slug: "gratitude-architecture",
+    name: "Gratitude Architecture",
+    oneLiner:
+      "Dual-rail, voluntary, governance-aware agent-economy layer: tools are free, contribution is opt-in, verification is on-chain.",
+    what: "Two payment rails write to one append-only gratitude ledger: an XRPL tip jar for human operators (Xaman links, <$0.001 fees, 3–5s) and an x402 channel for AI agents (USDC on Base by default, RLUSD on XRPL via t54.ai facilitator). Proof of Gratitude is enforced at the Rust rate-limit pre-check: verified contributors get 2× rate limits, a 'Grateful Agent' badge, weighted governance voting, and a Karma boost. Receive-only addresses; no custody of keys; settlement requires explicit human approval. Discovery via `.well-known/agent-economy.json`.",
+    why: "The industry's 2026 agent-commerce stack converged on payments-first (x402, AP2, VCAP) and left governance unsolved. Forced paid bounties produced race-to-zero dynamics (ClawTasks pivoted to free-only in early 2026). Voluntary patronage with measurable, cryptographically-verified benefits is the pattern that works. WhiteMagic ships the opinionated OSS reference implementation so operators and regulated buyers have an alternative to closed card-delegation rails.",
+    status: "shipped",
+    shipped: "2026-03 (v15.1.0; x402-native endpoint planned v15.2.1)",
+    maps_to: [
+      "x402 (Coinbase / Linux Foundation AAIF)",
+      "XRPL Payment Channels / ILP streaming",
+      "EU AI Act Article 14 (audit trail)",
+      "ERC-8004 (reputation, adjacent)",
+    ],
   },
 };
 

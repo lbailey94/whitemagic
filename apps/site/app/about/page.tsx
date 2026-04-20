@@ -2,6 +2,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { Prose } from "@/components/Prose";
 import { ArrowRight } from "lucide-react";
+import { JsonLd } from "@/components/JsonLd";
+import { personLd } from "@/lib/jsonld";
 
 export const metadata = {
   title: "About — WhiteMagic Labs",
@@ -12,6 +14,7 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <>
+      <JsonLd data={personLd()} />
       <PageHeader
         eyebrow="About"
         title="Self-taught. Already shipped."

@@ -18,7 +18,19 @@ build/
 .venv/
 venv/
 env/
-lib/
+# Python venv lib dirs (scoped — do NOT match apps/site/lib or similar source dirs)
+/lib/
+/lib64/
+**/.venv/lib/
+**/venv/lib/
+
+# === Node ===
+node_modules
+**/node_modules
+.next/
+**/.next/
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
 
 # === Rust ===
 core/whitemagic-rust/target/

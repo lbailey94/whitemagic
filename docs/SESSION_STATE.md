@@ -1,6 +1,6 @@
 # Session State — WhiteMagic Labs Site + Librarian
 
-**Last updated**: 2026-04-19, late session
+**Last updated**: 2026-04-20, evening session (Track A: Resend notifier, JSON-LD, per-page OG images shipped; Hetzner SSH remains unresolved and deprioritized)
 **Purpose**: Fast-pickup doc. Read this first when returning.
 **Update protocol**: Replace the "Where we are" and "What to do next" sections
 each session. Preserve the "Decisions log" and append to it.
@@ -20,6 +20,51 @@ each session. Preserve the "Decisions log" and append to it.
 - Infrastructure decision: **planning for Hetzner** (not Vercel). See
   `@docs/architecture/INFRASTRUCTURE_DECISION.md`. Deploy walkthrough at
   `@docs/deploy/HETZNER_DEPLOY.md`.
+- **Agent-economy strategy pass** (earlier this session): deep research + two new
+  docs. Public thesis: `@docs/AGENT_FIRST_ECONOMICS.md`. Private strategy,
+  financial scenarios, and Labs offerings beyond generic consulting:
+  `@docs/strategy_manifestos/STRATEGY_AGENT_ECONOMY.md`. `ROADMAP.md`
+  updated with post-launch priorities.
+- **Late tonight** (2026-04-19, ~23:40 UTC-4):
+  - Reconciled Vercel → Hetzner across `apps/README.md`,
+    `apps/site/PHASE_ROADMAP.md`, `apps/site/README.md`,
+    `apps/SCOPING_BROWSER_FIRST_DECIDED.md §5/§7/§8/§9`.
+  - **Contact form backend shipped**: `@apps/site/app/api/contact/route.ts`
+    (POST, per-IP daily rate limit, honeypot, 400/429 handling),
+    `@apps/site/components/ContactForm.tsx` (client form wired into
+    `/contact`), shared store in `@apps/site/lib/contact.ts`. Librarian's
+    `submit_contact_request` tool refactored to use the same store, so
+    `/admin` shows a unified feed.
+  - **Admin middleware shipped**: `@apps/site/middleware.ts` — Basic Auth
+    on `/admin` + `/admin/*`, SHA-256 of `ADMIN_PASSWORD_HASH` with
+    constant-time compare. Dev-friendly (no gate when hash is unset).
+    Env block added to `HETZNER_DEPLOY.md`.
+  - **8th platform capability + `/economy` page shipped**:
+    `gratitude-architecture` in `@apps/site/lib/data/platform.ts`; new
+    `@apps/site/app/economy/page.tsx` covers thesis / two rails / Proof
+    of Gratitude / positioning / non-goals / CTAs. Corpus + persona +
+    tool schemas updated. `/economy` added to header nav + sitemap.
+  - `next build` clean: 20 routes, `/economy` SSG, middleware 34.8 kB.
+- **2026-04-20 evening — Track A (no-VPS-required polish)**:
+  - **Resend notifier shipped** (env-gated): `@apps/site/lib/notify.ts`
+    fires on every successful `storeContactRequest`, so both form POSTs
+    and Librarian `submit_contact_request` calls email Lucas when
+    `RESEND_API_KEY` + `CONTACT_NOTIFY_EMAIL` are set. Silent no-op in
+    dev. `/admin` now shows a notification-status card.
+  - **JSON-LD structured data**: `@apps/site/lib/jsonld.ts` +
+    `@apps/site/components/JsonLd.tsx`. Root layout emits `Organization`
+    + `WebSite`. Per-page: `Service` on each `/services/*`, `ItemList` +
+    `FAQPage` on `/pricing`, `Person` on `/about`.
+  - **Per-page OG images**: shared `@apps/site/lib/og.tsx` renderer +
+    routes for `/services/{private-ai-deployment,agent-governance,
+    mcp-engineering}`, `/pricing`, `/economy`, `/timeline`, `/about`.
+    Consistent lavender-on-aged-paper design language.
+  - `next build` clean: 27 routes total, 7 new OG routes dynamic.
+  - **Hetzner SSH blocker**: deprioritized after burning the day on
+    agent/authorized_keys/socket-activation loops. Deploy tracks
+    documented in session recap; tomorrow's plan is a single clean
+    web-console-only bootstrap script (no port change, no hardening
+    until key auth is proven end-to-end).
 
 ---
 
@@ -121,8 +166,8 @@ for the repo strategy context).
 
 | # | Task | Est. | Blocker |
 |---|---|---|---|
-| 1 | Contact form backend (currently static; `submit_contact_request` tool writes to KV but `/contact` form is inert) | 1 hr | None |
-| 2 | `/admin` middleware — hashed password gate | 30 min | None |
+| ~~1~~ | ~~Contact form backend~~ — **done 2026-04-19**: `@apps/site/app/api/contact/route.ts` + `@apps/site/components/ContactForm.tsx` + shared store in `@apps/site/lib/contact.ts`. Submissions land in the same KV feed as the Librarian tool and show up on `/admin`. | — | — |
+| ~~2~~ | ~~`/admin` middleware — hashed password gate~~ — **done 2026-04-19**: `@apps/site/middleware.ts` Basic Auth, SHA-256 `ADMIN_PASSWORD_HASH`. | — | — |
 | 3 | Resend integration → email to Lucas when `submit_contact_request` fires | 1 hr | Resend account |
 | 4 | Sitemap + robots.txt + OG images for all pages | 2 hr | None |
 | 5 | Analytics: Plausible or self-hosted Umami | 1 hr | Decision + account |
@@ -190,12 +235,25 @@ cd6654a docs: lock decisions for browser-first build + monorepo-vs-multirepo ana
 
 ## What to do in the next session
 
-Order matters. Don't jump ahead.
+Tomorrow, fresh head, in this order:
 
-1. **Lucas**: Create OpenRouter account + Upstash account + Stripe payment links + private GitHub repo + confirm Hetzner SSH works.
-2. **Cascade**: Read `@docs/deploy/HETZNER_DEPLOY.md` and walk Lucas through it step by step. Resolve any VPS-specific surprises.
-3. **Once site is live on Hetzner**: Enable real OpenRouter key, do a real conversation with the Librarian, verify Karma ledger fills, verify budget tracker ticks up.
-4. **Then**: Contact form backend + admin middleware (small work items 1 + 2 above).
-5. **Then**: Start PWA Phase 1 (the big Rust WASM build).
+1. **Hetzner — one clean bootstrap** via web console only.
+   Cascade to prep a single idempotent script Lucas pastes into the Hetzner
+   web console. Policy: **no port change, no password disable, no fail2ban**
+   until we've verified key-auth login from the laptop. Each step gets
+   verified before the next is attempted.
+2. **DNS**: point `whitemagic.dev` at Hetzner IP via Cloudflare (orange-cloud
+   proxy on). Wait for propagation.
+3. **Site up on HTTP first** (Caddy with `:80` host block, no TLS yet) →
+   verify `curl http://whitemagic.dev` returns 200.
+4. **TLS**: flip Caddy to `whitemagic.dev { reverse_proxy … }` and let it
+   auto-provision via ACME.
+5. **Real keys land**: OpenRouter + Upstash + Resend + admin hash + Stripe
+   payment links → paste into `/srv/whitemagic-site/.env.production.local`,
+   restart systemd unit, verify `/admin` shows every card green.
+6. **Then and only then**: SSH hardening pass (disable root, disable
+   password auth, optionally move port).
 
-If the next session is shorter (< 1 hr), good candidates: contact form backend, admin middleware, blog post scaffolding, sitemap generation — none of these depend on accounts being set up.
+If tomorrow's session is short (< 1 hr), good candidates that need zero
+VPS: first `/writing` blog post, Resend domain verification prep,
+expand Librarian corpus with gratitude-architecture depth.

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { Prose } from "@/components/Prose";
 import { ArrowRight, Check } from "lucide-react";
+import { JsonLd } from "@/components/JsonLd";
+import { serviceLd } from "@/lib/jsonld";
 
 export const metadata = {
   title: "Private AI Deployment — WhiteMagic Labs",
@@ -31,6 +33,7 @@ const GOOD_FIT = [
 export default function Page() {
   return (
     <>
+      <JsonLd data={serviceLd("private-ai-deployment")} />
       <PageHeader
         eyebrow="Service · Private AI Deployment"
         title="AI that lives inside your walls."

@@ -11,7 +11,25 @@ the 12-month horizon. Strategic, not a sprint log.
 
 - **Session-to-session state**: `@docs/SESSION_STATE.md`
 - **Strategic scoping**: `@apps/SCOPING_BROWSER_FIRST_DECIDED.md`
+- **Public agent-economy thesis**: `@docs/AGENT_FIRST_ECONOMICS.md`
+- **Private agent-economy strategy + Labs offerings + financials**: `@docs/strategy_manifestos/STRATEGY_AGENT_ECONOMY.md`
 - **This doc**: the 12-month direction.
+
+## Post-launch strategic priority (April 2026)
+
+After site launch, the clear next objective is **positioning WhiteMagic as
+the governance-first, OSS-reference agent-economy platform**. Concrete
+work, prioritized:
+
+1. ~~`/economy` page + 8th Librarian platform capability~~ — **done 2026-04-19**: `@apps/site/app/economy/page.tsx` + `gratitude-architecture` capability in `@apps/site/lib/data/platform.ts`; discoverable via header nav, sitemap, Librarian corpus, and `get_platform_capability` tool.
+2. Publish `.well-known/agent-economy.json` on whitemagic.dev
+3. Publish one essay — "Gratitude-grade x402: why voluntary works where forced bounties failed"
+4. DID-bind `agent_id` in the gratitude ledger (v15.2.0 partial)
+5. Make `whitemagic.tip` x402-native (HTTP 402, not payment link)
+6. File voluntary-tier-x402 RFC against the coinbase/x402 repo
+7. Package and market the Agent Economy Readiness Assessment ($15–30K fixed-fee SKU — see strategy doc §7.1)
+
+Full detail and financial scenarios: `@docs/strategy_manifestos/STRATEGY_AGENT_ECONOMY.md`.
 
 ---
 
@@ -23,7 +41,7 @@ The site cannot go public without these.
 |---|---|---|---|
 | 0.1 | OpenRouter account + API key in env | Lucas | 5 min |
 | 0.2 | Upstash Redis free tier + REST credentials | Lucas | 5 min |
-| 0.3 | Two Stripe payment links (Office Hours $250, Architecture Review $2,500) | Lucas | 20 min |
+| 0.3 | Two Stripe payment links (Office Hours $700, Architecture Review $7,000) | Lucas | 20 min |
 | 0.4 | Private GitHub repo for deploy source | Lucas | 5 min |
 | 0.5 | Hetzner VPS provisioned + domain DNS via Cloudflare | Lucas | 30 min |
 | 0.6 | First deploy to Hetzner — follow `@docs/deploy/HETZNER_DEPLOY.md` | Together | 3–4 hr |

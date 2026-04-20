@@ -35,6 +35,13 @@ public/             Static assets (video, fonts, og images)
 
 ## Phase
 
-Phase 0 scaffold — minimal landing page. Real copy, service pages, and
-case studies land in Phase 1. See `../whitemagic-frontend/PHASE_0_PLAN.md`
-for the full plan.
+Phase 0–1 complete (scaffold + real pages). Phase L.2 complete
+(site-wide tool-using Librarian + public Karma ledger). See
+`PHASE_ROADMAP.md` in this directory and `@docs/SESSION_STATE.md`
+at the repo root for current state.
+
+## Deploy
+
+Self-hosted on Hetzner (Next.js `output: 'standalone'` → systemd →
+Caddy → Cloudflare). Walkthrough: `@docs/deploy/HETZNER_DEPLOY.md`.
+Rationale: `@docs/architecture/INFRASTRUCTURE_DECISION.md`.

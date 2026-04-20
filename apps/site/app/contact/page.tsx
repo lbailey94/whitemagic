@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
+import { ContactForm } from "@/components/ContactForm";
 import { Mail, Calendar, Github } from "lucide-react";
 
 export const metadata = {
@@ -37,6 +38,17 @@ export default function ContactPage() {
             cta={EMAIL}
             href={`mailto:${EMAIL}`}
           />
+        </div>
+
+        <div className="mx-auto mt-10 max-w-3xl">
+          <h2 className="mb-1 font-head text-2xl font-semibold text-ink">
+            Or send a message
+          </h2>
+          <p className="mb-6 text-sm text-muted">
+            Plain form. Goes to the same inbox, no ceremony. Lucas replies
+            within two business days.
+          </p>
+          <ContactForm />
         </div>
 
         <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border bg-surface-alt p-8">

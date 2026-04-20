@@ -5,6 +5,8 @@ import { Footer } from "@/components/Footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRain } from "@/components/MatrixRain";
 import { FloatingLibrarian } from "@/components/FloatingLibrarian";
+import { JsonLd } from "@/components/JsonLd";
+import { organizationLd, websiteLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "WhiteMagic Labs — Private AI Deployment",
@@ -40,6 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <JsonLd data={[organizationLd(), websiteLd()]} />
         <ThemeProvider>
           <MatrixRain />
           <div className="relative z-10">

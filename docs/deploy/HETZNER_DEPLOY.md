@@ -159,11 +159,23 @@ LIBRARIAN_MONTHLY_CAP_USD=25
 NEXT_PUBLIC_STRIPE_OFFICE_HOURS_URL=https://buy.stripe.com/REDACTED
 NEXT_PUBLIC_STRIPE_ARCHITECTURE_REVIEW_URL=https://buy.stripe.com/REDACTED
 
-# ── Admin (future) ─────────────────────────────
-# ADMIN_PASSWORD_HASH=            # once middleware lands
+# ── Admin (Basic Auth gate on /admin) ──────────
+# SHA-256 hex of the shared admin password. Generate with:
+#   node -e "require('crypto').createHash('sha256').update('YOUR_PASSWORD').digest('hex')"
+# or:
+#   printf '%s' 'YOUR_PASSWORD' | sha256sum | cut -d' ' -f1
+# Leave blank in dev to skip the gate. Username is "admin" by default
+# (override with ADMIN_USER if desired).
+ADMIN_PASSWORD_HASH=REDACTED
+# ADMIN_USER=admin
 
-# ── Resend (future) ────────────────────────────
-# RESEND_API_KEY=
+# ── Resend (contact-form email notifications) ──
+# Leave blank to disable emails; submissions still land in /admin feed.
+# Get key: https://resend.com → API Keys
+# RESEND_API_KEY=re_REDACTED
+# CONTACT_NOTIFY_EMAIL=lucas@example.com
+# Optional sender; defaults to Resend's onboarding address until domain verified:
+# CONTACT_FROM_EMAIL="WhiteMagic <notifications@whitemagic.dev>"
 EOF
 chmod 600 /srv/whitemagic-site/.env.production.local
 ```

@@ -5,6 +5,8 @@ import { RATE_LIMITS_PUBLIC } from "@/lib/librarian/rate-limit";
 import { DEFAULT_MODEL } from "@/lib/librarian/llm";
 import { recentKarma, karmaStats } from "@/lib/librarian/karma";
 import { TOOL_NAMES } from "@/lib/librarian/tools";
+import { listRecentContactRequests } from "@/lib/contact";
+import { isNotifyConfigured } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -16,21 +18,24 @@ export const metadata = {
 /**
  * Admin / Librarian monitoring.
  *
- * Currently un-gated; exposes only aggregate counters and ledger entries
- * (no conversation content, no visitor IPs, no PII). TODO: add Vercel
- * middleware + hashed ADMIN_PASSWORD before the site goes fully public.
+ * Gated by Basic-Auth middleware (`middleware.ts`) when
+ * `ADMIN_PASSWORD_HASH` is set. Exposes only aggregate counters, ledger
+ * entries, and contact submissions — no conversation content.
  */
 export default async function AdminPage() {
-  const [budget, karma, stats] = await Promise.all([
+  const [budget, karma, stats, contacts] = await Promise.all([
     getBudget(),
     recentKarma(50),
     karmaStats(),
+    listRecentContactRequests(25),
   ]);
+  const adminGated = !!process.env.ADMIN_PASSWORD_HASH;
   const kvConfigured = !!(
     process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
   );
   const openrouterConfigured = !!process.env.OPENROUTER_API_KEY;
   const killSwitch = process.env.LIBRARIAN_DISABLED === "1";
+  const notifyConfigured = isNotifyConfigured();
 
   return (
     <>
@@ -87,6 +92,26 @@ export default async function AdminPage() {
             value={`${RATE_LIMITS_PUBLIC.dailyPerIp} / ${RATE_LIMITS_PUBLIC.perSession}`}
             hint="per IP / per session"
             tone="info"
+          />
+          <StatCard
+            label="Email notifications"
+            value={notifyConfigured ? "Configured (Resend)" : "Disabled"}
+            hint={
+              notifyConfigured
+                ? "Contact submissions emailed on arrival"
+                : "Set RESEND_API_KEY + CONTACT_NOTIFY_EMAIL to enable"
+            }
+            tone={notifyConfigured ? "ok" : "warn"}
+          />
+          <StatCard
+            label="Admin gate"
+            value={adminGated ? "Basic Auth active" : "Un-gated (dev)"}
+            hint={
+              adminGated
+                ? "ADMIN_PASSWORD_HASH set; middleware enforcing"
+                : "Set ADMIN_PASSWORD_HASH in env to enable"
+            }
+            tone={adminGated ? "ok" : "warn"}
           />
         </div>
 
@@ -164,6 +189,67 @@ export default async function AdminPage() {
                     </td>
                     <td className="px-3 py-2 font-mono text-[10px] text-muted">
                       {e.sessionIdHash ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <h2 className="mb-4 mt-12 font-head text-xl font-semibold text-ink">
+          Contact submissions · last {contacts.length}
+        </h2>
+        <p className="mb-3 text-sm text-muted">
+          Unified feed of messages from both the{" "}
+          <code className="font-mono text-xs">/contact</code> form and the
+          Librarian&apos;s <code className="font-mono text-xs">submit_contact_request</code>{" "}
+          tool. 90-day retention.
+        </p>
+        {contacts.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border-light py-8 text-center text-sm text-muted">
+            No contact submissions yet.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-border-light">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-alt text-left text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="px-3 py-2 font-medium">When</th>
+                  <th className="px-3 py-2 font-medium">Source</th>
+                  <th className="px-3 py-2 font-medium">Email</th>
+                  <th className="px-3 py-2 font-medium">Topic</th>
+                  <th className="px-3 py-2 font-medium">Summary</th>
+                  <th className="px-3 py-2 font-medium">Ref</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contacts.map((c) => (
+                  <tr
+                    key={c.reference}
+                    className="border-t border-border-light align-top"
+                  >
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
+                      {timeAgo(c.timestamp)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                          c.source === "librarian"
+                            ? "bg-lavender/10 text-lavender"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                        }`}
+                      >
+                        {c.source}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs">{c.email}</td>
+                    <td className="px-3 py-2 text-xs">{c.topic}</td>
+                    <td className="max-w-md px-3 py-2 text-xs text-muted">
+                      {c.summary}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
+                      {c.reference}
                     </td>
                   </tr>
                 ))}

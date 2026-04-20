@@ -6,7 +6,7 @@ User-facing applications built on top of the WhiteMagic platform.
 
 | Path | What it is | Status |
 |---|---|---|
-| `apps/site/` | WhiteMagic Labs consultancy site (whitemagic.dev) — Next.js 15 + Tailwind + MDX, deployed on Vercel. | Active, shipping April 2026. |
+| `apps/site/` | WhiteMagic Labs consultancy site (whitemagic.dev) — Next.js 15 + Tailwind + MDX, self-hosted on Hetzner (Caddy + systemd, Cloudflare in front). | Active, shipping April 2026. |
 
 ## Relationship to the core platform
 
@@ -28,9 +28,14 @@ with siblings.
 
 ## Deployment
 
-`apps/site/` deploys from this monorepo to Vercel. The Vercel project
-is configured with **Root Directory: `apps/site`** and the Next.js
-framework preset. DNS: `whitemagic.dev` → Vercel.
+`apps/site/` self-hosts on a Hetzner VPS (Ubuntu 24.04, CX22-class).
+Next.js 15 runs in `output: 'standalone'` mode under `systemd`, with
+Caddy providing TLS + reverse proxy and Cloudflare in front for DNS +
+DDoS. Deploy source is the private `whitemagic-site-private` repo
+(subtree-synced from the monorepo); pushes to `main` trigger a
+GitHub Actions SSH deploy. Full walkthrough in
+`@docs/deploy/HETZNER_DEPLOY.md`; rationale in
+`@docs/architecture/INFRASTRUCTURE_DECISION.md`.
 
 ## History
 

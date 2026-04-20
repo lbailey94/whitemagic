@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import { JsonLd } from "@/components/JsonLd";
+import { serviceLd } from "@/lib/jsonld";
 import { Prose } from "@/components/Prose";
 import { ArrowRight, Check } from "lucide-react";
 
@@ -38,6 +40,7 @@ const FORMATS = [
 export default function Page() {
   return (
     <>
+      <JsonLd data={serviceLd("mcp-engineering")} />
       <PageHeader
         eyebrow="Service · MCP Engineering"
         title="Production-grade MCP, built right the first time."

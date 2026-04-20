@@ -44,8 +44,8 @@ Get the site in front of real buyers. Small, concrete, high-leverage.
 | 2.1 | Set up Cal.com (free tier) — 30-min "Discovery call" event, pre-call form | 🎯 | 30 min |
 | 2.2 | Wire real booking URL into `app/contact/page.tsx` (replace TODO) | 🎯 | 5 min |
 | 2.3 | Confirm email: `whitemagicdev@proton.me` or a new `lucas@whitemagic.dev` alias | 🎯 | 15 min |
-| 2.4 | Deploy to Vercel — connect GitHub repo, one-click deploy | 🧱 | 20 min |
-| 2.5 | DNS: point `whitemagic.dev` at Vercel (away from Squarespace) | 🧱 | 30 min, then 1–24 h propagation |
+| 2.4 | Deploy to Hetzner — follow `@docs/deploy/HETZNER_DEPLOY.md` (Caddy + systemd + Cloudflare) | 🧱 | 3–4 h first time |
+| 2.5 | DNS: point `whitemagic.dev` at Cloudflare → Hetzner VPS (away from Squarespace) | 🧱 | 30 min, then 1–24 h propagation |
 | 2.6 | Keep the old Squarespace page up at `old.whitemagic.dev` for 30 days as a safety net | 🧱 | 15 min |
 | 2.7 | OG image — a simple 1200×630 PNG with wordmark + tagline, served from `/og.png` | 🎨 | 30 min |
 | 2.8 | `robots.txt` + `sitemap.xml` — Next.js native helpers | 🧱 | 20 min |
@@ -54,7 +54,12 @@ Get the site in front of real buyers. Small, concrete, high-leverage.
 
 **Exit criterion**: You can paste `https://whitemagic.dev` into a cold email
 to an MCP contract, a law-firm CTO, or a LinkedIn DM — and it loads a
-polished site with a working booking link.
+polished site (served from Hetzner, fronted by Cloudflare) with a working
+Librarian + booking link.
+
+**Infrastructure note (April 19, 2026)**: original plan assumed Vercel. Pivoted
+to self-hosted Hetzner the same day Vercel disclosed its April 2026 security
+incident — see `@docs/architecture/INFRASTRUCTURE_DECISION.md` for rationale.
 
 ---
 
