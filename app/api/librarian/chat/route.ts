@@ -1,10 +1,14 @@
 /**
- * POST /api/librarian/chat
+ * POST /api/librarian/chat — streaming chat with tool execution loop.
  *
- * Streaming chat endpoint for the Librarian. Pipeline:
- *   kill switch → dharma → rate limit → monthly budget → LLM → record spend
+ * Pipeline:
+ *   kill switch → dharma(user msg) → rate limit → monthly budget
+ *   → loop up to MAX_ITERS:
+ *       streamLLM → if tool_calls: execute, feed back, continue
+ *                 → else: done, flush
+ *   → record spend + karma
  *
- * Returns newline-delimited JSON (each line is a StreamChunk).
+ * Output: newline-delimited JSON chunks (StreamChunk format).
  */
 
 import type { NextRequest } from "next/server";
@@ -12,28 +16,31 @@ import type { ChatMessage, ChatRequest, StreamChunk } from "@/lib/librarian/type
 import { checkDharma } from "@/lib/librarian/dharma";
 import { checkRateLimit } from "@/lib/librarian/rate-limit";
 import { getBudget, recordSpend } from "@/lib/librarian/budget";
-import { streamLLM } from "@/lib/librarian/llm";
+import { streamLLM, type PendingToolCall } from "@/lib/librarian/llm";
 import { LIBRARIAN_CONFIG } from "@/lib/librarian/persona";
 import { serializeCorpus } from "@/lib/librarian/corpus";
+import { TOOL_SCHEMAS, executeTool } from "@/lib/librarian/tools";
+import { recordKarma } from "@/lib/librarian/karma";
 
-export const runtime = "nodejs"; // budget/rate-limit use fetch + KV; nodejs is safest for streams
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const MAX_TOOL_ITERATIONS = 3;
+
 function clientIp(req: NextRequest): string {
-  // Vercel / Cloudflare forward the real IP here.
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0].trim();
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-function jsonLine(chunk: StreamChunk): string {
-  return JSON.stringify(chunk) + "\n";
+function jsonLine(chunk: StreamChunk): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(chunk) + "\n");
 }
 
 function refusalStream(chunk: StreamChunk): Response {
   const body = new ReadableStream({
     start(controller) {
-      controller.enqueue(new TextEncoder().encode(jsonLine(chunk)));
+      controller.enqueue(jsonLine(chunk));
       controller.close();
     },
   });
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return new Response("No user message", { status: 400 });
   }
 
-  // 2. Dharma
+  // 2. Dharma on last user message
   const dharma = checkDharma(lastUser.content);
   if (!dharma.allow) {
     return refusalStream({
@@ -102,7 +109,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
-  // 4. Monthly budget check
+  // 4. Monthly budget
   const budget = await getBudget();
   if (budget.exceeded) {
     return refusalStream({
@@ -114,44 +121,171 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
-  // 5. Build LLM request
-  const systemWithCorpus: ChatMessage = {
+  // 5. Build system prompt with corpus + optional page context
+  const contextLine = body.pageContext?.path
+    ? `\n\n# Visitor context\nThe visitor is currently on \`${body.pageContext.path}\`${body.pageContext.title ? ` (page: "${body.pageContext.title}")` : ""}. When relevant, tailor your answer to what they're likely looking at.`
+    : "";
+  const systemMsg: ChatMessage = {
     role: "system",
-    content: `${LIBRARIAN_CONFIG.systemPrompt}\n\n# Corpus\n\n${serializeCorpus()}`,
+    content: `${LIBRARIAN_CONFIG.systemPrompt}\n\n# Corpus\n\n${serializeCorpus()}${contextLine}`,
   };
-  const llmMessages: ChatMessage[] = [systemWithCorpus, ...messages];
+  // Conversation state for the tool loop — starts with system + user turns.
+  const conversation: ChatMessage[] = [systemMsg, ...messages];
 
-  // 6. Stream LLM → client
-  const encoder = new TextEncoder();
+  const toolCtx = {
+    sessionId: body.sessionId,
+    pageContext: body.pageContext,
+    ip,
+  };
+
+  // 6. Stream with tool-execution loop
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let totalCost = 0;
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      let lastModel = "";
+
       try {
-        for await (const chunk of streamLLM({
-          messages: llmMessages,
-          maxTokens: LIBRARIAN_CONFIG.maxTokensPerResponse,
-          temperature: LIBRARIAN_CONFIG.temperature,
-        })) {
-          controller.enqueue(encoder.encode(jsonLine(chunk)));
-          if (chunk.done) {
-            // Record spend after the stream completes. Fire and forget —
-            // a failure here shouldn't fail the user's response.
-            recordSpend(chunk.done.costUsd).catch((e) => {
-              console.error("[librarian] recordSpend failed:", e);
-            });
+        for (let iter = 0; iter < MAX_TOOL_ITERATIONS + 1; iter++) {
+          const pendingToolCalls: PendingToolCall[] = [];
+          let finishedWithTools = false;
+
+          for await (const chunk of streamLLM({
+            messages: conversation,
+            maxTokens: LIBRARIAN_CONFIG.maxTokensPerResponse,
+            temperature: LIBRARIAN_CONFIG.temperature,
+            tools: iter < MAX_TOOL_ITERATIONS ? TOOL_SCHEMAS : undefined,
+          })) {
+            if (chunk.kind === "delta") {
+              controller.enqueue(jsonLine({ delta: chunk.text }));
+            } else if (chunk.kind === "tool_calls") {
+              pendingToolCalls.push(...chunk.calls);
+              finishedWithTools = true;
+            } else if (chunk.kind === "error") {
+              controller.enqueue(
+                jsonLine({
+                  refusal: {
+                    reason: "internal_error",
+                    message: chunk.message,
+                  },
+                }),
+              );
+              controller.close();
+              return;
+            } else if (chunk.kind === "done") {
+              totalInputTokens += chunk.inputTokens;
+              totalOutputTokens += chunk.outputTokens;
+              totalCost += chunk.costUsd;
+              lastModel = chunk.model;
+            }
           }
+
+          if (!finishedWithTools || pendingToolCalls.length === 0) {
+            break; // natural end — LLM produced a final answer
+          }
+
+          // Execute tools, emit chunks, and append to conversation.
+          const assistantToolMsg: ChatMessage = {
+            role: "assistant",
+            content: "",
+          };
+          // Attach tool_calls payload for the provider on the next turn.
+          (
+            assistantToolMsg as unknown as {
+              tool_calls: unknown[];
+            }
+          ).tool_calls = pendingToolCalls.map((c) => ({
+            id: c.id,
+            type: "function",
+            function: { name: c.name, arguments: c.arguments },
+          }));
+          conversation.push(assistantToolMsg);
+
+          for (const call of pendingToolCalls) {
+            let parsedArgs: Record<string, unknown> = {};
+            try {
+              parsedArgs = call.arguments ? JSON.parse(call.arguments) : {};
+            } catch {
+              parsedArgs = {};
+            }
+            const argsPreview = JSON.stringify(parsedArgs).slice(0, 120);
+
+            controller.enqueue(
+              jsonLine({
+                tool_call: {
+                  id: call.id,
+                  name: call.name,
+                  argsPreview,
+                },
+              }),
+            );
+
+            const t0 = Date.now();
+            const result = await executeTool(call.name, parsedArgs, toolCtx);
+            const durationMs = Date.now() - t0;
+
+            controller.enqueue(
+              jsonLine({
+                tool_result: {
+                  callId: call.id,
+                  name: call.name,
+                  result,
+                },
+              }),
+            );
+
+            // Append tool result as a "tool" role message for the LLM's next turn.
+            const toolMsg = {
+              role: "tool" as const,
+              content: JSON.stringify(result),
+              tool_call_id: call.id,
+            };
+            conversation.push(toolMsg as unknown as ChatMessage);
+
+            // Record karma (fire-and-forget)
+            recordKarma({
+              tool: call.name,
+              argsPreview,
+              resultKind: result.kind,
+              durationMs,
+              dharmaOk: true,
+              sessionId: body.sessionId,
+            }).catch((e) =>
+              console.error("[librarian] recordKarma failed:", e),
+            );
+          }
+          // Loop continues — LLM gets the tool results and can produce
+          // its final natural-language answer (or more tool calls).
+        }
+
+        // Emit final done chunk
+        controller.enqueue(
+          jsonLine({
+            done: {
+              inputTokens: totalInputTokens,
+              outputTokens: totalOutputTokens,
+              costUsd: totalCost,
+              model: lastModel,
+            },
+          }),
+        );
+
+        if (totalCost > 0) {
+          recordSpend(totalCost).catch((e) =>
+            console.error("[librarian] recordSpend failed:", e),
+          );
         }
       } catch (e) {
         console.error("[librarian] stream error:", e);
         controller.enqueue(
-          encoder.encode(
-            jsonLine({
-              refusal: {
-                reason: "internal_error",
-                message:
-                  "Something went wrong on my end. Please try again, or reach Lucas at /contact.",
-              },
-            }),
-          ),
+          jsonLine({
+            refusal: {
+              reason: "internal_error",
+              message:
+                "Something went wrong on my end. Please try again, or reach Lucas at /contact.",
+            },
+          }),
         );
       } finally {
         controller.close();

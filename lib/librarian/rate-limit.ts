@@ -94,23 +94,35 @@ class UpstashKV implements KVClient {
   }
 }
 
-let _kv: KVClient | null = null;
+/**
+ * Hoist the KV singleton onto globalThis so every route handler shares
+ * the same instance. In Next.js dev mode, route modules can be loaded
+ * into separate module graphs (each HMR boundary compiles independently),
+ * which would otherwise give every route its own empty in-memory KV.
+ * In production this is a no-op — a single shared singleton either way.
+ */
+interface GlobalWithKV {
+  __librarianKV?: KVClient;
+}
+const globalForKV = globalThis as GlobalWithKV;
 
 export function getKV(): KVClient {
-  if (_kv) return _kv;
+  if (globalForKV.__librarianKV) return globalForKV.__librarianKV;
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  let instance: KVClient;
   if (url && token) {
-    _kv = new UpstashKV(url, token);
+    instance = new UpstashKV(url, token);
   } else {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
         "[librarian/rate-limit] UPSTASH_* env vars not set; falling back to in-memory KV (dev only).",
       );
     }
-    _kv = new InMemoryKV();
+    instance = new InMemoryKV();
   }
-  return _kv;
+  globalForKV.__librarianKV = instance;
+  return instance;
 }
 
 function todayKey(): string {

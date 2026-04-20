@@ -17,11 +17,27 @@ export interface ChatRequest {
   messages: ChatMessage[];
   /** Optional session id for rate limiting; generated client-side. */
   sessionId?: string;
+  /** Optional page context so the Librarian knows where the visitor is. */
+  pageContext?: { path: string; title?: string };
 }
 
 export interface StreamChunk {
   /** Incremental text delta from the LLM. */
   delta?: string;
+  /** Emitted when a tool call is issued by the LLM (before execution). */
+  tool_call?: {
+    id: string;
+    name: string;
+    argsPreview: string;
+  };
+  /** Emitted when a tool call completes, with the structured result. */
+  tool_result?: {
+    callId: string;
+    name: string;
+    // Structured result — see lib/librarian/tools.ts ToolResult.
+    // Typed as unknown here to avoid circular import; the client narrows.
+    result: unknown;
+  };
   /** Emitted when the stream ends, with usage stats. */
   done?: {
     inputTokens: number;
