@@ -1,12 +1,11 @@
 import { PageHeader } from "@/components/PageHeader";
 import { getBudget } from "@/lib/librarian/budget";
-import {
-  DHARMA_RULES_PUBLIC,
-} from "@/lib/librarian/dharma";
+import { DHARMA_RULES_PUBLIC } from "@/lib/librarian/dharma";
 import { RATE_LIMITS_PUBLIC } from "@/lib/librarian/rate-limit";
 import { DEFAULT_MODEL } from "@/lib/librarian/llm";
+import { recentKarma, karmaStats } from "@/lib/librarian/karma";
+import { TOOL_NAMES } from "@/lib/librarian/tools";
 
-// Force dynamic rendering so the budget reads live from KV on each request.
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -17,13 +16,16 @@ export const metadata = {
 /**
  * Admin / Librarian monitoring.
  *
- * TODO before making this properly gated: add Vercel middleware checking
- * a hashed ADMIN_PASSWORD env var. Currently this page is not secret, but
- * it also exposes only aggregate counters — no conversation content, no
- * visitor IPs — so drive-by discovery is low-risk.
+ * Currently un-gated; exposes only aggregate counters and ledger entries
+ * (no conversation content, no visitor IPs, no PII). TODO: add Vercel
+ * middleware + hashed ADMIN_PASSWORD before the site goes fully public.
  */
 export default async function AdminPage() {
-  const budget = await getBudget();
+  const [budget, karma, stats] = await Promise.all([
+    getBudget(),
+    recentKarma(50),
+    karmaStats(),
+  ]);
   const kvConfigured = !!(
     process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
   );
@@ -35,7 +37,7 @@ export default async function AdminPage() {
       <PageHeader
         eyebrow="Admin"
         title="Librarian status."
-        lede="Monthly budget, guardrails, and environment readiness. Aggregate counters only — no conversation content is recorded."
+        lede="Monthly budget, guardrails, environment, and the public Karma ledger — every tool the Librarian has invoked. Aggregate only; no conversation content is recorded."
       />
 
       <section className="container-site py-10">
@@ -61,7 +63,11 @@ export default async function AdminPage() {
           <StatCard
             label="Upstash KV"
             value={kvConfigured ? "Configured" : "In-memory fallback"}
-            hint={kvConfigured ? "Production-ready" : "Rate limits reset on restart"}
+            hint={
+              kvConfigured
+                ? "Production-ready"
+                : "Rate limits reset on restart"
+            }
             tone={kvConfigured ? "ok" : "warn"}
           />
           <StatCard
@@ -71,18 +77,100 @@ export default async function AdminPage() {
             tone={killSwitch ? "warn" : "ok"}
           />
           <StatCard
-            label="Daily IP limit"
-            value={`${RATE_LIMITS_PUBLIC.dailyPerIp} msgs`}
-            hint="Resets at UTC midnight"
+            label="Tool calls · last hour"
+            value={String(stats.lastHour)}
+            hint={`${stats.total} recorded total`}
             tone="info"
           />
           <StatCard
-            label="Session limit"
-            value={`${RATE_LIMITS_PUBLIC.perSession} msgs`}
-            hint="2-hour window"
+            label="Daily / session limits"
+            value={`${RATE_LIMITS_PUBLIC.dailyPerIp} / ${RATE_LIMITS_PUBLIC.perSession}`}
+            hint="per IP / per session"
             tone="info"
           />
         </div>
+
+        <h2 className="mb-4 mt-12 font-head text-xl font-semibold text-ink">
+          Tools the Librarian can invoke ({TOOL_NAMES.length})
+        </h2>
+        <div className="mb-10 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {TOOL_NAMES.map((name) => (
+            <div
+              key={name}
+              className="rounded border border-border-light/60 px-3 py-2"
+            >
+              <p className="font-mono text-xs text-fg">{name}</p>
+              <p className="mt-0.5 font-mono text-[10px] text-muted">
+                {stats.byTool[name] ?? 0} invocation
+                {(stats.byTool[name] ?? 0) === 1 ? "" : "s"} recorded
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <h2 className="mb-4 font-head text-xl font-semibold text-ink">
+          Karma Ledger · last 50 tool calls
+        </h2>
+        <p className="mb-3 text-sm text-muted">
+          Every tool invocation is recorded here with tool name, args preview
+          (first 120 chars), result kind, duration, and a session fingerprint
+          (not session id). Mirrors the Karma Ledger primitive in WhiteMagic
+          core — eating our own dogfood in public.
+        </p>
+        {karma.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border-light py-8 text-center text-sm text-muted">
+            No tool calls recorded yet. Ask the Librarian something on
+            /librarian to populate this.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-border-light">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-alt text-left text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="px-3 py-2 font-medium">When</th>
+                  <th className="px-3 py-2 font-medium">Tool</th>
+                  <th className="px-3 py-2 font-medium">Args (preview)</th>
+                  <th className="px-3 py-2 font-medium">Result kind</th>
+                  <th className="px-3 py-2 font-medium">ms</th>
+                  <th className="px-3 py-2 font-medium">Session</th>
+                </tr>
+              </thead>
+              <tbody>
+                {karma.map((e) => (
+                  <tr
+                    key={e.id}
+                    className="border-t border-border-light align-top"
+                  >
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
+                      {timeAgo(e.timestamp)}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs">{e.tool}</td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
+                      {e.argsPreview || "{}"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                          e.resultKind === "error"
+                            ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200"
+                            : "bg-lavender/10 text-lavender"
+                        }`}
+                      >
+                        {e.resultKind}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
+                      {e.durationMs}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-muted">
+                      {e.sessionIdHash ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <h2 className="mb-4 mt-12 font-head text-xl font-semibold text-ink">
           Dharma rules on visitor input ({DHARMA_RULES_PUBLIC.length})
@@ -120,6 +208,8 @@ export default async function AdminPage() {
   );
 }
 
+type StatTone = "ok" | "warn" | "danger" | "info";
+
 function StatCard({
   label,
   value,
@@ -129,9 +219,9 @@ function StatCard({
   label: string;
   value: string;
   hint: string;
-  tone: "ok" | "warn" | "danger" | "info";
+  tone: StatTone;
 }) {
-  const toneClasses: Record<typeof tone, string> = {
+  const toneClasses: Record<StatTone, string> = {
     ok: "border-emerald-300/40 bg-emerald-50/30 dark:bg-emerald-950/20",
     warn: "border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/20",
     danger: "border-red-300/40 bg-red-50/30 dark:bg-red-950/20",
@@ -146,4 +236,16 @@ function StatCard({
       <p className="text-xs text-muted">{hint}</p>
     </div>
   );
+}
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
 }

@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRain } from "@/components/MatrixRain";
+import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 
 export const metadata: Metadata = {
   title: "WhiteMagic Labs — Private AI Deployment",
@@ -46,6 +47,7 @@ export default function RootLayout({
             <main>{children}</main>
             <Footer />
           </div>
+          <FloatingLibrarian />
         </ThemeProvider>
       </body>
     </html>
