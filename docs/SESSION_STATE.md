@@ -25,6 +25,10 @@ each session. Preserve the "Decisions log" and append to it.
   financial scenarios, and Labs offerings beyond generic consulting:
   `@docs/strategy_manifestos/STRATEGY_AGENT_ECONOMY.md`. `ROADMAP.md`
   updated with post-launch priorities.
+- **Agent-first lab strategy** (2026-04-20): two-track infra
+  recommendation (Railway face + NixOS showpiece), six-island
+  compounding graph, concrete 30-day plan —
+  `@docs/strategy_manifestos/AGENT_FIRST_LAB_STRATEGY.md`.
 - **Late tonight** (2026-04-19, ~23:40 UTC-4):
   - Reconciled Vercel → Hetzner across `apps/README.md`,
     `apps/site/PHASE_ROADMAP.md`, `apps/site/README.md`,
