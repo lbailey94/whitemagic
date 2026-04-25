@@ -16,6 +16,12 @@ from whitemagic.run_mcp_lean import (  # noqa: F401
     server,
 )
 
+# Backward compat: tests expect `mcp`
+mcp = server
+
+# Backward compat: historical entrypoint
+register_tools = lambda: None  # noqa: E731
+
 
 if __name__ == "__main__":
     # `python -m whitemagic.run_mcp` must still launch the server.

@@ -355,11 +355,13 @@ def get_julia_resonance(impulse: float = 0.5) -> float:
         return 0.0
 
 def get_rust_acceleration(query_vec: list) -> list:
-    """Use Rust SIMD for rapid candidate selection (stub for high-volume fusion)."""
-    if find_spec("whitemagic_rs") is None:
-        return []
-    # In a real scenario, this would call whitemagic_rs.search(query_vec)
-    # For fusion, we just check presence
+    """Use Rust SIMD for rapid candidate selection if available."""
+    try:
+        import whitemagic_rs as rs
+        if hasattr(rs, "search"):
+            return rs.search(query_vec)
+    except Exception:
+        pass
     return []
 
 # ---------------------------------------------------------------------------

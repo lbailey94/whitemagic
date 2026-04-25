@@ -137,6 +137,15 @@ class EventType(Enum):
     
     # Learning events
     LEARNING_COMPLETED = "learning_completed"
+    
+    # Agent / broker / task events (for temporal scheduler)
+    BROKER_DISCONNECTED = "broker_disconnected"
+    TASK_FAILED = "task_failed"
+    AGENT_DEREGISTERED = "agent_deregistered"
+    VOTE_CONSENSUS_REACHED = "vote_consensus_reached"
+    VOTE_SESSION_CLOSED = "vote_session_closed"
+    TASK_CREATED = "task_created"
+    BROKER_MESSAGE_PUBLISHED = "broker_message_published"
 
 @dataclass
 class ResonanceEvent:
@@ -183,5 +192,16 @@ def get_bus() -> GanYingBus:
 
 get_event_bus = get_bus # Compatibility alias
 
-def emit_event(source: str, event_type: EventType, data: dict[str, Any]):
-    get_bus().emit(ResonanceEvent(source=source, event_type=event_type, data=data))
+def emit_event(*args, **kwargs):
+    if args and isinstance(args[0], EventType):
+        kwargs["event_type"] = args[0]
+        if len(args) > 1: kwargs["data"] = args[1]
+        if len(args) > 2: kwargs["source"] = args[2]
+    elif args and isinstance(args[0], str):
+        kwargs["source"] = args[0]
+        if len(args) > 1: kwargs["event_type"] = args[1]
+        if len(args) > 2: kwargs["data"] = args[2]
+    if "source" not in kwargs: kwargs["source"] = "system"
+    if "event_type" not in kwargs or not isinstance(kwargs["event_type"], EventType):
+        kwargs["event_type"] = EventType.SYSTEM_HEARTBEAT
+    get_bus().emit(ResonanceEvent(**kwargs))

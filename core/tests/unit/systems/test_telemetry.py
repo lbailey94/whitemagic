@@ -13,11 +13,10 @@ def isolated_telemetry(tmp_path, monkeypatch):
     return telemetry
 
 
-@unittest.skip("Telemetry implementation changed")
 def test_telemetry_records_runtime_tool_errors(isolated_telemetry):
     from whitemagic.tools.unified_api import call_tool
 
-    out = call_tool("read_memory", filename="telemetry_missing_memory.md")
+    out = call_tool("memory_read", filename="telemetry_missing_memory.md")
     assert out["status"] == "error"
 
     summary = isolated_telemetry.get_summary()
@@ -25,7 +24,7 @@ def test_telemetry_records_runtime_tool_errors(isolated_telemetry):
     assert summary["error_count"] == 1
     assert summary["success_rate"] == 0.0
     event = summary["recent_events"][-1]
-    assert event["tool"] == "read_memory"
+    assert event["tool"] == "memory_read"
     assert event["status"] == "error"
     assert isinstance(event["error_code"], str) and event["error_code"]
 

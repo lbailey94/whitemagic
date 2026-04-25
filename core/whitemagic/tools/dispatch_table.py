@@ -1,3 +1,4 @@
+from typing import cast
 """dispatch_table.py — Tool router: assembles domain slices into one table.
 
 The DISPATCH_TABLE dict is composed from per-domain slice modules:
@@ -183,6 +184,13 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "ilp.history": LazyHandler("ilp", "handle_ilp_history"),
     "ilp.balance": LazyHandler("ilp", "handle_ilp_balance"),
     "ilp.status": LazyHandler("ilp", "handle_ilp_status"),
+
+    # --- Missing Mappings ---
+    "cache.status": LazyHandler("cache_coherence", "handle_cache_status"),
+    "cache.flush": LazyHandler("cache_coherence", "handle_cache_flush"),
+    "zodiac.status": LazyHandler("zodiac_progression", "handle_zodiac_status"),
+    "astro_status": LazyHandler("gana_dipper", "astro_status"),
+    "astro_shift": LazyHandler("gana_dipper", "astro_shift"),
 }
 
 # ---------------------------------------------------------------------------

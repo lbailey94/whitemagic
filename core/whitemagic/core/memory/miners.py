@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Pattern Extraction Engine - Week 3 of v2.3.1.
 
 Analyzes long-term memories to extract:
@@ -247,7 +249,6 @@ Usage:
     report = miner.mine(sample_size=500)
 """
 
-from __future__ import annotations
 
 import logging
 import re
@@ -897,8 +898,6 @@ Usage:
     miner = get_causal_miner()
     report = miner.mine(sample_size=200)
 """
-
-from __future__ import annotations
 
 import logging
 import math

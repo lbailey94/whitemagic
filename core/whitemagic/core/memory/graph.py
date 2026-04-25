@@ -199,7 +199,7 @@ class GraphEngine:
 class GraphWalker:
     """Multi-hop weighted graph traversal engine."""
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         self._lock = threading.Lock()
         self._total_walks = 0
         self._total_nodes_visited = 0

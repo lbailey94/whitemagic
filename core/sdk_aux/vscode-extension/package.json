@@ -2,7 +2,7 @@
   "name": "whitemagic-vscode",
   "displayName": "WhiteMagic",
   "description": "WhiteMagic AI assistant integration for VSCode - Memory-powered development companion",
-  "version": "20.0.0",
+  "version": "22.0.0",
   "publisher": "whitemagic",
   "engines": {
     "vscode": "^1.85.0"
@@ -93,7 +93,7 @@
     "@vscode/test-electron": "^2.3.8"
   },
   "dependencies": {
-    "@whitemagic/wasm": "^18.1.0",
+    "@whitemagic/wasm": "^22.0.0",
     "@whitemagic/sdk": "^0.1.0"
   },
   "repository": {

@@ -265,16 +265,14 @@ Polyglot/
 
 ## Roadmap
 
-### v21.x (Current)
-- ✅ Rust: Production stable
-- ✅ Go: Production stable
-- 🧪 Koka: Effect system experiments
-- 🧪 Zig: FFI bridge testing
-
-### v22.0 (Planned)
-- 🎯 Mojo: GPU kernel implementation (SDK permitting)
-- 🎯 Elixir: Distributed node integration
-- 🎯 Koka: Production effect handlers
+### v22.0.0 (Current)
+- ✅ Rust: Production stable (PyO3 + maturin, SIMD, WASM)
+- ✅ Go: Production stable (mesh networking, galactic telepathy)
+- 🧪 Koka: Effect system experiments (30 effect handler files)
+- 🧪 Zig: FFI bridge buildable (15 subdirectories, dispatch core, SIMD)
+- 🎯 Mojo: GPU kernel implementation (SDK permitting, 38 source files present)
+- 🎯 Elixir: Distributed node integration (OTP structures defined)
+- 📦 Haskell: Algebraic Dharma rules, I Ching divination, dependency graph planning (ctypes bridge)
 
 ### v23.0+ (Future)
 - 🔮 Julia: Scientific computing bridge

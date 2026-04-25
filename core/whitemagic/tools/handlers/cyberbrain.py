@@ -1,3 +1,4 @@
+from typing import cast
 """CyberBrain module handlers — salience, bicameral reasoning, retention, drives, self-model, worker."""
 from typing import Any
 

@@ -28,7 +28,7 @@ REFERENCES = [
     "core/README.md",
     "core/pyproject.toml",
     "core/SHIP_SURFACE.md",
-    "core/SECURITY.md",
+    "SECURITY.md",
     "polyglot/STATUS.md",
     "core/whitemagic-rust/Cargo.toml",
     "core/.well-known/agent.json",

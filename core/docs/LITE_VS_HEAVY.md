@@ -1,6 +1,6 @@
 # WhiteMagic Lite vs Heavy — Capability Comparison
 
-**Version**: 18.1.0 | **Last Updated**: March 2026
+**Version**: 22.0.0 | **Last Updated**: April 2026
 
 ---
 

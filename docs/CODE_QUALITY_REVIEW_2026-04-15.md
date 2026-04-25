@@ -15,7 +15,7 @@ code quality issues. This document tracks the full audit, all changes executed, 
 work, and a staged roadmap for completing it.
 
 **Execution Status**: Phases 0–5 executed in a single session pair-programming engagement.
-**Test suite**: **949 / 949 passing** throughout all changes.
+**Test suite**: **949 / 949 passing** throughout all changes. *(Note: This was accurate at time of review. Current state as of 2026-04-22: 783 passed, 173 failed, 259 skipped.)*
 
 ### Quantitative Snapshot — Before vs After
 

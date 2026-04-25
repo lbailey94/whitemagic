@@ -154,7 +154,7 @@ class EdgeInference:
 
             # === Core Info ===
             CompiledRule(id="version", pattern="version|what version",
-                response="WhiteMagic version 15.0.0 — The Tool Substrate for Agentic AI", confidence=1.0),
+                response="WhiteMagic version 22.0.0 — The Tool Substrate for Agentic AI", confidence=1.0),
             CompiledRule(id="gardens", pattern="garden|how many garden",
                 response="WhiteMagic has 17 gardens: joy, love, beauty, truth, wisdom, mystery, play, wonder, connection, sangha, practice, presence, voice, dharma, courage, gratitude, patience", confidence=1.0),
             CompiledRule(id="tests", pattern="test|how many test|test count",

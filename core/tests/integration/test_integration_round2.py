@@ -486,3 +486,90 @@ class TestCallToolRound2:
 
         result = call_tool("vote.record_outcome", session_id=sid, success=True)
         assert result["status"] == "success"
+
+
+class TestCircuitBreakerStateMachine:
+    """Circuit breaker state transition tests (security hardening)."""
+
+    def test_closed_to_open_after_threshold(self):
+        from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
+
+        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=3, window_seconds=10.0, cooldown_seconds=0.1))
+        assert breaker.is_open() is False
+
+        # Record 3 failures
+        breaker.record_failure()
+        breaker.record_failure()
+        breaker.record_failure()
+
+        assert breaker.is_open() is True
+        assert breaker._state.value == "open"
+
+    def test_open_to_half_open_after_cooldown(self):
+        import time
+        from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
+
+        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05))
+        breaker.record_failure()
+        breaker.record_failure()
+        assert breaker.is_open() is True
+
+        # Wait for cooldown
+        time.sleep(0.06)
+        assert breaker.is_open() is False  # Transitioned to HALF_OPEN
+        assert breaker._state.value == "half_open"
+
+    def test_half_open_to_closed_on_success(self):
+        import time
+        from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
+
+        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05))
+        breaker.record_failure()
+        breaker.record_failure()
+        time.sleep(0.06)
+        breaker.is_open()  # Trigger OPEN -> HALF_OPEN transition
+        assert breaker._state.value == "half_open"
+
+        breaker.record_success()
+        assert breaker._state.value == "closed"
+        assert breaker._total_trips == 1
+
+    def test_half_open_to_open_on_failure(self):
+        import time
+        from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
+
+        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=2, window_seconds=10.0, cooldown_seconds=0.05))
+        breaker.record_failure()
+        breaker.record_failure()
+        time.sleep(0.06)
+        breaker.is_open()  # Trigger OPEN -> HALF_OPEN transition
+        assert breaker._state.value == "half_open"
+
+        breaker.record_failure()
+        assert breaker._state.value == "open"
+
+    def test_calm_response_structure(self):
+        from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
+
+        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=1, window_seconds=10.0, cooldown_seconds=60.0))
+        breaker.record_failure()
+        resp = breaker.calm_response()
+
+        assert resp["status"] == "error"
+        assert resp["error_code"] == "circuit_breaker_open"
+        assert resp["retryable"] is True
+        assert "cooldown_remaining_s" in resp["circuit_breaker"]
+        assert resp["circuit_breaker"]["state"] == "open"
+
+    def test_failure_window_prunes_old_failures(self):
+        import time
+        from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
+
+        breaker = CircuitBreaker("test_tool", config=BreakerConfig(failure_threshold=3, window_seconds=0.1, cooldown_seconds=60.0))
+        breaker.record_failure()
+        breaker.record_failure()
+        time.sleep(0.12)  # Old failures expire
+        breaker.record_failure()
+
+        # Only 1 failure in window, breaker should stay closed
+        assert breaker.is_open() is False

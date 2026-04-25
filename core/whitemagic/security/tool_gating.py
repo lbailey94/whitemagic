@@ -423,14 +423,15 @@ def check_tool_execution(
     # NEW: SutraCode Kernel check (hard stop)
     try:
         import whitemagic_rust
-        if hasattr(whitemagic_rust, 'sutra_kernel'):
-            kernel = whitemagic_rust.sutra_kernel.SutraKernel()
+        sk_mod = getattr(whitemagic_rust, 'sutra_kernel', None)
+        if sk_mod is not None and hasattr(sk_mod, 'SutraKernel'):
+            kernel = sk_mod.SutraKernel()
             import json
             # Serialize params for the Rust kernel
             payload_str = json.dumps(params, default=str)
             # This will panic and crash the thread if a violation is found
             kernel.verify_action("mcp_client", tool_name, payload_str)
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError, AttributeError):
         # We only catch Python-level exceptions here (like missing module).
         # Rust panics will bubble up and crash the worker thread safely.
         pass

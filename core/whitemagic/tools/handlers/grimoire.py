@@ -1,3 +1,4 @@
+from typing import cast
 """MCP handlers for Grimoire 2.0."""
 
 import logging
@@ -51,12 +52,19 @@ def handle_grimoire_suggest(**kwargs: Any) -> dict[str, Any]:
 
 def handle_grimoire_cast(**kwargs: Any) -> dict[str, Any]:
     """Mock auto-cast endpoint. The Grimoire Engine handles recommendations for manual processing via Dispatch."""
+    spell_name = kwargs.get("spell_name", "")
+    if not spell_name:
+        return {"status": "error", "message": "spell_name is required for casting"}
     return {"status": "error", "message": "Direct spell casting is handled natively via tool sequence in Grimoire 2.0. Use 'grimoire_suggest' then execute the individual tools."}
 
 
 def handle_grimoire_recommend(**kwargs: Any) -> dict[str, Any]:
     """Alias for grimoire_suggest."""
-    return handle_grimoire_suggest(**kwargs)
+    result = handle_grimoire_suggest(**kwargs)
+    # Add recommendations alias for backward compatibility
+    if "suggestions" in result and "recommendations" not in result:
+        result["recommendations"] = result["suggestions"]
+    return result
 
 
 def handle_grimoire_auto_status(**kwargs: Any) -> dict[str, Any]:
@@ -67,4 +75,6 @@ def handle_grimoire_auto_status(**kwargs: Any) -> dict[str, Any]:
         "active_state": grimoire.state.value,
         "wu_xing_affinity": grimoire.context.wu_xing.value,
         "yin_yang_affinity": grimoire.context.yin_yang.value,
+        "spells_available": True,
+        "mode": "manual",
     }

@@ -1,6 +1,6 @@
 {
   "name": "whitemagic-site",
-  "version": "0.1.0",
+  "version": "22.0.0",
   "private": true,
   "description": "whitemagic.dev — private AI deployment consultancy",
   "scripts": {

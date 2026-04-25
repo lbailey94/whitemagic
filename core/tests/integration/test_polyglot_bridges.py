@@ -44,12 +44,12 @@ class TestGoBridge:
     """Test Go FFI bridge functionality."""
 
     @pytest.mark.skipif(
-        not Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-go/whitemagic-go-mesh").exists(),
+        not Path("/home/lucas/Desktop/WHITEMAGIC/core/mesh_aux/cmd/mesh_aux/mesh_daemon").exists(),
         reason="Go binary not built"
     )
     def test_go_binary_exists(self):
         """Test that Go mesh binary exists."""
-        binary_path = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-go/whitemagic-go-mesh")
+        binary_path = Path("/home/lucas/Desktop/WHITEMAGIC/core/mesh_aux/cmd/mesh_aux/mesh_daemon")
         assert binary_path.exists()
         assert binary_path.is_file()
 

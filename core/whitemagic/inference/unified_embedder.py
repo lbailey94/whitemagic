@@ -156,9 +156,10 @@ class UnifiedEmbedder:
         """Encode using Mojo GPU via Iceoryx2 shared memory.
 
         Not yet implemented — requires Iceoryx2 IPC channel to Mojo GPU process.
-        Tracked in UNIFIED_POLYGLOT_EMBEDDING_CAMPAIGN.
+        Falls back to Python FastEmbed.
         """
-        raise NotImplementedError("Mojo GPU path not yet implemented (requires Iceoryx2 IPC)")
+        logger.debug("Mojo GPU path unavailable, falling back to Python")
+        return self._encode_python(texts)
 
     def _encode_rust_onnx(self, texts: list[str]) -> np.ndarray:
         """Encode using Rust ONNX with Arrow."""

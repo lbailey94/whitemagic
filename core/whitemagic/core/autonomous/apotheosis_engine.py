@@ -113,22 +113,33 @@ class SelfMonitoringHealthLoop:
             status=self._status_from_value(coherence_overall, self.thresholds["coherence"], higher_is_better=True),
         )
 
-        # 2. Memory usage check (placeholder - would integrate with actual memory backend)
+        # 2. Memory usage check
+        try:
+            import psutil
+            memory_usage = psutil.virtual_memory().percent
+        except Exception:
+            memory_usage = 50.0
         readings["memory_usage"] = HealthReading(
             timestamp=now,
             metric_name="memory_usage_percent",
-            value=50.0,
+            value=memory_usage,
             threshold=self.thresholds["memory_usage_percent"],
-            status=HealthStatus.HEALTHY,
+            status=self._status_from_value(memory_usage, self.thresholds["memory_usage_percent"], higher_is_better=False),
         )
 
         # 3. Response time check
+        try:
+            from whitemagic.core.monitoring.telemetry import get_telemetry
+            telemetry = get_telemetry()
+            response_time = telemetry.get_avg_duration() * 1000.0  # seconds -> ms
+        except Exception:
+            response_time = 100.0
         readings["response_time"] = HealthReading(
             timestamp=now,
             metric_name="response_time_ms",
-            value=100.0,
+            value=response_time,
             threshold=self.thresholds["response_time_ms"],
-            status=HealthStatus.HEALTHY,
+            status=self._status_from_value(response_time, self.thresholds["response_time_ms"], higher_is_better=False),
         )
 
         # 4. Error rate check

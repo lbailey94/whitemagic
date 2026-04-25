@@ -62,68 +62,60 @@ def _ensure_cached() -> None:
     if _cached:
         return
     try:
+        from whitemagic.tools.input_sanitizer import sanitize_tool_args
         _sanitize_tool_args = sanitize_tool_args
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: input_sanitizer dependency missing: %s", e)
-    except (AttributeError, RuntimeError) as e:
-        logger.warning("Middleware: input_sanitizer initialization failed: %s", e)
     try:
+        from whitemagic.tools.circuit_breaker import get_breaker_registry
         _get_breaker_registry = get_breaker_registry
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: circuit_breaker dependency missing: %s", e)
-    except (AttributeError, RuntimeError) as e:
-        logger.warning("Middleware: circuit_breaker initialization failed: %s", e)
     try:
-        _sanitize_tool_args = sanitize_tool_args
-    except ImportError as e:
-        logger.debug("Middleware: input_sanitizer dependency missing: %s", e)
-    try:
+        from whitemagic.tools.rate_limiter import get_rate_limiter
         _get_rate_limiter = get_rate_limiter
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: rate_limiter dependency missing: %s", e)
     try:
+        from whitemagic.tools.tool_permissions import check_tool_permission
         _check_tool_permission = check_tool_permission
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: tool_permissions dependency missing: %s", e)
     try:
+        from whitemagic.tools.maturity_check import check_maturity_for_tool
         _check_maturity_for_tool = check_maturity_for_tool
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: maturity_check dependency missing: %s", e)
     try:
+        from whitemagic.security.security_breaker import get_security_monitor
         _get_security_monitor = get_security_monitor
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: security_breaker dependency missing: %s", e)
     try:
+        from whitemagic.core.governor import get_governor
         _get_governor = get_governor
-    except ImportError as e:
+    except Exception as e:
+        try:
+            from whitemagic.dharma.governor import get_governor
+            _get_governor = get_governor
+        except Exception:
+            pass
         logger.debug("Middleware: governor dependency missing: %s", e)
     try:
+        from whitemagic.core.monitoring.prometheus_export import get_prometheus
         _get_prometheus = get_prometheus
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: prometheus_export dependency missing: %s", e)
     try:
+        from whitemagic.core.monitoring.otel_export import get_otel
         _get_otel = get_otel
-    except ImportError as e:
+    except Exception as e:
         logger.debug("Middleware: otel_export dependency missing: %s", e)
-    except (AttributeError, RuntimeError) as e:
-        logger.warning("Middleware: governor initialization failed: %s", e)
     try:
-        from whitemagic.tools.compact_response import compact
-        _compact_fn = compact
-    except (ImportError, AttributeError):
+        from whitemagic.utils.core import compact_dict
+        _compact_fn = compact_dict
+    except Exception as e:
         pass
-    try:
-        _get_prometheus = get_prometheus
-    except ImportError as e:
-        logger.debug("Middleware: prometheus_export dependency missing: %s", e)
-    except (AttributeError, RuntimeError) as e:
-        logger.warning("Middleware: prometheus_export initialization failed: %s", e)
-    try:
-        _get_otel = get_otel
-    except ImportError as e:
-        logger.debug("Middleware: otel_export dependency missing: %s", e)
-    except (AttributeError, RuntimeError) as e:
-        logger.warning("Middleware: otel_export initialization failed: %s", e)
     _cached = True
 
 
@@ -351,8 +343,9 @@ def mw_tool_permissions(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
     _ensure_cached()
     if _check_tool_permission is not None:
         try:
-            if not _check_tool_permission(ctx.agent_id, ctx.tool_name):
-                return {"status": "error", "error": f"Permission denied for tool '{ctx.tool_name}'"}
+            perm_result = _check_tool_permission(ctx.agent_id, ctx.tool_name)
+            if perm_result is not None:
+                return perm_result
         except (AttributeError, RuntimeError) as e:
             logger.debug(f"Middleware: permission check failed for {ctx.tool_name}: {e}")
     return next_fn(ctx)
@@ -365,8 +358,9 @@ def mw_maturity_gate(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
     _ensure_cached()
     if _check_maturity_for_tool is not None:
         try:
-            if not _check_maturity_for_tool(ctx.tool_name):
-                return {"status": "error", "error": f"Tool '{ctx.tool_name}' is not mature enough for high-risk usage"}
+            mat_result = _check_maturity_for_tool(ctx.tool_name)
+            if mat_result is not None:
+                return mat_result
         except (AttributeError, RuntimeError) as e:
             logger.debug(f"Middleware: maturity check failed for {ctx.tool_name}: {e}")
     return next_fn(ctx)

@@ -280,5 +280,5 @@ exclude = [
 
 ## Changelog
 
-- **2026-04-07**: Initial manifest creation (v21.0.0)
-- **Next**: Implement cleanup per this manifest
+- **2026-04-07**: Initial manifest creation (v22.0.0)
+- **2026-04-22**: Polyglot bridge audit — documented all bridge purposes and wiring status

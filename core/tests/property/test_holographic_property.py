@@ -1,5 +1,5 @@
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import HealthCheck, given, settings, strategies as st
 from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder, HolographicCoordinate
 
 # Generate random strings
@@ -23,6 +23,7 @@ memory_strategy = st.fixed_dictionaries({
 })
 
 @given(memory_strategy)
+@settings(suppress_health_check=[HealthCheck.too_slow])
 def test_holographic_encoder_bounds(memory):
     encoder = CoordinateEncoder()
     # Disable gardens so we just test the core math

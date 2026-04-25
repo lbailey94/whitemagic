@@ -618,9 +618,6 @@ try:
         logger.debug("Rust keyword extraction available")
 except Exception as e:
     import logging
-import sqlite3
-import sqlite3
-import sqlite3
     logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
 

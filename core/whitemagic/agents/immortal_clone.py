@@ -303,24 +303,105 @@ class ImmortalClone:
         )
 
     def analyze(self, action: Action) -> ActionResult:
-        """Analyze code (placeholder for now)."""
+        """Analyze a Python file using the AST module."""
         start_time = time.time()
-        # In full implementation, would use tree-sitter, AST analysis, etc.
-        return ActionResult(
-            success=True,
-            data={'analyzed': str(action.target)},
-            duration=time.time() - start_time
-        )
+        target = Path(action.target)
+        if not target.exists() or not target.is_file():
+            return ActionResult(
+                success=False,
+                error=f"Target not found: {action.target}",
+                duration=time.time() - start_time,
+            )
+
+        try:
+            import ast
+            source = target.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+
+            functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+            classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+            imports = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    imports.extend(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom):
+                    imports.append(node.module or "")
+
+            complexity = len(functions) + len(classes)
+
+            return ActionResult(
+                success=True,
+                data={
+                    "analyzed": str(action.target),
+                    "functions": functions,
+                    "classes": classes,
+                    "imports": imports,
+                    "complexity": complexity,
+                    "lines": len(source.splitlines()),
+                },
+                duration=time.time() - start_time,
+            )
+        except SyntaxError as e:
+            return ActionResult(
+                success=False,
+                error=f"Syntax error in {action.target}: {e}",
+                duration=time.time() - start_time,
+            )
+        except Exception as e:
+            return ActionResult(
+                success=False,
+                error=str(e),
+                duration=time.time() - start_time,
+            )
 
     def edit(self, action: Action) -> ActionResult:
-        """Edit file (placeholder for now)."""
+        """Apply a list of text edits to a file."""
         start_time = time.time()
-        # In full implementation, would apply actual edits
-        return ActionResult(
-            success=True,
-            data={'edited': str(action.target)},
-            duration=time.time() - start_time
-        )
+        target = Path(action.target)
+        if not target.exists() or not target.is_file():
+            return ActionResult(
+                success=False,
+                error=f"Target not found: {action.target}",
+                duration=time.time() - start_time,
+            )
+
+        changes = action.changes or {}
+        edits = changes.get("edits", [])
+        if not edits:
+            return ActionResult(
+                success=False,
+                error="No edits provided",
+                duration=time.time() - start_time,
+            )
+
+        try:
+            source = target.read_text(encoding="utf-8")
+            results = []
+            for edit in edits:
+                edit_action = edit.get("action", "replace")
+                if edit_action == "replace":
+                    old = edit.get("old", "")
+                    new = edit.get("new", "")
+                    if old in source:
+                        source = source.replace(old, new, 1)
+                        results.append({"status": "success"})
+                    else:
+                        results.append({"status": "error", "reason": "old text not found"})
+                else:
+                    results.append({"status": "error", "reason": f"unsupported action: {edit_action}"})
+
+            target.write_text(source, encoding="utf-8")
+            return ActionResult(
+                success=all(r["status"] == "success" for r in results),
+                data={"edited": str(action.target), "results": results},
+                duration=time.time() - start_time,
+            )
+        except Exception as e:
+            return ActionResult(
+                success=False,
+                error=str(e),
+                duration=time.time() - start_time,
+            )
 
     def verify(self, action: Action) -> ActionResult:
         """Verify victory conditions."""

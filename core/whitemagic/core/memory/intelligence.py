@@ -39,6 +39,8 @@ class HolographicStorage:
 
 class HRREngine:
     """Handles vector binding and unbinding using circular convolution."""
+    def __init__(self, **kwargs: Any) -> None:
+        pass
     def bind(self, a: list[float], b: list[float]) -> list[float]:
         return a
 

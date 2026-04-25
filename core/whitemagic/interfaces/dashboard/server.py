@@ -6,6 +6,7 @@ Provides REST API endpoints for the React dashboard.
 
 import argparse
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,8 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 logger = logging.getLogger(__name__)
+
+DEMO_MODE = os.environ.get("WM_DEMO_MODE", "false").lower() in {"1", "true", "yes", "on"}
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -94,39 +97,41 @@ def get_memories() -> Any:
                 memories.append(memory_data)
         except (ImportError, ModuleNotFoundError) as e:
             logger.info(f"Error getting memories: {e}")
-            # Return mock data for demo
-            memories = [
-                {
-                    "id": "1",
-                    "title": "Plugin Architecture Implementation",
-                    "content": "Successfully implemented the plugin system for WhiteMagic...",
-                    "created_at": datetime.now().isoformat(),
-                    "type": "implementation",
-                    "importance": 5,
-                    "tags": ["plugins", "architecture"],
-                    "related": ["2", "3"],
-                },
-                {
-                    "id": "2",
-                    "title": "Dashboard Development",
-                    "content": "Creating React dashboard with D3.js visualizations...",
-                    "created_at": datetime.now().isoformat(),
-                    "type": "development",
-                    "importance": 4,
-                    "tags": ["dashboard", "react"],
-                    "related": ["1"],
-                },
-                {
-                    "id": "3",
-                    "title": "Memory Graph Visualization",
-                    "content": "Using D3.js force simulation for memory network...",
-                    "created_at": datetime.now().isoformat(),
-                    "type": "visualization",
-                    "importance": 3,
-                    "tags": ["d3", "visualization"],
-                    "related": ["2"],
-                },
-            ]
+            if DEMO_MODE:
+                memories = [
+                    {
+                        "id": "1",
+                        "title": "Plugin Architecture Implementation",
+                        "content": "Successfully implemented the plugin system for WhiteMagic...",
+                        "created_at": datetime.now().isoformat(),
+                        "type": "implementation",
+                        "importance": 5,
+                        "tags": ["plugins", "architecture"],
+                        "related": ["2", "3"],
+                    },
+                    {
+                        "id": "2",
+                        "title": "Dashboard Development",
+                        "content": "Creating React dashboard with D3.js visualizations...",
+                        "created_at": datetime.now().isoformat(),
+                        "type": "development",
+                        "importance": 4,
+                        "tags": ["dashboard", "react"],
+                        "related": ["1"],
+                    },
+                    {
+                        "id": "3",
+                        "title": "Memory Graph Visualization",
+                        "content": "Using D3.js force simulation for memory network...",
+                        "created_at": datetime.now().isoformat(),
+                        "type": "visualization",
+                        "importance": 3,
+                        "tags": ["d3", "visualization"],
+                        "related": ["2"],
+                    },
+                ]
+            else:
+                return jsonify({"memories": [], "error": "Memory backend unavailable"}), 503
 
         return jsonify({"memories": memories})
     except Exception as e:
@@ -218,30 +223,32 @@ def get_events() -> Any:
                 }
                 events.append(event_data)
         except Exception:
-            # Return mock events
-            events = [
-                {
-                    "id": "e1",
-                    "type": "memory_created",
-                    "title": "Memory Created",
-                    "description": "Plugin Architecture Implementation",
-                    "timestamp": datetime.now().isoformat(),
-                },
-                {
-                    "id": "e2",
-                    "type": "garden_activated",
-                    "title": "Garden Activated",
-                    "description": "Focus garden is ready for deep work",
-                    "timestamp": datetime.now().isoformat(),
-                },
-                {
-                    "id": "e3",
-                    "type": "plugin_loaded",
-                    "title": "Plugin Loaded",
-                    "description": "simple_todo plugin loaded successfully",
-                    "timestamp": datetime.now().isoformat(),
-                },
-            ]
+            if DEMO_MODE:
+                events = [
+                    {
+                        "id": "e1",
+                        "type": "memory_created",
+                        "title": "Memory Created",
+                        "description": "Plugin Architecture Implementation",
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    {
+                        "id": "e2",
+                        "type": "garden_activated",
+                        "title": "Garden Activated",
+                        "description": "Focus garden is ready for deep work",
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    {
+                        "id": "e3",
+                        "type": "plugin_loaded",
+                        "title": "Plugin Loaded",
+                        "description": "simple_todo plugin loaded successfully",
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                ]
+            else:
+                return jsonify({"events": [], "error": "Event backend unavailable"}), 503
 
         return jsonify({"events": events})
     except Exception as e:
@@ -273,19 +280,57 @@ def get_gardens() -> Any:
         ]
 
         for name in garden_names:
-            # Mock garden data for now
-            import random
+            if DEMO_MODE:
+                import random
 
-            gardens.append(
-                {
-                    "id": name,
-                    "name": name,
-                    "status": "active" if random.random() > 0.2 else "inactive",
-                    "health": random.randint(60, 100),
-                    "memories": random.randint(5, 50),
-                    "last_activity": datetime.now().isoformat(),
-                },
-            )
+                gardens.append(
+                    {
+                        "id": name,
+                        "name": name,
+                        "status": "active" if random.random() > 0.2 else "inactive",
+                        "health": random.randint(60, 100),
+                        "memories": random.randint(5, 50),
+                        "last_activity": datetime.now().isoformat(),
+                    },
+                )
+            else:
+                try:
+                    mod = __import__(f"whitemagic.gardens.{name}", fromlist=["Garden"])
+                    garden_cls = getattr(mod, f"{name.title()}Garden", None)
+                    if garden_cls:
+                        g = garden_cls()
+                        gardens.append(
+                            {
+                                "id": name,
+                                "name": name,
+                                "status": "active",
+                                "health": getattr(g, "health", 100),
+                                "memories": getattr(g, "memory_count", 0),
+                                "last_activity": datetime.now().isoformat(),
+                            },
+                        )
+                    else:
+                        gardens.append(
+                            {
+                                "id": name,
+                                "name": name,
+                                "status": "unknown",
+                                "health": 0,
+                                "memories": 0,
+                                "last_activity": datetime.now().isoformat(),
+                            },
+                        )
+                except Exception:
+                    gardens.append(
+                        {
+                            "id": name,
+                            "name": name,
+                            "status": "unknown",
+                            "health": 0,
+                            "memories": 0,
+                            "last_activity": datetime.now().isoformat(),
+                        },
+                    )
 
         return jsonify({"gardens": gardens})
     except Exception as e:
@@ -402,14 +447,10 @@ def get_dream_phases() -> Any:
         "evolution", "mutation", "synthesis", "harmonize"
     ]
 
-    # Mock current phase if not in master mode
-    import random
-    current_idx = random.randint(0, 11) if not is_master else 0
-
     return jsonify({
         "is_master": is_master,
         "phases": phases,
-        "current_phase": phases[current_idx],
+        "current_phase": phases[0] if is_master else "unknown",
         "active": is_master
     })
 
@@ -427,8 +468,10 @@ def get_locomo_stats() -> Any:
     except (ImportError, ModuleNotFoundError):
         pass
 
-    # v21 Baseline Fallback
+    # Fallback when no results file exists
     return jsonify({
+        "status": "fallback",
+        "message": "No LoCoMo results file found. Run benchmarks to populate.",
         "overall_accuracy": 88.0,
         "avg_latency_ms": 1421.0,
         "total_hits": 22,
@@ -541,10 +584,6 @@ def _search_gardens_and_events(query: str) -> list[dict[str, Any]]:
             from whitemagic.core.resonance.gan_ying import get_bus
 
             get_bus()
-            # This would search through events - placeholder implementation
-            # In reality, would filter events by query content
-            # This would search through events - placeholder implementation
-            # In reality, would filter events by query content
         except Exception:
             pass
     except Exception:

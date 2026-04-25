@@ -25,7 +25,7 @@ class GanYingMixin:
             stacklevel=2,
         )
 
-def init_listeners():
+def init_listeners(*args, **kwargs):
     """Deprecated: Use whitemagic.core.resonance.get_bus().listen() directly."""
     warnings.warn(
         "init_listeners() is deprecated. Use whitemagic.core.resonance.get_bus().listen() directly.",
@@ -33,13 +33,15 @@ def init_listeners():
         stacklevel=2,
     )
 
-def listen_for(event_type, callback):
+def listen_for(event_type):
     """Deprecated: Use whitemagic.core.resonance.get_bus().listen() directly."""
     warnings.warn(
         "listen_for() is deprecated. Use whitemagic.core.resonance.get_bus().listen() directly.",
         DeprecationWarning,
         stacklevel=2,
     )
-    return get_bus().listen(event_type, callback)
+    def decorator(callback):
+        return get_bus().listen(event_type, callback)
+    return decorator
 
 __all__ = ["GanYingMixin", "init_listeners", "listen_for"]

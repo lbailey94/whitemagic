@@ -166,6 +166,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "get_metrics_summary":     "gana_mound",
     "record_yin_yang_activity": "gana_mound",
     "get_yin_yang_balance":    "gana_mound",
+    "cache.flush":             "gana_mound",
+    "cache.status":            "gana_mound",
 
     # ═══ STOMACH — Digestion & Resource Management ═══
     "pipeline":                "gana_stomach",
@@ -279,6 +281,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "ollama.generate":         "gana_roof",
     "ollama.chat":             "gana_roof",
     "ollama.agent":            "gana_roof",
+    "zodiac.status":           "gana_roof",
 
     # ═══ ENCAMPMENT — Transition & Handoff ═══
     "sangha_chat_send":        "gana_encampment",

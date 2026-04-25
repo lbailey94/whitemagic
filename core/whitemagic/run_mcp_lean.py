@@ -321,19 +321,85 @@ async def list_tools() -> list[types.Tool]:
     return tools
 
 
+# ── Result cache (LRU) for read-only Gana calls ──────────────────────
+_result_cache: dict[str, Any] = {}
+_CACHE_MAX_SIZE = 64
+
+
+def _cache_key(gana: str, tool_name: str, tool_args: dict[str, Any], operation: str | None) -> str:
+    """Deterministic cache key for a PRAT call."""
+    import hashlib, json
+    payload = json.dumps({"g": gana, "t": tool_name, "a": tool_args, "o": operation}, sort_keys=True, default=str)
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
 def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], operation: str | None) -> dict[str, Any]:
     """Run the PRAT dispatch synchronously — called from a worker thread."""
     _ensure_init()
+
+    # --- Input validation ---
+    if not tool_name:
+        return {
+            "status": "error",
+            "error_code": "MISSING_TOOL_NAME",
+            "error": "The 'tool' parameter is required.",
+        }
+    if not isinstance(tool_args, dict):
+        return {
+            "status": "error",
+            "error_code": "INVALID_ARGS_TYPE",
+            "error": f"Expected dict for 'args', got {type(tool_args).__name__}.",
+        }
+
+    # --- Security: input sanitization (defense-in-depth) ---
+    try:
+        from whitemagic.tools.input_sanitizer import sanitize_tool_args
+        sanitized = sanitize_tool_args(tool_name, tool_args)
+        if sanitized is not None:
+            # Input was blocked by sanitizer
+            logger.warning("Input sanitizer blocked %s/%s: %s", gana, tool_name, sanitized.get("error"))
+            return sanitized
+    except Exception as exc:
+        logger.debug("Input sanitizer error (non-blocking): %s", exc)
+
+    # --- Cache lookup (read-only Ganas only) ---
+    _READ_ONLY_GANAS = {"gana_heart", "gana_star", "gana_ghost", "gana_willow"}
+    use_cache = gana in _READ_ONLY_GANAS
+    if use_cache:
+        key = _cache_key(gana, tool_name, tool_args, operation)
+        cached = _result_cache.get(key)
+        if cached is not None:
+            logger.debug("Cache hit for %s/%s", gana, tool_name)
+            return cached
+
     try:
         from whitemagic.tools.prat_router import route_prat_call
-        return route_prat_call(
+        result = route_prat_call(
             gana,
             tool=tool_name,
             args=tool_args,
             operation=operation,
         )
+        # Cache successful read-only results
+        if use_cache and result.get("status") == "success":
+            if len(_result_cache) >= _CACHE_MAX_SIZE:
+                _result_cache.pop(next(iter(_result_cache)))
+            _result_cache[key] = result
+        return result
+    except ImportError as exc:
+        logger.error("PRAT router import failed: %s", exc)
+        return {
+            "status": "error",
+            "error_code": "ROUTER_IMPORT_ERROR",
+            "error": f"Failed to load PRAT router: {exc}",
+        }
     except Exception as exc:
-        return {"status": "error", "error": str(exc)}
+        logger.exception("Unhandled exception in _sync_dispatch")
+        return {
+            "status": "error",
+            "error_code": "INTERNAL_ERROR",
+            "error": str(exc),
+        }
 
 
 @server.call_tool()

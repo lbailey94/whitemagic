@@ -618,7 +618,7 @@ class PolyglotRouter:
 
         return self._route_operation("cast_heavens_net", python_impl, rust_fn=rust_impl)
 
-    def scan_tree(self, root_path: str) -> Any:
+    def scan_tree(self, root_path: str, pattern: str = "*.py") -> Any:
         """Tree Scanning with Metadata (Rust Optimized)"""
         def rust_impl() -> Any:
             import whitemagic_rs
@@ -627,7 +627,21 @@ class PolyglotRouter:
             raise AttributeError("whitemagic_rs has no scan_tree implementation")
 
         def python_impl() -> Any:
-            return None  # Fallback not implemented for complex tree result
+            import os
+            from pathlib import Path
+            results = []
+            root = Path(root_path)
+            for path in root.rglob(pattern):
+                try:
+                    stat = path.stat()
+                    results.append({
+                        "path": str(path.relative_to(root)),
+                        "size": stat.st_size,
+                        "mtime": stat.st_mtime,
+                    })
+                except Exception:
+                    pass
+            return results
 
         return self._route_operation("scan_tree", python_impl, rust_fn=rust_impl)
 

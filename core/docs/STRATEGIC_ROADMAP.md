@@ -1,12 +1,12 @@
 # WhiteMagic Strategic Roadmap
 
-**Version**: 18.1.0 | **Last Updated**: March 2026
+**Version**: 22.0.0 | **Last Updated**: April 2026
 
 ---
 
-## Where We Are (v18.1.0)
+## Where We Are (v22.0.0)
 
-WhiteMagic v18.1.0 is the current documented release line. It delivers:
+WhiteMagic v22.0.0 is the current documented release line. It delivers:
 
 - **28 Gana MCP meta-tools** as the stable public contract, backed by broader internal tool surfaces
 - **11-language polyglot** architecture (Python, Rust, Zig, Mojo, Julia, Haskell, Elixir, Go, TypeScript, C, WASM)

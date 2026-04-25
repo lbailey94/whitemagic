@@ -1,11 +1,14 @@
 """Acceleration modules — SIMD, FFI, and polyglot-accelerated operations.
 
 Note: Polyglot bridges (Elixir, Go, Haskell, Julia, Mojo) are optional dependencies.
-If not installed, fallback implementations raise NotImplementedError with clear error messages.
+If not installed, fallback implementations return graceful error dicts instead of raising.
 These bridges are experimental and currently not in active development.
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 try:
     from .elixir_bridge import (
@@ -26,14 +29,16 @@ except ImportError:
         timeout_ms: int = 30000,
         priority: str = "normal",
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Elixir bridge not available or archived.")
+        logger.debug("Elixir bridge not available — elixir_cascade_execute skipped")
+        return {"status": "skipped", "reason": "Elixir bridge not available or archived."}
 
     def elixir_cascade_pipeline(
         tasks: list[dict[str, Any]],
         mode: str = "parallel",
         max_failures: int = -1,
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Elixir bridge not available or archived.")
+        logger.debug("Elixir bridge not available — elixir_cascade_pipeline skipped")
+        return {"status": "skipped", "reason": "Elixir bridge not available or archived."}
 
 try:
     from .go_mesh_bridge import (
@@ -47,20 +52,23 @@ except ImportError:
         return {"status": "error", "message": "Go mesh bridge not available."}
 
     def mesh_agent_status() -> dict[str, Any] | None:
-        raise NotImplementedError("Go mesh bridge not available.")
+        logger.debug("Go mesh bridge not available — mesh_agent_status skipped")
+        return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
     def mesh_distribute_task(
         task: dict[str, Any],
         strategy: str = "least_loaded",
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Go mesh bridge not available.")
+        logger.debug("Go mesh bridge not available — mesh_distribute_task skipped")
+        return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
     def mesh_sync_memory(
         memory_id: str,
         content: str,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Go mesh bridge not available.")
+        logger.debug("Go mesh bridge not available — mesh_sync_memory skipped")
+        return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
 try:
     from .haskell_bridge import (
@@ -78,7 +86,8 @@ except ImportError:
         description: str = "",
         args_str: str = "",
     ) -> list[dict[str, Any]] | None:
-        raise NotImplementedError("Haskell bridge not available.")
+        logger.debug("Haskell bridge not available — haskell_check_boundaries skipped")
+        return []
 
     def haskell_evaluate_rules(
         tool_name: str,
@@ -87,7 +96,8 @@ except ImportError:
         category: str = "",
         profile: str = "default",
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Haskell bridge not available.")
+        logger.debug("Haskell bridge not available — haskell_evaluate_rules skipped")
+        return {"status": "skipped", "reason": "Haskell bridge not available."}
 
     def haskell_maturity_assess(
         stage: int,
@@ -99,7 +109,8 @@ except ImportError:
         agents_registered: int = 0,
         error_rate: float = 0.0,
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Haskell bridge not available.")
+        logger.debug("Haskell bridge not available — haskell_maturity_assess skipped")
+        return {"status": "skipped", "reason": "Haskell bridge not available."}
 
 try:
     from .julia_bridge import (
@@ -113,7 +124,8 @@ except ImportError:
         metrics: dict[str, list[float]],
         steps: int = 5,
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Julia bridge not available.")
+        logger.debug("Julia bridge not available — julia_batch_forecast skipped")
+        return {"status": "skipped", "reason": "Julia bridge not available."}
 
     def julia_bridge_status() -> dict[str, Any]:
         return {"status": "error", "message": "Julia bridge not available."}
@@ -124,12 +136,14 @@ except ImportError:
         alpha: float = 0.3,
         beta: float = 0.1,
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Julia bridge not available.")
+        logger.debug("Julia bridge not available — julia_forecast_metric skipped")
+        return {"status": "skipped", "reason": "Julia bridge not available."}
 
     def julia_importance_distribution(
         scores: list[float],
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Julia bridge not available.")
+        logger.debug("Julia bridge not available — julia_importance_distribution skipped")
+        return {"status": "skipped", "reason": "Julia bridge not available."}
 
 try:
     from .mojo_bridge import (
@@ -142,18 +156,21 @@ except ImportError:
     def mojo_batch_encode(
         memories: list[dict[str, Any]],
     ) -> list[tuple[float, float, float, float, float]] | None:
-        raise NotImplementedError("Mojo bridge not available.")
+        logger.debug("Mojo bridge not available — mojo_batch_encode skipped")
+        return None
 
     def mojo_neuro_score(
         memories: list[dict[str, Any]],
     ) -> list[dict[str, Any]] | None:
-        raise NotImplementedError("Mojo bridge not available.")
+        logger.debug("Mojo bridge not available — mojo_neuro_score skipped")
+        return None
 
     def mojo_quantize(
         vectors: list[list[float]],
         mode: str = "int8",
     ) -> dict[str, Any] | None:
-        raise NotImplementedError("Mojo bridge not available.")
+        logger.debug("Mojo bridge not available — mojo_quantize skipped")
+        return None
 
     def mojo_status() -> dict[str, Any]:
         return {"status": "error", "message": "Mojo bridge not available."}

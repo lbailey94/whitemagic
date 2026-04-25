@@ -86,7 +86,6 @@ class TestCriticalPathMemoryStorage:
 
 
 @pytest.mark.skipif(not HAS_WHITEMAGIC, reason="WhiteMagic not available")
-@unittest.skip("Search operations implementation changed")
 class TestCriticalPathSearchOperations(unittest.TestCase):
     """Critical path: Search operations (FTS + BM25)."""
 

@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import uuid
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,9 @@ class SQLiteBackend:
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript(SCHEMA)
 
+    def get_connection(self):
+        return sqlite3.connect(self.db_path)
+
 # --- MANAGER ---
 
 class MemoryManager:
@@ -61,9 +66,20 @@ class MemoryManager:
     def __init__(self, backend: SQLiteBackend):
         self.backend = backend
 
-    def store(self, content: str, title: str = "", tags: list[str] = None):
-        logger.info(f"Storing memory: {title}")
-        return str(uuid.uuid4())
+    def store(self, content: str, title: str = "", tags: list[str] | None = None) -> str:
+        """Store a memory in the SQLite database."""
+        memory_id = str(uuid.uuid4())
+        tag_str = ",".join(tags) if tags else ""
+        now = datetime.now().isoformat()
+        with self.backend.get_connection() as conn:
+            conn.execute(
+                """INSERT INTO memories (id, content, title, tags, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (memory_id, content, title, tag_str, now, now),
+            )
+            conn.commit()
+        logger.info(f"Stored memory {memory_id}: {title}")
+        return memory_id
 
 # --- SINGLETONS ---
 _manager: MemoryManager | None = None

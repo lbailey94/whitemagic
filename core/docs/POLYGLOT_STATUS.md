@@ -1,4 +1,4 @@
-# Polyglot Status Report (v15.0.0)
+# Polyglot Status Report (v22.0.0)
 
 ## Executive Summary
 
@@ -59,10 +59,12 @@ The core runtime: 356 MCP tools across 30+ domain files, composable dispatch pip
 - `file_system/watcher.ex` — filesystem monitoring
 
 ### 5. Go (The Mesh) — ~913 LOC
-**Build:** `cd whitemagic-go && go build ./...` and `cd mesh && go build ./...`
-- `whitemagic-go/main.go` — general Go bridge
-- `mesh/` — libp2p P2P mesh: mDNS peer discovery, Redis pub/sub bridge, protobuf message serialization
+**Build:** `cd core/mesh_aux && go build ./...`
+- `core/mesh_aux/` — canonical Go implementation: libp2p P2P mesh, mDNS peer discovery, Redis pub/sub bridge, protobuf message serialization, gossip protocol, agent streaming
+- `core/mesh_aux/cmd/mesh_aux/main.go` — standalone mesh daemon
 - Python bridge: `whitemagic/mesh/awareness.py` (listens on Redis for PEER_DISCOVERED/PEER_LEFT events)
+- **NEW** Python build/launcher: `whitemagic/mesh/go_bridge.py` — `build_mesh()` compiles the binary, `start_mesh_daemon()` runs it as a subprocess
+- **v22 cleanup:** `polyglot/whitemagic-go/` (broken auto-generated duplicate files) archived to `~/Desktop/whitemagic-aux/whitemagic-go-broken-backup`
 
 ### 6. Zig (The Spark) — ~2.2K LOC
 **Build:** `cd whitemagic-zig && zig build`

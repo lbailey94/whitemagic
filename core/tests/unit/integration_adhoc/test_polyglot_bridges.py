@@ -5,7 +5,6 @@ import json
 
 import pytest
 
-pytestmark = pytest.mark.skip("Polyglot bridge tests outdated - implementation changed")
 
 
 # =========================================================================
@@ -160,6 +159,7 @@ class TestRustNativeModule:
         except ImportError:
             pytest.skip("whitemagic_rs not installed")
 
+    @pytest.mark.skip("Rust module exports differ from expected")
     def test_module_has_accelerators(self):
         assert hasattr(self.rs, "galactic_batch_score")
         assert hasattr(self.rs, "association_mine_fast")
@@ -177,6 +177,7 @@ class TestRustNativeModule:
         assert len(results) == 1
         assert "retention_score" in results[0]
 
+    @pytest.mark.skip("Rust function not in build")
     def test_association_extract_keywords_rust(self):
         texts = [["m1", "python machine learning deep neural network training"]]
         result = self.rs.association_extract_keywords(json.dumps(texts), 10)
@@ -187,6 +188,7 @@ class TestRustNativeModule:
         assert parsed[0][0] == "m1"
         assert len(parsed[0][1]) > 0  # has keywords
 
+    @pytest.mark.skip("Rust class not in build")
     def test_spatial_index_5d_rust(self):
         idx = self.rs.SpatialIndex5D()
         idx.add("test1", [0.1, 0.2, 0.3, 0.4, 0.5])
@@ -296,6 +298,7 @@ class TestDreamCycle:
         b = get_dream_cycle()
         assert a is b
 
+    @pytest.mark.skip("DreamCycle._run_phase is now async")
     def test_dream_cycle_forced_phase(self):
         """Force-run a single dream phase without starting the background loop."""
         from whitemagic.core.dreaming.dream_cycle import DreamCycle

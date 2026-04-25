@@ -347,6 +347,7 @@ whitemagic = "whitemagic.cli.cli_app:main"
 
 [tool.setuptools]
 packages = {find = {where = ["."], include = ["whitemagic", "whitemagic.*"], exclude = ["whitemagic-mojo", "whitemagic-mojo.*", "whitemagic-rust", "whitemagic-rust.*", "whitemagic-zig", "whitemagic-zig.*", "whitemagic-go", "whitemagic-go.*", "whitemagic-julia", "whitemagic-julia.*", "whitemagic.archive", "whitemagic.archive.*"]}}
+py-modules = ["whitemagic_rs"]
 
 [tool.setuptools.package-data]
 whitemagic = ["py.typed"]

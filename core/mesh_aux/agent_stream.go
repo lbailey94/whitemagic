@@ -201,7 +201,7 @@ func (r *AgentRegistry) AssignTask(task *TaskRequest) (*AgentInfo, error) {
 		// Score: prefer agents with lower load
 		loadRatio := 1.0 - float64(agent.CurrentLoad)/float64(max(agent.MaxLoad, 1))
 		// Bonus for agents that have completed more tasks (experienced)
-		expBonus := float64(agent.TasksComplete) / float64(max(agent.TasksComplete+agent.TasksFailed, 1))
+		expBonus := float64(agent.TasksComplete) / float64(max(int(agent.TasksComplete+agent.TasksFailed), 1))
 		score := loadRatio*0.7 + expBonus*0.3
 
 		if score > bestScore {

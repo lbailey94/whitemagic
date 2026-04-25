@@ -7,6 +7,19 @@ Uses mocks for subsystem singletons to isolate handler logic.
 import unittest
 from unittest.mock import MagicMock, patch
 
+try:
+    import whitemagic.core.memory.unified
+    import whitemagic.core.memory.vector_search
+    import whitemagic.core.intelligence.knowledge_graph
+    import whitemagic.core.intelligence.solver
+    import whitemagic.core.governor
+    import whitemagic.core.acceleration.simd
+    import whitemagic.agents.swarm
+    import whitemagic.tools.sandbox
+except ImportError:
+    pass
+
+
 
 # =========================================================================
 # Dharma handlers

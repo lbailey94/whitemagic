@@ -169,10 +169,8 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
     probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
 
     try:
-        with socket.create_connection((host, port), timeout=probe_timeout):
-            return True  # connection succeeded
+        socket.create_connection((host, port), timeout=probe_timeout).close()
     except OSError:
-
         return {
             "status": "error",
             "error": f"Redis {host}:{port} is unreachable",
@@ -223,10 +221,8 @@ def handle_broker_history(**kwargs: Any) -> dict[str, Any]:
     probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
 
     try:
-        with socket.create_connection((host, port), timeout=probe_timeout):
-            return True  # connection succeeded
+        socket.create_connection((host, port), timeout=probe_timeout).close()
     except OSError:
-
         return {
             "status": "error",
             "error": f"Redis {host}:{port} is unreachable",
@@ -267,10 +263,8 @@ def handle_broker_status(**kwargs: Any) -> dict[str, Any]:
         return await asyncio.wait_for(broker.status(), timeout=timeout)
 
     try:
-        with socket.create_connection((host, port), timeout=probe_timeout):
-            return True  # connection succeeded
+        socket.create_connection((host, port), timeout=probe_timeout).close()
     except OSError:
-
         return {
             "status": "error",
             "error": f"Redis {host}:{port} is unreachable",

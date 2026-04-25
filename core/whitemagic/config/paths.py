@@ -49,8 +49,7 @@ ARCHIVE_DIR: Path = PROJECT_ROOT / "archive"
 # Resolution order (first wins):
 # 1. WM_STATE_ROOT env var  (explicit, preferred)
 # 2. WM_CONFIG_ROOT env var (legacy alias, still supported)
-# 3. SD card location      (/media/lucas/SD_CARD/WHITEMAGIC/data/runtime - new default)
-# 4. ~/.whitemagic          (fallback for compatibility)
+# 3. ~/.whitemagic          (fallback for compatibility)
 #
 # NOTE: Repo-local state detection has been intentionally removed.
 # Runtime state (memory DB, sessions, logs) must never live inside the

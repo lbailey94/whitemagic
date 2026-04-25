@@ -15,27 +15,46 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
     @click.option("--output", "-o", default="memory_graph.html", help="Output file for the graph")
     def graph(output: str) -> None:
         """Generate relationship graph for memories (v4.5.0)."""
-        html_content = """<!DOCTYPE html>
+        try:
+            memory = get_memory_fn()
+            nodes = []
+            links = []
+            all_memories = memory.search(limit=200)
+            for i, mem in enumerate(all_memories):
+                nodes.append({"id": mem.id, "title": mem.title or "Untitled", "group": str(mem.memory_type)})
+                for tag in (mem.tags or set()):
+                    links.append({"source": mem.id, "target": f"tag:{tag}", "value": 1})
+            html_content = f"""<!DOCTYPE html>
 <html>
 <head>
     <title>WhiteMagic Memory Graph</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .node { border: 1px solid #ccc; padding: 10px; margin: 5px; display: inline-block; }
-    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>body {{ font-family: Arial, sans-serif; margin: 0; }} #graph {{ width: 100vw; height: 100vh; }}</style>
 </head>
 <body>
-    <h1>WhiteMagic Memory Relationship Graph</h1>
-    <p>Graph visualization placeholder. Implement full graph logic here.</p>
-    <div class="node">Memory 1</div>
-    <div class="node">Memory 2</div>
+    <div id="graph"></div>
+    <script>
+        const nodes = {json_dumps_fn(nodes)};
+        const links = {json_dumps_fn(links)};
+        const svg = d3.select("#graph").append("svg").attr("width", "100%").attr("height", "100%");
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(80))
+            .force("charge", d3.forceManyBody().strength(-200))
+            .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+        const link = svg.append("g").selectAll("line").data(links).join("line").attr("stroke", "#999").attr("stroke-opacity", 0.6);
+        const node = svg.append("g").selectAll("circle").data(nodes).join("circle").attr("r", 8).attr("fill", "#69b3a2");
+        node.append("title").text(d => d.title);
+        simulation.on("tick", () => {{
+            link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            node.attr("cx", d => d.x).attr("cy", d => d.y);
+        }});
+    </script>
 </body>
 </html>"""
-        try:
             with open(output, "w") as f:
                 f.write(html_content)
-            click.echo(f"✅ Graph generated: {output}")
-        except (OSError, FileNotFoundError, PermissionError) as e:
+            click.echo(f"✅ Graph generated: {output} ({len(nodes)} nodes, {len(links)} links)")
+        except Exception as e:
             click.echo(f"❌ Failed to generate graph: {e}", err=True)
 
     @main.command(name="session-start")

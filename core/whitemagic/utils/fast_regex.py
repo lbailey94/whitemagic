@@ -18,15 +18,30 @@ from whitemagic.utils.rust_helper import is_rust_available
 
 
 class FastRegexPattern:
-    """Wrapper that uses Python re module (Rust acceleration not yet implemented)."""
+    """Wrapper that uses Rust regex when available, Python re fallback otherwise."""
 
     def __init__(self, pattern: str, flags: int = 0):
         self.pattern = pattern
         self.flags = flags
+        self._rust_pattern = None
         self._py_pattern = re.compile(pattern, flags)
+        if is_rust_available() and flags == 0:
+            try:
+                import whitemagic_rs as rs
+                if hasattr(rs, "Regex"):
+                    self._rust_pattern = rs.Regex(pattern)
+            except Exception:
+                pass
 
     def search(self, text: str) -> re.Match | None:
         """Search for pattern in text."""
+        if self._rust_pattern is not None:
+            try:
+                m = self._rust_pattern.search(text)
+                if m:
+                    return re.Match(m)
+            except Exception:
+                pass
         return self._py_pattern.search(text)
 
     def match(self, text: str) -> re.Match | None:
@@ -35,6 +50,11 @@ class FastRegexPattern:
 
     def findall(self, text: str) -> list:
         """Find all matches."""
+        if self._rust_pattern is not None:
+            try:
+                return self._rust_pattern.findall(text)
+            except Exception:
+                pass
         return self._py_pattern.findall(text)
 
     def finditer(self, text: str):

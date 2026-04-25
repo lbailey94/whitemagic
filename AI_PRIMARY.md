@@ -630,9 +630,9 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **UMAP Visualization** (`core/memory/umap_projection.py`) — 2D/3D embedding projection with optional k-means clustering and metadata hydration.
 
 ### Metrics
-- **311 MCP tools** across **28 Gana meta-tools**
+- **~420 MCP tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
-- **1,656 tests passing**, 0 failures
+- **783 tests passing**, 173 failures under investigation, 259 skipped (as of 2026-04-22)
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 
 ---

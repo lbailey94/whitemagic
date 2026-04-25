@@ -41,7 +41,7 @@ def find_unread(directory: str = ".", patterns: list[str] | None = None) -> list
 def stats(scan_disk: bool = False) -> dict[str, Any]:
     return cast(dict[str, Any], get_archaeologist().stats(scan_disk=scan_disk))
 
-# Bridge for WisdomExtractor (placeholder for now using Chariot logic)
+# Bridge for WisdomExtractor — delegates to ChariotArchaeologist
 class WisdomExtractor:
     def __init__(self):
         self.arch = get_archaeologist()

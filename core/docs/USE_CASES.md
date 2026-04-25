@@ -1,6 +1,6 @@
 # WhiteMagic Use Cases & Capabilities Guide
 
-**Version**: 15.0.0 | **For**: AI agents, developers, researchers, hobbyists
+**Version**: 22.0.0 | **For**: AI agents, developers, researchers, hobbyists
 
 ---
 

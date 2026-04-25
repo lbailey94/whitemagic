@@ -55,6 +55,18 @@ def recall_cmd(task_type: str) -> None:
 @thought_cli.command(name="score")
 @click.option("--manual", type=float, help="Manual score (-1.0 to 1.0)")
 def score_cmd(manual: float | None) -> None:
-    """Score the most recent episode (placeholder)."""
-    # In a real impl, this would connect to the active session state
-    click.echo("Scoring functionality requires active session connection (not yet implemented in CLI)")
+    """Score the most recent episode."""
+    galaxy = _get_galaxy()
+    try:
+        episode = galaxy.get_most_recent_episode()
+        if not episode:
+            click.echo("No recent episode found to score.")
+            return
+        if manual is not None:
+            score = max(-1.0, min(1.0, manual))
+            galaxy.score_episode(episode.id, score)
+            click.echo(f"Scored episode {episode.id}: {score:.2f}")
+        else:
+            click.echo(f"Most recent episode {episode.id} has score {episode.outcome_score:.2f}")
+    except Exception as e:
+        click.echo(f"Scoring failed: {e}")

@@ -29,6 +29,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import sqlite3
 import threading
 import time
 from collections import deque
@@ -921,7 +922,6 @@ class DreamCycle:
         """Emit a dream event to the Gan Ying bus."""
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
-import sqlite3
                 EventType,
                 ResonanceEvent,
                 get_bus,

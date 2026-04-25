@@ -18,12 +18,12 @@ import unittest
 
 import pytest
 
-pytestmark = pytest.mark.skip("v12.7 fusion tests outdated - implementation changed")
 
 # =========================================================================
 # 1. Zig SIMD Cosine Similarity
 # =========================================================================
 
+@pytest.mark.skip("Zig library not built in this environment")
 class TestZigSIMD(unittest.TestCase):
     """Test the Zig SIMD cosine similarity bridge."""
 
@@ -76,6 +76,7 @@ class TestZigSIMD(unittest.TestCase):
 # 2. Haskell Dharma Primary Evaluator
 # =========================================================================
 
+@pytest.mark.skip("Haskell bridge not built in this environment")
 class TestHaskellDharmaPrimary(unittest.TestCase):
     """Test Haskell Dharma as primary evaluator with Python fallback."""
 
@@ -405,6 +406,7 @@ class TestCapabilityMatrixUpdates(unittest.TestCase):
 # 10. Fusion Status Tracking
 # =========================================================================
 
+@pytest.mark.skip("Fusion status API removed in v22")
 class TestFusionStatus(unittest.TestCase):
     """Test the fusion status tracker."""
 

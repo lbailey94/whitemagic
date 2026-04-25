@@ -164,6 +164,9 @@ Thumbs.db
 
 # === Private / Not for public release ===
 aria/
+archive/
+legacy/
+whitemagic-site/
 core/whitemagic/legacy/
 data/
 projects/

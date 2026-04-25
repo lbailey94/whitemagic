@@ -542,6 +542,7 @@ def get_resonance_summary() -> dict[str, Any]:
             current_lunar_gana = name
             break
 
+    from whitemagic.core.zodiac import get_zodiac_clock
     return {
         "session_calls": state.call_count,
         "gana_counts": state.get_gana_counts(),
