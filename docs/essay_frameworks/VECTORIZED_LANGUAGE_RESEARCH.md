@@ -520,7 +520,56 @@ with latency 123ms and returned 5 results
 
 ---
 
-## XII. Research Campaign Proposal
+## XII. Revised Architecture: Layered Symbolic Compression
+
+> **Updated after review (Apr 25, 2026).** The original proposal conflated two distinct problems: general AI reasoning compression and structured operation serialization. This section refines the scope.
+
+### The Problem With Universal Glyph Languages
+
+A single synthetic logoglyph language for *all* AI thought is a category error. Frontier models do not "think in tokens"—tokens (English, Chinese, or ⊕⊗↻) are lossy serializations of latent-space reasoning. A glyph language changes the compression format, not the reasoning substrate. Attempting to replace natural language for creative synthesis, debugging, or philosophical inquiry hits an expressiveness wall fast.
+
+**The right scope:** A **domain-specific language (DSL)** for WhiteMagic's repetitive mechanical operations—tool dispatch, memory queries, blackboard updates, clone coordination. This is where 80-95% compression is real, parsers are tractable, and debugging is bounded.
+
+### Four-Layer Stack
+
+| Layer | Format | Human Readable? | Use Case | Compression |
+|-------|--------|----------------|----------|-------------|
+| **Human** | English / Chinese | Yes | Requirements, reasoning, debugging, Grimoire chapters | Baseline |
+| **Tool DSL** | Symbolic glyphs (this doc) | With decoder | Tool dispatch, memory queries, blackboard, pipeline orchestration | 80-90% |
+| **Binary** | Protocol Buffers / MessagePack | No | Wire protocol, clone-to-clone bus, WASM edge | 90-95% |
+| **Latent** | High-dim vectors | N/A | Internal model reasoning (already how models operate) | N/A |
+
+**Rule:** Compression increases as you go down the stack, but human inspectability decreases. Never compress above the layer where a human needs to debug.
+
+### The Tool DSL Scope
+
+The 100-glyph set proposed in Sections III-V is *correct* when scoped to the Tool DSL layer. It should NOT be extended to:
+- Natural language generation
+- Code synthesis (Python/Rust/Zig source)
+- Philosophical or ethical reasoning
+- User-facing documentation
+
+**Example boundary:**
+```
+✅ Tool DSL:     🔍[◆:#consciousness,$>0.8,n=10]     (5 glyphs → 50 tokens)
+❌ Universal:    ↻[◆:user_feeling_sad]⊗[empathy]⊣[reply]  (nonsense for general reasoning)
+```
+
+### Chinese Characters as Precedent
+
+Chinese is the closest existing human writing system to what the Tool DSL proposes. A single character like 感 (Gǎn, "resonance/stimulus") packs emotion, sensation, and causality into one glyph—exactly the multi-dimensional encoding this research targets. The difference is that Chinese evolved organically over 5,000 years; the Tool DSL is designed mechanically for a narrow domain.
+
+**Implication:** If a future workflow needs human-readable but token-efficient scratchpads, Classical Chinese (文言文) or structured Chinese notation is a viable middle path—denser than English, more expressive than synthetic glyphs, and culturally resonant with WhiteMagic's astronomical terminology.
+
+### Updated Next Steps
+
+1. **Immediate** — Lock the Tool DSL to WhiteMagic operations only. Reject "universal AI language" scope creep.
+2. **Week 1** — Define the core 50-glyph operational subset (Section III-A through E). Build Python encoder/decoder.
+3. **Week 2** — Integrate with `prat_mappings.py`. When `WM_VECTORIZED=1`, tool dispatch uses glyph notation internally while returning English to the client.
+4. **Week 3** — Benchmark on 100 real tool calls. Measure token reduction, parser latency, and debuggability.
+5. **Week 4** — Decision gate: if compression < 70% or debug time > 2×, abandon Tool DSL and invest in Binary layer (MessagePack) instead.
+
+## XIII. Research Campaign Proposal
 
 ### Campaign: **Vectorized Language Development**
 **Shadow Clones**: 50K  
@@ -560,23 +609,23 @@ with latency 123ms and returned 5 results
 
 ---
 
-## XIII. Conclusion
+## XIV. Conclusion
 
-Synthetic logoglyphs represent a **paradigm shift** in AI-to-AI communication:
-- **80-95% token reduction** for internal operations
-- **Context-dependent semantics** for rich expressiveness
-- **Hierarchical composition** for complex workflows
-- **Metadata embedding** for confidence, priority, context
+Synthetic logoglyphs are **not a paradigm shift**—they are a well-scoped DSL for a well-understood problem. The genuine innovation is not the symbols themselves but the *layered compression architecture* that places them at the correct level of the stack.
 
-While experimental, the potential benefits are enormous:
-- Faster internal processing
-- Lower API costs
-- More efficient shadow clone coordination
-- Richer semantic content in compact form
+**What works:**
+- **80-90% token reduction** for structured Tool DSL operations
+- **Hierarchical composition** for multi-step pipeline orchestration
+- **Cross-language serialization** via UTF-8 glyph encoding
 
-The path forward is clear: **research, prototype, validate, iterate**. With a dedicated shadow clone campaign, we can build a production-ready vectorized language system within 4 weeks.
+**What does not work:**
+- Replacing natural language for general reasoning
+- Expecting humans to debug raw glyph streams without decoders
+- Extending the glyph set beyond 100-200 operational symbols
 
-**The future of AI communication is not more words—it's smarter symbols.**
+**The honest verdict:** Tool DSL compression is a 2-week implementation with measurable returns. "Universal vectorized thought" is a research distraction. Invest in the Tool DSL. If it fails the Week 4 decision gate, fall back to MessagePack at the Binary layer and move on.
+
+**The future of AI communication is layered: natural language where humans debug, symbols where machines coordinate, and binary where bits matter.**
 
 ---
 
