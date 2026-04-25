@@ -496,7 +496,7 @@ async def read_resource(uri) -> str:
         except Exception as exc:
             return f"# Unavailable\n\nerror: {exc}"
     if "ai-primary" in uri_str:
-        path = REPO_ROOT / "docs" / "misc" / "AI_PRIMARY.md"
+        path = REPO_ROOT / "AI_PRIMARY.md"
         try:
             return path.read_text(encoding="utf-8")
         except Exception as exc:
@@ -504,7 +504,7 @@ async def read_resource(uri) -> str:
     if "server-instructions" in uri_str:
         return _INSTRUCTIONS
     if "system-map" in uri_str:
-        path = REPO_ROOT / "docs" / "misc" / "SYSTEM_MAP.md"
+        path = REPO_ROOT / "SYSTEM_MAP.md"
         try:
             return path.read_text(encoding="utf-8")
         except Exception as exc:

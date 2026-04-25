@@ -51,36 +51,105 @@ State root resolution (intended):
 
 Nothing under runtime state should ever be committed.
 
-## Repo Layout (What Matters)
+## Repo Layout (Tree-Accurate)
 
-Core Python (shipped):
-- `whitemagic/`: main Python package
-- `whitemagic/tools/`: canonical tool registry + dispatcher used by MCP
-- `whitemagic/run_mcp.py`: FastMCP stdio server entrypoint
-- `tests/`: unit + integration tests
-- `docs/`: documentation
-- `audit/`: audit/verification scripts (should not assume developer-specific paths)
+```
+WHITEMAGIC/
+├── README.md                           # Project overview
+├── CHANGELOG.md                        # Release history
+├── SECURITY.md                         # Security policy
+├── CODE_OF_CONDUCT.md                  # Community standards
+├── CONTRIBUTING.md                     # Contribution guide
+├── DEPLOY.md                           # Deployment overview
+├── QUICKSTART.md                       # 5-minute start
+├── SYSTEM_MAP.md                       # This file — canonical repo map
+├── AI_PRIMARY.md                       # AI agent onboarding doc
+├── skill.md                            # MCP skill definition
+│
+├── docs/                               # Project-level documentation
+│   ├── INDEX.md                        # Doc filing system index (start here)
+│   ├── README.md                       # Docs folder guide
+│   ├── message_board/                  # Active session docs (current cycle)
+│   │   ├── SESSION_SUMMARY.md
+│   │   ├── RELEASE_READINESS_v22.0.0.md
+│   │   ├── PHASE0_AUDIT.md
+│   │   ├── STUB_AUDIT.md
+│   │   ├── STUB_ZERO_PLAN.md
+│   │   └── ... (15 total)
+│   ├── archive/                        # Superseded old versions
+│   ├── adr/                            # Architecture Decision Records (5)
+│   ├── architecture/                   # Infra & structural decisions
+│   ├── operations/                     # Runbooks, config, ops guides
+│   ├── plans/                          # Roadmaps + planning history
+│   ├── public/                         # Website, legal, GitHub-facing
+│   ├── reports/                        # Audits, evaluations, post-mortems
+│   ├── spec/                           # Technical specifications
+│   ├── strategy_manifestos/            # Strategic vision & market analysis
+│   ├── essay_frameworks/               # Long-form philosophy essays
+│   └── deploy/                         # Deployment-specific guides
+│
+├── core/                               # Python package (shipped)
+│   ├── whitemagic/                     # Main Python package
+│   │   ├── tools/                      # Tool registry + dispatcher
+│   │   ├── run_mcp.py                  # FastMCP stdio entrypoint
+│   │   ├── run_mcp_lean.py             # Lean MCP server (28 Ganas)
+│   │   ├── grimoire/                   # 28 Gana chapters + Python code
+│   │   ├── core/                       # Memory, intelligence, resonance
+│   │   ├── interfaces/                 # API + dashboard
+│   │   └── ... (50+ subpackages)
+│   ├── tests/                          # Unit + integration tests
+│   ├── docs/                           # Core-specific docs
+│   │   ├── adr/                        # Core ADRs
+│   │   ├── architecture/               # Core architecture deep-dives
+│   │   ├── community/                  # Core community docs
+│   │   └── ... (40+ .md files)
+│   ├── scripts/                        # Audit, deploy, maintenance scripts
+│   ├── whitemagic-rust/                # Rust PyO3 extension
+│   ├── whitemagic-math/                # Math utilities
+│   └── eval_aux/                       # Evaluation docs
+│
+├── grimoire/                           # Canonical 28 Gana chapters (.md)
+│   ├── 00_PROLOGUE.md                  # Referenced by run_mcp_lean.py
+│   ├── 01_HORN_SESSION_INITIATION.md
+│   ├── ...
+│   └── templates/
+│
+├── polyglot/                           # 11-language acceleration cores
+│   ├── mojo/                           # Mojo 0.26.1 kernels
+│   ├── whitemagic-koka/                # Koka effect handlers
+│   ├── whitemagic-zig/                 # Zig SIMD
+│   └── ...
+│
+├── apps/                               # Application layer
+│   └── site/                           # Next.js website
+│
+├── .github/                            # CI/CD, PR templates, workflows
+│   ├── workflows/ci.yml
+│   └── PULL_REQUEST_TEMPLATE.md
+│
+└── ops/                                # Operations scripts
+```
 
-Polyglot accelerators (all 6 languages build clean — ship source only, not build outputs):
-- `whitemagic-rust/`: Rust PyO3 extension (`whitemagic_rs`) — galactic batch scoring, association mining, 5D KD-tree, SIMD search
-- `haskell/`: Haskell FFI — algebraic Dharma rules, dependency graph planner
-- `elixir/`: Elixir OTP — actor-model Gan Ying event bus, dream scheduler, supervisor
-- `whitemagic-go/` + `mesh/`: Go — general bridge + libp2p P2P mesh (mDNS, Redis, protobuf)
-- `whitemagic-zig/`: Zig — SIMD cosine similarity, holographic projection, memory management
-- `whitemagic-mojo/`: Mojo 0.26 — batch coordinate encoding, neuro scoring, satkona yang
-- `whitemagic-julia/`: Julia scientific (Legacy/Restored)
-- `experiments/`: Experimental/Reference code
+### Key Rules
 
-Local legacy archive (ignored by git; kept for reference):
-- `_archived/`: legacy/broken modules (should not be used as canonical APIs)
+- **Root `.md` files** are canonical — referenced by code, CI, and external tools. Do not move without updating references.
+- **`docs/message_board/`** is the active workspace. Current session docs live here.
+- **`docs/archive/`** holds superseded versions.
+- **`core/docs/`** is separate from `docs/` — `core/` is a distributable Python package.
+- **`grimoire/`** (root) is the canonical markdown source. `core/whitemagic/grimoire/` contains the Python package + copies of the `.md` files.
 
-Local-only (ignored; never ship):
+### Local-Only (Ignored; Never Ship)
+
 - `memory/`, `data/`, `logs/`, `reports/`, `tmp/`
 - `.whitemagic/`
 - `.venv/`, `temp_venv/`
 - `windsurf_conversations/`
 - `.mcp.json` (use `.mcp.json.example` as a template)
 - `wm` (local convenience wrapper)
+
+### Local Legacy Archive
+
+- `_archived/`: legacy/broken modules (should not be used as canonical APIs)
 
 ## CyberBrains-Inspired Modules (v11.1)
 

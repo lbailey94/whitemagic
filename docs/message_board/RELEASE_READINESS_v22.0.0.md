@@ -123,11 +123,42 @@ All 11 major modules import successfully:
 ### Before Tagging
 1. ✅ **All clear** — no blockers
 
-### After Tagging
-1. Create GitHub Release with CHANGELOG excerpt
-2. Push `v22.0.0` tag
-3. Verify CI passes on tag
-4. Announce in #releases channel
+### After Tagging — Phase 8: Post-v22 Strategy (2026-04-25)
+
+#### Immediate (Session 1 — High Impact, Low Risk)
+1. ✅ **Git tag `v22.0.0` created** — commit `e2b0544`
+2. **MCP Startup Latency (Step 2)** — The `mcp.types` import costs ~970ms. Resolution: defer the import until first `_sync_dispatch` call in `run_mcp_lean.py`. Add a `LazyMCPTypes` wrapper so the module is only loaded when a request actually arrives. Target: <100ms cold-start for health checks.
+3. **Stub Audit CI Gate (Step 3 / Step 8)** — Create `core/scripts/check_stubs.py` that runs on every PR: greps for `"stub"` in docstrings, counts `raise NotImplementedError`, and flags any Python module that shrinks by >50% relative to `main`. Add as a `stub-audit` job to `.github/workflows/ci.yml`.
+4. **Performance Benchmarking (Step 7)** — Create `core/scripts/benchmark_acceleration.py` that runs a matrix of: Python fallback vs. Zig SIMD vs. Rust accelerators for cosine similarity, batch ops, and keyword extraction. Output JSON to `reports/benchmark_v22.json`. This gives us data to decide which bridges are worth maintaining.
+
+#### Short Term (1–2 Weeks)
+5. **Real Agent Loop (Step 6 / Step 10)** — The immortal clone now has AST-based `analyze()` and `edit()`. Next: wire it to the PRAT router so a clone can invoke Gana tools. Add `wm clone run --target=./my_module.py --campaign=fix_imports` CLI command. The clone loop becomes: `analyze → plan edits → call gana_root for tool dispatch → edit → verify → repeat until victory conditions met`.
+6. **5D Coordinate Expansion (Step 11)** — Build on the recovered holographic coords:
+   - Add `spatial_navigator.py` CLI: `wm memory journey --from=tag:architecture --depth=3`
+   - Implement constellation detection in 5D space using `grid_density_scan`
+   - Add a `/api/memories/journey` dashboard endpoint that returns a D3.js force graph of related memories
+7. **Economic Layer Activation (Step 12)** — The payment modules (`ilp_manager.py`, `karma_anchor.py`, `ledger.py`) work when `xrpl-py` is installed but have zero test coverage. Add `tests/test_payments.py` with mocked XRPL responses. Document the x402 flow in `docs/X402_INTEGRATION.md`. Build a `/api/tip` endpoint on the dashboard for the site launch.
+
+#### Medium Term (1 Month)
+8. **Archive Deep Recovery (Step 9)** — All major archive recoveries are complete. Remaining opportunity: the `whitemagic0.2` archive has deeper Koka effect-handler bindings and Mojo GPU kernel templates. If/when those runtimes are available, diff and port. Not blocking.
+
+#### Strategic Decisions (Saved for Last — Require External Input)
+9. **Site Launch Blockers (Step 1)** — Resend API key + OpenRouter API key required for `/contact` and `/librarian`. These are pure integration tasks (no code risk) but need credentials and DNS config. **Action:** Obtain keys, add to environment, verify end-to-end.
+10. **Mem0 / Zep Integration (Step 4)** — This is an architecture decision. The competitive analysis recommends positioning WhiteMagic as the "governance + resonance + pattern extraction" layer on top of established memory backends. If we integrate Mem0 or Zep, our SQLite layer becomes the "resonance cache" (holographic coords, galactic distances, Harmony Vector feedback) while the primary vector store lives in Mem0/Zep. **Action:** Spike a `whitemagic[mem0]` extra with a `Mem0Backend` adapter behind the `UnifiedMemory` interface. Evaluate latency and feature parity before committing.
+11. **WASM Build Verification (Step 5)** — The competitive analysis identifies WASM Component Model as the long-term polyglot strategy. **Action:** Add `build-wasm` target to CI. Verify `wasm-pack build` succeeds for `core/whitemagic-rust`. If it passes, promote WASM from Labs tier to Core tier in `POLYGLOT_STATUS.md`.
+
+#### Success Metrics for Phase 8
+| Metric | Target | Owner |
+|--------|--------|-------|
+| MCP cold-start | <100ms | Core |
+| Stub audit CI | Green on every PR | Infra |
+| Benchmark coverage | 6 acceleration paths | Core |
+| Clone tool invocation | 1 end-to-end demo | Core |
+| 5D memory journey | Working CLI + API | Core |
+| Payment test coverage | 80%+ | Core |
+| Site launch | Live at whitemagic.dev | Site |
+| Mem0 spike | Go/No-go decision | Architecture |
+| WASM CI | Green | Polyglot |
 
 ---
 

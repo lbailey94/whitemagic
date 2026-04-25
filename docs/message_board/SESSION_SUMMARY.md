@@ -256,26 +256,28 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 
 ---
 
-## 10. Next Steps (Prioritized)
+## 10. Next Steps (Prioritized) — Phase 8: Post-v22 Strategy
 
-### Immediate (Before v22.0.0 Tag)
-1. ✅ All clear — release readiness verified
+> **Status:** v22.0.0 tagged (`e2b0544`). Stub Zero complete. All 41 stubs eliminated.
+> **Updated:** Strategic direction revised after review of CyberBrain architecture documents and polyglot resonance research.
 
-### Short Term (Next Session)
-1. **Execute Sprint 1 of `STUB_ZERO_PLAN.md`** — Recover 5 archive regressions
-2. **Create GitHub Release** for v22.0.0 with CHANGELOG excerpt
-3. **Push `v22.0.0` tag** and verify CI passes
+### Immediate (Session 1 — High Impact, Low Risk)
+1. **MCP Startup Latency** — Defer `mcp.types` import until first `_sync_dispatch` call. Add `LazyMCPTypes` wrapper. Target: <100ms cold-start.
+2. **Stub Audit CI Gate** — Create `core/scripts/check_stubs.py` (greps docstrings, counts `NotImplementedError`, flags >50% size drops). Add `stub-audit` job to CI.
+3. **Performance Benchmarking** — Create `core/scripts/benchmark_acceleration.py`: Python vs. Zig SIMD vs. Rust for cosine, batch ops, keywords. Output JSON to `reports/benchmark_v22.json`.
 
-### Medium Term (Next 2 Weeks)
-1. **Execute Sprints 2-4 of `STUB_ZERO_PLAN.md`** — Close design gaps, port bridges, polish
-2. **Site launch blockers** — Resend + OpenRouter integration
-3. **Investigate MCP import latency** — Profile `mcp.types` deferred loading
+### Short Term (1–2 Weeks)
+4. **Real Agent Loop** — Wire immortal clone to PRAT router so clones can invoke Gana tools. Add `wm clone run --target=./file.py --campaign=...` CLI. Loop: `analyze → plan → gana dispatch → edit → verify → repeat`.
+5. **5D Coordinate Expansion** — Build `wm memory journey --from=tag:x --depth=3` CLI. Implement constellation detection in 5D space. Add `/api/memories/journey` dashboard endpoint with D3.js force graph.
+6. **Economic Layer Activation** — Add `tests/test_payments.py` with mocked XRPL. Document x402 in `docs/X402_INTEGRATION.md`. Build `/api/tip` endpoint.
 
-### Long Term (Next Month)
-1. **Add `STUB_AUDIT` CI check** — Flag modules that shrink >50% in PRs
-2. **Recover remaining archive modules** — `simd_cosine`, `simd_unified`, `koka_bridge`, `mojo_bridge`
-3. **Implement real agent loop** — Immortal clone AST analysis and mutation
-4. **Wire Rust accelerators** — When `whitemagic-rust` is built, swap Python fallbacks
+### Medium Term (1 Month)
+7. **Archive Deep Recovery** — All major recoveries done. If Koka/Mojo runtimes become available, diff deeper bindings from `whitemagic0.2` archive.
+
+### Strategic Decisions (Saved for Last — Require External Input)
+8. **Site Launch Blockers** — Needs Resend + OpenRouter API keys, DNS config. Pure integration, no code risk.
+9. **~~Mem0 / Zep Integration~~ → REJECTED** — After architectural review, integrating Mem0 or Zep would be **regressive**. WhiteMagic's 5D holographic system, bicameral enrichment, and galactic topology are emergent cognitive capabilities that flat vector stores cannot replicate. See Section 14 for full rationale. Decision: build native cognitive layers instead.
+10. **WASM Build Verification** — Add `build-wasm` to CI. Verify `wasm-pack build` for `whitemagic-rust`. If green, promote WASM to Core tier.
 
 ---
 
@@ -327,6 +329,123 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 
 ### Backend Additions
 - `sqlite_backend.py`: Added `list_all_paginated()` and `batch_update_galactic()` for GalacticMap
+
+---
+
+## 14. Post-v22 Strategic Pivot — From Memory Backend to Cognitive Operating System
+
+> **Date:** 2026-04-25 (post-tag review)
+> **Trigger:** Re-discovery of CyberBrain architecture documents (`CODEX/LIBRARY/cyberbrains*`) and holographic resonance research
+> **Decision:** WhiteMagic is not a "memory tool." It is a **cognitive operating system**. We will not bolt onto competing memory backends. We will refine what makes us unique.
+
+---
+
+### 14.1 The Mem0 / Zep Rejection
+
+**Original plan:** Spike `whitemagic[mem0]` extra, evaluate latency/feature parity, treat our SQLite layer as a "resonance cache" on top of Mem0/Zep.
+
+**Why this was wrong:**
+- Mem0 is a **retrieval layer** (vector + metadata). WhiteMagic is a **cognitive layer** (spatial reasoning, emotional valence, creative synthesis).
+- Mem0 retrieves based on cosine similarity — a hard threshold. WhiteMagic uses **galactic zones** (CORE → FAR_EDGE) with gradient-based accessibility. A memory at `distance=0.65` is still reachable but requires more "effort." This is memory physics, not vector lookup.
+- Mem0 has **no concept** of: hippocampal replay, bicameral enrichment, constellation detection, mindful forgetting with galactic drift, or Harmony Vector feedback loops.
+- **Bolting onto Mem0 makes WhiteMagic a plugin. Refining the 5D system makes us a category.**
+
+**Verdict:** Rejected. No Mem0/Zep adapter will be built. The `UnifiedMemory` interface remains open for future backends, but the strategic priority is native cognitive architecture.
+
+---
+
+### 14.2 The CyberBrain Architecture
+
+The CyberBrain documents describe a **7-layer nested cognitive stack** mapped to neuroanatomy. WhiteMagic already implements most of these layers:
+
+| Layer | Brain Region | WhiteMagic Module | Status |
+|-------|-------------|-------------------|--------|
+| 1 | Atomic Kernel | `seed` binary, `shelter` sandbox | ✅ Core |
+| 2 | Sensorimotor Weave | MCP tool dispatch, Gana handlers | ✅ Core |
+| 3 | Command Hall | Dharma governance, circuit breakers | ✅ Core |
+| 4 | Narrative Layer | Bicameral reasoner, immortal clone | ✅ Active |
+| 5 | Radiant Layer | Harmony Vector, gratitude economy | ✅ Active |
+| 6 | Constellation Layer | Galactic Map, constellation detection | ✅ Active |
+| 7 | Logos Layer | Foresight engine (aspirational) | 🌱 Stage 6 gate |
+
+**Key insight:** We are not "adding" a CyberBrain. We **already built one** — we just didn't name it. The 5D galactic core *is* the hippocampal spatial map. The bicameral reasoner *is* the dual-hemisphere corpus callosum. The salience arbiter *is* the thalamic router.
+
+**What we need to add:**
+- **Multi-timescale event bus** (10ms reflex → 1hr consolidation) — currently all Python loops run at the same timescale
+- **Digital corpus callosum** — high-bandwidth bidirectional critique between left (deterministic) and right (stochastic) hemispheres
+- **Jaynes Voice Audit** — scan for hallucinated "un-logged" command tokens; quarantine if found
+
+---
+
+### 14.3 The Polyglot Core Matrix
+
+Different cognitive functions need different computational substrates. The archive shows we previously explored Julia, Haskell, and other languages for "resonating data-stars." This was correct.
+
+| Brain Region | Language | Rationale | Current Status |
+|-------------|----------|-----------|----------------|
+| **Cerebellum / Reflex** | Rust / Zig | <1ms, no GC, deterministic | ✅ SIMD bridges active |
+| **Hippocampal Indexing** | Haskell | Immutable spatial structures, type-safe bridges | 🌱 `polyglot/whitemagic-hs/` exists, needs revival |
+| **Cortex / Narrative** | Python | LLM integration, rapid prototyping | ✅ Primary stack |
+| **PFC / Planning** | Julia | Mathematical optimization, tree search | 🌱 `polyglot/whitemagic-jl/` exists, needs wiring |
+| **Global Workspace** | Go | Concurrency, hot-swappable modules | ✅ Mesh bridge built |
+| **Limbic / Emotion** | Python + numpy | Signal processing on valence vectors | ✅ Drive core active |
+| **Logos / Foresight** | Python + JAX | Monte Carlo world models | 🌱 Aspirational |
+
+**Strategic priority:** Revive the Haskell spatial core and Julia planning core. They are not "acceleration" — they are **cognitive specialization**. Haskell's type system can enforce invariants like "a creative bridge only forms when `tag_overlap == 0 AND valence_sum > 1.5`." Julia's multiple dispatch is perfect for `galactic_distance(::Star{A}, ::Star{B})` with per-type metrics.
+
+---
+
+### 14.4 The Dream / YAML Sandbox
+
+**Concept:** When bicameral reasoning detects a creative bridge with `confidence < 0.5`, instead of polluting core memory, write it to a **dream artifact** — a human-readable YAML file.
+
+**Why YAML:**
+- Human-inspectable (you can literally read the AI's dreams)
+- Git-diffable (track how dream patterns evolve across versions)
+- Branchable (create `dreams/experiment_7.yaml` without touching SQLite)
+- Safe (parsing is bounded; no code execution)
+- Non-destructive (dreams expire unless revisited)
+
+**Nightly dream consolidation:**
+1. Load all dream YAMLs from `~/.whitemagic/dreams/`
+2. Check revisit counts (how many times the dream was queried)
+3. Promote high-revisit dreams to memory with `dream_source` provenance
+4. Let unvisited dreams expire via mindful forgetting
+
+This gives WhiteMagic **introspection** and **creative incubation** — capabilities no vector store has.
+
+---
+
+### 14.5 The Recursive Holographic Galaxy
+
+**Core thesis:** Memory is not stored as **points** in vector space. It is stored as **fields** in a holographic interference pattern.
+
+- The **5th dimension (v)** is not spatial — it is **vitality variance**, the rate of change of a concept's importance
+- Two stars with identical `(x,y,z,w)` but different `v` are the *same concept at different energies*
+- **Constellation detection** finds stable interference patterns across the field
+- **Memory is not retrieved — it is reconstructed** by generating an interference pattern and finding which existing patterns resonate
+
+**This is why polyglot specialization matters:**
+- Python orchestrates the field
+- Julia computes the resonances (mathematical optimization over 5D manifolds)
+- Haskell validates the bridges (type-safe topological invariants)
+- Rust handles the reflex-speed spatial queries
+
+---
+
+### 14.6 Revised Next Steps (Cognitive OS Priority)
+
+The Phase 8 table (Section 10) remains valid for hardening tasks. These items are **additive** — they represent the new strategic layer.
+
+| Priority | Task | Description | Effort |
+|----------|------|-------------|--------|
+| **P0** | Event Bus Prototype | Go-based multi-timescale broker: 10ms reflex / 1s reactive / 1hr consolidation buckets | 2–3 days |
+| **P0** | Haskell Spatial Core Revival | Revive `polyglot/whitemagic-hs/` as the **5D topology validator** — type-safe constellation detection | 3–4 days |
+| **P1** | Julia Planning Core | Wire `polyglot/whitemagic-jl/` to the PFC layer for mathematical optimization and tree search | 2–3 days |
+| **P1** | Dream YAML Schema | Design schema, implement `dreams/` directory, nightly consolidation pipeline | 1–2 days |
+| **P1** | Corpus Callosum Bus | Bidirectional critique channel between left (deterministic) and right (stochastic) hemispheres | 2–3 days |
+| **P2** | Jaynes Voice Audit | Scan internal command stream for un-logged / hallucinated tokens; quarantine mechanism | 1–2 days |
+| **P2** | Neurotransmitter Vectors | Expand UniVaR value-vectors to act like dopamine (BG), oxytocin (limbic), serotonin (PFC) scalars | 2–3 days |
 
 ---
 

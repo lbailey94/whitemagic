@@ -281,7 +281,7 @@ class TestM11_CodeQualityAttribution:
 
     def test_no_deepmind_or_antigravity_attribution(self):
         """CODE_QUALITY_REVIEW*.md must not claim Google DeepMind or Antigravity AI authorship."""
-        review_path = os.path.join(REPO_ROOT, "docs", "CODE_QUALITY_REVIEW_2026-04-15.md")
+        review_path = os.path.join(REPO_ROOT, "docs", "message_board", "CODE_QUALITY_REVIEW_2026-04-15.md")
         if not os.path.exists(review_path):
             pytest.skip("Code quality review file not found")
         with open(review_path) as f:
