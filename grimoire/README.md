@@ -1,7 +1,7 @@
 # The WhiteMagic Grimoire - 28-Fold Living Mandala
 
-**Version**: v21.0.0 (WhiteMagic Core)  
-**Phase**: CAPRICORN (Phase 10) - Consolidation  
+**Version**: v22.0.0 (WhiteMagic Core)  
+**Phase**: AQUARIUS (Phase 11) — Community / Cognitive OS  
 **Structure**: 28 Chapters (Lunar Mansions) + Tool Stability Tiers  
 **Status**: ✅ Complete — Release Contract Established
 
@@ -11,7 +11,7 @@
 
 This Grimoire is a **28-fold cyclical instruction system** aligned with the Lunar Mansions (Chinese Xiu), Ganas (consciousness processors), and Gardens (consciousness domains). It's designed to be walked sequentially for learning or accessed directly for specific guidance.
 
-**Tool Stability Tiers**: Each chapter's Gana is **STABLE** (public contract). The nested tools under each Gana are **OPTIONAL** (available but may evolve).
+**Tool Stability Tiers**: Each chapter's Gana is **STABLE** (public contract). The nested tools under each Gana are **OPTIONAL** (available but may evolve). There are 28 Gana meta-tools and 453+ internal callable tools.
 
 **The Eternal Cycle**: Chapter 28 → Chapter 1 → Chapter 2 → ... → Chapter 28 → Chapter 1 ...
 
@@ -195,7 +195,7 @@ cat grimoire/01_HORN_SESSION_INITIATION.md
 cat grimoire/00_INDEX.md
 
 # Completing a session?
-cat grimoire/28_ROOF_SESSION_HANDOFF.md
+cat grimoire/28_WALL_BOUNDARIES.md
 ```
 
 ---
@@ -203,10 +203,10 @@ cat grimoire/28_ROOF_SESSION_HANDOFF.md
 ## 📊 Status
 
 **Completion**: 28/28 chapters (100%) ✅  
-**Version Alignment**: WhiteMagic v21.0.0  
-**Tool Contract**: 28 STABLE Gana meta-tools + 420 OPTIONAL dispatch tools  
+**Version Alignment**: WhiteMagic v22.0.0  
+**Tool Contract**: 28 STABLE Gana meta-tools + 453+ internal callable tools  
 **Date**: April 2026  
-**Next**: AQUARIUS (Phase 11) — Community
+**Next**: PISCES (Phase 12) — Deep Integration
 
 ---
 

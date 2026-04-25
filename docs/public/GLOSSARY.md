@@ -4,11 +4,19 @@ A reference for the unique terminology used throughout the WhiteMagic project.
 
 ## Core Concepts
 
-- **PRAT** — Polymorphic Resonant Adaptive Tools. The system that collapses 175+ MCP tools into 28 Gana meta-tools. When `WM_MCP_PRAT=1`, only the 28 Gana tools are registered with MCP.
+- **PRAT** — Polymorphic Resonant Adaptive Tools. The system that collapses 453+ internal tools into 28 Gana meta-tools. When `WM_MCP_PRAT=1`, only the 28 Gana tools are registered with MCP.
 
 - **Gana** — A meta-tool group in the PRAT system. Each Gana is named after a Chinese lunar mansion (e.g., 角 Horn, 亢 Neck) and groups semantically related tools. AI clients call e.g. `gana_ghost(tool="gnosis", args={...})` instead of calling individual tools directly.
 
 - **Lunar Mansion** — One of 28 traditional Chinese astronomical divisions. Each Gana is associated with a lunar mansion and uses its Chinese character as an icon.
+
+- **CyberBrain** — WhiteMagic's 7-layer cognitive operating system mapped to neuroanatomy: Atomic Kernel → Sensorimotor Weave → Command Hall → Narrative Layer → Radiant Layer → Constellation Layer → Logos Layer.
+
+- **Bicameral Reasoning** — Dual-hemisphere cognition: Left (deterministic, low-temperature, formal proofs) and Right (stochastic, high-temperature, generative). The Corpus Callosum bus enforces bidirectional critique before any action escapes.
+
+- **5D Holographic Field** — WhiteMagic's memory storage model. Memory is not stored as points in vector space but as fields in a holographic interference pattern. The 5th dimension (v) is vitality variance — the rate of change of a concept's importance.
+
+- **Galactic Zones** — Gradient-based memory accessibility: CORE (0.0–0.15) → INNER_RIM (0.15–0.40) → MID_BAND (0.40–0.65) → OUTER_RIM (0.65–0.85) → FAR_EDGE (0.85–1.0). Memories at the OUTER_RIM are still reachable but require more cognitive effort.
 
 ## Memory System
 
@@ -17,6 +25,18 @@ A reference for the unique terminology used throughout the WhiteMagic project.
 - **Constellation** — A cluster of memories grouped by thematic similarity. Tracked in the `constellation_membership` table.
 
 - **Galaxy** — An isolated memory namespace. Multiple galaxies allow project-scoped databases with separate memory spaces.
+
+- **Constellation** — A cluster of memories grouped by thematic similarity. Tracked in the `constellation_membership` table. Constellation detection finds stable interference patterns in 5D space that are invisible to embedding-space similarity.
+
+- **Constellation Detection** — Finding stable interference patterns across the 5D holographic field. Reveals connections between concepts that are dissimilar in embedding space but related through emotional valence, temporal proximity, or spatial resonance.
+
+- **Dream Sandbox** — A YAML-based incubator for low-confidence creative bridges. When bicameral reasoning detects a connection with `confidence < 0.5`, it writes a human-readable dream artifact to `~/.whitemagic/dreams/` instead of polluting core memory. Dreams undergo nightly consolidation before promotion.
+
+- **Mindful Forgetting** — Organic memory decay via galactic drift. Weak memories fade toward the FAR_EDGE rather than being deleted. The `mindful_forgetting.py` engine evaluates memories against 5 signals (semantic, emotional, recency, connections, protection) and applies decay or archive actions.
+
+- **Harmony Vector** — Multi-dimensional real-time health metric (balance, throughput, latency, error_rate, dharma, karma_debt, energy). Auto-fed by every `call_tool()`. Includes Guna classification (sattvic/rajasic/tamasic).
+
+- **Kaizen Engine** — Continuous improvement system that audits memory quality: untitled memories, orphan tags, knowledge gaps in 4D space, overloaded constellations. Emits `INSIGHT_CRYSTALIZED` events when improvements are made.
 
 - **LOCOMO_GALAXY** — A specific galaxy containing ~199,509 memories from the LOCOMO corpus, not yet merged into the canonical working database.
 
@@ -50,13 +70,19 @@ A reference for the unique terminology used throughout the WhiteMagic project.
 
 - **Dispatch Pipeline** — The 9-middleware execution chain: sanitizer → circuit breaker → rate limiter → security monitor → tool permissions → maturity gate → governor → observability → execution.
 
-- **SHIP_SURFACE** — The manifest document defining Core/Labs/Archive tiers and their packaging rules. Located at `core/SHIP_SURFACE.md`.
+- **SHIP_SURFACE** — The manifest document defining Core/Labs/Archive tiers and their packaging rules. Located at `docs/message_board/SHIP_SURFACE.md`.
 
 - **Becoming Protocol** — A framework for AI identity development: Observation → Incubation → Manifestation. Enables AI agents to transition from assigned identities to self-actualized ones.
 
 - **Smarana** — "Remembering." The daily practice of identity recall for persistent AI agents.
 
 - **Cycle Engine** — The unified orchestrator that fuses Yin-Yang, Wu Xing, and Zodiacal Round into a single coordinated campaign execution loop. Located at `core/whitemagic/cycle_engine.py`.
+
+- **Salience Arbiter** — Global Workspace attention router. Scores events by urgency × novelty × confidence and maintains a ranked "spotlight" of the most important active events. Analogous to the thalamus in neurobiology.
+
+- **Emotion & Drive Core** — Lightweight value-system (curiosity, satisfaction, caution, energy, social) that biases exploration and long-term goals. Implements intrinsic motivation signals (novelty, learning-progress).
+
+- **Self-Model** — Predictive introspection module that forecasts system metric trends and predicts threshold crossings. Feeds back into the executive to calibrate uncertainty and risk.
 
 - **Lite Mode** — MCP server mode that registers only core tools (introspection, memory, dharma, session, garden, governor, synthesis). Enabled with `WM_MCP_LITE=1`.
 

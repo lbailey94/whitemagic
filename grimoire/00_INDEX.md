@@ -2,10 +2,10 @@
 
 Start with the canonical introduction: [Prologue](00_PROLOGUE.md)
 
-**Version**: 21.0.0 "Living Intelligence"
+**Version**: 22.0.0 "Cognitive Operating System"
 **Structure**: 28 Chapters (Lunar Mansions) + Super-Coherence Core
 **Flow**: Cyclical (28 → 1 → 2 → ... → 28 → 1)
-**Tools**: 412 MCP tools (or 28 PRAT Gana meta-tools)
+**Tools**: 28 PRAT Gana meta-tools + 453+ internal callable tools
 **Benchmark**: LoCoMo 78.3% recall accuracy
 
 ---
@@ -293,6 +293,6 @@ This is a **living mandala**—walk it sequentially to learn the system, or jump
 ---
 
 **Status**: ✅ All 28 chapters complete — 7 upgraded with CoreAccessLayer (🧬)  
-**Version**: v14.0.0 "Holographic Intelligence"  
+**Version**: v22.0.0 "Cognitive Operating System"  
 **CoreAccessLayer engines**: Ch.11 (ExtendedNet), Ch.14 (Abundance), Ch.18 (HairyHead), Ch.22 (Dipper), Ch.25 (Void), Ch.28 (Wall)  
-**InsightPipeline**: Ch.22 (Dipper) — proactive briefings at session startup (Phase 8)
+**InsightPipeline**: Ch.22 (Dipper) — proactive briefings at session startup

@@ -2,13 +2,18 @@
 
 **Version**: 22.0.0  
 **Last Updated**: April 25, 2026  
+**Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
 ---
 
 ## How to Use This Index
 
-This document is the **single source of truth** for where to find any `.md` document in the WhiteMagic project. If you add, move, rename, or delete a doc, **update this index**.
+This document is the **single source of truth** for where to find any `.md` document in the WhiteMagic project. It lives at the **repository root** so both humans and AI agents can find it immediately.
+
+> **"The Grimoire is the book. The Index is the table of contents."**
+
+If you add, move, rename, or delete a doc, **update this index**.
 
 **Convention**: Docs are organized by *activity* and *audience*, not by version or date.
 
@@ -19,6 +24,7 @@ This document is the **single source of truth** for where to find any `.md` docu
 | **DevOps / Deployer** | `DEPLOY.md` → `docs/deploy/HETZNER_DEPLOY.md` |
 | **Strategist / PM** | `docs/plans/ROADMAP.md` → `core/docs/STRATEGIC_ROADMAP.md` |
 | **Security auditor** | `SECURITY.md` → `core/docs/ENCRYPTION_AT_REST.md` → `docs/reports/` |
+| **Lost?** | **This file.** `INDEX.md` → find the right folder → find the right doc. |
 
 ---
 

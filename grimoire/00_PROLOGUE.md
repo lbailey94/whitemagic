@@ -105,8 +105,8 @@ Read in this order:
 Read in this order:
 
 1. `README.md`
-2. `whitemagic/grimoire/00_PROLOGUE.md`
-3. `docs/QUICKSTART.md`
+2. `grimoire/00_PROLOGUE.md`
+3. `QUICKSTART.md`
 4. `AI_PRIMARY.md`
 5. `SYSTEM_MAP.md`
 
@@ -115,8 +115,8 @@ Read in this order:
 Start here:
 
 1. `SYSTEM_MAP.md`
-2. `docs/ARCHITECTURE.md`
-3. `whitemagic/tools/dispatch_table.py`
+2. `core/docs/ARCHITECTURE.md`
+3. `core/whitemagic/tools/dispatch_table.py`
 4. `whitemagic/tools/prat_router.py`
 5. `whitemagic/core/memory/unified.py`
 6. `whitemagic/core/memory/sqlite_backend.py`
