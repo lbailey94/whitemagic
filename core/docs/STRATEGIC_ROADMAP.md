@@ -69,6 +69,16 @@ WhiteMagic v22.0.0 is the current release line. It delivers:
 | 18 | Jaynes Voice Audit | Scan internal command stream for un-logged / hallucinated tokens; quarantine mechanism. | 1–2 days | Planned |
 | 19 | Neurotransmitter Vectors | Expand UniVaR value-vectors to act like dopamine (BG), oxytocin (limbic), serotonin (PFC) scalars. | 2–3 days | Planned |
 
+### Grimoire Remediation Track (New — Audit Results)
+| # | Step | Description | Effort | Status |
+|---|------|-------------|--------|--------|
+| 20 | Registry Bug Fix | Swap Southern/Northern quadrant assignments in `garden_gana_registry.py` to match Grimoire/PRAT canonical mapping. Affects all quadrant-aware code. | 10 min | Planned |
+| 21 | Grimoire Truth Table | Single canonical doc: Chapter → Gana → Garden → Real Tools → Quadrant → Element. Derive both Grimoire and registry from it. | 30 min | Planned |
+| 22 | Grimoire Deduplication | Remove `.md` copies from `core/whitemagic/grimoire/`. Have Python code read from root `grimoire/`. | 30 min | Planned |
+| 23 | Aspirational Tool Audit | Annotate or implement ~30-40% fictional tools in Grimoire. `navigate_grimoire`, `prat_list_morphologies`, `get_session_context` were meant to be "auto-cast" capabilities. | 2–3 days | Planned |
+| 24 | Northern Quadrant Expansion | Chapters 22-28 are stubs (~160 lines avg) vs Chapters 1-14 (~1,200 lines avg). Expand to match depth and standardize structure. | 1–2 days | Planned |
+| 25 | Grimoire Style Standardization | Enforce consistent chapter structure: Purpose → Garden → Real Tools → Workflows → Transitions → Troubleshooting across all 28 chapters. | 1 day | Planned |
+
 ### Strategic Decisions (Saved for Last — Require External Input)
 
 | # | Step | Description | Blocker |

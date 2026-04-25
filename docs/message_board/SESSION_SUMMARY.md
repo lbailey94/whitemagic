@@ -446,6 +446,77 @@ The Phase 8 table (Section 10) remains valid for hardening tasks. These items ar
 | **P1** | Corpus Callosum Bus | Bidirectional critique channel between left (deterministic) and right (stochastic) hemispheres | 2–3 days |
 | **P2** | Jaynes Voice Audit | Scan internal command stream for un-logged / hallucinated tokens; quarantine mechanism | 1–2 days |
 | **P2** | Neurotransmitter Vectors | Expand UniVaR value-vectors to act like dopamine (BG), oxytocin (limbic), serotonin (PFC) scalars | 2–3 days |
+| **P0** | Grimoire Registry Bug Fix | Swap Southern/Northern quadrant assignments in `garden_gana_registry.py` to match Grimoire/PRAT canonical mapping | 10 min |
+| **P1** | Grimoire Truth Table | Single canonical doc mapping: Chapter → Gana → Garden → Real Tools → Quadrant → Element. Derive Grimoire and registry from it | 30 min |
+| **P1** | Grimoire Deduplication | Remove `.md` copies from `core/whitemagic/grimoire/`, have Python read from root `grimoire/` | 30 min |
+| **P1** | Aspirational Tool Audit | Annotate or implement ~30-40% fictional tools referenced in Grimoire chapters. `prat_list_morphologies`, `navigate_grimoire`, `get_session_context` were meant to be "auto-cast" capabilities | 2–3 days |
+| **P2** | Northern Quadrant Expansion | Chapters 22-28 are stubs (~160 lines avg) vs Chapters 1-14 (~1,200 lines avg). Expand to match depth | 1–2 days |
+| **P2** | Grimoire Style Standardization | Enforce consistent chapter structure: Purpose → Garden → Real Tools → Workflows → Transitions → Troubleshooting | 1 day |
+
+---
+
+## 14.7 Grimoire Remediation Plan
+
+> **Status:** Audit complete. Registry bug confirmed. Aspirational tools identified. Dual-directory hazard mapped.
+
+### The Registry Bug (Critical)
+
+`garden_gana_registry.py` has **Southern and Northern quadrant assignments swapped** relative to the Grimoire and `prat_mappings.py`.
+
+| Source | Ch.8-14 Mapping | Ch.22-28 Mapping |
+|--------|----------------|------------------|
+| **Grimoire** (canonical) | Southern (Ghost→Abundance) | Northern (Dipper→Wall) |
+| **PRAT mappings** (dispatch) | Southern (Ghost→Abundance) | Northern (Dipper→Wall) |
+| **Registry** (buggy) | Northern (Dipper→Wall) | Southern (Ghost→Abundance) |
+
+**Verdict:** Grimoire/PRAT is the canonical mapping. It has been the working system for the entire project. The registry is a data bug introduced during a refactor. Any quadrant-aware code (Wu Xing phase amplification, garden resonance, zodiac boost) is currently boosting the wrong Gana set.
+
+**Fix:** Swap registry entries 8-14 and 22-28 to match Grimoire/PRAT. This is a 10-minute change but affects any code doing quadrant-level operations.
+
+### Aspirational Tools
+
+~30-40% of tools referenced in Grimoire chapters do not exist in the dispatch table. Key ones:
+
+| Aspirational Tool | Intended Purpose | Verdict |
+|-------------------|------------------|---------|
+| `navigate_grimoire` | Auto-cast: find best chapter for current task based on context | **Implement** — Core to PRAT's "Adaptive" promise |
+| `prat_list_morphologies` | List consciousness lenses (wisdom, mystery, courage, etc.) | **Implement** — Required for PRAT morphology selection |
+| `prat_get_context` | Context synthesis with morphology selection | **Rename/Implement** — Partially exists as `prat_invoke` |
+| `get_session_context` | Retrieve full session state | **Implement** — Critical for handoff and continuity |
+| `manage_gardens` | Activate/deactivate consciousness gardens | **Redesign** — Gardens are a subsystem, not an MCP tool. Use `garden_activate` instead |
+| `check_system_health` | Comprehensive health diagnostics | **Implement** — Exists piecemeal across handlers |
+| `consult_wisdom_council` | Multi-perspective deliberation | **Rename** — `consult_full_council` exists in `handlers/misc.py` but is not wired to dispatch table |
+| `initialize_session` | Session creation with full metadata | **Merge** — Overlaps with `session_bootstrap` and `create_session` |
+
+**Note:** The aspirational tools were not found in any archive or legacy folder. They were conceptualized but never implemented. Their names are descriptive enough to reconstruct intent from context.
+
+### Dual-Directory Hazard
+
+Both `grimoire/` (root, canonical) and `core/whitemagic/grimoire/` (Python package) carry `.md` copies. The Python code (`chapters.py`, `core.py`, `auto_cast.py`) lives only in `core/whitemagic/grimoire/`. Root `grimoire/` has the corrected v22.0.0 versions; `core/whitemagic/grimoire/` has stale v21.0.0 copies.
+
+**Fix:** Remove `.md` files from `core/whitemagic/grimoire/`. Update `run_mcp_lean.py` and `grimoire_engine.py` to read `.md` from root `grimoire/`.
+
+### The Auto-Cast Vision
+
+`navigate_grimoire` and `prat_list_morphologies` were the foundation of **auto-cast** — the PRAT system automatically selecting the best Gana, tool, and morphology based on:
+- Prior tool calls in the session (resonance history)
+- Current emotional state (Emotion & Drive Core)
+- Wu Xing phase (seasonal energy)
+- Task keywords (garden resonance)
+
+This is what makes PRAT **Polymorphic Resonant Adaptive** — not just a router, but a conductor that feels the music and chooses the instrument. Without these tools, PRAT is just a static lookup table.
+
+### Chapter Structure Standard
+
+Every Grimoire chapter must contain:
+1. **Purpose** (3-5 sentences) — What this Gana does and when to use it
+2. **Garden** (1 paragraph) — The virtue to embody; emotional resonance
+3. **Real Tools** (table) — Only tools that exist in the dispatch table
+4. **Workflows** (2-3 practical patterns) — Code or step-by-step
+5. **Transitions** (previous/next) — How to enter and exit this chapter
+6. **Troubleshooting** (common issues) — What goes wrong and how to fix it
+
+**Northern Quadrant Debt:** Chapters 22-28 average 160 lines. Chapters 1-14 average 1,200 lines. This is not stylistic variation — it is incomplete documentation.
 
 ---
 
