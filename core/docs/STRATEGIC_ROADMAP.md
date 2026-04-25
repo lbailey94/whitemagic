@@ -229,6 +229,55 @@ Note: Marketplace Bridge from Leap 10 provides the external coordination layer; 
 
 ---
 
+## Parallel Track: WhiteMagic Core — Enterprise & Chinese Localization
+
+**Goal:** A corporate-friendly, Chinese-localized fork (`whitemagic-core`) that preserves all architecture and capabilities while removing metaphysical framing. Runs in parallel with the mainline "Soul" version.
+
+**Rationale:** The mainline Grimoire naming (28 Lunar Mansions, Dharma/Karma, Wu Xing phases) is architecturally coherent but creates friction in enterprise procurement and Chinese developer adoption. The Core fork is the same engine with a different public face.
+
+### Milestones
+
+| Milestone | Description | Effort | Status |
+|-----------|-------------|--------|--------|
+| **Fork & Scaffold** | Create `whitemagic/whitemagic-core` fork. Remove Grimoire `.md` layer from public API. Expose functional tool names (`search_memories` instead of `gana_winnowing_basket`). Config flag `WM_CORPO=1` switches naming mode. | 1 week | Planned |
+| **Corpo Naming Convention** | Map all 28 Ganas to enterprise-friendly names. Dharma → Policy Engine, Karma Ledger → Audit Trail, Harmony Vector → Health Monitor, Galactic Map → Memory Lifecycle, etc. Maintain bidirectional lookup table. | 3 days | Planned |
+| **Chinese Localization** | Translate all public API docs, README, CLI help text, and error messages to Simplified Chinese (`zh-CN`). Gitee mirror with Chinese-first README. | 2 weeks | Planned |
+| **Gitee Launch** | Publish on Gitee. Target: `pip install whitemagic-core`. One-command setup. WeChat support group. Benchmarks-first marketing. | 1 week | Planned |
+| **Rednote Content Strategy** | Aesthetic posts about AI memory architecture, ethical governance, and 5D spatial indexing — framed as "cool infrastructure" not mysticism. Link to Gitee, never to Grimoire chapters. | Ongoing | Planned |
+
+### Naming Map (Sample)
+
+| Soul (Mainline) | Core (Enterprise) | Chinese (Technical) |
+|-----------------|-------------------|---------------------|
+| Gana Winnowing Basket | Memory Search | 记忆搜索 |
+| Gana Ghost | System Introspection | 系统自省 |
+| Gana Star | Governance Engine | 治理引擎 |
+| Gana Dipper | Strategy & Maturity | 策略成熟度评估 |
+| Dharma Rules | Policy Engine | 策略引擎 |
+| Karma Ledger | Audit Trail | 审计追踪 |
+| Harmony Vector | Health Monitor | 健康监控 |
+| Galactic Map | Memory Lifecycle | 记忆生命周期 |
+| Dream Sandbox | Incubator | 孵化器 |
+| Wu Xing Phase | Campaign Phase | 活动阶段 |
+| Bicameral Reasoning | Dual-Mode Reasoning | 双模式推理 |
+
+### Key Principle
+
+The Core fork changes **only** the public face:
+- Public API names (functional vs. symbolic)
+- Documentation language (Chinese vs. English)
+- Marketing framing (infrastructure vs. cognitive OS)
+
+It changes **nothing** in the engine:
+- All 453 internal tools remain identical
+- All 2,063 tests pass unchanged
+- All middleware (circuit breaker, rate limiter, maturity gate) is the same
+- SQLite schema, polyglot bridges, and security pipeline are untouched
+
+**The rule:** A bug fix in mainline applies to Core automatically. A new feature in Core (enterprise SSO, multi-tenant namespace) merges back to mainline if it's generally useful.
+
+---
+
 ## Design Principles (Unchanged Since v0.2)
 
 1. **Memory is identity** — An AI that remembers is fundamentally different from one that doesn't
