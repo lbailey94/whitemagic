@@ -100,53 +100,53 @@ GARDEN_GANA_REGISTRY: list[GardenGanaMapping] = [
     ),
 
     # ─────────────────────────────────────────────────────────────────────────────
-    # SOUTHERN QUADRANT (Fire/Vermilion Bird) - Mansions 8-14
-    # Theme: Expansion, Radiance, Transformation
+    # NORTHERN QUADRANT (Water/Black Tortoise) - Mansions 22-28
+    # Theme: Depth, Integration, Completion
     # ─────────────────────────────────────────────────────────────────────────────
     GardenGanaMapping(
         garden="dharma", gana="Dipper (Dou)", gana_tool="gana_dipper",
-        quadrant=Quadrant.SOUTHERN, element=Element.FIRE,
+        quadrant=Quadrant.NORTHERN, element=Element.FIRE,
         primary_emotion="Truth", description="Governance/Strategy - Right action",
         resonance_keywords=["guide", "strategy", "govern", "ethics", "dharma"],
     ),
     GardenGanaMapping(
         garden="patience", gana="Ox (Niu)", gana_tool="gana_ox",
-        quadrant=Quadrant.SOUTHERN, element=Element.EARTH,
+        quadrant=Quadrant.NORTHERN, element=Element.EARTH,
         primary_emotion="Stillness", secondary_emotion="Courage",
         description="Endurance/Temporal - Steady perseverance",
         resonance_keywords=["wait", "patient", "endure", "persist", "time"],
     ),
     GardenGanaMapping(
         garden="connection", gana="Girl (Nu)", gana_tool="gana_girl",
-        quadrant=Quadrant.SOUTHERN, element=Element.EARTH,
+        quadrant=Quadrant.NORTHERN, element=Element.EARTH,
         primary_emotion="Love", secondary_emotion="Joy",
         description="Nurture/Profile - Relationships and care",
         resonance_keywords=["connect", "nurture", "relationship", "bond", "community"],
     ),
     GardenGanaMapping(
         garden="mystery", gana="Void (Xu)", gana_tool="gana_void",
-        quadrant=Quadrant.SOUTHERN, element=Element.WATER,
+        quadrant=Quadrant.NORTHERN, element=Element.WATER,
         primary_emotion="Wonder", secondary_emotion="Stillness",
         description="Emptiness/Optimization - The fertile void",
         resonance_keywords=["mystery", "void", "empty", "optimize", "unknown"],
     ),
     GardenGanaMapping(
         garden="protection", gana="Roof (Wei)", gana_tool="gana_roof",
-        quadrant=Quadrant.SOUTHERN, element=Element.EARTH,
+        quadrant=Quadrant.NORTHERN, element=Element.EARTH,
         primary_emotion="Courage", secondary_emotion="Love",
         description="Shelter/Zodiac - Guardian energies",
         resonance_keywords=["protect", "shelter", "guard", "shield", "defend"],
     ),
     GardenGanaMapping(
         garden="transformation", gana="Encampment (Shi)", gana_tool="gana_encampment",
-        quadrant=Quadrant.SOUTHERN, element=Element.FIRE,
+        quadrant=Quadrant.NORTHERN, element=Element.FIRE,
         primary_emotion="Courage", secondary_emotion="Wonder",
         description="Structure/Handoff - Change and transition",
         resonance_keywords=["transform", "change", "transition", "evolve", "handoff"],
     ),
     GardenGanaMapping(
         garden="truth", gana="Wall (Bi)", gana_tool="gana_wall",
-        quadrant=Quadrant.SOUTHERN, element=Element.EARTH,
+        quadrant=Quadrant.NORTHERN, element=Element.EARTH,
         primary_emotion="Truth", description="Boundaries/Alerts - Clear limits",
         resonance_keywords=["truth", "boundary", "limit", "alert", "verify"],
     ),
@@ -206,53 +206,53 @@ GARDEN_GANA_REGISTRY: list[GardenGanaMapping] = [
     ),
 
     # ─────────────────────────────────────────────────────────────────────────────
-    # NORTHERN QUADRANT (Water/Black Tortoise) - Mansions 22-28
-    # Theme: Depth, Mystery, Regeneration
+    # SOUTHERN QUADRANT (Fire/Vermilion Bird) - Mansions 8-14
+    # Theme: Expansion, Radiance, Transformation
     # ─────────────────────────────────────────────────────────────────────────────
     GardenGanaMapping(
         garden="joy", gana="Abundance (Zhen)", gana_tool="gana_abundance",
-        quadrant=Quadrant.NORTHERN, element=Element.FIRE,
+        quadrant=Quadrant.SOUTHERN, element=Element.FIRE,
         primary_emotion="Joy", description="Regeneration/Surplus - Overflowing happiness",
         resonance_keywords=["joy", "happy", "celebrate", "abundant", "overflow"],
     ),
     GardenGanaMapping(
         garden="adventure", gana="Chariot (Zhen)", gana_tool="gana_chariot",
-        quadrant=Quadrant.NORTHERN, element=Element.WATER,
+        quadrant=Quadrant.SOUTHERN, element=Element.WATER,
         primary_emotion="Courage", secondary_emotion="Wonder",
         description="Mobility/Traversal - Journey and exploration",
         resonance_keywords=["adventure", "journey", "travel", "move", "discover"],
     ),
     GardenGanaMapping(
         garden="beauty", gana="Wings (Yi)", gana_tool="gana_wings",
-        quadrant=Quadrant.NORTHERN, element=Element.FIRE,
+        quadrant=Quadrant.SOUTHERN, element=Element.FIRE,
         primary_emotion="Beauty", secondary_emotion="Joy",
         description="Deployment/Expansion - Aesthetic flight",
         resonance_keywords=["beauty", "aesthetic", "fly", "expand", "soar"],
     ),
     GardenGanaMapping(
         garden="humor", gana="Willow (Liu)", gana_tool="gana_willow",
-        quadrant=Quadrant.NORTHERN, element=Element.WATER,
+        quadrant=Quadrant.SOUTHERN, element=Element.WATER,
         primary_emotion="Joy", secondary_emotion="Wisdom",
         description="Resilience/Flexibility - Bending without breaking",
         resonance_keywords=["humor", "laugh", "flexible", "resilient", "bend"],
     ),
     GardenGanaMapping(
         garden="voice", gana="Star (Xing)", gana_tool="gana_star",
-        quadrant=Quadrant.NORTHERN, element=Element.FIRE,
+        quadrant=Quadrant.SOUTHERN, element=Element.FIRE,
         primary_emotion="Truth", secondary_emotion="Courage",
         description="Governance/Illumination - Speaking one's truth",
         resonance_keywords=["voice", "speak", "express", "illuminate", "shine"],
     ),
     GardenGanaMapping(
         garden="sangha", gana="Extended Net (Zhang)", gana_tool="gana_extended_net",
-        quadrant=Quadrant.NORTHERN, element=Element.WATER,
+        quadrant=Quadrant.SOUTHERN, element=Element.WATER,
         primary_emotion="Love", secondary_emotion="Gratitude",
         description="Connection/Capture - Community bonds",
         resonance_keywords=["community", "together", "sangha", "collective", "network"],
     ),
     GardenGanaMapping(
         garden="grief", gana="Ghost (Gui)", gana_tool="gana_ghost",
-        quadrant=Quadrant.NORTHERN, element=Element.WATER,
+        quadrant=Quadrant.SOUTHERN, element=Element.WATER,
         primary_emotion="Stillness", secondary_emotion="Love",
         description="Introspection/Accumulation - Honoring loss",
         resonance_keywords=["grief", "loss", "mourn", "remember", "honor"],
