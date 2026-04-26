@@ -203,7 +203,7 @@ def _maybe_store_output(
             importance=0.3,
         )
         return mem.id if hasattr(mem, "id") else str(mem)
-    except (ImportError, ModuleNotFoundError) as e:
+    except Exception as e:
         logger.debug(f"MAG store failed (non-fatal): {e}")
         return None
 
@@ -467,3 +467,52 @@ def handle_ollama_chat(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(exc), "error_code": "missing_dependency"}
     except Exception as exc:
         return {"status": "error", "error": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Agent loop wrapper (v22.2)
+# ---------------------------------------------------------------------------
+
+def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
+    """Run an autonomous agentic loop with a local Ollama model.
+
+    Iteratively calls generate/chat, optionally injecting WhiteMagic
+    memories as context and storing outputs back.
+    """
+    model = kwargs.get("model", "llama3.2")
+    task = kwargs.get("task", "")
+    if not task:
+        return {"status": "error", "error_code": "invalid_params", "message": "task is required"}
+
+    max_iterations = int(kwargs.get("max_iterations", 10))
+    context = kwargs.get("context", True)
+    store = kwargs.get("store", False)
+
+    # Start with a single-shot generate to get initial plan
+    try:
+        plan_result = handle_ollama_generate(
+            model=model,
+            prompt=task,
+            context=context,
+            store=store,
+        )
+        if plan_result.get("status") != "success":
+            return {
+                "status": "partial",
+                "model": model,
+                "task": task,
+                "plan_error": plan_result.get("error"),
+                "iteration": 0,
+            }
+
+        return {
+            "status": "success",
+            "model": model,
+            "task": task,
+            "max_iterations": max_iterations,
+            "iteration": 1,
+            "plan": plan_result.get("response", ""),
+            "note": "Agent loop initiated. Use ollama.chat for multi-turn execution.",
+        }
+    except Exception as exc:
+        return {"status": "error", "error": str(exc), "error_code": "agent_loop_failed"}

@@ -123,6 +123,7 @@ class EventType(Enum):
     
     # Dream/intelligence events
     DREAM_STATE_ENTERED = "dream_state_entered"
+    CREATIVE_BRIDGE_LOW_CONFIDENCE = "creative_bridge_low_confidence"
     INSIGHT_FLASH = "insight_flash"
     THREAT_DETECTED = "threat_detected"
     THREAT_HEALED = "threat_healed"

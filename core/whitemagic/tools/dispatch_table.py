@@ -192,6 +192,10 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "astro_status": LazyHandler("gana_dipper", "astro_status"),
     "astro_shift": LazyHandler("gana_dipper", "astro_shift"),
 
+    # --- Neurotransmitter Vector ---
+    "neurotransmitter.status": LazyHandler("neurotransmitters", "handle_neurotransmitter_status"),
+    "neurotransmitter.report": LazyHandler("neurotransmitters", "handle_neurotransmitter_report"),
+
     # --- Aspirational Tools (v22.2) ---
     "navigate_grimoire": LazyHandler("aspirational", "handle_navigate_grimoire"),
     "get_session_context": LazyHandler("aspirational", "handle_get_session_context"),

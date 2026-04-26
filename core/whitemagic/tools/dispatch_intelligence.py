@@ -51,6 +51,12 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
     "dream_status": LazyHandler("dreaming", "handle_dream_status"),
     "dream_now": LazyHandler("dreaming", "handle_dream_now"),
 
+    # --- Dream Artifacts (v22.2) ---
+    "dream.list": LazyHandler("dream_artifacts", "handle_dream_list"),
+    "dream.read": LazyHandler("dream_artifacts", "handle_dream_read"),
+    "dream.promote": LazyHandler("dream_artifacts", "handle_dream_promote"),
+    "dream.expire": LazyHandler("dream_artifacts", "handle_dream_expire"),
+
     # --- Cache Coherence Registry ---
     "cache.status": LazyHandler("cache_coherence", "handle_cache_status"),
     "cache.flush": LazyHandler("cache_coherence", "handle_cache_flush"),
@@ -166,7 +172,16 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
     "ollama.models": LazyHandler("ollama", "handle_ollama_models"),
     "ollama.generate": LazyHandler("ollama", "handle_ollama_generate"),
     "ollama.chat": LazyHandler("ollama", "handle_ollama_chat"),
-    "ollama.agent": LazyHandler("ollama_agent", "handle_ollama_agent"),
+    "ollama.agent": LazyHandler("ollama", "handle_ollama_agent"),
+
+    # --- Voice Audit (v22.2) ---
+    "voice_audit.scan": LazyHandler("voice_audit", "handle_voice_audit_scan"),
+    "voice_audit.status": LazyHandler("voice_audit", "handle_voice_audit_status"),
+    "voice_audit.quarantine_list": LazyHandler("voice_audit", "handle_voice_audit_quarantine_list"),
+
+    # --- Corpus Callosum Bus (v22.2) ---
+    "corpus_callosum.debate": LazyHandler("corpus_callosum", "handle_corpus_callosum_debate"),
+    "corpus_callosum.status": LazyHandler("corpus_callosum", "handle_corpus_callosum_status"),
 
     # --- Simple Aliases ---
     "think": LazyHandler("aliases", "handle_think"),

@@ -212,8 +212,10 @@ class BicameralReasoner:
             duration_ms=elapsed_ms,
         )
 
-        # Emit event
+        # Emit events
         self._emit_event(result)
+        if result.final_confidence < 0.5:
+            self._emit_low_confidence_event(result)
 
         return result
 
@@ -472,6 +474,28 @@ class BicameralReasoner:
             )
         except Exception as e:
             logger.debug(f"Bicameral non-critical execution error: {e}", exc_info=True)
+
+    def _emit_low_confidence_event(self, result: BicameralResult) -> None:
+        """Emit CREATIVE_BRIDGE_LOW_CONFIDENCE when synthesis is uncertain."""
+        try:
+            from whitemagic.core.resonance.gan_ying import emit_event
+            from whitemagic.core.resonance.gan_ying_enhanced import EventType
+
+            emit_event(
+                "bicameral_reasoner",
+                EventType.CREATIVE_BRIDGE_LOW_CONFIDENCE,
+                {
+                    "query": result.query[:200],
+                    "left": result.left_analysis.content[:500],
+                    "right": result.right_analysis.content[:500],
+                    "synthesis": result.synthesis[:500],
+                    "confidence": result.final_confidence,
+                    "tension": result.tension_score,
+                    "dominant": result.dominant_hemisphere,
+                },
+            )
+        except Exception as e:
+            logger.debug(f"Bicameral low-confidence emission error: {e}", exc_info=True)
 
     # ------------------------------------------------------------------
     # Introspection

@@ -227,6 +227,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "starter_packs":           "gana_dipper",
     "astro_status":            "gana_dipper",
     "astro_shift":             "gana_dipper",
+    "neurotransmitter.status": "gana_dipper",
+    "neurotransmitter.report": "gana_dipper",
 
     # ═══ OX — Endurance & Watchdog ═══
     "swarm.decompose":         "gana_ox",
@@ -420,6 +422,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "dream_stop":                  "gana_abundance",
     "dream_status":                "gana_abundance",
     "dream_now":                   "gana_abundance",
+    "dream.list":                  "gana_abundance",
+    "dream.read":                  "gana_abundance",
+    "dream.promote":               "gana_abundance",
+    "dream.expire":                "gana_abundance",
     "memory.lifecycle_sweep":      "gana_abundance",
     "memory.lifecycle_stats":      "gana_abundance",
     "memory.consolidate":          "gana_abundance",
@@ -440,6 +446,9 @@ TOOL_TO_GANA: dict[str, str] = {
     "otel.metrics":                "gana_hairy_head",
     "otel.spans":                  "gana_hairy_head",
     "otel.status":                 "gana_hairy_head",
+    "voice_audit.scan":            "gana_hairy_head",
+    "voice_audit.status":          "gana_hairy_head",
+    "voice_audit.quarantine_list": "gana_hairy_head",
 
     # ── TURTLE BEAK — Edge inference sub-tools ──
     "edge_add_rule":               "gana_turtle_beak",
@@ -448,6 +457,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "ensemble.query":              "gana_three_stars",
     "ensemble.history":            "gana_three_stars",
     "ensemble.status":             "gana_three_stars",
+    "corpus_callosum.debate":      "gana_three_stars",
+    "corpus_callosum.status":      "gana_three_stars",
 
     # ── DIPPER — Homeostasis + starter packs sub-tools ──
     "homeostasis.check":           "gana_dipper",

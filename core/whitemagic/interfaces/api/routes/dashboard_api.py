@@ -8,7 +8,7 @@ Provides:
 - Agentic module status
 """
 
-import random
+import time
 from datetime import datetime
 from typing import Any, cast
 
@@ -143,30 +143,37 @@ async def get_visualization_data() -> dict[str, Any]:
 
 @router.get("/ganas/activity")
 async def get_gana_activity() -> dict[str, list[dict[str, Any]]]:
-    """Get activity stats for all 28 Ganas."""
+    """Get activity stats for all 28 Ganas from live PRAT resonance and vitality data."""
     try:
-        ganas = get_all_ganas()
-        activity_list = []
+        from whitemagic.tools.prat_resonance import get_resonance_state
+        from whitemagic.tools.gana_vitality import get_vitality_monitor
 
+        ganas = get_all_ganas()
+        resonance = get_resonance_state()
+        vitality = get_vitality_monitor()
+
+        gana_counts = resonance.get_gana_counts()
+        reps = vitality.get_all_reputations()
+
+        activity_list = []
         for gana in ganas:
             mansion = gana.mansion
+            rep = reps.get(gana.name, {})
+            current_invocations = gana_counts.get(gana.name, 0)
 
-            # Simulate liveliness based on time/randomness until Gan Ying is wired
-            # giving it a "breathing" effect
-            base_invocations = _GANA_STATS.get(mansion.name, 0)
-            invocation_delta = random.randint(0, 5) if random.random() > 0.7 else 0
-            current_invocations = base_invocations + invocation_delta
-            _GANA_STATS[mansion.name] = current_invocations
-
-            # Map Internal Quadrant to Frontend Quadrant (lowercase)
-            quad_map = {"East": "east", "South": "south", "West": "west", "North": "north"}
+            last_call_age = rep.get("last_call_age_secs")
+            last_active = None
+            if last_call_age is not None:
+                last_active = datetime.fromtimestamp(time.time() - last_call_age).isoformat()
 
             activity_list.append({
                 "mansion": f"{mansion.chinese} ({mansion.pinyin})",
-                "quadrant": quad_map.get(mansion.quadrant, "east"),
+                "quadrant": mansion.quadrant.lower(),
                 "invocations": current_invocations,
-                "avgExecutionMs": random.randint(50, 300),
-                "lastActive": datetime.now().isoformat(),
+                "avgExecutionMs": round(rep.get("avg_latency_ms", 0), 2),
+                "lastActive": last_active or datetime.now().isoformat(),
+                "vitality": rep.get("vitality", "unknown"),
+                "successRate": round(rep.get("success_rate", 1.0), 3),
             })
 
         return {"ganas": activity_list}

@@ -501,6 +501,15 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
         except Exception as e:
             logger.debug(f"Failed to add harmony snapshot to metrics: {e}")
         try:
+            from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
+            nt = get_neurotransmitter_vector()
+            nt.record_tool_call(
+                success=(telemetry_status == "success"),
+                result=out,
+            )
+        except Exception as e:
+            logger.debug(f"Failed to record neurotransmitter snapshot: {e}")
+        try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger
             get_karma_ledger().record(
                 tool=canonical,
@@ -510,6 +519,13 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             )
         except Exception as e:
             logger.debug(f"Failed to publish tool metrics: {e}")
+        # Jaynes Voice Audit: verify claim after ledger record
+        try:
+            if _voice_audit_claim_id:
+                from whitemagic.core.governance.voice_audit import get_voice_audit_scanner
+                get_voice_audit_scanner().verify_claim(tool=canonical)
+        except Exception as e:
+            logger.debug(f"VoiceAudit claim verification failed: {e}")
 
     def _finish(out: dict[str, Any]) -> dict[str, Any]:
         _record_telemetry(out)
@@ -568,6 +584,18 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 )
                 replay["side_effects"] = side_effects
                 return _finish(replay)
+
+        # Jaynes Voice Audit: register claim before dispatch
+        _voice_audit_claim_id: str | None = None
+        try:
+            from whitemagic.core.governance.voice_audit import get_voice_audit_scanner
+            _voice_audit_claim_id = get_voice_audit_scanner().register_claim(
+                module=f"call_tool:{request_id}",
+                tool=canonical,
+                params={"dry_run": dry_run},
+            )
+        except Exception as e:
+            logger.debug(f"VoiceAudit claim registration failed: {e}")
 
         # Nervous System pre-dispatch check (circuit breakers, rate limits)
         ns_allowed = True

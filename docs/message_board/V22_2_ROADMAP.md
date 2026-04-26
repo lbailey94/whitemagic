@@ -180,4 +180,214 @@ Serve entire Grimoire as MCP resource stream. AI clients can read chapters with 
 
 ---
 
+---
+
+## Phase 3: The Wild Ideas — "Cognitive Differentiation" (IN PROGRESS)
+
+> **Decision**: Implement all five wild ideas in sequence.
+> **Rationale**: Each builds on existing systems. No external dependencies. High differentiation value.
+> **Archive reconnaissance**: No existing implementations found for neurotransmitters, dream YAML, voice audit, or corpus callosum. Must build fresh. MCP resource infrastructure exists and is functional.
+
+---
+
+### 3.1 Neurotransmitter Vectors (Sequence #1)
+
+**Effort**: 2 days  
+**Builds on**: `harmony/vector.py` (HarmonyVector), `intelligence/emotion_drive.py` (DriveCore)
+
+**What**: Expand Harmony Vector with 7 biochemical analogues that make system health intuitive.
+
+| Neurotransmitter | Computational Analogue | Source Signal |
+|-----------------|----------------------|---------------|
+| Dopamine | Reward prediction error | Expected vs actual tool outcome |
+| Oxytocin | Trust / social bonding | Agent cooperation rate, mesh sync success |
+| Serotonin | Mood stability | Rolling variance of Harmony Vector |
+| Cortisol | Stress / alarm | Error rate, circuit breaker trips, rate limit hits |
+| Acetylcholine | Attention / focus | Salience Arbiter spotlight density |
+| GABA | Inhibition / calm | Rate of "PROCEED_WITH_CAUTION" from explain_this |
+| Glutamate | Excitation / drive | Rate of creative bridges from bicameral reasoner |
+
+**Files to create**:
+- `core/whitemagic/core/monitoring/neurotransmitter_vector.py` — `NeurotransmitterVector` dataclass + signal collectors
+- `core/whitemagic/tools/handlers/neurotransmitters.py` — `neurotransmitter.status`, `neurotransmitter.report`
+- Tests: `tests/unit/test_neurotransmitter_vector.py`
+
+**Integration points**:
+- Auto-fed by `call_tool()` on every invocation (like Harmony Vector)
+- Displayed in dashboard as "System Biochemistry"
+- Fed into Homeostatic Loop for auto-correction decisions
+
+---
+
+### 3.2 Grimoire as MCP Resource (Sequence #2)
+
+**Effort**: 1-2 days  
+**Builds on**: `run_mcp_lean.py` (existing `list_resources()` + `read_resource()`)
+
+**What**: Serve Grimoire chapters as dynamic MCP resources with live system state interpolated.
+
+**Current resources** (already working):
+- `whitemagic://health`
+- `whitemagic://orientation/prologue`
+- `whitemagic://orientation/ai-primary`
+- `whitemagic://orientation/server-instructions`
+- `whitemagic://orientation/system-map`
+- `whitemagic://workflow/*`
+
+**New resources to add**:
+- `whitemagic://grimoire/chapter/{1-28}` — Individual chapters with live state
+- `whitemagic://grimoire/quadrant/{eastern,southern,western,northern}` — Quadrant summaries
+- `whitemagic://grimoire/current` — The chapter most resonant with current system state
+
+**Example dynamic response** for `whitemagic://grimoire/chapter/14`:
+```yaml
+chapter: 14 — Abundance (Feng)
+garden: joy
+current_harmony: 0.87          # live from HarmonyVector
+active_dream_phase: NARRATIVE  # live from DreamCycle
+recommended_tool: dream        # based on current state
+wu_xing_boost: Fire +15%       # live from fusions
+last_consolidation: 2026-04-25T22:00:00Z
+narrative_memories_compressed_today: 3
+```
+
+**Files to modify**:
+- `core/whitemagic/run_mcp_lean.py` — Add Grimoire resources to `list_resources()` and `read_resource()`
+- `core/whitemagic/grimoire/resource_renderer.py` — New: markdown + live data interpolator
+
+---
+
+### 3.3 Memory Dreams as YAML Artifacts (Sequence #3)
+
+**Effort**: 2-3 days  
+**Builds on**: `core/dreaming/dream_cycle.py` (977 lines), `core/dreaming/narrative_compressor.py` (501 lines), `core/intelligence/bicameral.py` (513 lines)
+
+**What**: When bicameral reasoning detects a creative bridge with `confidence < 0.5`, write it to `~/.whitemagic/dreams/YYYY-MM-DD_HH-MM-SS.yaml`. Nightly consolidation promotes high-revisit dreams to real memories.
+
+**Why YAML**:
+- Human-inspectable (read the AI's dreams)
+- Git-diffable (track imagination evolution)
+- Branchable (`dreams/experiment_7.yaml` without touching SQLite)
+- Safe (bounded parsing, no code execution)
+- Non-destructive (expire unless revisited)
+
+**Schema**:
+```yaml
+dream_id: dream_20260425_223000_abc123
+created_at: "2026-04-25T22:30:00Z"
+source: bicameral_reasoner
+confidence: 0.42
+tension_score: 0.78
+left_hemisphere: "Module caching should be deterministic"
+right_hemisphere: "What if caching had emotional valence?"
+creative_bridge: "Cache warmth — frequently-accessed items get 'warm' tags that boost recall priority"
+keywords: [cache, valence, warmth, emotion]
+revisit_count: 0
+status: incubating  # incubating → reconsidered → promoted → archived → expired
+```
+
+**Files to create**:
+- `core/whitemagic/core/dreaming/dream_artifacts.py` — `DreamArtifact` dataclass, YAML serializer, directory watcher
+- `core/whitemagic/core/dreaming/dream_consolidator.py` — Nightly consolidation: check revisit counts, promote to memory, expire unvisited
+- `core/whitemagic/tools/handlers/dream_artifacts.py` — `dream.list`, `dream.read`, `dream.promote`, `dream.expire`
+
+**Integration points**:
+- Bicameral reasoner emits `CREATIVE_BRIDGE_LOW_CONFIDENCE` event → DreamArtifact writer listens
+- Dream daemon runs consolidation every night at 3AM (SLOW lane)
+- Promoted dreams become memories with `dream_source` provenance
+
+---
+
+### 3.4 Jaynes Voice Audit (Sequence #4)
+
+**Effort**: 3-4 days  
+**Builds on**: `dharma/karma_ledger.py` (declared vs actual tracking), `tools/unified_api.py` (single entry point)
+
+**What**: Scan internal command stream for un-logged / hallucinated tool invocations. If a module claims it called `delete_memory` but the Karma Ledger has no entry, quarantine the session.
+
+**Named after**: Julian Jaynes' bicameral mind theory — the "voice" that commands action. In AI, this is the internal monologue generating tool-call intents.
+
+**How it works**:
+1. Every tool call through `call_tool()` writes to Karma Ledger
+2. Every internal module that CLAIMS to have called a tool registers the claim in a parallel `claim_log`
+3. Voice Audit scanner runs periodically: compare claims vs ledger
+4. Mismatch = "hallucinated invocation" → quarantine, alert, flag for review
+
+**Files to create**:
+- `core/whitemagic/core/governance/voice_audit.py` — `VoiceAuditScanner`, `ClaimLog`, quarantine logic
+- `core/whitemagic/core/governance/quarantine.py` — `QuarantineManager` (session isolation, review queue)
+- `core/whitemagic/tools/handlers/voice_audit.py` — `voice_audit.scan`, `voice_audit.status`, `voice_audit.quarantine_list`
+
+**Integration points**:
+- Wired into `unified_api.call_tool()` as step 0.5 (after input sanitizer, before circuit breaker)
+- Quarantine state feeds into Harmony Vector (cortisol spike)
+- Audit trail anchored to Karma Ledger for external verification
+
+---
+
+### 3.5 Corpus Callosum Bus (Sequence #5)
+
+**Effort**: 4-5 days  
+**Builds on**: `core/intelligence/bicameral.py` (CrossCritique, HemisphereResult), `core/resonance/_consolidated.py` (GanYingBus)
+
+**What**: A persistent bidirectional critique channel between "left hemisphere" (deterministic, precise) and "right hemisphere" (stochastic, creative). Not a one-shot `reason()` call — a living argument that resolves through synthesis.
+
+**Protocol**:
+```
+Right Hemisphere: "I propose we merge the memory tiers."
+    → emits to gan_ying://corpus_callosum/right
+
+Left Hemisphere (listener): "Challenge: you haven't proven this preserves
+                            the no-delete policy."
+    → emits to gan_ying://corpus_callosum/left
+
+Right Hemisphere: "Counter: galactic rotation already handles this."
+
+Left Hemisphere: "Accepted with modification: require dry_run=True on first execution."
+    → Synthesis event emitted. Both hemispheres agree.
+```
+
+**Files to create**:
+- `core/whitemagic/core/intelligence/corpus_callosum.py` — `CorpusCallosumBus`, `HemisphereAgent`, `SynthesisArbiter`
+- `core/whitemagic/core/intelligence/hemisphere_agents.py` — `LeftHemisphereAgent`, `RightHemisphereAgent` (event-driven listeners)
+- `core/whitemagic/tools/handlers/corpus_callosum.py` — `corpus_callosum.debate`, `corpus_callosum.status`
+
+**Safety guardrails**:
+- Max rounds: 3 (prevents infinite loops)
+- Timeout: 30 seconds per round
+- Tension-score threshold: if >0.9, auto-escalate to Wisdom Council
+- All debates logged to Karma Ledger
+
+---
+
+## Updated Success Metrics
+
+| Metric | v22.0.0 | v22.2 Phase 1 | v22.2 Phase 3 Target |
+|--------|---------|---------------|---------------------|
+| Tests passing | 2,068 | 2,082 ✅ | 2,150+ |
+| Tools with handlers | ~400 | 450+ ✅ | 460+ |
+| Gana tools working | 0/28 | 28/28 ✅ | 28/28 |
+| Broken core tools | 2+ | 0 ✅ | 0 |
+| Neurotransmitter Vector | — | — | 7 dimensions active |
+| Grimoire MCP resources | 0 | 5 ✅ | 33 (28 chapters + 4 quadrants + current) |
+| Dream YAML artifacts | — | — | Active with nightly consolidation |
+| Voice Audit | — | — | Scanning + quarantine active |
+| Corpus Callosum debates | — | — | Available via MCP |
+
+---
+
+## Archive Recovery Status
+
+| Wild Idea | Archive Found? | Action |
+|-----------|---------------|--------|
+| Neurotransmitter Vectors | ❌ No | Build fresh (2 days) |
+| Grimoire as MCP Resource | ⚠️ Partial (MCP infra exists) | Extend existing resources (1-2 days) |
+| Memory Dreams YAML | ❌ No | Build fresh using dream daemon + narrative compressor (2-3 days) |
+| Jaynes Voice Audit | ❌ No | Build fresh using karma ledger + unified_api (3-4 days) |
+| Corpus Callosum Bus | ❌ No | Build fresh using bicameral + gan_ying bus (4-5 days) |
+
+**Total Phase 3 effort**: 12-17 days of focused implementation.
+
+---
+
 *Last updated: 2026-04-25*

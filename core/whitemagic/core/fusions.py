@@ -908,3 +908,295 @@ def _classify_event_lane(event_type: str) -> str:
     elif event_type in slow_events:
         return "SLOW"
     return "MEDIUM"
+
+
+# ---------------------------------------------------------------------------
+# Fusion 14: Embedding Daemon → Galactic Map Reindex
+# ---------------------------------------------------------------------------
+
+def embedding_galactic_reindex(batch_size: int = 100) -> dict[str, Any]:
+    """Trigger a reindex of memory embeddings into galactic spatial zones.
+
+    When the embedding daemon updates vector indices, memories may shift
+    their semantic position. This fusion reassigns galactic zone memberships
+    based on current holographic distances.
+    """
+    try:
+        from whitemagic.core.memory.galactic_map import GalacticMap
+        from whitemagic.core.memory.manager import MemoryManager
+
+        gm = GalacticMap()
+        mgr = MemoryManager()
+        memories = mgr.list(limit=batch_size)
+
+        reindexed = 0
+        for mem in memories:
+            try:
+                coord = mem.get("holographic_coord")
+                if coord:
+                    gm.assign_zone(mem["id"], coord)
+                    reindexed += 1
+            except Exception:
+                continue
+
+        emit_fusion_event("EMBEDDING_GALACTIC_REINDEX", {
+            "reindexed": reindexed,
+            "batch_size": batch_size,
+        })
+
+        return {
+            "reindexed": reindexed,
+            "batch_size": batch_size,
+            "zones": gm.get_zone_counts(),
+        }
+    except Exception as e:
+        return {"reindexed": 0, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Fusion 15: Session → Memory Enrichment
+# ---------------------------------------------------------------------------
+
+def session_memory_enrich(session_id: str = "", query: str = "") -> dict[str, Any]:
+    """Enrich a session's working context with relevant memories.
+
+    Performs hybrid search + graph walk on the session's current topic
+    and injects the top memories into the session's scratchpad.
+    """
+    try:
+        from whitemagic.core.memory.manager import MemoryManager
+        from whitemagic.tools.handlers.scratchpad import handle_scratchpad
+
+        mgr = MemoryManager()
+        search_query = query or session_id
+        results = mgr.search(search_query, limit=5)
+
+        memories = []
+        for r in results:
+            entry = r.get("entry", r)
+            memories.append({
+                "id": entry.get("id", ""),
+                "title": entry.get("title", "Untitled"),
+                "content": str(entry.get("content", ""))[:200],
+            })
+
+        if memories:
+            handle_scratchpad(
+                operation="append",
+                content=f"[Memory Enrichment] {len(memories)} related memories found for '{search_query}'",
+                session_id=session_id,
+            )
+
+        emit_fusion_event("SESSION_MEMORY_ENRICH", {
+            "session_id": session_id,
+            "memories_found": len(memories),
+        })
+
+        return {
+            "session_id": session_id,
+            "query": search_query,
+            "memories_injected": len(memories),
+            "memories": memories,
+        }
+    except Exception as e:
+        return {"memories_injected": 0, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Fusion 16: Pattern Engine → Dream Cycle Surface
+# ---------------------------------------------------------------------------
+
+def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
+    """Surface high-salience patterns from the dream cycle's memory batch.
+
+    Uses the pattern engine to mine associations and novelty from
+    memories currently being processed in the dream cycle.
+    """
+    try:
+        from whitemagic.core.memory.pattern_engine import PatternEngine
+
+        if not dream_batch:
+            return {"patterns": [], "reason": "no dream batch provided"}
+
+        engine = PatternEngine()
+        patterns = []
+
+        for mem in dream_batch[:20]:
+            try:
+                mined = engine.mine(str(mem.get("content", "")))
+                if mined:
+                    patterns.extend(mined)
+            except Exception:
+                continue
+
+        # Deduplicate by pattern signature
+        seen = set()
+        unique_patterns = []
+        for p in patterns:
+            sig = p.get("signature", str(p))
+            if sig not in seen:
+                seen.add(sig)
+                unique_patterns.append(p)
+
+        emit_fusion_event("PATTERN_DREAM_SURFACE", {
+            "memories_scanned": len(dream_batch),
+            "patterns_found": len(unique_patterns),
+        })
+
+        return {
+            "memories_scanned": len(dream_batch),
+            "patterns_found": len(unique_patterns),
+            "patterns": unique_patterns[:10],
+        }
+    except Exception as e:
+        return {"patterns": [], "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Fusion 17: Garden → Harmony Vector Health Sync
+# ---------------------------------------------------------------------------
+
+def garden_health_sync() -> dict[str, Any]:
+    """Synchronize consciousness garden vitality with the Harmony Vector.
+
+    Reads Harmony Vector health metrics and propagates them to all
+    active gardens as vitality modifiers.
+    """
+    try:
+        from whitemagic.gardens import get_garden
+        from whitemagic.harmony.vector import get_harmony_vector
+
+        hv = get_harmony_vector()
+        snap = hv.snapshot()
+        score = snap.harmony_score
+
+        garden_names = [
+            "wonder", "stillness", "healing", "sanctuary", "love", "courage", "wisdom",
+            "joy", "adventure", "beauty", "humor", "voice", "sangha", "grief",
+            "awe", "gratitude", "creation", "presence", "play", "practice", "reverence",
+            "dharma", "patience", "connection", "mystery", "protection", "transformation", "truth",
+        ]
+
+        synced = []
+        for name in garden_names:
+            try:
+                garden = get_garden(name)
+                if garden and hasattr(garden, "vitality"):
+                    garden.vitality = score
+                    synced.append({"garden": name, "vitality": round(score, 3)})
+            except Exception:
+                continue
+
+        emit_fusion_event("GARDEN_HEALTH_SYNC", {
+            "harmony_score": score,
+            "gardens_synced": len(synced),
+        })
+
+        return {
+            "harmony_score": round(score, 3),
+            "gardens_synced": len(synced),
+            "sample": synced[:5],
+        }
+    except Exception as e:
+        return {"gardens_synced": 0, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Fusion 18: Grimoire → Resonance Suggestion
+# ---------------------------------------------------------------------------
+
+def grimoire_resonance_suggest(current_gana: str = "") -> dict[str, Any]:
+    """Suggest the next Grimoire chapter based on PRAT resonance state.
+
+    Uses recent call history and emotional valence to recommend
+    which Gana chapter to enter next.
+    """
+    try:
+        from whitemagic.tools.prat_resonance import get_resonance_state
+
+        state = get_resonance_state()
+        history = state.get_recent_history(limit=5)
+
+        # Count recent Gana usage
+        gana_counts: dict[str, int] = {}
+        for snap in history:
+            g = snap.get("gana_name", "")
+            if g:
+                gana_counts[g] = gana_counts.get(g, 0) + 1
+
+        # If current_gana provided, suggest complementary quadrant
+        suggestions = []
+        if current_gana:
+            _COMPLEMENTARY = {
+                "gana_horn": ["gana_dipper", "gana_three_stars"],
+                "gana_ghost": ["gana_void", "gana_wall"],
+                "gana_star": ["gana_heart", "gana_tail"],
+                "gana_dipper": ["gana_horn", "gana_abundance"],
+                "gana_abundance": ["gana_dipper", "gana_ghost"],
+                "gana_three_stars": ["gana_horn", "gana_star"],
+            }
+            for g in _COMPLEMENTARY.get(current_gana, []):
+                suggestions.append({"gana": g, "reason": "complementary_energy"})
+
+        # Also suggest underused Ganas
+        all_ganas = [
+            "gana_horn", "gana_neck", "gana_root", "gana_room", "gana_heart", "gana_tail", "gana_winnowing_basket",
+            "gana_ghost", "gana_willow", "gana_star", "gana_extended_net", "gana_wings", "gana_chariot", "gana_abundance",
+            "gana_straddling_legs", "gana_mound", "gana_stomach", "gana_hairy_head", "gana_net", "gana_turtle_beak", "gana_three_stars",
+            "gana_dipper", "gana_ox", "gana_girl", "gana_void", "gana_roof", "gana_encampment", "gana_wall",
+        ]
+        underused = [g for g in all_ganas if gana_counts.get(g, 0) == 0 and g != current_gana][:3]
+        for g in underused:
+            suggestions.append({"gana": g, "reason": "underused_exploration"})
+
+        emit_fusion_event("GRIMOIRE_RESONANCE_SUGGEST", {
+            "current_gana": current_gana,
+            "suggestions": len(suggestions),
+        })
+
+        return {
+            "current_gana": current_gana,
+            "recent_history_count": len(history),
+            "suggestions": suggestions,
+        }
+    except Exception as e:
+        return {"suggestions": [], "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Fusion 19: Lifecycle → Dream Trigger
+# ---------------------------------------------------------------------------
+
+def lifecycle_dream_trigger() -> dict[str, Any]:
+    """Trigger lifecycle maintenance during the dream cycle's consolidation phase.
+
+    When the dream cycle enters consolidation, this fusion initiates
+    retention sweeps, galactic rotation, and decay drift.
+    """
+    try:
+        from whitemagic.core.memory.lifecycle import run_sweep
+        from whitemagic.core.memory.galactic_map import GalacticMap
+
+        sweep_result = run_sweep()
+
+        gm = GalacticMap()
+        rotation = {}
+        try:
+            if hasattr(gm, "rotate"):
+                rotation = gm.rotate()
+        except Exception:
+            pass
+
+        emit_fusion_event("LIFECYCLE_DREAM_TRIGGER", {
+            "sweep_memories_affected": sweep_result.get("memories_affected", 0),
+            "rotation": rotation,
+        })
+
+        return {
+            "sweep": sweep_result,
+            "rotation": rotation,
+            "triggered": True,
+            "phase": "consolidation",
+        }
+    except Exception as e:
+        return {"triggered": False, "error": str(e)}

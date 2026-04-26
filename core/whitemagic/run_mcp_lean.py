@@ -473,6 +473,62 @@ async def list_resources() -> list[types.Resource]:
             description=wf_desc,
             mimeType="text/markdown",
         ))
+    # v22.2: Grimoire chapters as dynamic resources
+    _GRIMOIRE_CHAPTERS = [
+        ("01", "Horn — Session Initiation"),
+        ("02", "Neck — Memory Presence"),
+        ("03", "Root — System Foundation"),
+        ("04", "Room — Resource Sanctuary"),
+        ("05", "Heart — Context Connection"),
+        ("06", "Tail — Performance Drive"),
+        ("07", "Winnowing Basket — Consolidation"),
+        ("08", "Ghost — Metrics Introspection"),
+        ("09", "Willow — Adaptive Play"),
+        ("10", "Star — PRAT Illumination"),
+        ("11", "Extended Net — Resonance Network"),
+        ("12", "Wings — Parallel Creation"),
+        ("13", "Chariot — Codebase Navigation"),
+        ("14", "Abundance — Resource Sharing"),
+        ("15", "Straddling Legs — Ethical Balance"),
+        ("16", "Mound — Strategic Patience"),
+        ("17", "Stomach — Energy Management"),
+        ("18", "Hairy Head — Detailed Attention"),
+        ("19", "Net — Pattern Capture"),
+        ("20", "Turtle Beak — Precise Validation"),
+        ("21", "Three Stars — Wisdom Council"),
+        ("22", "Dipper — Governance"),
+        ("23", "Ox — Endurance"),
+        ("24", "Girl — Nurture"),
+        ("25", "Void — Emptiness"),
+        ("26", "Roof — Shelter"),
+        ("27", "Encampment — Structure"),
+        ("28", "Wall — Boundaries"),
+    ]
+    for num, title in _GRIMOIRE_CHAPTERS:
+        resources.append(types.Resource(
+            uri=cast(Any, f"whitemagic://grimoire/chapter/{num}"),
+            name=f"Grimoire Ch.{num}: {title}",
+            description=f"WhiteMagic Grimoire Chapter {num} with live system state.",
+            mimeType="text/markdown",
+        ))
+    # Quadrant summaries
+    for quad, qtitle in (("eastern", "Eastern — Spring/Wood"),
+                          ("southern", "Southern — Summer/Fire"),
+                          ("western", "Western — Autumn/Metal"),
+                          ("northern", "Northern — Winter/Water")):
+        resources.append(types.Resource(
+            uri=cast(Any, f"whitemagic://grimoire/quadrant/{quad}"),
+            name=f"Grimoire Quadrant: {qtitle}",
+            description=f"Summary of the {quad} quadrant with live resonance data.",
+            mimeType="text/markdown",
+        ))
+    # Current most-resonant chapter
+    resources.append(types.Resource(
+        uri=cast(Any, "whitemagic://grimoire/current"),
+        name="Grimoire: Current Chapter",
+        description="The Grimoire chapter most resonant with current system state.",
+        mimeType="text/markdown",
+    ))
     return resources
 
 
@@ -517,7 +573,136 @@ async def read_resource(uri) -> str:
             return wf_path.read_text(encoding="utf-8")
         except Exception as exc:
             return f"# Workflow not found: {wf_name}\n\nerror: {exc}"
+    # v22.2: Grimoire resources with live state interpolation
+    if "grimoire/" in uri_str:
+        return _read_grimoire_resource(uri_str)
     return f"# Unknown resource: {uri}"
+
+
+def _read_grimoire_resource(uri_str: str) -> str:
+    """Read a Grimoire resource with live system state interpolated."""
+    import json
+    from datetime import datetime
+
+    # Collect live state (best-effort)
+    live_state = {"timestamp": datetime.now().isoformat()}
+    try:
+        from whitemagic.harmony.vector import get_harmony_vector
+        hv = get_harmony_vector()
+        snap = hv.snapshot()
+        live_state["harmony_score"] = round(snap.harmony_score, 3)
+        live_state["guna"] = {
+            "sattvic": round(snap.guna_sattvic_pct, 2),
+            "rajasic": round(snap.guna_rajasic_pct, 2),
+            "tamasic": round(snap.guna_tamasic_pct, 2),
+        }
+    except Exception:
+        pass
+    try:
+        from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
+        nt = get_neurotransmitter_vector()
+        nt_snap = nt.snapshot()
+        live_state["neurotransmitters"] = {
+            "dominant": nt_snap.dominant,
+            "cortisol": nt_snap.cortisol,
+            "dopamine": nt_snap.dopamine,
+        }
+    except Exception:
+        pass
+    try:
+        from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+        dc = get_dream_cycle()
+        live_state["dream_phase"] = dc.status().get("phase", "unknown")
+    except Exception:
+        pass
+
+    # Build frontmatter
+    frontmatter = "---\n" + json.dumps(live_state, indent=2) + "\n---\n\n"
+
+    if "grimoire/chapter/" in uri_str:
+        chapter_num = uri_str.split("chapter/")[-1].strip("/")
+        # Map chapter number to filename
+        _CHAPTER_FILES = {
+            "01": "01_HORN_SESSION_INITIATION.md",
+            "02": "02_NECK_MEMORY_PRESENCE.md",
+            "03": "03_ROOT_SYSTEM_FOUNDATION.md",
+            "04": "04_ROOM_RESOURCE_SANCTUARY.md",
+            "05": "05_HEART_CONTEXT_CONNECTION.md",
+            "06": "06_TAIL_PERFORMANCE_DRIVE.md",
+            "07": "07_WINNOWINGBASKET_CONSOLIDATION.md",
+            "08": "08_GHOST_METRICS_INTROSPECTION.md",
+            "09": "09_WILLOW_ADAPTIVE_PLAY.md",
+            "10": "10_STAR_PRAT_ILLUMINATION.md",
+            "11": "11_EXTENDEDNET_RESONANCE_NETWORK.md",
+            "12": "12_WINGS_PARALLEL_CREATION.md",
+            "13": "13_CHARIOT_CODEBASE_NAVIGATION.md",
+            "14": "14_ABUNDANCE_RESOURCE_SHARING.md",
+            "15": "15_STRADDLINGLEGS_ETHICAL_BALANCE.md",
+            "16": "16_MOUND_STRATEGIC_PATIENCE.md",
+            "17": "17_STOMACH_ENERGY_MANAGEMENT.md",
+            "18": "18_HAIRYHEAD_DETAILED_ATTENTION.md",
+            "19": "19_NET_PATTERN_CAPTURE.md",
+            "20": "20_TURTLEBEAK_PRECISE_VALIDATION.md",
+            "21": "21_THREESTARS_WISDOM_COUNCIL.md",
+            "22": "22_DIPPER_GOVERNANCE.md",
+            "23": "23_OX_ENDURANCE.md",
+            "24": "24_GIRL_NURTURE.md",
+            "25": "25_VOID_EMPTINESS.md",
+            "26": "26_ROOF_SHELTER.md",
+            "27": "27_ENCAMPMENT_STRUCTURE.md",
+            "28": "28_WALL_BOUNDARIES.md",
+        }
+        fname = _CHAPTER_FILES.get(chapter_num)
+        if fname:
+            path = REPO_ROOT / "grimoire" / fname
+            try:
+                content = path.read_text(encoding="utf-8")
+                return frontmatter + content
+            except Exception as exc:
+                return f"# Chapter unavailable\n\nerror: {exc}"
+        return f"# Unknown chapter: {chapter_num}"
+
+    if "grimoire/quadrant/" in uri_str:
+        quadrant = uri_str.split("quadrant/")[-1].strip("/")
+        _QUADRANT_DATA = {
+            "eastern": {"chapters": "1-7", "element": "Wood", "season": "Spring", "theme": "Initiation, growth, foundation"},
+            "southern": {"chapters": "8-14", "element": "Fire/Water/Earth", "season": "Summer", "theme": "Expansion, radiance, creation"},
+            "western": {"chapters": "15-21", "element": "Metal/Earth/Fire", "season": "Autumn", "theme": "Refinement, judgment, precision"},
+            "northern": {"chapters": "22-28", "element": "Fire/Earth/Water", "season": "Winter", "theme": "Depth, integration, completion"},
+        }
+        qdata = _QUADRANT_DATA.get(quadrant)
+        if qdata:
+            return frontmatter + f"""# {quadrant.title()} Quadrant
+
+**Chapters**: {qdata['chapters']}  
+**Element**: {qdata['element']}  
+**Season**: {qdata['season']}  
+**Theme**: {qdata['theme']}
+
+## Live Resonance
+{json.dumps(live_state, indent=2)}
+"""
+        return f"# Unknown quadrant: {quadrant}"
+
+    if "grimoire/current" in uri_str:
+        # Pick chapter based on dominant guna
+        try:
+            from whitemagic.harmony.vector import get_harmony_vector
+            hv = get_harmony_vector()
+            snap = hv.snapshot()
+            if snap.guna_rajasic_pct > 0.5:
+                current_ch = "06_TAIL_PERFORMANCE_DRIVE.md"
+            elif snap.guna_sattvic_pct > 0.5:
+                current_ch = "08_GHOST_METRICS_INTROSPECTION.md"
+            else:
+                current_ch = "25_VOID_EMPTINESS.md"
+            path = REPO_ROOT / "grimoire" / current_ch
+            content = path.read_text(encoding="utf-8")
+            return frontmatter + "# 🌟 Most Resonant Chapter Right Now\n\n" + content
+        except Exception as exc:
+            return f"# Current chapter unavailable\n\nerror: {exc}"
+
+    return "# Unknown Grimoire resource"
 
 
 # ══════════════════════════════════════════════════════════════════════

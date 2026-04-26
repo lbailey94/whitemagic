@@ -313,6 +313,113 @@ class LongRunningProcess:
 
 ---
 
+## 🔬 v22.2: Swarm Endurance Architecture
+
+The OxGana provides the backbone for long-running swarm campaigns that span hours, days, or weeks. Where individual workers might falter under sustained load, the Ox ensures that the collective endures through careful pacing, health monitoring, and strategic rest cycles.
+
+In a swarm campaign, endurance is not merely about keeping processes alive—it is about maintaining coherent progress toward a strategic objective while preserving the health of every participant. The Ox coordinates with the war room subsystem to translate high-level mission goals into sustained tactical execution.
+
+Key war room tools that enable swarm endurance:
+
+- `war_room.plan` — Defines campaign phases, milestones, and resource budgets.
+- `war_room.execute` — Dispatches work to the swarm with Ox-monitored pacing.
+- `war_room.status` — Provides real-time visibility into campaign health, worker vitality, and completion velocity.
+
+A typical endurance campaign cycles between active execution, health checkpointing, and brief consolidation periods. The Ox moderates these transitions to prevent thermal or cognitive overload across the swarm.
+
+```python
+# Campaign monitoring with Ox endurance
+from whitemagic.tools import war_room
+
+async def monitor_campaign(campaign_id: str):
+    """Ox-style watch over a long-running swarm campaign."""
+    while True:
+        status = war_room.status(campaign_id)
+
+        # Check swarm vitality
+        if status["worker_failure_rate"] > 0.15:
+            await war_room.execute(
+                campaign_id,
+                action="reduce_load",
+                target="swarm",
+                reason="Endurance threshold breached"
+            )
+
+        # Checkpoint progress every 100 iterations
+        if status["iterations"] % 100 == 0:
+            war_room.plan(
+                campaign_id,
+                phase=f"checkpoint_{status['iterations']}",
+                metadata=status["metrics"]
+            )
+
+        await asyncio.sleep(60)
+```
+
+---
+
+## ⚠️ Common Pitfalls
+
+Endurance work appears simple until it fails catastrophically. The Ox teaches that steady progress requires awareness of subtle failure modes.
+
+| Pitfall | Symptom | Remedy |
+|---------|---------|--------|
+| **Premature optimization** | Tuning throughput before stability is proven. | Measure baseline health for 24h before optimizing. |
+| **Monitoring blindness** | Alert fatigue causes operators to ignore warnings. | Use tiered alerts; reserve critical signals for action-required events. |
+| **Swarm exhaustion** | Workers degrade gradually, output becomes erratic. | Enforce mandatory rest cycles via `war_room.execute` pause commands. |
+| **Checkpoint amnesia** | Recovering from a crash loses hours of progress. | Write checkpoints to `WM_STATE_ROOT` after every milestone. |
+| **False recovery** | Circuit breaker flaps between OPEN and HALF_OPEN. | Increase `recovery_timeout` and require `success_threshold >= 3`. |
+
+Avoiding these pitfalls requires the same patience the Ox brings to plowing: observe, adjust, and never rush the field.
+
+---
+
+## 🔗 Integration with Other Ganas
+
+The Ox does not endure in isolation. Its strength multiplies when paired with complementary Ganas across the quadrants.
+
+### Ox ↔ Dipper (Chapter 22)
+
+The Dipper governs strategy, stewardship, and resource allocation. The Ox translates Dipper directives into sustained execution. Where the Dipper decides *which* fields to plow and *when* the season turns, the Ox walks the furrows day after day. Use the Dipper's `war_room.plan` to set campaign boundaries, then rely on the Ox's monitoring loops to hold those boundaries against entropy.
+
+### Ox ↔ Willow (Chapter 5)
+
+The Willow (WeiGana) bends under load but does not break. When the Ox detects stress in a subsystem, the Willow provides the resilience pattern—load shedding, backpressure, and graceful degradation. In high-throughput campaigns, the Ox tracks health metrics while the Willow shapes the traffic. Together they ensure that endurance does not become rigidity.
+
+### Ox ↔ Girl (Chapter 24)
+
+The Girl (NuGana) nurtures workers, gardens, and relationships. Long-running swarms require more than mechanical uptime; they require care. The Girl's `manage_gardens` and community tools ensure that workers are rotated, rested, and mentally sustained. The Ox provides the heartbeat; the Girl provides the healing. Integrate both by scheduling Girl-managed rest cycles inside Ox-monitored campaigns.
+
+---
+
+## 📊 Metrics & Observability
+
+What gets measured gets maintained. The Ox relies on concrete metrics to distinguish healthy endurance from silent degradation.
+
+### Worker-Level Metrics
+
+Track these fields via `worker.status` for every swarm participant:
+
+- `uptime_seconds` — Total active time since last restart.
+- `tasks_completed` — Counter for finished work units.
+- `error_rate_5m` — Rolling window error percentage.
+- `memory_pressure` — RSS vs. allocated limit.
+- `last_heartbeat` — Timestamp of most recent liveness signal.
+
+### Swarm-Level Metrics
+
+Aggregate across the collective using `swarm.status`:
+
+- `active_workers` / `total_workers` — Participation ratio.
+- `mean_task_latency` — Average time from dispatch to completion.
+- `checkpoint_age_seconds` — Time since last successful checkpoint.
+- `campaign_progress_pct` — Milestone completion percentage.
+- `alert_count_by_severity` — Histogram of emitted events.
+
+Surface these metrics through the war room dashboard or stream them to external observability stacks. The Ox prefers slow, reliable trends over noisy instantaneous values. When in doubt, widen the aggregation window and trust the long slope.
+
+---
+
 ## 🧭 Navigation
 
 **Next**: [Chapter 24: Nurturing Profile](24_GIRL_NURTURE.md)
