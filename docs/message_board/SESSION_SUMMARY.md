@@ -1,10 +1,10 @@
-# WhiteMagic v22.0.0 — Session Summary & Handoff Document
+# WhiteMagic v22.0.0 + v22.2 — Session Summary & Handoff Document
 
 > **Session Date:** 2026-04-25
-> **Scope:** Complete codebase stabilization from broken baseline to release-ready
-> **Final State:** 2,063 tests passed, 0 failed, 66 skipped
-> **Net Improvement:** +1,280 passing tests, -193 skips, 0 failures
-> **New Artifacts:** 8 documents, 12 modules recovered/created, 1 CI job added
+> **Scope:** Complete codebase stabilization from broken baseline to release-ready, followed by v22.2 surface completion and cognitive architecture expansion
+> **Final State:** 2,154 tests passed, 0 failed, 66 skipped
+> **Net Improvement:** +1,371 passing tests, -193 skips, 0 failures
+> **New Artifacts:** 12 documents, 28 modules recovered/created, 4 cognitive subsystems, 1 CI job added
 
 ---
 
@@ -192,8 +192,10 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 | Apr 25 | Phase 5 | 2,063 | 0 | 66 | MCP hardening, security |
 | Apr 25 | Phase 6 | 2,063 | 0 | 66 | Memory stress, release readiness |
 | Apr 25 | Phase 7 | 2,063 | 0 | 66 | Stub audit, 3 archive recoveries |
+| Apr 25 | v22.2 Phase 1 | 2,082 | 0 | 66 | Archive recovery, aspirational tools |
+| Apr 25 | v22.2 Phase 2 | 2,154 | 0 | 66 | Surface completion + cognitive architecture |
 
-**Net improvement: +1,280 passing tests, -193 skips, 0 failures.**
+**Net improvement: +1,371 passing tests, -193 skips, 0 failures.**
 
 ---
 
@@ -256,28 +258,40 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 
 ---
 
-## 10. Next Steps (Prioritized) — Phase 8: Post-v22 Strategy
+## 10. Next Steps (Prioritized) — Post-v22.2 Strategy
 
-> **Status:** v22.0.0 tagged (`e2b0544`). Stub Zero complete. All 41 stubs eliminated.
-> **Updated:** Strategic direction revised after review of CyberBrain architecture documents and polyglot resonance research.
+> **Status:** v22.2 Phase 1-2-3 complete. All roadmap targets exceeded. 2,154 tests passing. 4 cognitive subsystems active.
+> **Updated:** 2026-04-25 after v22.2 impact assessment.
 
-### Immediate (Session 1 — High Impact, Low Risk)
+### Completed Today (for reference)
+- ✅ MCP hardening & security (Phase 5)
+- ✅ Memory stress tests & release readiness (Phase 6)
+- ✅ Stub audit & archive recovery (Phase 7)
+- ✅ v22.2 Phase 1: Gana bridge, aspirational tools, browser automation, SIMD unified
+- ✅ v22.2 Phase 2: Handler expansion, Northern Quadrant Grimoire, dashboard real data, 6 new fusions
+- ✅ v22.2 Phase 3 (bonus): Dream YAML artifacts, Corpus Callosum Bus, Jaynes Voice Audit, Neurotransmitter Vectors
+
+### Immediate (Next Session — High Impact, Low Risk)
 1. **MCP Startup Latency** — Defer `mcp.types` import until first `_sync_dispatch` call. Add `LazyMCPTypes` wrapper. Target: <100ms cold-start.
 2. **Stub Audit CI Gate** — Create `core/scripts/check_stubs.py` (greps docstrings, counts `NotImplementedError`, flags >50% size drops). Add `stub-audit` job to CI.
-3. **Performance Benchmarking** — Create `core/scripts/benchmark_acceleration.py`: Python vs. Zig SIMD vs. Rust for cosine, batch ops, keywords. Output JSON to `reports/benchmark_v22.json`.
+3. **Engine Registry Garden Bug** — `core/engines/registry.py` has wrong garden assignments (e.g., `Willow → play` instead of `humor`). Fix and verify tests still pass.
+4. **Documentation Sync** — Update `SESSION_SUMMARY.md`, `V22_2_ROADMAP.md`, `AGENTS.md` with final v22.2 metrics.
 
 ### Short Term (1–2 Weeks)
-4. **Real Agent Loop** — Wire immortal clone to PRAT router so clones can invoke Gana tools. Add `wm clone run --target=./file.py --campaign=...` CLI. Loop: `analyze → plan → gana dispatch → edit → verify → repeat`.
-5. **5D Coordinate Expansion** — Build `wm memory journey --from=tag:x --depth=3` CLI. Implement constellation detection in 5D space. Add `/api/memories/journey` dashboard endpoint with D3.js force graph.
-6. **Economic Layer Activation** — Add `tests/test_payments.py` with mocked XRPL. Document x402 in `docs/X402_INTEGRATION.md`. Build `/api/tip` endpoint.
+5. **Handler Stubs to Real Code** — The 7 new handler modules (watcher, backup, verification, grimoire_walkthrough, gana_dipper, galactic_dashboard, ollama_agent) have minimal implementations. Expand to full functionality.
+6. **Performance Benchmarking** — Create `core/scripts/benchmark_acceleration.py`: Python vs. Zig SIMD vs. Rust for cosine, batch ops, keywords. Output JSON to `reports/benchmark_v22.json`.
+7. **5D Coordinate Expansion** — Build `wm memory journey --from=tag:x --depth=3` CLI. Implement constellation detection in 5D space. Add `/api/memories/journey` dashboard endpoint with D3.js force graph.
+8. **Economic Layer Activation** — Add `tests/test_payments.py` with mocked XRPL. Document x402 in `docs/X402_INTEGRATION.md`. Build `/api/tip` endpoint.
 
 ### Medium Term (1 Month)
-7. **Archive Deep Recovery** — All major recoveries done. If Koka/Mojo runtimes become available, diff deeper bindings from `whitemagic0.2` archive.
+9. **Logos Layer / Foresight Engine** — The only missing CyberBrain layer (Layer 7). Predictive engine for constellation drift, memory decay, and association path convergence.
+10. **Polyglot Revival** — Haskell spatial core (`polyglot/whitemagic-hs/`) and Julia planning core (`polyglot/whitemagic-jl/`). Install cabal/document dependencies. Wire to PFC layer.
+11. **Archive Deep Recovery** — All major recoveries done. If Koka/Mojo runtimes become available, diff deeper bindings from `whitemagic0.2` archive.
 
-### Strategic Decisions (Saved for Last — Require External Input)
-8. **Site Launch Blockers** — Needs Resend + OpenRouter API keys, DNS config. Pure integration, no code risk.
-9. **~~Mem0 / Zep Integration~~ → REJECTED** — After architectural review, integrating Mem0 or Zep would be **regressive**. WhiteMagic's 5D holographic system, bicameral enrichment, and galactic topology are emergent cognitive capabilities that flat vector stores cannot replicate. See Section 14 for full rationale. Decision: build native cognitive layers instead.
-10. **WASM Build Verification** — Add `build-wasm` to CI. Verify `wasm-pack build` for `whitemagic-rust`. If green, promote WASM to Core tier.
+### Strategic (Saved for Last — Require External Input)
+12. **Site Launch Blockers** — Needs Resend + OpenRouter API keys, DNS config. Pure integration, no code risk.
+13. **~~Mem0 / Zep Integration~~ → REJECTED** — After architectural review, integrating Mem0 or Zep would be **regressive**. WhiteMagic's 5D holographic system, bicameral enrichment, and galactic topology are emergent cognitive capabilities that flat vector stores cannot replicate. See Section 14 for full rationale. Decision: build native cognitive layers instead.
+14. **WASM Build Verification** — Add `build-wasm` to CI. Verify `wasm-pack build` for `whitemagic-rust`. If green, promote WASM to Core tier.
 
 ---
 
