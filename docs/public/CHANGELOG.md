@@ -5,6 +5,34 @@
 
 ---
 
+## [22.2.0] - 2026-04-26 — Cognitive Differentiation Release
+
+### Cognitive Architecture (5 Wild Ideas)
+- **Neurotransmitter Vectors**: 7-dimension biochemical health monitoring (dopamine, oxytocin, serotonin, cortisol, acetylcholine, GABA, glutamate)
+- **Grimoire MCP Resources**: 33 dynamic resources serving Grimoire chapters with live system state interpolation
+- **Memory Dreams YAML**: Human-inspectable imagination capture from bicameral reasoning; nightly consolidation
+- **Jaynes Voice Audit**: Hallucinated tool-invocation scanner with quarantine mechanism
+- **Corpus Callosum Bus**: Multi-round bicameral debate engine with tension-based escalation
+
+### Surface Completion (Phase 2)
+- 443 dispatch tools, 471 callable tools — all with working handlers
+- Northern Quadrant Grimoire expanded to 484-line average
+- Dashboard wired to real Gan Ying event bus
+- 23/28 fusions active
+
+### Metrics
+- Tests: **2,154 passed, 66 skipped, 0 failed**
+- Doc drift: **7/7 checks passing**
+- Zero broken core tools
+
+---
+
+## [22.0.0] - 2026-04-16 — Modular Release
+
+See root `CHANGELOG.md` for detailed v22.0.0 notes.
+
+---
+
 ## [21.0.0] - 2026-04-14 — Public Release
 
 ### Repository Restructure & Editorial Pass

@@ -632,4 +632,86 @@ python scripts/check_doc_drift.py
 
 ---
 
+## 16. v22.2 Phase 2 — Surface Completion (Parallel Session, 2026-04-25)
+
+### Scope
+Complete all remaining surface gaps: handler modules, Northern Quadrant Grimoire, dashboard real data, missing fusions.
+
+### What Was Done
+
+| # | Task | Status | Impact |
+|---|------|--------|--------|
+| 1 | `handlers/ollama_agent.py` — autonomous agentic loop | ✅ | Filled LazyHandler gap |
+| 2 | `handlers/galactic_dashboard.py` — galactic map data | ✅ | Filled LazyHandler gap |
+| 3 | Northern Quadrant Grimoire expansion (Ch 23-28) | ✅ | Avg 484 lines (target 400+) |
+| 4 | Dashboard mock data → real Gan Ying bus data | ✅ | `random.randint` removed |
+| 5 | Missing fusions implemented | ✅ | 23/28 active (target 21/28) |
+
+### Metrics
+
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Tests passing | 2,082 | **2,100+** | **+18** |
+| Fusions active | 13/28 | **23/28** | **+10** |
+| Northern Quadrant avg lines | 141 | **484** | **+343** |
+
+---
+
+## 17. v22.2 Phase 3 — The Wild Ideas / Cognitive Differentiation (2026-04-26)
+
+### Scope
+Implement all five "wild ideas" from `V22_2_ROADMAP.md`: Neurotransmitter Vectors, Grimoire MCP Resource, Memory Dreams YAML, Jaynes Voice Audit, Corpus Callosum Bus.
+
+### What Was Done
+
+| # | Wild Idea | Files | Tests |
+|---|-----------|-------|-------|
+| 1 | **Neurotransmitter Vectors** | `core/monitoring/neurotransmitter_vector.py`, `handlers/neurotransmitters.py` | `test_neurotransmitter_vector.py` (8 passed) |
+| 2 | **Grimoire as MCP Resource** | `run_mcp_lean.py` (+33 resources) | Manual smoke test |
+| 3 | **Memory Dreams as YAML Artifacts** | `core/dreaming/dream_artifacts.py`, `core/dreaming/dream_consolidator.py`, `handlers/dream_artifacts.py` | `test_dream_artifacts.py` (16 passed) |
+| 4 | **Jaynes Voice Audit** | `core/governance/voice_audit.py`, `core/governance/quarantine.py`, `handlers/voice_audit.py` | `test_voice_audit.py` (10 passed) |
+| 5 | **Corpus Callosum Bus** | `core/intelligence/corpus_callosum.py`, `core/intelligence/hemisphere_agents.py`, `handlers/corpus_callosum.py` | `test_corpus_callosum.py` (16 passed) |
+
+### Integration Points
+- Neurotransmitter Vector: auto-fed by `call_tool()` telemetry post-step
+- Grimoire Resource: live state interpolation (Harmony Vector, Dream Cycle, Neurotransmitters)
+- Dream Artifacts: listens to `CREATIVE_BRIDGE_LOW_CONFIDENCE` Gan Ying event
+- Voice Audit: claim registration at `call_tool()` entry, verification after Karma Ledger write
+- Corpus Callosum: debates logged to Karma Ledger; tension >0.9 auto-escalates
+
+### Final Metrics
+
+| Metric | v22.0.0 | v22.2 Final | Delta |
+|--------|---------|-------------|-------|
+| Tests passing | 2,068 | **2,154** | **+86** |
+| Failed | 0 | **0** | 0 |
+| Skipped | 66 | **66** | 0 |
+| Dispatch tools | 425 | **443** | **+18** |
+| Callable tools | 453 | **471** | **+18** |
+| Gana tools working | 0/28 | **28/28** | **+28** |
+| Broken core tools | 2+ | **0** | **-2+** |
+| Neurotransmitter dimensions | — | **7 active** | New |
+| Grimoire MCP resources | 0 | **33** | New |
+| Dream YAML pipeline | — | **Active** | New |
+| Voice Audit scanning | — | **Active** | New |
+| Corpus Callosum debates | — | **Available** | New |
+| Fusions active | 13/28 | **23/28** | **+10** |
+| Northern Quadrant avg lines | 141 | **484** | **+343** |
+
+### Test Verification
+
+```bash
+cd core
+python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
+# Result: 2154 passed, 66 skipped, 0 failed
+
+python scripts/check_doc_drift.py
+# Result: All 7 checks pass — documentation is in sync.
+```
+
+### Release Status
+**v22.2.0 TAGGED** — All roadmap objectives complete. Polyglot builds (Zig/Rust/Haskell) remain as deferred polish for v22.2.x or v22.3.
+
+---
+
 *This document is a living artifact. Update it as work progresses.*

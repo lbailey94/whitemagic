@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 22.0.0  
-**Last Updated**: April 25, 2026  
+**Version**: 22.2.0  
+**Last Updated**: April 26, 2026  
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -55,9 +55,9 @@ These files live at the repository root. They are the **public face** of the pro
 
 | File | What It Is | Date |
 |------|-----------|------|
-| `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 25 |
-| `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 25 |
-| `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 25 |
+| `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
+| `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 26 |
+| `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
 | `RELEASE_READINESS_v22.0.0.md` | Release gate checklist — 34 checks, all passed | Apr 25 |
 | `PHASE0_AUDIT.md` | Living audit from broken baseline to stable | Apr 22–25 |
 | `STUB_AUDIT.md` | Catalog of 41 structural stubs with severity ratings | Apr 25 |

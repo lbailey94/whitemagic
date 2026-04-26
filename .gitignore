@@ -185,6 +185,7 @@ polyglot/whitemagic-zig/lib/
 polyglot/whitemagic-zig/*.so
 polyglot/whitemagic-zig/*.a
 polyglot/whitemagic-zig/*.o
+polyglot/elixir/_build/
 
 # === Docs: Three-tier structure ===
 # Ignore internal and private docs, keep public un-ignored
