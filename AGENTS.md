@@ -259,7 +259,56 @@ Before declaring any task complete:
 
 ---
 
-## 12. Contact & Context
+## 12. Session Timing & Velocity Tracking
+
+This project uses **focused sessions** with explicit time tracking. Each session should have a clear, well-scoped goal.
+
+### Before Starting
+
+Record the start time and state the goal:
+
+```bash
+date '+%H:%M:%S'
+# Goal: Add X to Y module
+```
+
+### After Finishing
+
+Record end time and note:
+- **Duration** (actual vs expected)
+- **Test run time** (how long did the 2,063 tests take?)
+- **What was surprising** (unexpected friction, archive recovery needed, etc.)
+- **What took longer than expected and why**
+- **Technical debt created** (stubs, TODOs, deferred refactors)
+
+### Why This Matters for WhiteMagic
+
+- **Archive reconnaissance** can take 5-15 minutes per module. Timing reveals which modules need upstream recovery.
+- **Test suite runtime** (~30-60s for full suite) is a metric. If it grows, investigate parallelization.
+- **Doc drift checks** (~5s) should never be skipped. If they fail, fix before commit.
+- **Memory subsystem changes** require stress tests. Timing these helps estimate risk for future memory work.
+
+### Healthy Session Benchmarks
+
+| Task Type | Healthy Duration | Warning Signal |
+|-----------|------------------|----------------|
+| Add a new tool | 15-30 min | >45 min = dispatch table complexity |
+| Recover from archive | 10-20 min | >30 min = merge conflicts / API drift |
+| Refactor memory code | 20-40 min | >60 min = run stress tests, check galactic zones |
+| Documentation update | 5-10 min | >20 min = INDEX.md or drift issues |
+| Full test suite | 30-60s | >2 min = investigate slow tests |
+
+### Documentation as Byproduct
+
+Every session produces:
+- Working code + passing tests
+- Updated `docs/message_board/SESSION_SUMMARY.md`
+- If grimoire-affecting: updated `grimoire/TRUTH_TABLE.md`
+- If architecture-affecting: updated `AGENTS.md`
+
+---
+
+## 13. Contact & Context
 
 - **Project**: WhiteMagic v22.0.0
 - **Repository**: `/home/lucas/Desktop/WHITEMAGIC/`

@@ -152,6 +152,28 @@ def get_state_root() -> Path:
     return WM_ROOT
 
 
+def get_external_app_data_paths(app_name: str) -> list[Path]:
+    """Return well-known external application data paths under the user's home directory.
+
+    This is the *only* sanctioned location for Path.home() expansion outside of
+    WM_ROOT resolution. Callers should pass the application name and receive a
+    list of candidate directories to probe.
+
+    Args:
+        app_name: Short identifier for the external app. Supported:
+            - "windsurf" -> Codeium/Windsurf cascade conversation directories
+
+    Returns:
+        List of Path objects ordered by preference (newest/most-specific first).
+    """
+    if app_name == "windsurf":
+        return [
+            Path.home() / ".codeium" / "windsurf" / "cascade",
+            Path.home() / ".codeium" / "cascade",
+        ]
+    return []
+
+
 def ensure_paths() -> Any:
     """Ensure all core directories exist."""
     import logging

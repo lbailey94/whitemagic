@@ -27,7 +27,7 @@ REFERENCES = [
     "CHANGELOG.md",
     "core/README.md",
     "core/pyproject.toml",
-    "core/SHIP_SURFACE.md",
+    "docs/message_board/SHIP_SURFACE.md",
     "SECURITY.md",
     "polyglot/STATUS.md",
     "core/whitemagic-rust/Cargo.toml",
@@ -96,6 +96,10 @@ for ref in REFERENCES:
                 
             # Skip lines with dependency version patterns
             if '>=' in line or '<' in line or '~=' in line:
+                continue
+            
+            # Skip historical / creation references
+            if 'Initial manifest creation' in line or 'creation (v' in line:
                 continue
                 
             # Check for version patterns

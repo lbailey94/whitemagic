@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-__version__ = "22.0.0"
+__version__ = "22.2.0"
 
 # Get WASM package path
 _WASM_DIR = Path(__file__).parent / "wasm"

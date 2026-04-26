@@ -21,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from whitemagic.config.paths import WM_ROOT
+from whitemagic.config.paths import WM_ROOT, get_external_app_data_paths
 
 
 @dataclass
@@ -99,12 +99,7 @@ class WindsurfConversationReader:
     - Index conversations for search
     """
 
-    DEFAULT_PATHS = [
-        # Path expansion justified: External app data (Codeium/Windsurf)
-        # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-        Path.home() / ".codeium" / "windsurf" / "cascade",
-        Path.home() / ".codeium" / "cascade",
-    ]
+    DEFAULT_PATHS = get_external_app_data_paths("windsurf")
 
     def __init__(self, base_path: Path | None = None):
         self.base_path = base_path

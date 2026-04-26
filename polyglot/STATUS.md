@@ -1,7 +1,7 @@
 # WhiteMagic Polyglot Bridge Status
 
 **Last Updated**: 2026-04-14  
-**Version**: v22.0.0
+**Version**: v22.2.0
 
 ## Overview
 
@@ -265,7 +265,7 @@ Polyglot/
 
 ## Roadmap
 
-### v22.0.0 (Current)
+### v22.2.0 (Current)
 - ✅ Rust: Production stable (PyO3 + maturin, SIMD, WASM)
 - ✅ Go: Production stable (mesh networking, galactic telepathy)
 - 🧪 Koka: Effect system experiments (30 effect handler files)
