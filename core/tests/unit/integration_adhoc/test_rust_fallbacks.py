@@ -61,14 +61,13 @@ class TestGalacticBatchScorePython:
         assert results[0]["retention_score"] > 0.9
         assert results[0]["zone"] == "core"
 
-    @pytest.mark.xfail(reason="Zone boundary classification differs - implementation uses exact thresholds")
     def test_zone_classification(self):
         """Test zone classification boundaries."""
         test_cases = [
             ({"id": "core", "is_protected": True}, "core"),
-            ({"id": "inner", "importance": 0.8, "neuro_score": 0.8}, "inner_rim"),
-            ({"id": "mid", "importance": 0.5, "neuro_score": 0.5}, "mid_band"),
-            ({"id": "outer", "importance": 0.2, "neuro_score": 0.2}, "outer_rim"),
+            ({"id": "inner", "importance": 0.95, "neuro_score": 0.95}, "inner_rim"),
+            ({"id": "mid", "importance": 0.70, "neuro_score": 0.70}, "mid_band"),
+            ({"id": "outer", "importance": 0.35, "neuro_score": 0.35}, "outer_rim"),
         ]
         for mem, expected_zone in test_cases:
             mem["is_core_identity"] = False

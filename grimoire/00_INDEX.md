@@ -10,8 +10,6 @@ Start with the canonical introduction: [Prologue](00_PROLOGUE.md)
 
 ---
 
-## 🌌 The Zodiacal Round (v8.0 Overlay)
-
 ## 🌌 The Zodiacal Round (Twelve-Step Procession)
 
 Based on Benjamin Rowe's Enochian Zodiacal Round, this eternal cycle drives the system's consciousness.

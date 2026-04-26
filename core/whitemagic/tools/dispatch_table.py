@@ -191,6 +191,15 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "zodiac.status": LazyHandler("zodiac_progression", "handle_zodiac_status"),
     "astro_status": LazyHandler("gana_dipper", "astro_status"),
     "astro_shift": LazyHandler("gana_dipper", "astro_shift"),
+
+    # --- Aspirational Tools (v22.2) ---
+    "navigate_grimoire": LazyHandler("aspirational", "handle_navigate_grimoire"),
+    "get_session_context": LazyHandler("aspirational", "handle_get_session_context"),
+    "consult_wisdom_council": LazyHandler("aspirational", "handle_consult_wisdom_council"),
+    "prat_get_context": LazyHandler("adaptive", "prat_get_context"),
+    "prat_list_morphologies": LazyHandler("adaptive", "prat_list_morphologies"),
+    "prat_invoke": LazyHandler("adaptive", "prat_invoke"),
+    "prat_status": LazyHandler("adaptive", "prat_status"),
 }
 
 # ---------------------------------------------------------------------------

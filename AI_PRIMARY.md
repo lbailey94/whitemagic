@@ -45,7 +45,7 @@ The agentic ecosystem has exploded. As of February 2026:
 ### Whitemagic's Position
 
 Whitemagic is the **cognitive scaffolding layer** — the Hands, Memory, and Conscience for any AI agent, regardless of which LLM is the Brain. Agents bring their own reasoning; Whitemagic provides:
-- **Hands** — ~420 MCP tools (or 28 Gana meta-tools in PRAT mode) for acting on the world
+- **Hands** — 453 callable tools / 425 dispatch tools (or 28 Gana meta-tools in PRAT mode) for acting on the world
 - **Memory** — Tiered, persistent, semantic, with galactic lifecycle and no-delete policy
 - **Conscience** — Dharma rules, Karma ledger, Harmony Vector, Homeostatic Loop
 
@@ -79,7 +79,7 @@ WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 # Or lean mode (28 Gana meta-tools, recommended for new clients)
 python -m whitemagic.run_mcp_lean
 
-# Or classic mode (311 individual tools)
+# Or classic mode (425 dispatch tools)
 python -m whitemagic.run_mcp
 
 # Or lite mode (92 core tools)
@@ -115,7 +115,7 @@ cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — batch e
 
 Primary:
 - **MCP server (stdio):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (28 Gana meta-tools)
-- **MCP server (classic):** `python -m whitemagic.run_mcp` (311 individual tools)
+- **MCP server (classic):** `python -m whitemagic.run_mcp` (425 dispatch tools)
 
 Secondary:
 - **In-process Python:** `from whitemagic.tools.unified_api import call_tool`
@@ -132,7 +132,7 @@ On first connection, read these resources before tool calls:
 
 ## PRAT Mode — 28 Gana Meta-Tools
 
-The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 311 tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
+The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 425 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
 
 1. **Has a domain** — a specific operational concern (session, memory, health, ethics, etc.)
 2. **Supports 4 polymorphic operations** — search / analyze / transform / consolidate
@@ -572,7 +572,7 @@ See `docs/STRATEGIC_ROADMAP.md` for full details (Leaps 9-10).
 
 ## Release Readiness — What Must Work
 
-For Whitemagic to be release-ready (v15.0), the following must be verified:
+For Whitemagic to be release-ready (v22.0.0), the following must be verified:
 
 ### Critical Path (Must Pass)
 
@@ -603,13 +603,13 @@ For Whitemagic to be release-ready (v15.0), the following must be verified:
 
 ---
 
-## What's New in v15.0
+## What's New in v22.0.0
 
 ### Multi-Galaxy Memory (Project-Scoped Databases)
 WhiteMagic now supports multiple "galaxies" — separate memory databases for different projects or domains. Each galaxy has its own SQLite database, holographic index, and association graph. Tools: `galaxy.create`, `galaxy.switch`, `galaxy.list`, `galaxy.status`, `galaxy.ingest`, `galaxy.delete`. The `default` galaxy ships with quickstart guide memories.
 
 ### Ollama Agent Loop
-`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 311 tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
+`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 425 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
 
 ### Edgerunner Violet Security Layer
 15 new security tools: MCP Integrity (SHA-256 schema fingerprinting), Model Signing (OMS-compatible manifests with trust levels), Engagement Tokens (HMAC-SHA256 scoped authorization for offensive security), Security Monitor (anomaly detection for rapid-fire, lateral movement, privilege escalation). Violet Dharma profile adds 5 security rules. Karma ledger now has ops_class field for dual-log transparency.
@@ -630,9 +630,9 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **UMAP Visualization** (`core/memory/umap_projection.py`) — 2D/3D embedding projection with optional k-means clustering and metadata hydration.
 
 ### Metrics
-- **~420 MCP tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
+- **453 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
-- **783 tests passing**, 173 failures under investigation, 259 skipped (as of 2026-04-22)
+- **2,063 tests passing**, 0 failures, 66 skipped (as of 2026-04-25)
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 
 ---

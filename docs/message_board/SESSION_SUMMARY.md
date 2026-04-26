@@ -552,4 +552,70 @@ Every Grimoire chapter must contain:
 
 ---
 
+## 15. v22.2 Immediate Sprint — Archive Recovery & Surface Completion (2026-04-25)
+
+### Scope
+Complete archive reconnaissance, cross-reference with codebase gaps, and execute all Phase 1 (Immediate) objectives from `V22_2_ROADMAP.md`.
+
+### What Was Done
+
+| # | Task | Status | Impact |
+|---|------|--------|--------|
+| 1 | Archive reconnaissance (`whitemagic-aux/`, `core/_archived/`) | ✅ | Mapped 6,165 archive files, identified 7 recovery targets |
+| 2 | Create `V22_2_ROADMAP.md` | ✅ | 3-phase roadmap with concrete deliverables |
+| 3 | Fix Gana meta-tool dispatch | ✅ | 28 Gana tools now work via `bridge/gana.py` |
+| 4 | Fix `salience.spotlight` | ✅ | Real SalienceArbiter with event scoring + decay |
+| 5 | Recover browser automation suite | ✅ | 2,496 lines from `browser-garden-backup/` |
+| 6 | Recover `simd_unified.py` | ✅ | +189 lines, Zig probing, 5D KNN, Rust fallbacks |
+| 7 | Create 7 missing handler modules | ✅ | watcher, backup, verification, grimoire_walkthrough, gana_dipper, galactic_dashboard, ollama_agent |
+| 8 | Implement 7 aspirational tools | ✅ | navigate_grimoire, get_session_context, consult_wisdom_council, prat_get_context, prat_list_morphologies, prat_invoke, prat_status |
+| 9 | Fix doc drift (tool counts) | ✅ | AI_PRIMARY.md, SYSTEM_MAP.md, INDEX.md updated |
+| 10 | Create `AGENTS.md` | ✅ | Comprehensive agent operations guide |
+
+### New Files Created
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `core/whitemagic/core/bridge/gana.py` | 42 | Gana meta-tool invocation bridge |
+| `core/whitemagic/core/bridge/adaptive.py` | 173 | PRAT adaptive functions (archive recovery) |
+| `core/whitemagic/tools/handlers/browser_tools.py` | 153 | Browser automation handlers |
+| `core/whitemagic/tools/handlers/aspirational.py` | 96 | Aspirational tool handlers |
+| `core/whitemagic/tools/handlers/adaptive.py` | 40 | PRAT adaptive wrapper handlers |
+| `core/whitemagic/tools/handlers/watcher.py` | 72 | Filesystem watcher handlers |
+| `core/whitemagic/tools/handlers/backup.py` | 24 | Galaxy backup/restore handlers |
+| `core/whitemagic/tools/handlers/verification.py` | 47 | Verification/attestation handlers |
+| `core/whitemagic/tools/handlers/grimoire_walkthrough.py` | 49 | Grimoire walkthrough handler |
+| `core/whitemagic/tools/handlers/gana_dipper.py` | 31 | Astro status/shift handlers |
+| `core/whitemagic/tools/handlers/galactic_dashboard.py` | 21 | Galactic dashboard handler |
+| `core/whitemagic/tools/handlers/ollama_agent.py` | 20 | Ollama agent loop handler |
+| `core/whitemagic/gardens/browser/*.py` | 2,496 | Browser automation suite (archive recovery) |
+| `AGENTS.md` | 535 | Agent operations guide |
+| `docs/message_board/V22_2_ROADMAP.md` | 280 | v22.2 release roadmap |
+
+### Metrics
+
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Tests passing | 2,068 | **2,082** | **+14** |
+| Failed | 0 | 0 | 0 |
+| Skipped | 66 | 66 | 0 |
+| Dispatch tools | 425 | **432** | **+7** |
+| Callable tools | 453 | **460** | **+7** |
+| Broken Gana tools | 28/28 | **0/28** | **-28** |
+| Missing handlers | 24 | **0** | **-24** |
+| Aspirational tools missing | 7 | **0** | **-7** |
+
+### Test Verification
+
+```bash
+cd core
+python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
+# Result: 2082 passed, 66 skipped, 0 failed
+
+python scripts/check_doc_drift.py
+# Result: All 7 checks pass — documentation is in sync.
+```
+
+---
+
 *This document is a living artifact. Update it as work progresses.*

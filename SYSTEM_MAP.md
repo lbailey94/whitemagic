@@ -621,3 +621,46 @@ The first public-ready release. Major structural cleanup, documentation overhaul
 - Active fusions: **28** (unchanged)
 - MCP tools: **178** (unchanged)
 - Polyglot languages: **7** (Python + 6 accelerators)
+
+---
+
+## v14.x — Cognitive Enrichment & HNSW Indexing
+
+### HNSW Approximate Nearest-Neighbor Index
+Integrated into `whitemagic/core/memory/embeddings.py`. Uses `hnswlib` 0.8.0 for O(log N) embedding search on both hot and cold DBs. Parameters: ef_construction=200, M=32, ef=100 (~99% recall). Graceful fallback to numpy brute-force.
+
+### Entropy & Abstraction Scoring
+- `whitemagic/core/memory/entropy_scorer.py`: **EntropyScorer** — Shannon entropy (normalized) for information density, abstraction level via concrete/abstract keyword detection, vocabulary richness (type-token ratio). Composite score = 0.6×entropy + 0.4×abstraction. Plugs into `RetentionEngine` as an evaluator (weight=0.15).
+
+### Causal Edge Mining
+- `whitemagic/core/memory/causal_miner.py`: **CausalMiner** — discovers directed causal edges between memories. Blends semantic similarity (0.50), temporal proximity (0.35), and tag overlap (0.15). Relation types: `led_to`, `influenced`, `preceded`, `related_to`.
+
+### UMAP Visualization
+- `whitemagic/core/memory/umap_projection.py`: **UMAPProjector** — projects 384-dim embeddings to 2D/3D via UMAP. Optional k-means clustering, metadata hydration, result caching.
+
+---
+
+## v22.0.0 — "Cognitive Operating System" (Current)
+
+The first release where the codebase declares itself a **cognitive operating system** rather than a memory backend. Major structural stabilization, test recovery, and documentation reconciliation.
+
+### Structural Stabilization
+- **2,063 tests passing**, 0 failures, 66 skipped (up from 783/173/259 at v15 baseline)
+- **41 structural stubs eliminated** via 4-sprint "Stub Zero" plan
+- **3 critical archive recoveries**: `lifecycle.py` (+383 lines), `solver_engine.py` (+110 lines), `db_manager.py` (+196 lines) from `whitemagic0.2` archive
+- Doc drift detection (`check_doc_drift.py`) added to CI — validates version, tool counts, stale directory references
+
+### Grimoire Truth Table
+Canonical `grimoire/TRUTH_TABLE.md` established as the single source of truth for Chapter → Gana → Garden → Tool → Quadrant → Element mappings. All registry code reconciled against this table.
+
+### MCP Hardening
+- Structured error codes in `run_mcp_lean.py` (`MISSING_TOOL_NAME`, etc.)
+- Input sanitization at MCP entrypoint (`sanitize_tool_args`)
+- LRU cache for read-only Ganas (64 entries)
+
+### Updated Counts
+- **453 callable tools** across **425 dispatch entries** + **28 Gana meta-tools**
+- **2,063 tests passing**, 0 failures, 66 skipped
+- **28 active cross-system fusions** (matching the 28 Ganas)
+- **0 unexplored synthesis opportunities**
+- Polyglot languages: **7** (Python + Rust + Haskell + Elixir + Go + Zig + Mojo)

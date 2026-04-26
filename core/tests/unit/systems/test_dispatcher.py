@@ -68,8 +68,6 @@ class TestDryRun:
         assert_envelope_shape(result)
         assert result["status"] == "success"
 
-    import pytest
-    @pytest.mark.xfail(reason="Flaky in full suite due to module mocking leakage")
     def test_dry_run_not_injected_by_default(self, monkeypatch):
         from whitemagic.tools import unified_api
 

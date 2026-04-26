@@ -52,6 +52,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "working_memory.attend":   "gana_heart",
     "working_memory.context":  "gana_heart",
     "working_memory.status":   "gana_heart",
+    "get_session_context":     "gana_heart",
 
     # ═══ TAIL — Performance & Acceleration ═══
     "simd.cosine":             "gana_tail",
@@ -99,6 +100,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "grimoire_recommend":      "gana_willow",
     "grimoire_auto_status":    "gana_willow",
     "grimoire_walkthrough":    "gana_willow",
+    "navigate_grimoire":       "gana_willow",
 
     # ═══ STAR — Governance & PRAT Invocation ═══
     "governor_validate":       "gana_star",
@@ -106,6 +108,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "governor_check_drift":    "gana_star",
     "dharma.reload":           "gana_star",
     "set_dharma_profile":      "gana_star",
+    "prat_get_context":        "gana_star",
+    "prat_invoke":             "gana_star",
+    "prat_list_morphologies":  "gana_star",
+    "prat_status":             "gana_star",
 
     # ═══ EXTENDED NET — Pattern Connectivity ═══
     "pattern_search":          "gana_extended_net",
@@ -213,6 +219,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "art_of_war.chapter":      "gana_three_stars",
     "art_of_war.assess":       "gana_three_stars",
     "art_of_war.plan":         "gana_three_stars",
+    "consult_wisdom_council":  "gana_three_stars",
 
     # ═══ DIPPER — Governance & Strategy ═══
     "homeostasis":             "gana_dipper",

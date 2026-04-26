@@ -120,7 +120,7 @@ Any code doing **quadrant-level operations** must use this mapping:
   - Wu Xing amplification: Boost Water-phase Ganas during Winter
   - Integration zone: Deep work, completion, handoff prioritized
 
-**Registry Bug Note**: `garden_gana_registry.py` historically had Southern (Ch.8-14) and Northern (Ch.22-28) quadrant assignments swapped. This table reflects the **correct** canonical mapping as established by the Grimoire and PRAT dispatch table. Any quadrant-aware code must be verified against this table.
+**Registry Verification**: `garden_gana_registry.py` and `prat_mappings.py` were reconciled against this table on 2026-04-25. Northern (Ch.22-28) and Southern (Ch.8-14) quadrant assignments are confirmed correct. If any code disagrees with this mapping, this table wins.
 
 ---
 

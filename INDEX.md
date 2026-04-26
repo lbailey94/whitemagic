@@ -20,6 +20,7 @@ If you add, move, rename, or delete a doc, **update this index**.
 | Audience | Start Here |
 |----------|-----------|
 | **New human contributor** | `README.md` → `docs/public/CONTRIBUTING.md` → `docs/public/QUICKSTART.md` |
+| **AI agent (contributor)** | `AGENTS.md` → `AI_PRIMARY.md` → `SYSTEM_MAP.md` |
 | **AI agent (MCP client)** | `AI_PRIMARY.md` → `SYSTEM_MAP.md` → `docs/message_board/SESSION_SUMMARY.md` |
 | **DevOps / Deployer** | `DEPLOY.md` → `docs/deploy/HETZNER_DEPLOY.md` |
 | **Strategist / PM** | `docs/plans/ROADMAP.md` → `core/docs/STRATEGIC_ROADMAP.md` |
@@ -43,6 +44,7 @@ These files live at the repository root. They are the **public face** of the pro
 | `QUICKSTART.md` | 5-minute getting-started guide | `test_release_readiness.py` |
 | `SYSTEM_MAP.md` | **Canonical repo map** — architecture, modules, quick start | `run_mcp_lean.py` (MCP resource) |
 | `AI_PRIMARY.md` | **AI agent onboarding** — primary instruction doc for AI collaborators | `run_mcp_lean.py`, `version_bump.py`, `generate_llms_txt.py` |
+| `AGENTS.md` | **AI agent operations** — coding conventions, testing protocol, change patterns | — |
 | `skill.md` | MCP skill definition for agent registries | `version_bump.py` |
 
 ---
@@ -53,6 +55,7 @@ These files live at the repository root. They are the **public face** of the pro
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 25 |
 | `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 25 |
 | `RELEASE_READINESS_v22.0.0.md` | Release gate checklist — 34 checks, all passed | Apr 25 |
 | `PHASE0_AUDIT.md` | Living audit from broken baseline to stable | Apr 22–25 |

@@ -47,23 +47,26 @@ class TestPathHygiene:
 
             assert WM_ROOT == custom_root
 
-    @pytest.mark.xfail(reason="Environment-sensitive test - may fail in some test runners", strict=False)
     def test_strict_mode_blocks_cwd_fallback(self, tmp_path, monkeypatch):
         """Without WM_FALLBACK_TO_CWD, CWD fallback is blocked with clear error."""
-        # Create a non-writable intended root path
+        # Create bad_root as a FILE so _is_writable returns False (not a dir)
         bad_root = tmp_path / "nonexistent" / "path"
+        bad_root.parent.mkdir(parents=True)
+        bad_root.touch()
 
-        # Mock tempfile.gettempdir to return a non-writable path too
-        nonexistent_temp = str(tmp_path / "nonexistent_temp")
+        # Create a read-only temp directory so _is_writable returns False
+        readonly_temp = tmp_path / "readonly_temp"
+        readonly_temp.mkdir()
+        readonly_temp.chmod(0o555)
 
         with patch.dict(os.environ, {
             "WM_STATE_ROOT": str(bad_root),
             "WM_FALLBACK_TO_CWD": "false",
         }):
-            # Mock tempfile.gettempdir to simulate non-writable temp
+            # Mock tempfile.gettempdir to return the read-only path
             import tempfile as _tempfile_module
             original_gettempdir = _tempfile_module.gettempdir
-            _tempfile_module.gettempdir = lambda: nonexistent_temp
+            _tempfile_module.gettempdir = lambda: str(readonly_temp)
 
             try:
                 # Clear module cache
@@ -79,26 +82,31 @@ class TestPathHygiene:
                 assert "WM_STATE_ROOT" in error_msg
                 assert "WM_FALLBACK_TO_CWD" in error_msg
             finally:
-                # Restore original gettempdir
+                # Restore original gettempdir and permissions for cleanup
                 _tempfile_module.gettempdir = original_gettempdir
+                readonly_temp.chmod(0o755)
 
-    @pytest.mark.xfail(reason="Environment-sensitive test - may fail in some test runners", strict=False)
     def test_opt_in_cwd_fallback_works(self, tmp_path, monkeypatch):
         """WM_FALLBACK_TO_CWD=true allows CWD fallback when needed."""
+        # Create bad_root as a FILE so _is_writable returns False (not a dir)
         bad_root = tmp_path / "nonexistent" / "path"
+        bad_root.parent.mkdir(parents=True)
+        bad_root.touch()
         monkeypatch.chdir(tmp_path)
 
-        # Mock tempfile.gettempdir to return a non-writable path
-        nonexistent_temp = str(tmp_path / "nonexistent_temp")
+        # Create a read-only temp directory so _is_writable returns False
+        readonly_temp = tmp_path / "readonly_temp_cwd"
+        readonly_temp.mkdir()
+        readonly_temp.chmod(0o555)
 
         with patch.dict(os.environ, {
             "WM_STATE_ROOT": str(bad_root),
             "WM_FALLBACK_TO_CWD": "true",
         }):
-            # Mock tempfile.gettempdir to simulate non-writable temp
+            # Mock tempfile.gettempdir to return the read-only path
             import tempfile as _tempfile_module
             original_gettempdir = _tempfile_module.gettempdir
-            _tempfile_module.gettempdir = lambda: nonexistent_temp
+            _tempfile_module.gettempdir = lambda: str(readonly_temp)
 
             try:
                 # Clear module cache
@@ -111,11 +119,12 @@ class TestPathHygiene:
                 # Should have used CWD fallback
                 assert WM_ROOT == tmp_path / ".whitemagic"
             finally:
-                # Restore original gettempdir
+                # Restore original gettempdir and permissions for cleanup
                 _tempfile_module.gettempdir = original_gettempdir
+                readonly_temp.chmod(0o755)
 
     def test_no_direct_path_home_usage(self):
-        """No files outside config/paths.py should use Path.home() or expanduser."""
+        """No files outside canonical path modules should use Path.home() or expanduser."""
         # This test verifies the grep-based CI check is working
         # List of files that legitimately need path expansion
         allowed_exceptions = [
@@ -123,8 +132,16 @@ class TestPathHygiene:
             "grimoire/",
             # Archive files (not runtime)
             "archive/",
-            # Path validation in security gating (legitimate)
+            # Canonical path module (the single source of truth for path resolution)
+            "config/paths.py",
+            # Path validation with security gating (legitimate)
             "security/tool_gating.py",
+            # User-provided base_path validation in unified API
+            "tools/unified_api.py",
+            # External app data discovery (Windsurf/Codeium)
+            "archaeology/windsurf_reader.py",
+            # Labs-tier binary discovery (user-configured MOJO_BIN)
+            "core/intelligence/hologram/mojo_bridge.py",
         ]
 
         whitemagic_root = Path(__file__).parent.parent.parent / "whitemagic"
@@ -142,14 +159,16 @@ class TestPathHygiene:
             if "Path.home()" in content or ".expanduser()" in content:
                 # Double-check it's not just in a comment
                 for i, line in enumerate(content.split("\n"), 1):
-                    if "#" not in line.split("Path.home()")[0] if "Path.home()" in line else True:
-                        if "Path.home()" in line or ".expanduser()" in line:
-                            violations.append(f"{rel_path}:{i}")
+                    stripped = line.split("#")[0]
+                    if "Path.home()" in stripped or ".expanduser()" in stripped:
+                        violations.append(f"{rel_path}:{i}")
 
-        # For now, just document violations rather than failing
-        # Once we clean them up, change this to an actual assertion
-        if violations:
-            pytest.xfail(f"Path expansion violations found:\n" + "\n".join(violations[:20]))
+        assert not violations, (
+            "Path expansion violations found — "
+            "all Path.home() / .expanduser() usage must be in config/paths.py "
+            "or explicitly added to allowed_exceptions with justification:\n"
+            + "\n".join(violations[:20])
+        )
 
     def test_db_path_respects_state_root(self, tmp_path):
         """DB_PATH should be under WM_ROOT unless explicitly overridden."""
