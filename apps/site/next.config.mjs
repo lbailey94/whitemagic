@@ -21,6 +21,15 @@ const nextConfig = {
         source: "/.well-known/ai-agent-policy.json",
         destination: "/api/well-known/ai-agent-policy",
       },
+      // A2A Protocol v1.2 Agent Card. Spec: https://github.com/google/A2A
+      {
+        source: "/.well-known/agent.json",
+        destination: "/api/well-known/agent",
+      },
+      {
+        source: "/.well-known/agent",
+        destination: "/api/well-known/agent",
+      },
     ];
   },
 };

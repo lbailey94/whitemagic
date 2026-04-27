@@ -214,18 +214,34 @@ def benchmark_5d_properties(iterations: int = 10_000) -> dict[str, Any]:
         else:
             prop2_fail += 1
 
-    # Property 3: galactic_distance respects triangle inequality (simplified)
+    # Property 3: cosine angular distance respects the triangle inequality.
+    # We measure d(a,b) = arccos(clamp(cos(a,b))) on three sampled vectors
+    # and assert d(a,c) <= d(a,b) + d(b,c) (with a small numerical tolerance).
+    def _angular_distance(u: list[float], v: list[float]) -> float:
+        dot = sum(x * y for x, y in zip(u, v))
+        nu = math.sqrt(sum(x * x for x in u))
+        nv = math.sqrt(sum(x * x for x in v))
+        if nu == 0 or nv == 0:
+            return 0.0
+        cos = max(-1.0, min(1.0, dot / (nu * nv)))
+        return math.acos(cos)
     prop3_pass = 0
     prop3_fail = 0
     for _ in range(iterations):
-        d1 = random.uniform(0.0, 1.0)
-        d2 = random.uniform(0.0, 1.0)
-        d3 = random.uniform(0.0, 1.0)
-        # Simplified: if d1 + d2 >= d3, triangle inequality holds
-        if d1 + d2 >= d3 and d1 + d3 >= d2 and d2 + d3 >= d1:
+        a = _generate_vector(64)
+        b = _generate_vector(64)
+        c = _generate_vector(64)
+        d_ab = _angular_distance(a, b)
+        d_bc = _angular_distance(b, c)
+        d_ac = _angular_distance(a, c)
+        if d_ac <= d_ab + d_bc + 1e-9:
             prop3_pass += 1
         else:
             prop3_fail += 1
+            if len(errors) < 3:
+                errors.append(
+                    f"triangle violated: d_ac={d_ac:.6f} > d_ab+d_bc={d_ab + d_bc:.6f}"
+                )
 
     return {
         "iterations": iterations,
@@ -241,36 +257,53 @@ def benchmark_5d_properties(iterations: int = 10_000) -> dict[str, Any]:
 # 4. Dispatch Pipeline Benchmark
 # ---------------------------------------------------------------------------
 def benchmark_dispatch(iterations: int = 1000) -> dict[str, Any]:
-    """Benchmark tool dispatch latency for read-only tools."""
+    """Benchmark tool dispatch latency for read-only tools.
+
+    Note: ``call_tool`` takes keyword arguments (``call_tool(name, **kwargs)``),
+    not a positional dict. We also count successes vs errors so a "fast"
+    benchmark that's just failing loudly cannot masquerade as low latency.
+    """
     try:
         from whitemagic.tools.unified_api import call_tool
     except ImportError:
         return {"error": "unified_api not available"}
 
-    # Benchmark Gnosis (read-only introspection)
-    gnosis_times: list[float] = []
-    for _ in range(iterations):
-        t0 = time.perf_counter()
+    def _bench(name: str, **kwargs: Any) -> tuple[list[float], int, int]:
+        times: list[float] = []
+        ok_count = 0
+        err_count = 0
+        last_error: str | None = None
+        # Warmup
         try:
-            call_tool("gnosis", {"action": "status"})
-        except Exception:
+            call_tool(name, **kwargs)
+        except Exception:  # noqa: BLE001 - benchmark, root cause logged below
             pass
-        gnosis_times.append(time.perf_counter() - t0)
+        for _ in range(iterations):
+            t0 = time.perf_counter()
+            try:
+                resp = call_tool(name, **kwargs)
+                times.append(time.perf_counter() - t0)
+                # Treat envelope-error as failure for benchmark accounting
+                if isinstance(resp, dict) and resp.get("status") == "success":
+                    ok_count += 1
+                else:
+                    err_count += 1
+                    if last_error is None and isinstance(resp, dict):
+                        last_error = str(resp.get("error_code") or resp.get("error") or "")
+            except Exception as e:  # noqa: BLE001 - capture for transparency
+                times.append(time.perf_counter() - t0)
+                err_count += 1
+                if last_error is None:
+                    last_error = f"{type(e).__name__}: {e}"
+        return times, ok_count, err_count
 
-    # Benchmark health_report
-    health_times: list[float] = []
-    for _ in range(iterations):
-        t0 = time.perf_counter()
-        try:
-            call_tool("health_report", {})
-        except Exception:
-            pass
-        health_times.append(time.perf_counter() - t0)
+    gnosis_times, gnosis_ok, gnosis_err = _bench("gnosis", action="status")
+    health_times, health_ok, health_err = _bench("health_report")
 
     return {
         "iterations": iterations,
-        "gnosis_status": _summary("gnosis", gnosis_times),
-        "health_report": _summary("health", health_times),
+        "gnosis_status": {**_summary("gnosis", gnosis_times), "ok": gnosis_ok, "err": gnosis_err},
+        "health_report": {**_summary("health", health_times), "ok": health_ok, "err": health_err},
     }
 
 
@@ -284,8 +317,10 @@ def benchmark_prat_compression() -> dict[str, Any]:
     Full implementation requires a fixed task gold set.
     """
     try:
+        from whitemagic.tools.prat_mappings import (
+            GANA_TO_TOOLS,  # type: ignore[import-not-found]
+        )
         from whitemagic.tools.tool_surface import get_surface_counts
-        from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
 
         counts = get_surface_counts()
         total_tools = counts.get("callable_tools", 0)
@@ -353,13 +388,19 @@ def main() -> int:
     if p["errors"]:
         print(f"  ⚠️  {len(p['errors'])} sample errors")
 
-    # 4. Dispatch
-    print("\n[4/5] Dispatch Pipeline (n=1000)...")
-    results["dispatch"] = benchmark_dispatch(iterations=1000)
+    # 4. Dispatch — small N to stay under per-tool rate-limit thresholds
+    # (e.g., health_report rate-limit is ~10 calls / 5 s). For higher-N
+    # latency profiling, run with the rate limiter disabled.
+    print("\n[4/5] Dispatch Pipeline (n=8, per-tool)...")
+    results["dispatch"] = benchmark_dispatch(iterations=8)
     d = results["dispatch"]
     if "error" not in d:
-        print(f"  gnosis/status  mean={d['gnosis_status']['mean_ms']:.3f}ms  p95={d['gnosis_status']['p95_ms']:.3f}ms")
-        print(f"  health_report  mean={d['health_report']['mean_ms']:.3f}ms  p95={d['health_report']['p95_ms']:.3f}ms")
+        g = d["gnosis_status"]
+        h = d["health_report"]
+        print(f"  gnosis/status  mean={g['mean_ms']:.3f}ms  p95={g['p95_ms']:.3f}ms  ok={g['ok']}/{g['ok'] + g['err']}")
+        print(f"  health_report  mean={h['mean_ms']:.3f}ms  p95={h['p95_ms']:.3f}ms  ok={h['ok']}/{h['ok'] + h['err']}")
+        if g["err"] > 0 or h["err"] > 0:
+            print("  ⚠️  Non-zero error count — latency includes failure paths; investigate before publishing.")
     else:
         print(f"  ⚠️  {d['error']}")
 

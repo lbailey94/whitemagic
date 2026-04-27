@@ -55,6 +55,7 @@ These files live at the repository root. They are the **public face** of the pro
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape — Mem0/Cognee/Letta/Anthropic Claude Memory + Molty trifecta + A2A/x402/MCP numbers | Apr 27 |
 | `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
 | `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 26 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |

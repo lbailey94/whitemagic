@@ -99,7 +99,6 @@ def check_dispatch_table() -> None:
 def check_registry_tools() -> None:
     print("\n[4/7] Registry callable tool count...")
     try:
-        from whitemagic.tools.registry import TOOL_REGISTRY
         from whitemagic.tools.tool_surface import get_surface_counts
 
         counts = get_surface_counts()
@@ -166,20 +165,26 @@ def check_versions() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 7. AI_PRIMARY.md tool counts
+# 7. Tool-count drift across canonical docs
 # ---------------------------------------------------------------------------
-def check_ai_primary_counts() -> None:
-    print("\n[7/8] AI_PRIMARY.md tool counts...")
-    ai_primary = ROOT / "AI_PRIMARY.md"
-    if not ai_primary.exists():
-        warn("AI_PRIMARY.md not found")
-        return
+def check_tool_count_drift() -> None:
+    """Scan canonical docs for ANY claimed tool counts and flag drift.
 
-    text = ai_primary.read_text()
-    # Extract claimed counts
-    callable_match = re.search(r"(\d+)\s+callable tools", text)
-    dispatch_match = re.search(r"(\d+)\s+dispatch tools", text)
-
+    Catches phrasings like:
+      - "453 callable tools"
+      - "425 dispatch tools" / "425 dispatch entries"
+      - "311 individual tools" (legacy classic-mode wording)
+      - "all 425 dispatch tools"  (mid-sentence)
+    Reports every occurrence whose number disagrees with the live registry.
+    """
+    print("\n[7/8] Tool-count drift across canonical docs...")
+    docs = [
+        ROOT / "AI_PRIMARY.md",
+        ROOT / "AGENTS.md",
+        ROOT / "SYSTEM_MAP.md",
+        ROOT / "docs" / "public" / "SYSTEM_MAP.md",
+        ROOT / "README.md",
+    ]
     try:
         from whitemagic.tools.tool_surface import get_surface_counts
 
@@ -190,27 +195,110 @@ def check_ai_primary_counts() -> None:
         warn(f"Could not load surface counts: {e}")
         return
 
-    errors_found = False
-    if callable_match:
-        claimed = int(callable_match.group(1))
-        if claimed != actual_callable:
-            error(f"AI_PRIMARY.md claims {claimed} callable tools, actual = {actual_callable}")
-            errors_found = True
-    if dispatch_match:
-        claimed = int(dispatch_match.group(1))
-        if claimed != actual_dispatch:
-            error(f"AI_PRIMARY.md claims {claimed} dispatch tools, actual = {actual_dispatch}")
-            errors_found = True
+    callable_pat = re.compile(r"(\d+)\s+callable\s+tools", re.IGNORECASE)
+    # "dispatch tools" or "dispatch entries" or "individual tools" all describe
+    # the same underlying number (live dispatch table size in non-PRAT mode).
+    dispatch_pat = re.compile(
+        r"(\d+)\s+(?:dispatch\s+tools|dispatch\s+entries|individual\s+tools)",
+        re.IGNORECASE,
+    )
 
-    if not errors_found:
-        ok(f"AI_PRIMARY.md counts match reality ({actual_callable} callable / {actual_dispatch} dispatch)")
+    drift_count = 0
+    checked_count = 0
+    for doc in docs:
+        if not doc.exists():
+            continue
+        text = doc.read_text()
+        rel = doc.relative_to(ROOT)
+        for match in callable_pat.finditer(text):
+            checked_count += 1
+            claimed = int(match.group(1))
+            if claimed != actual_callable:
+                line_num = text[: match.start()].count("\n") + 1
+                error(f"{rel}:{line_num} claims {claimed} callable tools, actual = {actual_callable}")
+                drift_count += 1
+        for match in dispatch_pat.finditer(text):
+            checked_count += 1
+            claimed = int(match.group(1))
+            if claimed != actual_dispatch:
+                line_num = text[: match.start()].count("\n") + 1
+                error(f"{rel}:{line_num} claims {claimed} dispatch tools, actual = {actual_dispatch}")
+                drift_count += 1
+
+    if drift_count == 0:
+        ok(f"All {checked_count} tool-count references match reality ({actual_callable} callable / {actual_dispatch} dispatch)")
 
 
 # ---------------------------------------------------------------------------
-# 8. POLYGLOT_STATUS buildable languages
+# 8. Test-count drift across canonical docs
+# ---------------------------------------------------------------------------
+def check_test_count_consistency() -> None:
+    """Scan canonical docs for claimed test-pass counts and flag drift.
+
+    The drift bug we hit on 2026-04-27: ``AGENTS.md`` claimed 2,154
+    passing tests, ``SYSTEM_MAP.md`` claimed 2,063, the actual baseline
+    was 2,179. None of the previous checks caught it because they only
+    looked at tool counts.
+
+    Strategy here: find every ``N passing tests`` / ``N tests passing``
+    / ``N passed`` reference, group them, and require all docs to
+    agree. The check does NOT shell out to pytest (too slow); it only
+    enforces *consistency* across docs. Update the docs together and
+    this stays green.
+    """
+    print("\n[8/9] Test-count consistency across canonical docs...")
+    docs = [
+        ROOT / "AI_PRIMARY.md",
+        ROOT / "AGENTS.md",
+        ROOT / "SYSTEM_MAP.md",
+        ROOT / "docs" / "public" / "SYSTEM_MAP.md",
+        ROOT / "README.md",
+    ]
+
+    # Match e.g. "2,179 passing tests", "2179 tests passing", "2,063 tests passing"
+    # but NOT "2,179 passed" because that phrase appears in copy-pasted pytest
+    # summary blocks where short-term staleness is acceptable.
+    pat = re.compile(
+        r"(\d[\d,]*)\s+(?:passing\s+tests|tests\s+passing|tests passing)",
+        re.IGNORECASE,
+    )
+
+    seen: dict[str, list[tuple[str, int]]] = {}
+    for doc in docs:
+        if not doc.exists():
+            continue
+        text = doc.read_text()
+        rel = str(doc.relative_to(ROOT))
+        for match in pat.finditer(text):
+            count = int(match.group(1).replace(",", ""))
+            line_num = text[: match.start()].count("\n") + 1
+            seen.setdefault(rel, []).append((f"line {line_num}", count))
+
+    # Flatten all counts and check for drift
+    all_counts: list[int] = []
+    for entries in seen.values():
+        for _, count in entries:
+            all_counts.append(count)
+
+    if not all_counts:
+        ok("No test-count references found in canonical docs (skipped)")
+        return
+
+    if len(set(all_counts)) == 1:
+        ok(f"All {len(all_counts)} test-count references agree on {all_counts[0]:,}")
+        return
+
+    error(f"Test-count drift detected: docs disagree across {len(set(all_counts))} different values")
+    for doc_rel, entries in sorted(seen.items()):
+        for where, count in entries:
+            print(f"    {doc_rel}:{where} → {count:,}")
+
+
+# ---------------------------------------------------------------------------
+# 9. POLYGLOT_STATUS buildable languages
 # ---------------------------------------------------------------------------
 def check_polyglot_status() -> None:
-    print("\n[8/8] POLYGLOT_STATUS build claims...")
+    print("\n[9/9] POLYGLOT_STATUS build claims...")
     status_file = CORE / "docs" / "POLYGLOT_STATUS.md"
     if not status_file.exists():
         warn("POLYGLOT_STATUS.md not found")
@@ -251,7 +339,8 @@ def main() -> int:
     check_registry_tools()
     check_no_stale_refs()
     check_versions()
-    check_ai_primary_counts()
+    check_tool_count_drift()
+    check_test_count_consistency()
     check_polyglot_status()
 
     print("\n" + "=" * 60)

@@ -11,10 +11,10 @@
 WhiteMagic is a **cognitive operating system** for agentic AI — not merely a memory tool. It provides:
 
 - Persistent memory with 5D holographic coordinates and galactic lifecycle
-- 453 callable tools across 425 dispatch entries + 28 Gana meta-tools (PRAT)
+- 479 callable tools across 451 dispatch entries + 28 Gana meta-tools (PRAT)
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
-- 2,154 passing tests, 0 failures
+- 2,185 passing tests, 0 failures
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -27,7 +27,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd /home/lucas/Desktop/WHITEMAGIC
 source .venv/bin/activate
 
-# 2. Verify test baseline (should be 2154 passed, 66 skipped, 0 failed)
+# 2. Verify test baseline (should be 2185 passed, 67 skipped, 0 failed)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
 
 # 3. Verify doc drift
