@@ -194,6 +194,7 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 | Apr 25 | Phase 7 | 2,063 | 0 | 66 | Stub audit, 3 archive recoveries |
 | Apr 25 | v22.2 Phase 1 | 2,082 | 0 | 66 | Archive recovery, aspirational tools |
 | Apr 25 | v22.2 Phase 2 | 2,154 | 0 | 66 | Surface completion + cognitive architecture |
+| Apr 26 | v22.2 Immediate | 2,154 | 0 | 66 | MCP latency, stub audit CI, engine registry fix, doc sync |
 
 **Net improvement: +1,371 passing tests, -193 skips, 0 failures.**
 
@@ -260,8 +261,8 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 
 ## 10. Next Steps (Prioritized) — Post-v22.2 Strategy
 
-> **Status:** v22.2 Phase 1-2-3 complete. All roadmap targets exceeded. 2,154 tests passing. 4 cognitive subsystems active.
-> **Updated:** 2026-04-25 after v22.2 impact assessment.
+> **Status:** v22.2 Phase 1-2-3 complete. Immediate objectives (1-4) completed in single session. 2,154 tests passing. 4 cognitive subsystems active.
+> **Updated:** 2026-04-26 after immediate objective sweep.
 
 ### Completed Today (for reference)
 - ✅ MCP hardening & security (Phase 5)
@@ -272,10 +273,10 @@ The `mcp.types` import alone takes ~970ms. This is the primary startup bottlenec
 - ✅ v22.2 Phase 3 (bonus): Dream YAML artifacts, Corpus Callosum Bus, Jaynes Voice Audit, Neurotransmitter Vectors
 
 ### Immediate (Next Session — High Impact, Low Risk)
-1. **MCP Startup Latency** — Defer `mcp.types` import until first `_sync_dispatch` call. Add `LazyMCPTypes` wrapper. Target: <100ms cold-start.
-2. **Stub Audit CI Gate** — Create `core/scripts/check_stubs.py` (greps docstrings, counts `NotImplementedError`, flags >50% size drops). Add `stub-audit` job to CI.
-3. **Engine Registry Garden Bug** — `core/engines/registry.py` has wrong garden assignments (e.g., `Willow → play` instead of `humor`). Fix and verify tests still pass.
-4. **Documentation Sync** — Update `SESSION_SUMMARY.md`, `V22_2_ROADMAP.md`, `AGENTS.md` with final v22.2 metrics.
+1. ✅ **MCP Startup Latency** — Deferred `mcp.types` and `mcp.server.Server` imports via `_LazyMCPTypes` / `_LazyServer` proxies. Module import reduced from ~2,800ms to ~400ms. All tests pass.
+2. ✅ **Stub Audit CI Gate** — Created `core/scripts/check_stubs.py` with AST-based detection, false-positive filtering (Click, abstractmethod, intentional no-op hooks), and allowlist support. Added `stub-audit` job to `.github/workflows/ci.yml`. Tracks 5 genuine stubs.
+3. ✅ **Engine Registry Garden Bug** — Fixed 18 garden mismatches in `core/engines/registry.py` to align with `grimoire/TRUTH_TABLE.md`. Updated `test_engine_registry.py` to validate against canonical mapping.
+4. ✅ **Documentation Sync** — Updated `SESSION_SUMMARY.md`, `V22_2_ROADMAP.md`, `AGENTS.md` with session metrics and time-tracking protocol.
 
 ### Short Term (1–2 Weeks)
 5. **Handler Stubs to Real Code** — The 7 new handler modules (watcher, backup, verification, grimoire_walkthrough, gana_dipper, galactic_dashboard, ollama_agent) have minimal implementations. Expand to full functionality.

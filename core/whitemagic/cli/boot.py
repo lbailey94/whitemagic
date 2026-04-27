@@ -102,13 +102,14 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     from whitemagic.cli.commands.memory_commands import (
         consolidate,
         context,
+        journey,
         memory_list,
         recall,
         remember,
         search,
         stats,
     )
-    for cmd in [remember, recall, search, context, consolidate, stats, memory_list]:
+    for cmd in [remember, recall, search, context, consolidate, stats, memory_list, journey]:
         main_group.add_command(cmd)
 
     from whitemagic.cli.commands.scratchpad_commands import scratchpad

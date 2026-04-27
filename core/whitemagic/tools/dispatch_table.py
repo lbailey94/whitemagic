@@ -196,6 +196,29 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "neurotransmitter.status": LazyHandler("neurotransmitters", "handle_neurotransmitter_status"),
     "neurotransmitter.report": LazyHandler("neurotransmitters", "handle_neurotransmitter_report"),
 
+    # --- Watcher (Ghost / gana_ghost) ---
+    "watcher_add": LazyHandler("watcher", "handle_watcher_add"),
+    "watcher_remove": LazyHandler("watcher", "handle_watcher_remove"),
+    "watcher_start": LazyHandler("watcher", "handle_watcher_start"),
+    "watcher_stop": LazyHandler("watcher", "handle_watcher_stop"),
+    "watcher_status": LazyHandler("watcher", "handle_watcher_status"),
+    "watcher_recent_events": LazyHandler("watcher", "handle_watcher_recent_events"),
+    "watcher_stats": LazyHandler("watcher", "handle_watcher_stats"),
+    "watcher_list": LazyHandler("watcher", "handle_watcher_list"),
+
+    # --- Galaxy Backup / Restore ---
+    "galaxy_backup": LazyHandler("backup", "handle_galaxy_backup"),
+    "galaxy_restore": LazyHandler("backup", "handle_galaxy_restore"),
+
+    # --- Grimoire Walkthrough ---
+    "grimoire_walkthrough": LazyHandler("grimoire_walkthrough", "handle_grimoire_walkthrough"),
+
+    # --- Galactic Dashboard ---
+    "galactic_dashboard": LazyHandler("galactic_dashboard", "handle_galactic_dashboard"),
+
+    # --- Ollama Agent ---
+    "ollama_agent": LazyHandler("ollama_agent", "handle_ollama_agent"),
+
     # --- Aspirational Tools (v22.2) ---
     "navigate_grimoire": LazyHandler("aspirational", "handle_navigate_grimoire"),
     "get_session_context": LazyHandler("aspirational", "handle_get_session_context"),

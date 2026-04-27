@@ -230,3 +230,51 @@ def memory_list(limit: int) -> None:
                 click.echo(f"{mem_id}: {content[:80]}")
     except Exception as e:
         click.echo(f"❌ Failed to list memories: {e}")
+
+
+@click.command()
+@click.option("--from", "from_tag", required=True, help="Starting tag for the journey")
+@click.option("--depth", default=3, help="How many hops to traverse")
+@click.option("--limit", default=5, help="Max memories per hop")
+@click.pass_context
+def journey(ctx, from_tag: str, depth: int, limit: int) -> None:
+    """Explore memory space via tag-connected hops."""
+    now = (ctx.obj or {}).get("now") if isinstance(ctx.obj, dict) else None
+    json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
+
+    results: list[dict[str, Any]] = []
+    current_tags = {from_tag}
+    visited_ids: set[str] = set()
+
+    for hop in range(depth):
+        hop_memories: list[dict[str, Any]] = []
+        for tag in list(current_tags):
+            search_result = call_tool("search_memories", query=tag, limit=limit, now_override=now)
+            for mem in search_result.get("memories", search_result.get("results", [])):
+                mem_id = mem.get("id", mem.get("memory_id", ""))
+                if mem_id and mem_id not in visited_ids:
+                    visited_ids.add(mem_id)
+                    hop_memories.append(mem)
+                    # Collect new tags for next hop
+                    for t in mem.get("tags", []):
+                        current_tags.add(t)
+        if not hop_memories:
+            break
+        results.append({"hop": hop + 1, "tag_seeds": list(current_tags), "memories": hop_memories[:limit]})
+
+    if json_output:
+        click.echo(_json_dumps({"status": "success", "journey": results}))
+    else:
+        if HAS_RICH and console:
+            from rich.panel import Panel
+            for hop_data in results:
+                hop_num = hop_data["hop"]
+                mems = hop_data["memories"]
+                lines = [f"  • {m.get('content', '')[:60]} ({m.get('id', '?')[:8]})" for m in mems]
+                console.print(Panel("\n".join(lines), title=f"Hop {hop_num} — {len(mems)} memories", border_style="blue"))
+        else:
+            for hop_data in results:
+                hop_num = hop_data["hop"]
+                click.echo(f"\n--- Hop {hop_num} ---")
+                for m in hop_data["memories"]:
+                    click.echo(f"  [{m.get('id', '?')[:8]}] {m.get('content', '')[:80]}")

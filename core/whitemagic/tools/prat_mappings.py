@@ -92,6 +92,14 @@ TOOL_TO_GANA: dict[str, str] = {
     "capability.suggest":      "gana_ghost",
     "graph_topology":          "gana_ghost",
     "surprise_stats":          "gana_ghost",
+    "watcher_add":             "gana_ghost",
+    "watcher_remove":          "gana_ghost",
+    "watcher_start":           "gana_ghost",
+    "watcher_stop":            "gana_ghost",
+    "watcher_status":          "gana_ghost",
+    "watcher_recent_events":   "gana_ghost",
+    "watcher_stats":           "gana_ghost",
+    "watcher_list":            "gana_ghost",
 
     # ═══ WILLOW — Resilience & Flexibility ═══
     "rate_limiter.stats":      "gana_willow",
@@ -127,6 +135,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "mesh.connect":            "gana_wings",
     "mesh.broadcast":          "gana_wings",
     "mesh.status":             "gana_wings",
+    "galaxy_backup":           "gana_wings",
+    "galaxy_restore":          "gana_wings",
 
     # ═══ CHARIOT — Mobility & Archaeology ═══
     "archaeology":             "gana_chariot",
@@ -250,6 +260,7 @@ TOOL_TO_GANA: dict[str, str] = {
 
     # ═══ VOID — Emptiness & Defrag ═══
     "galactic.dashboard":      "gana_void",
+    "galactic_dashboard":      "gana_void",
     "garden_activate":         "gana_void",
     "garden_status":           "gana_void",
     "garden_health":           "gana_void",
@@ -290,6 +301,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "ollama.generate":         "gana_roof",
     "ollama.chat":             "gana_roof",
     "ollama.agent":            "gana_roof",
+    "ollama_agent":            "gana_roof",
     "zodiac.status":           "gana_roof",
 
     # ═══ ENCAMPMENT — Transition & Handoff ═══

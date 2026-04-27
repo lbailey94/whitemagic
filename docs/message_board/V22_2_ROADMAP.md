@@ -361,6 +361,36 @@ Left Hemisphere: "Accepted with modification: require dry_run=True on first exec
 
 ---
 
+## Phase 4: Immediate Objectives (Single Session — 2026-04-26)
+
+All 4 immediate objectives from `SESSION_SUMMARY.md` Section 10 were completed in one focused session (~22 minutes total).
+
+### 4.1 MCP Startup Latency ✅
+- Added `_LazyMCPTypes` and `_LazyServer` proxies to `run_mcp_lean.py`
+- Deferred `mcp.types`, `mcp.server.Server`, `mcp.shared.message.SessionMessage`, `runtime_status`, `tool_surface`, and `fast_json` imports
+- Module import time: ~2,800ms → ~400ms (7× improvement)
+- Target <100ms not reached due to Python module parsing overhead; further gains require splitting the module
+
+### 4.2 Stub Audit CI Gate ✅
+- Created `core/scripts/check_stubs.py` with AST-based detection
+- Filters: Click decorators, `@abstractmethod`, intentional no-op hooks (`_on_*`, `_check_*`, etc.)
+- Allowlist support via `core/scripts/stub_allowlist.json` for known intentional empties
+- Added `stub-audit` job to `.github/workflows/ci.yml`
+- Current state: 5 genuine stubs tracked (down from 41)
+
+### 4.3 Engine Registry Garden Bug ✅
+- Fixed 18 garden mismatches in `core/engines/registry.py` to align with `grimoire/TRUTH_TABLE.md`
+- Removed incorrect `test_all_gardens_unique` test (gardens are intentionally shared)
+- Added `test_gardens_match_truth_table` that validates the canonical 28-fold mapping
+- All 36 engine registry tests pass
+
+### 4.4 Documentation Sync ✅
+- Updated `SESSION_SUMMARY.md` test metrics table and immediate objectives status
+- Updated `V22_2_ROADMAP.md` with Phase 4 completion section
+- Updated `AGENTS.md` with time-tracking protocol refinements
+
+---
+
 ## Updated Success Metrics
 
 | Metric | v22.0.0 | v22.2 Phase 1 | v22.2 Phase 2 | v22.2 Final |

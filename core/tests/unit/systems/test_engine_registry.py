@@ -24,9 +24,17 @@ class TestEngineRegistryStructure:
         for engine in ENGINE_REGISTRY:
             assert isinstance(engine, EngineEntry)
 
-    def test_all_gardens_unique(self):
-        gardens = [e.garden for e in ENGINE_REGISTRY]
-        assert len(gardens) == len(set(gardens)), f"Duplicate gardens: {[g for g in gardens if gardens.count(g) > 1]}"
+    def test_gardens_match_truth_table(self):
+        """Gardens must match the canonical grimoire/TRUTH_TABLE.md mapping."""
+        expected = [
+            "courage", "stillness", "healing", "sanctuary", "love", "courage",
+            "wisdom", "grief", "humor", "voice", "sangha", "beauty",
+            "adventure", "joy", "awe", "gratitude", "creation", "presence",
+            "play", "practice", "reverence", "dharma", "patience", "connection",
+            "mystery", "protection", "transformation", "truth",
+        ]
+        actual = [e.garden for e in ENGINE_REGISTRY]
+        assert actual == expected, f"Garden mismatch at indices: {[i for i, (a, e) in enumerate(zip(actual, expected)) if a != e]}"
 
     def test_all_engine_names_unique(self):
         names = [e.engine_name for e in ENGINE_REGISTRY]
@@ -176,13 +184,13 @@ class TestKnownEngines:
     def test_predictive_engine(self):
         e = get_engine_entry("PredictiveEngine")
         assert e.mansion_chinese == "斗"
-        assert e.garden == "awe"
+        assert e.garden == "dharma"
         assert e.quadrant == Quadrant.NORTH
 
     def test_clone_army_engine(self):
         e = get_engine_entry("CloneArmyEngine")
         assert e.mansion_chinese == "女"
-        assert e.garden == "wonder"
+        assert e.garden == "connection"
         assert e.quadrant == Quadrant.NORTH
 
     def test_resonance_engine(self):
@@ -194,12 +202,12 @@ class TestKnownEngines:
     def test_emergence_engine(self):
         e = get_engine_entry("EmergenceEngine")
         assert e.mansion_chinese == "壁"
-        assert e.garden == "air"
+        assert e.garden == "truth"
         assert e.quadrant == Quadrant.NORTH
         assert e.grimoire_chapter == 28
 
     def test_boundary_engine(self):
         e = get_engine_entry("BoundaryEngine")
         assert e.mansion_chinese == "氐"
-        assert e.garden == "truth"
+        assert e.garden == "healing"
         assert e.quadrant == Quadrant.EAST

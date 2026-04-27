@@ -288,6 +288,26 @@ Record end time and note:
 - **Doc drift checks** (~5s) should never be skipped. If they fail, fix before commit.
 - **Memory subsystem changes** require stress tests. Timing these helps estimate risk for future memory work.
 
+### Phase-Based Execution Protocol
+
+When working through a prioritized backlog, use **phased execution** with explicit time gates:
+
+```bash
+# Before each phase
+date '+%H:%M:%S'
+# Goal: Phase N — description
+```
+
+**Rules**:
+1. **10-minute gate per phase**: If a phase completes in <10 minutes, proceed to the next phase immediately. If it exceeds 10 minutes, finish the current phase (no shortcuts), then summarize progress and decide whether to pivot or continue dedicated work on that area.
+2. **40-minute gate per batch**: If all objectives in a batch (e.g., 4 immediate objectives) complete in <40 minutes, escalate to the next batch (short-term → medium-term).
+3. **Summarize on threshold breach**: When a phase exceeds 10 min or a batch exceeds 40 min, record:
+   - What took longer than expected and why
+   - Whether the overrun signals hidden complexity (warranting a pivot) or just normal friction (warranting continuation)
+   - Any technical debt created
+
+**Why this works**: WhiteMagic's immediate objectives are typically well-scoped fixes. A phase exceeding 10 minutes usually means either (a) the problem is deeper than estimated, or (b) archive recovery / merge conflicts are involved. Both cases benefit from explicit reassessment rather than blind continuation.
+
 ### Healthy Session Benchmarks
 
 | Task Type | Healthy Duration | Warning Signal |
@@ -297,6 +317,8 @@ Record end time and note:
 | Refactor memory code | 20-40 min | >60 min = run stress tests, check galactic zones |
 | Documentation update | 5-10 min | >20 min = INDEX.md or drift issues |
 | Full test suite | 30-60s | >2 min = investigate slow tests |
+| Single immediate objective | 5-10 min | >10 min = summarize and reassess |
+| Immediate batch (4 objectives) | 20-40 min | >40 min = escalate or stop |
 
 ### Documentation as Byproduct
 
@@ -310,7 +332,7 @@ Every session produces:
 
 ## 13. Contact & Context
 
-- **Project**: WhiteMagic v22.0.0
+- **Project**: WhiteMagic v22.2.0
 - **Repository**: `/home/lucas/Desktop/WHITEMAGIC/`
 - **Virtual Environment**: `.venv/` (source before any Python work)
 - **Test Command**: `cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q`

@@ -89,7 +89,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=1, mansion_name="Neck", mansion_chinese="亢", mansion_pinyin="Kàng",
-        garden="practice", engine_name="ConsolidationEngine",
+        garden="stillness", engine_name="ConsolidationEngine",
         source_path="core/memory/consolidation.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="practice",
         grimoire_chapter=2,
@@ -97,7 +97,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=2, mansion_name="Root", mansion_chinese="氐", mansion_pinyin="Dǐ",
-        garden="truth", engine_name="BoundaryEngine",
+        garden="healing", engine_name="BoundaryEngine",
         source_path="core/boundaries/boundary_engine.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="truth",
         grimoire_chapter=3,
@@ -121,7 +121,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=5, mansion_name="Tail", mansion_chinese="尾", mansion_pinyin="Wěi",
-        garden="metal", engine_name="AccelerationEngine",
+        garden="courage", engine_name="AccelerationEngine",
         source_path="core/acceleration/__init__.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="metal",
         grimoire_chapter=6,
@@ -148,7 +148,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=8, mansion_name="Willow", mansion_chinese="柳", mansion_pinyin="Liǔ",
-        garden="play", engine_name="ResilienceEngine",
+        garden="humor", engine_name="ResilienceEngine",
         source_path="core/patterns/emergence/dream_state.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="play",
         grimoire_chapter=9,
@@ -156,7 +156,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=9, mansion_name="Star", mansion_chinese="星", mansion_pinyin="Xīng",
-        garden="beauty", engine_name="GovernanceEngine",
+        garden="voice", engine_name="GovernanceEngine",
         source_path="dharma/rules.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="beauty",
         grimoire_chapter=10,
@@ -164,7 +164,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=10, mansion_name="Extended Net", mansion_chinese="张", mansion_pinyin="Zhāng",
-        garden="connection", engine_name="AssociationEngine",
+        garden="sangha", engine_name="AssociationEngine",
         source_path="core/memory/association_miner.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="connection",
         grimoire_chapter=11,
@@ -172,7 +172,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=11, mansion_name="Wings", mansion_chinese="翼", mansion_pinyin="Yì",
-        garden="adventure", engine_name="ExportEngine",
+        garden="beauty", engine_name="ExportEngine",
         source_path="tools/handlers/export_import.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="adventure",
         grimoire_chapter=12,
@@ -180,7 +180,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=12, mansion_name="Chariot", mansion_chinese="轸", mansion_pinyin="Zhěn",
-        garden="transformation", engine_name="ArchaeologyEngine",
+        garden="adventure", engine_name="ArchaeologyEngine",
         source_path="archaeology/dig.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="transformation",
         grimoire_chapter=13,
@@ -198,7 +198,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     # ── Western Quadrant (White Tiger, Autumn, Metal) ── Mansions 15-21
     EngineEntry(
         slot=14, mansion_name="Straddling Legs", mansion_chinese="奎", mansion_pinyin="Kuí",
-        garden="patience", engine_name="DharmicSolver",
+        garden="awe", engine_name="DharmicSolver",
         source_path="core/intelligence/synthesis/solver_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="patience",
         grimoire_chapter=15,
@@ -214,7 +214,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=16, mansion_name="Stomach", mansion_chinese="胃", mansion_pinyin="Wèi",
-        garden="healing", engine_name="LifecycleEngine",
+        garden="creation", engine_name="LifecycleEngine",
         source_path="core/memory/lifecycle.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="healing",
         grimoire_chapter=17,
@@ -230,7 +230,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=18, mansion_name="Net", mansion_chinese="毕", mansion_pinyin="Bì",
-        garden="mystery", engine_name="PatternEngine",
+        garden="play", engine_name="PatternEngine",
         source_path="core/memory/pattern_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="mystery",
         grimoire_chapter=19,
@@ -238,7 +238,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=19, mansion_name="Turtle Beak", mansion_chinese="觜", mansion_pinyin="Zī",
-        garden="voice", engine_name="NarrativeEngine",
+        garden="practice", engine_name="NarrativeEngine",
         source_path="gardens/voice/narrative_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="voice",
         grimoire_chapter=20,
@@ -246,7 +246,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=20, mansion_name="Three Stars", mansion_chinese="参", mansion_pinyin="Shēn",
-        garden="dharma", engine_name="EthicsEngine",
+        garden="reverence", engine_name="EthicsEngine",
         source_path="gardens/dharma/ethics_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="dharma",
         grimoire_chapter=21,
@@ -256,7 +256,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     # ── Northern Quadrant (Black Tortoise, Winter, Water) ── Mansions 22-28
     EngineEntry(
         slot=21, mansion_name="Dipper", mansion_chinese="斗", mansion_pinyin="Dǒu",
-        garden="awe", engine_name="PredictiveEngine",
+        garden="dharma", engine_name="PredictiveEngine",
         source_path="core/intelligence/synthesis/predictive_engine.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="awe",
         grimoire_chapter=22,
@@ -264,7 +264,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=22, mansion_name="Ox", mansion_chinese="牛", mansion_pinyin="Niú",
-        garden="reverence", engine_name="GalacticEngine",
+        garden="patience", engine_name="GalacticEngine",
         source_path="core/memory/galactic_map.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="reverence",
         grimoire_chapter=23,
@@ -272,7 +272,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=23, mansion_name="Girl", mansion_chinese="女", mansion_pinyin="Nǚ",
-        garden="wonder", engine_name="CloneArmyEngine",
+        garden="connection", engine_name="CloneArmyEngine",
         source_path="core/memory/clones/clone_army.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="wonder",
         grimoire_chapter=24,
@@ -280,7 +280,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=24, mansion_name="Void", mansion_chinese="虚", mansion_pinyin="Xū",
-        garden="stillness", engine_name="ForgettingEngine",
+        garden="mystery", engine_name="ForgettingEngine",
         source_path="core/memory/mindful_forgetting.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="stillness",
         grimoire_chapter=25,
@@ -296,7 +296,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=26, mansion_name="Encampment", mansion_chinese="室", mansion_pinyin="Shì",
-        garden="sangha", engine_name="SwarmEngine",
+        garden="transformation", engine_name="SwarmEngine",
         source_path="agents/swarm.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="sangha",
         grimoire_chapter=27,
@@ -304,7 +304,7 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
     ),
     EngineEntry(
         slot=27, mansion_name="Wall", mansion_chinese="壁", mansion_pinyin="Bì",
-        garden="air", engine_name="EmergenceEngine",
+        garden="truth", engine_name="EmergenceEngine",
         source_path="core/intelligence/agentic/emergence_engine.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="air",
         grimoire_chapter=28,

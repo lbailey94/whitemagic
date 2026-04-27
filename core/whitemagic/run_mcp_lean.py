@@ -18,6 +18,8 @@ Supports:
 **SHIP_SURFACE**: 🎯 Core Tier - Essential runtime component
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys
@@ -32,20 +34,7 @@ REPO_ROOT = CORE_SYSTEM_DIR.parent
 if str(CORE_SYSTEM_DIR) not in sys.path:
     sys.path.insert(0, str(CORE_SYSTEM_DIR))
 
-from whitemagic.runtime_status import get_runtime_status
-from whitemagic.tools.tool_surface import (
-    GANA_NAMES as _GANA_NAMES,
-)
-from whitemagic.tools.tool_surface import (
-    GANA_SHORT_DESC as _GANA_SHORT_DESC,
-)
-from whitemagic.tools.tool_surface import (
-    get_gana_metadata as _get_gana_metadata,
-)
-from whitemagic.tools.tool_surface import (
-    get_gana_nested_tools as _get_gana_nested_tools,
-)
-from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
 
 # ── Logging (stderr only — stdout is the MCP transport) ─────────────
 logging.basicConfig(
@@ -55,10 +44,71 @@ logging.basicConfig(
 )
 logger = logging.getLogger("wm_mcp")
 
-# ── Standard MCP SDK imports (after sys.path setup) ──────────────────
-import mcp.types as types  # noqa: E402
-from mcp.server import Server  # noqa: E402
-from mcp.shared.message import SessionMessage  # noqa: E402
+# ── Lazy MCP SDK wrappers (deferred until first use) ─────────────────
+class _LazyMCPTypes:
+    """Proxy that imports mcp.types on first attribute access."""
+
+    _mod: Any = None
+
+    def __getattr__(self, name: str) -> Any:
+        if self._mod is None:
+            import mcp.types as _real_types
+
+            self._mod = _real_types
+        return getattr(self._mod, name)
+
+
+class _LazyServer:
+    """Proxy that creates mcp.server.Server on first *runtime* use.
+
+    Decorator calls (``@server.list_tools()`` etc.) are captured and
+    replayed when the real server is materialised inside ``main()``.
+    """
+
+    _srv: Any = None
+    _deferred: dict[str, list] = {}
+
+    def _ensure(self) -> Any:
+        if self._srv is None:
+            from mcp.server import Server
+
+            self._srv = Server("WhiteMagic Core")
+            self._srv.instructions = _INSTRUCTIONS
+            self._srv.version = _VERSION
+            self._srv.website_url = "https://github.com/whitemagic-ai/whitemagic"
+            for method_name, callbacks in self._deferred.items():
+                decorator_factory = getattr(self._srv, method_name)
+                for fn in callbacks:
+                    decorator_factory()(fn)
+        return self._srv
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._ensure(), name)
+
+    def _capture(self, name: str):
+        """Return a decorator that records the callback for later replay."""
+
+        def decorator(fn):
+            self._deferred.setdefault(name, []).append(fn)
+            return fn
+
+        return decorator
+
+    def list_tools(self):
+        return self._capture("list_tools")
+
+    def call_tool(self):
+        return self._capture("call_tool")
+
+    def list_resources(self):
+        return self._capture("list_resources")
+
+    def read_resource(self):
+        return self._capture("read_resource")
+
+
+types = _LazyMCPTypes()
+server = _LazyServer()
 
 # ── Version ──────────────────────────────────────────────────────────
 _VERSION_FILE = CORE_SYSTEM_DIR / "VERSION"
@@ -171,6 +221,8 @@ _GANA_CACHE: dict[str, tuple[str, list[str]]] | None = None
 # classic MCP surfaces draw from the same canonical 28-Gana contract.
 _GANA_TOOLS: dict[str, list[str]] = {}
 try:
+    from whitemagic.tools.tool_surface import get_gana_nested_tools as _get_gana_nested_tools
+
     _GANA_TOOLS = _get_gana_nested_tools()
 except ImportError:
     pass
@@ -181,6 +233,8 @@ def _load_gana_metadata() -> dict[str, tuple[str, list[str]]]:
     global _GANA_CACHE, _GANA_TOOLS
     if _GANA_CACHE is not None:
         return _GANA_CACHE
+
+    from whitemagic.tools.tool_surface import get_gana_metadata as _get_gana_metadata
 
     _GANA_CACHE = _get_gana_metadata()
     _GANA_TOOLS = {gana: list(tools) for gana, (_, tools) in _GANA_CACHE.items()}
@@ -292,18 +346,17 @@ except FileNotFoundError:
 
 
 # ══════════════════════════════════════════════════════════════════════
-# Build the MCP Server
+# Register handlers on the lazy server proxy
 # ══════════════════════════════════════════════════════════════════════
-
-server = Server("WhiteMagic Core")
-server.instructions = _INSTRUCTIONS
-server.version = _VERSION
-server.website_url = "https://github.com/whitemagic-ai/whitemagic"
-
 
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
     """Return the 28 Gana meta-tools with per-Gana tool enums, icons, and execution modes."""
+    from whitemagic.tools.tool_surface import (
+        GANA_NAMES as _GANA_NAMES,
+        GANA_SHORT_DESC as _GANA_SHORT_DESC,
+    )
+
     tools: list[types.Tool] = []
     for name in _GANA_NAMES:
         desc = _GANA_SHORT_DESC.get(name, f"Gana {name}")
@@ -405,6 +458,8 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:
     """Dispatch a PRAT Gana call through the full WhiteMagic pipeline."""
+    from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
     args = arguments or {}
     tool_name = args.get("tool")
     tool_args = args.get("args") or {}
@@ -712,6 +767,9 @@ def _read_grimoire_resource(uri_str: str) -> str:
 async def main_stdio() -> None:
     """Run as stdio MCP server (default, for IDE integration)."""
     import anyio
+    from mcp.shared.message import SessionMessage
+
+    from whitemagic.runtime_status import get_runtime_status
 
     runtime_status = get_runtime_status()
     if not runtime_status.get("silent_init"):
@@ -808,6 +866,8 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
             )
         ],
     )
+
+    from whitemagic.runtime_status import get_runtime_status
 
     runtime_status = get_runtime_status()
     logger.warning(f"WhiteMagic MCP HTTP server starting on http://{host}:{port}/mcp")

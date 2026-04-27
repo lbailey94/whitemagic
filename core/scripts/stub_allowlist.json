@@ -1,0 +1,15 @@
+[
+  "core/whitemagic/core/intake/media_processor.py:50:can_process",
+  "core/whitemagic/core/intake/media_processor.py:54:supported_extensions",
+  "core/whitemagic/core/intake/media_processor.py:58:extract",
+  "core/whitemagic/core/monitoring/otel_export.py:173:record_harmony_metrics",
+  "core/whitemagic/core/autonomous/unified_nervous_system.py:399:apotheosis_handler",
+  "core/whitemagic/core/memory/unified.py:872:save",
+  "core/whitemagic/core/plugin/grimoire_plugin.py:38:start",
+  "core/whitemagic/core/plugin/grimoire_plugin.py:41:stop",
+  "core/whitemagic/gardens/sangha/chat.py:371:clear_channel",
+  "core/whitemagic/core/intelligence/learning/rapid_cognition.py:13:get_rust_bridge",
+  "core/whitemagic/core/continuity.py:30:mark_seen",
+  "core/whitemagic/core/memory/memory_lifecycle.py:17:archive",
+  "core/whitemagic/core/memory/memory_lifecycle.py:20:promote"
+]

@@ -407,3 +407,17 @@ jobs:
 
       - name: Check doc drift
         run: python core/scripts/check_doc_drift.py
+
+  stub-audit:
+    name: Stub Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for structural stubs
+        run: python core/scripts/check_stubs.py
