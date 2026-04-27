@@ -219,6 +219,12 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     # --- Ollama Agent ---
     "ollama_agent": LazyHandler("ollama_agent", "handle_ollama_agent"),
 
+    # --- Foresight Engine (Logos Layer / CyberBrain Layer 7) ---
+    "foresight.analyze": LazyHandler("foresight", "handle_foresight_analyze"),
+    "foresight.constellations": LazyHandler("foresight", "handle_foresight_constellations"),
+    "foresight.decay": LazyHandler("foresight", "handle_foresight_decay"),
+    "foresight.convergence": LazyHandler("foresight", "handle_foresight_convergence"),
+
     # --- Aspirational Tools (v22.2) ---
     "navigate_grimoire": LazyHandler("aspirational", "handle_navigate_grimoire"),
     "get_session_context": LazyHandler("aspirational", "handle_get_session_context"),

@@ -267,14 +267,23 @@ def _check_collective() -> list[GateResult]:
 
 
 def _check_logos() -> list[GateResult]:
-    """Stage 6: Long-horizon foresight (aspirational — not yet implemented)."""
+    """Stage 6: Long-horizon foresight (implemented in v22.2+)."""
     results = []
-    # This is forward-looking. For now, always returns not-passed
-    # until a foresight engine is implemented.
-    results.append(GateResult(
-        "foresight_engine", False,
-        "Logos-grade foresight engine not yet implemented (aspirational)",
-    ))
+    try:
+        from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+        engine = get_foresight_engine()
+        report = engine.analyze()
+        results.append(GateResult(
+            "foresight_engine", True,
+            f"Foresight engine active — {len(report.constellation_projections)} projections, "
+            f"{len(report.decay_predictions)} decay predictions, "
+            f"{len(report.convergence_warnings)} convergence warnings",
+        ))
+    except Exception as exc:
+        results.append(GateResult(
+            "foresight_engine", False,
+            f"Foresight engine import failed: {exc}",
+        ))
     return results
 
 

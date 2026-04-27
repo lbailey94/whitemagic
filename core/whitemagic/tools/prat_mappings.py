@@ -471,6 +471,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "ensemble.status":             "gana_three_stars",
     "corpus_callosum.debate":      "gana_three_stars",
     "corpus_callosum.status":      "gana_three_stars",
+    "foresight.analyze":           "gana_three_stars",
+    "foresight.constellations":    "gana_three_stars",
+    "foresight.decay":             "gana_three_stars",
+    "foresight.convergence":       "gana_three_stars",
 
     # ── DIPPER — Homeostasis + starter packs sub-tools ──
     "homeostasis.check":           "gana_dipper",

@@ -299,14 +299,18 @@ date '+%H:%M:%S'
 ```
 
 **Rules**:
-1. **10-minute gate per phase**: If a phase completes in <10 minutes, proceed to the next phase immediately. If it exceeds 10 minutes, finish the current phase (no shortcuts), then summarize progress and decide whether to pivot or continue dedicated work on that area.
-2. **40-minute gate per batch**: If all objectives in a batch (e.g., 4 immediate objectives) complete in <40 minutes, escalate to the next batch (short-term → medium-term).
-3. **Summarize on threshold breach**: When a phase exceeds 10 min or a batch exceeds 40 min, record:
+1. **Time gate per phase** (adaptive by objective class):
+   - **Immediate objectives**: 10-minute gate. These are well-scoped fixes (wiring, config, small refactors).
+   - **Short-term objectives**: 10-minute gate. Slightly larger but still bounded (handler expansion, CLI commands, benchmarks).
+   - **Medium-term objectives**: 15-minute gate. These involve architecture, new subsystems, or significant design decisions. The extra 5 minutes acknowledges integration complexity.
+   - If a phase completes under its gate, proceed immediately. If it exceeds the gate, finish the phase (no shortcuts), then summarize progress and decide whether to pivot or continue.
+2. **Batch gate**: If all objectives in a batch complete under their cumulative gate threshold, escalate to the next batch.
+3. **Summarize on threshold breach**: When a phase exceeds its gate, record:
    - What took longer than expected and why
    - Whether the overrun signals hidden complexity (warranting a pivot) or just normal friction (warranting continuation)
    - Any technical debt created
 
-**Why this works**: WhiteMagic's immediate objectives are typically well-scoped fixes. A phase exceeding 10 minutes usually means either (a) the problem is deeper than estimated, or (b) archive recovery / merge conflicts are involved. Both cases benefit from explicit reassessment rather than blind continuation.
+**Why adaptive gates work**: Medium-term objectives (e.g., CyberBrain Layer 7, polyglot revival) are inherently more complex than immediate fixes. A 10-minute gate would force premature pivots on architecture that legitimately needs 12-15 minutes to wire correctly. The 15-minute gate respects the complexity while still preventing open-ended rabbit holes.
 
 ### Healthy Session Benchmarks
 

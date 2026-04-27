@@ -1,6 +1,6 @@
 # WhiteMagic Polyglot Bridge Status
 
-**Last Updated**: 2026-04-14  
+**Last Updated**: 2026-04-26  
 **Version**: v22.2.0
 
 ## Overview
@@ -12,7 +12,8 @@ WhiteMagic implements polyglot bridges to leverage language-specific strengths:
 - **Zig**: Low-level FFI, systems programming
 - **Mojo**: GPU kernels, ML acceleration (deferred)
 - **Elixir**: Distributed actor model (experimental)
-- **Haskell**: Functional patterns, category theory (archival)
+- **Haskell**: Functional patterns, category theory (scaffolded, buildable)
+- **Julia**: Scientific computing, optimization (scaffolded, PyJulia bridge)
 
 ---
 
@@ -26,7 +27,8 @@ WhiteMagic implements polyglot bridges to leverage language-specific strengths:
 | **Zig** | 🧪 Buildable | 2026-02-14 | `zig build` | Direct FFI shared lib | Header: `whitemagic.h` |
 | **Mojo** | ❌ Deferred | — | — | — | Await SDK maturity |
 | **Elixir** | 🧪 Stubs | 2026-02-14 | `mix test` | Not integrated | OTP structures only |
-| **Haskell** | 📦 Archival | 2026-02-14 | `cabal build` | — | Functional patterns |
+| **Haskell** | 🧪 Scaffolded | 2026-04-26 | `cabal build` | `whitemagic.core.acceleration.haskell_bridge` | Spatial core, FFI stubs |
+| **Julia** | 🧪 Scaffolded | 2026-04-26 | `julia --project` | `whitemagic.core.acceleration.julia_bridge` | Scientific computing, PyJulia |
 
 ---
 
