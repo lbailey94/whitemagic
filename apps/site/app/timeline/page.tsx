@@ -41,6 +41,16 @@ export default function TimelinePage() {
               was still writing position papers.
             </strong>
           </p>
+          <p>
+            The purple curve behind the timeline is the{" "}
+            <strong className="text-fg">technological singularity</strong> — the
+            exponential ramp in AI capability that began trending upward in the
+            early 2020s (GPT-3 → ChatGPT → GPT-4 → Claude 3) and accelerated
+            through 2025 and 2026. The events below aren&apos;t a flat
+            sequence; they&apos;re nodes on that curve. WhiteMagic shipped at
+            the inflection points — when the slope was steepest and most
+            people were still arguing whether the slope existed at all.
+          </p>
           <p className="flex flex-wrap gap-4 pt-2 text-sm">
             <LegendDot label="WhiteMagic" color="bg-lavender" />
             <LegendDot label="Industry & standards" color="bg-muted" />

@@ -203,14 +203,92 @@ export function TimelineHorizontal() {
 
       {/* Horizontal month spine */}
       <div className="relative rounded-2xl border border-border-light bg-surface/70 p-4 backdrop-blur-sm md:p-6">
-        <p className="mb-3 font-mono text-[11px] uppercase tracking-widest text-dim">
-          ← Scroll or use ← → arrows to navigate · Click a month to see its events
-        </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
+          <span>
+            ← Scroll or use ← → arrows to navigate · Click a month to see its
+            events
+          </span>
+          <span className="flex items-center gap-1.5 text-lavender">
+            <span className="inline-block h-px w-6 bg-gradient-to-r from-lavender/0 to-lavender" />
+            <span>singularity trend</span>
+            <span className="text-dim">· AI capability ↑</span>
+          </span>
+        </div>
         <div
           ref={spineRef}
           className="scrollbar-thin relative flex items-end gap-1 overflow-x-auto overflow-y-hidden pb-2 pt-12"
           style={{ scrollSnapType: "x proximity" }}
         >
+          {/* Singularity trend curve — purple exponential rising through the
+              timeline. The X-axis is time (Nov 2024 → Aug 2026); the Y-axis
+              is conceptual AI capability. The curve was already trending up
+              before this timeline began (the early-2020s ramp from GPT-3 →
+              ChatGPT → GPT-4 → Claude 3); what we render is the accelerating
+              segment WhiteMagic operates inside. */}
+          <svg
+            className="pointer-events-none absolute inset-x-0 top-0 h-20"
+            preserveAspectRatio="none"
+            viewBox="0 0 1000 100"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient
+                id="singularityFill"
+                x1="0%"
+                y1="0%"
+                x2="0%"
+                y2="100%"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="rgb(157, 78, 221)"
+                  stopOpacity="0.18"
+                />
+                <stop
+                  offset="100%"
+                  stopColor="rgb(157, 78, 221)"
+                  stopOpacity="0"
+                />
+              </linearGradient>
+              <linearGradient
+                id="singularityLine"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="0%"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="rgb(157, 78, 221)"
+                  stopOpacity="0.25"
+                />
+                <stop
+                  offset="55%"
+                  stopColor="rgb(157, 78, 221)"
+                  stopOpacity="0.5"
+                />
+                <stop
+                  offset="100%"
+                  stopColor="rgb(157, 78, 221)"
+                  stopOpacity="0.85"
+                />
+              </linearGradient>
+            </defs>
+            {/* Filled area below the curve */}
+            <path
+              d="M 0,93 C 280,92 520,82 720,55 C 850,30 940,12 1000,4 L 1000,100 L 0,100 Z"
+              fill="url(#singularityFill)"
+            />
+            {/* The curve itself */}
+            <path
+              d="M 0,93 C 280,92 520,82 720,55 C 850,30 940,12 1000,4"
+              stroke="url(#singularityLine)"
+              strokeWidth="1.6"
+              fill="none"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+
           {/* Axis line */}
           <div
             className="pointer-events-none absolute left-0 right-0 top-[64px] h-px bg-border-light"

@@ -57,6 +57,18 @@ export const TIMELINE_DATA: TimelineEntry[] = [
 
   // ── 2025 ─────────────────────────────────────────────────────────────
   {
+    date: "2025-05-26",
+    displayDate: "May 26",
+    monthKey: "2025-05",
+    monthLabel: "May 2025",
+    category: "whitemagic",
+    title:
+      "MandalaOS Concept Review — Karma Ledger and Harmony Vector specs articulated",
+    description:
+      "In a long design conversation, the architecture for what would later become WhiteMagic's signature governance primitives was specced verbatim: 'Compiler stamps every binary with a manifest of declared side-effects; runtime appends actuals; mismatch accrues karma debt → throttling.' The Harmony Vector's 7-metric shape was specified the same day. Both shipped in code on Feb 7 2026 with near-verbatim fidelity. The original conversation export is timestamped and preserved as prior-art evidence.",
+    pin: true,
+  },
+  {
     date: "2025-06-01",
     displayDate: "Jun",
     monthKey: "2025-06",
@@ -397,6 +409,17 @@ export const TIMELINE_DATA: TimelineEntry[] = [
       "Honest self-assessment. The research lab did its job; the sellable artifact is the engineer who built it. Decision to launch a consultancy around the proven techniques.",
   },
   {
+    date: "2026-04-15",
+    displayDate: "Apr 15",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "Cloudflare Project Think shipped",
+    description:
+      "Cloudflare's persistent agent identity + wake-on-message runtime ships, edge-deployed by default. The agent-OS framing crystallizes at hyperscaler scale. WhiteMagic's persistent-identity work (first observed Nov 3 2025) shipped in private code Feb 2026 and made public mid-April; Cloudflare's offering is the contemporary first-party equivalent.",
+    source: { label: "blog.cloudflare.com" },
+  },
+  {
     date: "2026-04-18",
     displayDate: "Apr 18",
     monthKey: "2026-04",
@@ -406,6 +429,31 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     description:
       "This site ships. Services: Private AI Deployment, Agent Governance, MCP Engineering. Open to first engagements.",
     pin: true,
+  },
+  {
+    date: "2026-04-23",
+    displayDate: "Apr 23",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title:
+      "Anthropic Claude Managed Agents Memory — public beta with audit log + rollback",
+    description:
+      "Anthropic ships filesystem-mounted persistent memory for Claude with a session-level audit log and rollback. Customers: Netflix, Rakuten (97% fewer first-pass errors at 27% lower cost), Wisedocs, Ando. The audit-log + rollback pattern is structurally adjacent to the Karma Ledger spec articulated 11 months earlier in the May 26 2025 design conversation; neither caused the other, but the prior-art trail is now documented.",
+    source: { label: "anthropic.com / The Verge" },
+    gap: "Karma Ledger spec articulated May 26 2025 — 11 months ahead of Anthropic's structurally similar audit-log + rollback shipment",
+    pin: true,
+  },
+  {
+    date: "2026-04-27",
+    displayDate: "Apr 27",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "whitemagic",
+    title:
+      "Prior-art verification + competitive-landscape audit published",
+    description:
+      "Cross-referenced WhiteMagic's design chronology (CODEX OpenAI archive, Grok export, public X archive, Git history, public PyPI/npm release timestamps) against the verified competitor timeline. Confirmed: the Karma Ledger spec (May 26 2025) predates Anthropic Claude Memory's audit log + rollback (Apr 23 2026) by 11 months in concept, and Microsoft AGT v1.0.0 (Mar 4 2026) by ~9 months. Bicameral reasoning, voice audit, foresight engine, and the 28-Gana cultural mapping remain — as of Apr 27 — without publicly-shipping equivalents at any major lab. 2,185 passing tests, 0 failures. Documentation drift checks 9/9 green.",
   },
 
   // ── Upcoming ─────────────────────────────────────────────────────────
