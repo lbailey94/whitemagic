@@ -226,9 +226,9 @@ Four months ago, the 7-layer CyberBrain architecture was a metaphor. Today:
 | 4 | Narrative Layer | Bicameral reasoner, Corpus Callosum | **Active** |
 | 5 | Radiant Layer | Harmony Vector, Neurotransmitters | **Active** |
 | 6 | Constellation Layer | Galactic Map, Dream Artifacts | **Active** |
-| 7 | Logos Layer | Foresight engine | Pending |
+| 7 | Logos Layer | Foresight engine | **Active** |
 
-The only layer not yet active is the **Logos Layer** (foresight engine). That is the next frontier.
+All seven layers are now active. The **Logos Layer** (foresight engine) shipped in v22.2.0 with 4 tools wired into the dispatch pipeline.
 
 ---
 

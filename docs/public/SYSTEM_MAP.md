@@ -369,7 +369,7 @@ All old tool names preserved as backward-compat aliases in `dispatch_table.py`.
 ### PRAT Router — 175 Tools → 28 Gana Meta-Tools
 The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 147 non-Gana tools to 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana lists its nested sub-tools and supports 4 polymorphic operations (search/analyze/transform/consolidate).
 
-- `whitemagic/tools/prat_router.py`: PRAT router — `TOOL_TO_GANA` dict, `GANA_TO_TOOLS` reverse lookup, `build_prat_schema()`, `route_prat_call()`. Wrong-Gana detection with redirect hints.
+- `whitemagic/tools/prat_mappings.py`: PRAT mappings — `TOOL_TO_GANA` dict, `GANA_TO_TOOLS` reverse lookup, `build_prat_schema()`. `whitemagic/tools/prat_router.py`: `route_prat_call()` with wrong-Gana detection and redirect hints.
 - `whitemagic/run_mcp.py`: `WM_MCP_PRAT=1` mode registers only 28 Gana meta-tools. PRAT checked before lite mode.
 - `.mcp.json`: Updated to use `WM_MCP_PRAT=1` by default.
 - Tests: `tests/unit/test_prat_router.py` (23 tests).

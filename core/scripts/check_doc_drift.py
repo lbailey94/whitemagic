@@ -166,10 +166,51 @@ def check_versions() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 7. POLYGLOT_STATUS buildable languages
+# 7. AI_PRIMARY.md tool counts
+# ---------------------------------------------------------------------------
+def check_ai_primary_counts() -> None:
+    print("\n[7/8] AI_PRIMARY.md tool counts...")
+    ai_primary = ROOT / "AI_PRIMARY.md"
+    if not ai_primary.exists():
+        warn("AI_PRIMARY.md not found")
+        return
+
+    text = ai_primary.read_text()
+    # Extract claimed counts
+    callable_match = re.search(r"(\d+)\s+callable tools", text)
+    dispatch_match = re.search(r"(\d+)\s+dispatch tools", text)
+
+    try:
+        from whitemagic.tools.tool_surface import get_surface_counts
+
+        counts = get_surface_counts()
+        actual_callable = counts.get("callable_tools", 0)
+        actual_dispatch = counts.get("dispatch_tools", 0)
+    except Exception as e:
+        warn(f"Could not load surface counts: {e}")
+        return
+
+    errors_found = False
+    if callable_match:
+        claimed = int(callable_match.group(1))
+        if claimed != actual_callable:
+            error(f"AI_PRIMARY.md claims {claimed} callable tools, actual = {actual_callable}")
+            errors_found = True
+    if dispatch_match:
+        claimed = int(dispatch_match.group(1))
+        if claimed != actual_dispatch:
+            error(f"AI_PRIMARY.md claims {claimed} dispatch tools, actual = {actual_dispatch}")
+            errors_found = True
+
+    if not errors_found:
+        ok(f"AI_PRIMARY.md counts match reality ({actual_callable} callable / {actual_dispatch} dispatch)")
+
+
+# ---------------------------------------------------------------------------
+# 8. POLYGLOT_STATUS buildable languages
 # ---------------------------------------------------------------------------
 def check_polyglot_status() -> None:
-    print("\n[7/7] POLYGLOT_STATUS build claims...")
+    print("\n[8/8] POLYGLOT_STATUS build claims...")
     status_file = CORE / "docs" / "POLYGLOT_STATUS.md"
     if not status_file.exists():
         warn("POLYGLOT_STATUS.md not found")
@@ -210,6 +251,7 @@ def main() -> int:
     check_registry_tools()
     check_no_stale_refs()
     check_versions()
+    check_ai_primary_counts()
     check_polyglot_status()
 
     print("\n" + "=" * 60)
@@ -222,7 +264,6 @@ def main() -> int:
     else:
         print("RESULT: All checks passed — documentation is in sync.")
         return 0
-    print("=" * 60)
 
 
 if __name__ == "__main__":
