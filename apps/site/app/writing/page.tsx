@@ -21,7 +21,7 @@ const POSTS: Post[] = [
     slug: "whitemagic-post-mortem",
     title: "WhiteMagic: an honest post-mortem",
     blurb:
-      "Six months, 170,000 lines, 1,318 passing tests, and a hard lesson in the difference between building a product and running a research lab. What worked, what didn't, and what I'd do differently.",
+      "Six months, 178,000 lines, 2,185 passing tests, and a hard lesson in the difference between building a product and running a research lab. What worked, what didn't, and what I'd do differently.",
     date: "2026-04",
     cluster: "Strategy",
     ready: false,

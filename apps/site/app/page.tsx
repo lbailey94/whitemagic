@@ -62,10 +62,11 @@ export default function HomePage() {
           </div>
           <div className="space-y-5 text-muted">
             <p className="leading-relaxed">
-              <strong className="text-fg">WhiteMagic</strong> is a 170,000-line
-              open-source cognitive OS for AI agents — 374 MCP tools, 11
-              languages, persistent holographic memory, an 8-stage governance
-              pipeline, and 1,318 passing tests. I designed, built, and shipped
+              <strong className="text-fg">WhiteMagic</strong> is a 178,000-line
+              open-source cognitive OS for AI agents — 479 callable tools (451
+              dispatch + 28 PRAT Gana meta-tools), 11 languages, persistent
+              holographic memory, an 8-stage governance pipeline, and 2,185
+              passing tests with zero failures. I designed, built, and shipped
               it solo.
             </p>
             <p className="leading-relaxed">

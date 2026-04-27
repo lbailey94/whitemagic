@@ -32,9 +32,9 @@ export function Hero() {
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border-light pt-8">
-            <Stat label="Lines of OSS shipped" value="170K" />
-            <Stat label="Tests passing" value="1,318" />
-            <Stat label="MCP tools built" value="374" />
+            <Stat label="Lines of OSS shipped" value="178K" />
+            <Stat label="Tests passing" value="2,185" />
+            <Stat label="MCP tools built" value="479" />
           </dl>
         </div>
 

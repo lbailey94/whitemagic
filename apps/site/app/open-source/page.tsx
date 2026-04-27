@@ -23,11 +23,11 @@ const PROJECTS: Project[] = [
     name: "WhiteMagic",
     tagline: "Cognitive operating system for AI agents",
     description:
-      "A 170K-line polyglot platform: persistent holographic memory, 374 MCP tools across 28 categories, 8-stage governance pipeline, 11 languages with Rust and Zig acceleration. The lab where every technique used in client engagements gets pressure-tested first.",
+      "A 178K-line polyglot platform: persistent holographic memory, 479 callable tools (451 dispatch + 28 PRAT Gana meta-tools), 8-stage governance pipeline, 11 languages with Rust and Zig acceleration. The lab where every technique used in client engagements gets pressure-tested first.",
     stats: [
-      { label: "Lines", value: "170K" },
-      { label: "MCP tools", value: "374" },
-      { label: "Tests passing", value: "1,318" },
+      { label: "Lines", value: "178K" },
+      { label: "Callable tools", value: "479" },
+      { label: "Tests passing", value: "2,185" },
       { label: "Languages", value: "11" },
     ],
     status: "Active",
