@@ -151,15 +151,28 @@ WHITEMAGIC/
 
 - `_archived/`: legacy/broken modules (should not be used as canonical APIs)
 
-## CyberBrains-Inspired Modules (v11.1)
+## CyberBrain 7-Layer Cognitive Stack (v22.2 — Complete)
 
-Neurosymbolic enhancements inspired by the CyberBrains architecture:
+WhiteMagic implements the full CyberBrain neurosymbolic architecture:
+
+| Layer | Brain Region | Module | Status |
+|-------|-------------|--------|--------|
+| 1 | Atomic Kernel | `seed` binary, `shelter` sandbox | ✅ Production |
+| 2 | Sensorimotor Weave | MCP tool dispatch, Gana handlers | ✅ Production |
+| 3 | Command Hall | Dharma governance, circuit breakers | ✅ Production |
+| 4 | Narrative Layer | `core/intelligence/bicameral.py` | ✅ Active |
+| 5 | Radiant Layer | Harmony Vector, gratitude economy | ✅ Active |
+| 6 | Constellation Layer | Galactic Map, constellation detection | ✅ Active |
+| 7 | **Logos Layer** | `core/intelligence/foresight_engine.py` | ✅ **Implemented v22.2** |
+
+### Key Modules
 
 - `whitemagic/core/resonance/temporal_scheduler.py`: **Temporal Scheduler** — time-bucketed event processing (FAST <10ms / MEDIUM ~1s / SLOW ~60s lanes), inspired by CNS multi-timescale architecture.
 - `whitemagic/core/resonance/salience_arbiter.py`: **Salience Arbiter** — Global Workspace attention routing; scores events by urgency×novelty×confidence and maintains a ranked "spotlight" of the most important active events.
 - `whitemagic/core/memory/mindful_forgetting.py`: **Mindful Forgetting** — multi-signal memory retention engine; memories survive only if vouched for by multiple independent signals (semantic, emotional, recency, connections, protection).
 - `whitemagic/core/governance/maturity_gates.py`: **Maturity Gates** — gated developmental milestones (Seed→Bicameral→Reflective→Radiant→Collective→Logos); capabilities unlock only after safety gates pass.
 - `whitemagic/core/intelligence/bicameral.py`: **Bicameral Reasoner** — dual-hemisphere (precise vs creative) thought processing with corpus callosum cross-critique and tension-aware synthesis.
+- `whitemagic/core/intelligence/foresight_engine.py`: **Foresight Engine** — predictive engine for constellation drift, memory decay, and association convergence (CyberBrain Layer 7).
 
 Tests: `tests/unit/test_cyberbrain_modules.py` (40 tests)
 
@@ -322,7 +335,20 @@ Three identical ~700-LOC copies → single canonical at `whitemagic/zodiac/zodia
 ### Intelligence Parallel Trees (Analyzed, Retained)
 Both `intelligence/` (51 files, 86 import sites) and `core/intelligence/` (32 files, 54 import sites) are actively used for complementary concerns. No merge — low ROI, high breakage risk.
 
-Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Mojo ~1.2K, Go ~913, Zig ~795.
+Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Mojo ~1.2K, Go ~913, Zig ~795, Koka ~800.
+
+### Polyglot Status (v22.2)
+
+| Language | Status | Bridge Location | Notes |
+|----------|--------|-----------------|-------|
+| **Rust** | ✅ Production | `core/whitemagic-rust/` | PyO3 + maturin, SIMD, WASM |
+| **Go** | ✅ Production | `core/mesh_aux/` | Mesh networking, gRPC |
+| **Zig** | 🧪 Buildable | `polyglot/whitemagic-zig/` | FFI shared lib, `simd_cosine.py` fallback |
+| **Koka** | 🧪 Experimental | `polyglot/whitemagic-koka/` | Effect handlers, 30 files |
+| **Mojo** | ❌ Deferred | `polyglot/mojo/` | Await SDK maturity |
+| **Elixir** | 🧪 Stubs | `polyglot/elixir/` | OTP structures only |
+| **Haskell** | 🧪 Scaffolded | `polyglot/whitemagic-hs/` | Spatial core, FFI stubs (new v22.2) |
+| **Julia** | 🧪 Scaffolded | `polyglot/whitemagic-jl/` | Scientific computing, PyJulia bridge (new v22.2) |
 
 ## Public Interfaces
 

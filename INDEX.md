@@ -58,6 +58,8 @@ These files live at the repository root. They are the **public face** of the pro
 | `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
 | `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 26 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
+| `ARCHIVE_LEGACY_RECON_2026.md` | Comprehensive archive & legacy reconnaissance — definitive map of all archives | Apr 26 |
+| `ARCHIVE_RECON_KOKA_MOJO.md` | Koka/Mojo deep archive reconnaissance findings | Apr 26 |
 | `RELEASE_READINESS_v22.0.0.md` | Release gate checklist — 34 checks, all passed | Apr 25 |
 | `PHASE0_AUDIT.md` | Living audit from broken baseline to stable | Apr 22–25 |
 | `STUB_AUDIT.md` | Catalog of 41 structural stubs with severity ratings | Apr 25 |
