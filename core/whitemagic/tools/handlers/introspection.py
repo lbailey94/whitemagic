@@ -221,8 +221,7 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
     try:
         import os
         report["haskell"] = _load_cached_binary_status("ghc",
-                # Path expansion justified: Tool-specific path handling
-                # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
+                # Tool discovery: GHC compiler path (legitimate expanduser)
                 os.path.expanduser("~/.ghcup/bin/ghc"))
     except (ImportError, ModuleNotFoundError):
         report["haskell"] = {"available": False}

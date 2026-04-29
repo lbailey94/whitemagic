@@ -734,8 +734,7 @@ def mojo_holographic_batch_encode(
             # Check common local paths
             import os
             for candidate in [
-                # Path expansion justified: Labs tier - external tool path (Mojo)
-                # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
+                # Tool discovery: Mojo compiler path (legitimate expanduser)
                 os.path.expanduser("~/.modular/bin/mojo"),
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../.venv/bin/mojo"),
             ]:

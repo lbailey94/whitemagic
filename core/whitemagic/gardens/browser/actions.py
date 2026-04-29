@@ -7,7 +7,7 @@ Usage:
     async with BrowserSession() as browser:
         await browser.navigate("https://example.com")
         await browser.click("#login-button")
-        await browser.type("#username", "user@example.com")
+        await browser.type_text("#username", "user@example.com")
         dom = await browser.extract_dom()
 """
 
@@ -203,7 +203,7 @@ class BrowserActions:
                 error=str(e),
             )
 
-    async def type(self, selector: str, text: str, clear_first: bool = True) -> ActionResult:
+    async def type_text(self, selector: str, text: str, clear_first: bool = True) -> ActionResult:
         """Type text into an input element.
 
         Args:
@@ -632,11 +632,11 @@ class BrowserSession:
             raise RuntimeError("Not connected")
         return await self._actions.click(selector)
 
-    async def type(self, selector: str, text: str) -> ActionResult:
+    async def type_text(self, selector: str, text: str) -> ActionResult:
         """Type into input."""
         if not self._actions:
             raise RuntimeError("Not connected")
-        return await self._actions.type(selector, text)
+        return await self._actions.type_text(selector, text)
 
     async def select(self, selector: str, value: str) -> ActionResult:
         """Select dropdown option."""

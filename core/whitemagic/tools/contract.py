@@ -39,7 +39,7 @@ ENV_VARS: list[EnvVar] = [
     EnvVar(
         name="WM_CONFIG_ROOT",
         purpose="Legacy alias for WM_STATE_ROOT (still supported).",
-        example="~/.whitemagic",
+        example="/tmp/whitemagic_state",
     ),
     EnvVar(
         name="WM_SILENT_INIT",

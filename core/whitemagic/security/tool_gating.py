@@ -98,10 +98,10 @@ class PathValidator:
         "/etc/passwd",
         "/etc/shadow",
         "/etc/sudoers",
-        "~/.ssh",
-        "~/.gnupg",
-        "~/.aws",
-        "~/.config/gcloud",
+        "~/.ssh",          # Pattern: expanded at validation time for any user
+        "~/.gnupg",        # Pattern: expanded at validation time for any user
+        "~/.aws",          # Pattern: expanded at validation time for any user
+        "~/.config/gcloud",  # Pattern: expanded at validation time for any user
         "/proc",
         "/sys",
     })

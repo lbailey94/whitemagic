@@ -210,11 +210,11 @@ def update(
     else:
         click.echo(f"Task not found or update failed: {task_id}")
 
-@task.command()
+@task.command(name="list")
 @click.option("--status", "-s", type=click.Choice(["open", "in_progress", "completed", "blocked"]), help="Filter by status")
 @click.option("--channel", "-c", help="Filter by channel")
 @click.option("--assigned-to", "-a", help="Filter by assignee")
-def list(status: str | None, channel: str | None, assigned_to: str | None) -> None:
+def list_tasks(status: str | None, channel: str | None, assigned_to: str | None) -> None:
     """List tasks, optionally filtered"""
     chat_system = get_chat()
     tasks = chat_system.list_tasks(status=status, channel=channel, assigned_to=assigned_to)

@@ -223,8 +223,11 @@ class Governor:
         "/bin", "/sbin", "/usr/bin", "/usr/sbin",
         "/etc", "/boot", "/sys", "/proc",
         "/var/lib", "/var/log",
-        "/root", "~/.ssh", "~/.gnupg",
-        "/home/*/.ssh", "/home/*/.gnupg",
+        "/root",
+        "~/.ssh",      # Pattern: expanded at validation time for any user
+        "~/.gnupg",    # Pattern: expanded at validation time for any user
+        "/home/*/.ssh",
+        "/home/*/.gnupg",
     ]
 
     # =========================================================================

@@ -75,7 +75,7 @@ def handle_browser_type(**kwargs: Any) -> dict[str, Any]:
         browser = BrowserSession()
         try:
             await browser.connect()
-            result = await browser.type(selector, text)
+            result = await browser.type_text(selector, text)
             return {"success": result.success, "message": result.message}
         finally:
             await browser.disconnect()
