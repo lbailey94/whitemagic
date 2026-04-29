@@ -51,6 +51,28 @@ const CAT_LABEL: Record<Category, string> = {
   regulatory: "Regulatory",
 };
 
+// ── Singularity curve geometry ──────────────────────────────────────────
+// The horizontal timeline is plotted against an exponential curve representing
+// the technological-singularity ramp. Dots sit ON the curve at their month's
+// computed (x, y) position; the SVG path is sampled from the same function so
+// it passes through every dot exactly.
+const CURVE_HEIGHT_PX = 240;
+const LABEL_ROW_HEIGHT_PX = 36;
+const MONTH_WIDTH_PX = 70;
+const SINGULARITY_K = 2.5;
+// Subtle scroll-linked vertical compression. As the user scrolls forward in
+// time, the curve compresses upward (anchored at the bottom), creating a
+// "zoom out into the distance" effect — the future climbs into a smaller
+// vertical envelope while the early events stay anchored at baseline.
+const SCROLL_ZOOM_RANGE = 0.18;
+
+/** Y-ratio for the singularity curve at normalized time t ∈ [0, 1].
+ *  Returns 1 at t=0 (oldest, bottom of curve) and 0 at t=1 (newest, top). */
+function singularityY(t: number): number {
+  const k = SINGULARITY_K;
+  return 1 - (Math.exp(k * t) - 1) / (Math.exp(k) - 1);
+}
+
 interface MonthAggregate {
   key: string;
   short: string;
@@ -109,10 +131,38 @@ function aggregate(filter: FilterKey): MonthAggregate[] {
 export function TimelineHorizontal() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [activeKey, setActiveKey] = useState<string>("2026-02");
+  const [scrollProgress, setScrollProgress] = useState(0);
   const spineRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const months = useMemo(() => aggregate(filter), [filter]);
+  const totalMonths = months.length;
+  const innerWidth = totalMonths * MONTH_WIDTH_PX;
+
+  // Compressed curve geometry derived from scroll progress (0 → 1).
+  const scrollFactor = 1 - scrollProgress * SCROLL_ZOOM_RANGE;
+  const effectiveCurveHeight = CURVE_HEIGHT_PX * scrollFactor;
+  const curveTopOffset = CURVE_HEIGHT_PX - effectiveCurveHeight;
+
+  // Pre-compute the SVG path through 220 sampled points of the singularity
+  // function so the rendered curve passes exactly through every dot.
+  const svgPath = useMemo(() => {
+    const SAMPLES = 220;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= SAMPLES; i++) {
+      const t = i / SAMPLES;
+      pts.push({ x: t * 1000, y: singularityY(t) * 240 });
+    }
+    const linePath = pts
+      .map((p, i) =>
+        i === 0
+          ? `M ${p.x.toFixed(2)},${p.y.toFixed(2)}`
+          : `L ${p.x.toFixed(2)},${p.y.toFixed(2)}`,
+      )
+      .join(" ");
+    const fillPath = `${linePath} L 1000,240 L 0,240 Z`;
+    return { linePath, fillPath };
+  }, []);
 
   const counts = useMemo(() => {
     const c: Record<FilterKey, number> = {
@@ -152,6 +202,26 @@ export function TimelineHorizontal() {
       nodeRect.width / 2;
     spine.scrollBy({ left: delta, behavior: "smooth" });
   }, [activeKey]);
+
+  // Track horizontal scroll progress (0 → 1) for the subtle curve-compression
+  // / zoom-out effect. As the user scrolls right (further into the future),
+  // the curve gradually compresses upward toward the baseline.
+  useEffect(() => {
+    const spine = spineRef.current;
+    if (!spine) return;
+    const handler = () => {
+      const max = spine.scrollWidth - spine.clientWidth;
+      if (max <= 0) {
+        setScrollProgress(0);
+        return;
+      }
+      const next = Math.min(1, Math.max(0, spine.scrollLeft / max));
+      setScrollProgress(next);
+    };
+    spine.addEventListener("scroll", handler, { passive: true });
+    handler();
+    return () => spine.removeEventListener("scroll", handler);
+  }, [innerWidth]);
 
   const onKey = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
@@ -201,11 +271,11 @@ export function TimelineHorizontal() {
         })}
       </div>
 
-      {/* Horizontal month spine */}
+      {/* Horizontal month spine with singularity curve */}
       <div className="relative rounded-2xl border border-border-light bg-surface/70 p-4 backdrop-blur-sm md:p-6">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
           <span>
-            ← Scroll or use ← → arrows to navigate · Click a month to see its
+            ← Scroll or use ← → arrows to navigate · Click a dot to see its
             events
           </span>
           <span className="flex items-center gap-1.5 text-lavender">
@@ -216,96 +286,160 @@ export function TimelineHorizontal() {
         </div>
         <div
           ref={spineRef}
-          className="scrollbar-thin relative flex items-end gap-1 overflow-x-auto overflow-y-hidden pb-2 pt-12"
+          className="scrollbar-thin relative overflow-x-auto overflow-y-hidden"
           style={{ scrollSnapType: "x proximity" }}
         >
-          {/* Singularity trend curve — purple exponential rising through the
-              timeline. The X-axis is time (Nov 2024 → Aug 2026); the Y-axis
-              is conceptual AI capability. The curve was already trending up
-              before this timeline began (the early-2020s ramp from GPT-3 →
-              ChatGPT → GPT-4 → Claude 3); what we render is the accelerating
-              segment WhiteMagic operates inside. */}
-          <svg
-            className="pointer-events-none absolute inset-x-0 top-0 h-20"
-            preserveAspectRatio="none"
-            viewBox="0 0 1000 100"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient
-                id="singularityFill"
-                x1="0%"
-                y1="0%"
-                x2="0%"
-                y2="100%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="rgb(157, 78, 221)"
-                  stopOpacity="0.18"
-                />
-                <stop
-                  offset="100%"
-                  stopColor="rgb(157, 78, 221)"
-                  stopOpacity="0"
-                />
-              </linearGradient>
-              <linearGradient
-                id="singularityLine"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="rgb(157, 78, 221)"
-                  stopOpacity="0.25"
-                />
-                <stop
-                  offset="55%"
-                  stopColor="rgb(157, 78, 221)"
-                  stopOpacity="0.5"
-                />
-                <stop
-                  offset="100%"
-                  stopColor="rgb(157, 78, 221)"
-                  stopOpacity="0.85"
-                />
-              </linearGradient>
-            </defs>
-            {/* Filled area below the curve */}
-            <path
-              d="M 0,93 C 280,92 520,82 720,55 C 850,30 940,12 1000,4 L 1000,100 L 0,100 Z"
-              fill="url(#singularityFill)"
-            />
-            {/* The curve itself */}
-            <path
-              d="M 0,93 C 280,92 520,82 720,55 C 850,30 940,12 1000,4"
-              stroke="url(#singularityLine)"
-              strokeWidth="1.6"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-
-          {/* Axis line */}
+          {/* Inner content with explicit width — month nodes are positioned
+              absolutely on the curve, so the spine uses pixel coordinates
+              rather than flex layout. */}
           <div
-            className="pointer-events-none absolute left-0 right-0 top-[64px] h-px bg-border-light"
-            aria-hidden="true"
-          />
-          {months.map((m) => (
-            <MonthNode
-              key={m.key}
-              month={m}
-              isActive={m.key === activeKey}
-              onSelect={() => setActiveKey(m.key)}
-              registerRef={(el) => {
-                if (el) nodeRefs.current.set(m.key, el);
-                else nodeRefs.current.delete(m.key);
+            className="relative"
+            style={{
+              width: `${innerWidth}px`,
+              height: `${CURVE_HEIGHT_PX + LABEL_ROW_HEIGHT_PX}px`,
+            }}
+          >
+            {/* Curve + dots layer.
+                Anchored at the bottom of the curve area; height shrinks
+                gradually with scroll progress (subtle zoom-out into the
+                distance as the viewer moves forward in time). */}
+            <div
+              className="absolute left-0 right-0"
+              style={{
+                top: `${curveTopOffset}px`,
+                height: `${effectiveCurveHeight}px`,
+                transition: "top 120ms linear, height 120ms linear",
               }}
+            >
+              {/* Singularity trend curve — purple exponential rising through
+                  the timeline. The X-axis is time (Nov 2024 → Feb 2027); the
+                  Y-axis is conceptual AI capability. The curve was already
+                  trending up before this window began (the early-2020s ramp
+                  from GPT-3 → ChatGPT → GPT-4 → Claude 3); what we render is
+                  the accelerating segment WhiteMagic operates inside. The
+                  SVG path is sampled from the same exponential function as
+                  the dot positions, so the curve passes exactly through
+                  every node. */}
+              <svg
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                preserveAspectRatio="none"
+                viewBox="0 0 1000 240"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient
+                    id="singularityFill"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="rgb(157, 78, 221)"
+                      stopOpacity="0.22"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="rgb(157, 78, 221)"
+                      stopOpacity="0"
+                    />
+                  </linearGradient>
+                  <linearGradient
+                    id="singularityLine"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="rgb(157, 78, 221)"
+                      stopOpacity="0.30"
+                    />
+                    <stop
+                      offset="55%"
+                      stopColor="rgb(157, 78, 221)"
+                      stopOpacity="0.60"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="rgb(157, 78, 221)"
+                      stopOpacity="0.95"
+                    />
+                  </linearGradient>
+                </defs>
+                <path d={svgPath.fillPath} fill="url(#singularityFill)" />
+                <path
+                  d={svgPath.linePath}
+                  stroke="url(#singularityLine)"
+                  strokeWidth="1.8"
+                  fill="none"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+
+              {/* Month dots — positioned absolutely ON the curve. */}
+              {months.map((m, i) => (
+                <MonthDot
+                  key={m.key}
+                  month={m}
+                  monthIndex={i}
+                  totalMonths={totalMonths}
+                  curveHeight={effectiveCurveHeight}
+                  isActive={m.key === activeKey}
+                  onSelect={() => setActiveKey(m.key)}
+                  registerRef={(el) => {
+                    if (el) nodeRefs.current.set(m.key, el);
+                    else nodeRefs.current.delete(m.key);
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Baseline axis line at the bottom of the curve area. */}
+            <div
+              className="pointer-events-none absolute left-0 right-0 h-px bg-border-light"
+              style={{ top: `${CURVE_HEIGHT_PX - 1}px` }}
+              aria-hidden="true"
             />
-          ))}
+
+            {/* Labels row — fixed below the curve. */}
+            <div
+              className="absolute left-0 right-0"
+              style={{
+                top: `${CURVE_HEIGHT_PX + 6}px`,
+                height: `${LABEL_ROW_HEIGHT_PX - 6}px`,
+              }}
+            >
+              {months.map((m, i) => {
+                const xPercent =
+                  totalMonths > 1 ? (i / (totalMonths - 1)) * 100 : 50;
+                const isActive = m.key === activeKey;
+                const empty = m.count === 0;
+                return (
+                  <span
+                    key={m.key}
+                    className={cn(
+                      "absolute font-mono text-[10px] uppercase tracking-wider transition",
+                      isActive
+                        ? "font-semibold text-ink"
+                        : empty
+                          ? "text-dim/60"
+                          : "text-muted",
+                    )}
+                    style={{
+                      left: `${xPercent}%`,
+                      transform: "translateX(-50%)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {m.short}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -343,18 +477,28 @@ export function TimelineHorizontal() {
   );
 }
 
-function MonthNode({
+function MonthDot({
   month,
+  monthIndex,
+  totalMonths,
+  curveHeight,
   isActive,
   onSelect,
   registerRef,
 }: {
   month: MonthAggregate;
+  monthIndex: number;
+  totalMonths: number;
+  curveHeight: number;
   isActive: boolean;
   onSelect: () => void;
   registerRef: (el: HTMLButtonElement | null) => void;
 }) {
   const empty = month.count === 0;
+  const t = totalMonths > 1 ? monthIndex / (totalMonths - 1) : 0;
+  const xPercent = t * 100;
+  const yPx = singularityY(t) * curveHeight;
+
   // Dot size based on count (capped)
   const size = empty
     ? "h-2 w-2"
@@ -379,15 +523,19 @@ function MonthNode({
       aria-label={`${month.label}, ${month.count} events. ${isActive ? "Currently selected" : "Click to view"}`}
       aria-pressed={isActive}
       className={cn(
-        "group relative flex min-w-[64px] shrink-0 flex-col items-center gap-2 rounded-lg px-2 py-1 outline-none transition focus-visible:ring-2 focus-visible:ring-lavender md:min-w-[80px]",
-        "scroll-snap-align-center",
+        "group absolute flex flex-col items-center outline-none transition focus-visible:ring-2 focus-visible:ring-lavender",
       )}
-      style={{ scrollSnapAlign: "center" }}
+      style={{
+        left: `${xPercent}%`,
+        top: `${yPx}px`,
+        transform: "translate(-50%, -50%)",
+        transition: "top 120ms linear",
+      }}
     >
-      {/* Count badge above axis */}
+      {/* Count badge above the dot */}
       <span
         className={cn(
-          "absolute top-0 font-mono text-[10px] font-semibold transition",
+          "mb-1 whitespace-nowrap font-mono text-[10px] font-semibold transition",
           empty && "opacity-0",
           isActive ? "text-lavender" : "text-dim group-hover:text-fg",
         )}
@@ -396,30 +544,16 @@ function MonthNode({
         {month.hasPin && <span className="ml-0.5 text-lavender">★</span>}
       </span>
 
-      {/* Dot on axis */}
+      {/* The dot itself — positioned exactly on the curve. */}
       <span
         className={cn(
-          "mt-10 inline-block rounded-full transition",
+          "inline-block rounded-full shadow-sm transition",
           size,
           dotClass,
           isActive && `ring-4 ${ringClass}`,
         )}
         aria-hidden="true"
       />
-
-      {/* Month label below axis */}
-      <span
-        className={cn(
-          "whitespace-nowrap font-mono text-[10px] uppercase tracking-wider transition",
-          isActive
-            ? "font-semibold text-ink"
-            : empty
-              ? "text-dim/60"
-              : "text-muted group-hover:text-fg",
-        )}
-      >
-        {month.short}
-      </span>
     </button>
   );
 }

@@ -493,7 +493,7 @@ export const TIMELINE_DATA: TimelineEntry[] = [
 export function monthRange(): { key: string; label: string; short: string }[] {
   const out: { key: string; label: string; short: string }[] = [];
   const start = new Date(2024, 10, 1); // Nov 2024
-  const end = new Date(2026, 7, 1); // Aug 2026
+  const end = new Date(2027, 1, 1); // Feb 2027 — extends the X-axis past the last event so the singularity curve has visible runway into the future
   const MONTHS = [
     "Jan",
     "Feb",
