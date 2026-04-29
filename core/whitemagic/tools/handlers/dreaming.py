@@ -1,7 +1,10 @@
 """MCP handlers for Dream Cycle control."""
 
 import asyncio
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def handle_dream(**kwargs: Any) -> dict[str, Any]:

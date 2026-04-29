@@ -5,6 +5,7 @@ discovery for coordinated multi-agent workflows.  All state is stored
 under WM_STATE_ROOT/agents/.
 """
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,8 @@ from typing import Any, cast
 from uuid import uuid4
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
+logger = logging.getLogger(__name__)
 from whitemagic.utils.fast_json import loads as _json_loads
 
 

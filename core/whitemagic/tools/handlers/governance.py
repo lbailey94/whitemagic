@@ -1,5 +1,8 @@
 """Governance & lifecycle tool handlers — lifecycle, consolidation, homeostasis, maturity, dharma reload, tool graph."""
+import logging
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 
 def handle_memory_lifecycle(**kwargs: Any) -> dict[str, Any]:

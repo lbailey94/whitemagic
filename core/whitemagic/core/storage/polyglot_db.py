@@ -9,6 +9,7 @@ Provides:
 
 import json
 import logging
+import sqlite3
 from enum import Enum
 from typing import Any
 

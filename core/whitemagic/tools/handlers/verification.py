@@ -10,7 +10,7 @@ def handle_verification_request(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error_code": "invalid_params", "message": "target is required"}
     req_id = kwargs.get("request_id", f"ver_{len(_verifications)}")
     _verifications[req_id] = {"target": target, "status": "pending", "attestations": []}
-    return {"status": "success", "request_id": req_id, "target": target, "status": "pending"}
+    return {"status": "pending", "request_id": req_id, "target": target}
 
 
 def handle_verification_attest(**kwargs: Any) -> dict[str, Any]:

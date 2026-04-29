@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import sqlite3
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -446,8 +447,6 @@ class PhylogeneticTracker:
         self._ensure_table()
         try:
             from whitemagic.core.memory.unified import get_unified_memory
-import sqlite3
-import sqlite3
             um = get_unified_memory()
             with um.backend.pool.connection() as conn:
                 total = conn.execute("SELECT COUNT(*) FROM lineage_edges").fetchone()[0]

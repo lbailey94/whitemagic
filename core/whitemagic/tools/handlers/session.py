@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 from uuid import uuid4
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps

@@ -1,6 +1,9 @@
 """MCP handlers for BitNet local inference."""
 
+import logging
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 
 def handle_bitnet_infer(**kwargs: Any) -> dict[str, Any]:

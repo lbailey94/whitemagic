@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fast_json import dumps_str as _json_dumps

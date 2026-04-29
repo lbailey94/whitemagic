@@ -79,7 +79,7 @@ def suite_import_health() -> SuiteResult:
         "whitemagic.config",
         "whitemagic.tools.unified_api",
         "whitemagic.tools.manifest",
-        "whitemagic.core.memory.manager",
+        "whitemagic.core.memory.unified",
         "whitemagic.security",
         "whitemagic.cli.cli_app",
         "whitemagic.grimoire.core",

@@ -4,5 +4,5 @@ try:
 except ImportError:
     # Fallback to old filename for compatibility
     from .GenomeTracker import (
-        PhylogeneticTracker as GenomeTracker,  # type: ignore[attr-defined]
+        PhylogeneticTracker as GenomeTracker,  # type: ignore[attr-defined]  # noqa: F401
     )

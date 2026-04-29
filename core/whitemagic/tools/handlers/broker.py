@@ -5,6 +5,7 @@ Whitemagic tool contract.  Redis is an optional dependency (``whitemagic[cache]`
 """
 import asyncio
 import json
+import logging
 import os
 import socket
 import time
@@ -13,6 +14,8 @@ from datetime import datetime
 from typing import Any, Optional, TypeVar
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
+logger = logging.getLogger(__name__)
 from whitemagic.utils.fast_json import loads as _json_loads
 
 

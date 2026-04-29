@@ -1,4 +1,3 @@
-from typing import cast
 """MCP handlers for Grimoire 2.0."""
 
 import logging

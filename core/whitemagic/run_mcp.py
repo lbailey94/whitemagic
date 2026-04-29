@@ -19,8 +19,26 @@ from whitemagic.run_mcp_lean import (  # noqa: F401
 # Backward compat: tests expect `mcp`
 mcp = server
 
-# Backward compat: historical entrypoint
+# Backward compat: historical entrypoints expected by omega_test and CI
 register_tools = lambda: None  # noqa: E731
+register_resources = lambda: None  # noqa: E731
+
+
+class _LifecycleShim:
+    """Graceful fallback for historical lifecycle API."""
+
+    @staticmethod
+    def startup() -> None:
+        """No-op startup for backward compatibility."""
+        return None
+
+    @staticmethod
+    def shutdown() -> None:
+        """No-op shutdown for backward compatibility."""
+        return None
+
+
+lifecycle = _LifecycleShim()
 
 
 if __name__ == "__main__":

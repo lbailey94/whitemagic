@@ -671,7 +671,7 @@ Integrated into `whitemagic/core/memory/embeddings.py`. Uses `hnswlib` 0.8.0 for
 The first release where the codebase declares itself a **cognitive operating system** rather than a memory backend. Major structural stabilization, test recovery, and documentation reconciliation.
 
 ### Structural Stabilization
-- **2,185 tests passing**, 0 failures, 67 skipped (up from 783/173/259 at v15 baseline; 2,063 at v22.0 release; +6 distance-metric property tests added 2026-04-27)
+- **2,215 tests passing**, 0 failures, 67 skipped (up from 783/173/259 at v15 baseline; 2,063 at v22.0 release; +29 tests added 2026-04-29)
 - **41 structural stubs eliminated** via 4-sprint "Stub Zero" plan
 - **3 critical archive recoveries**: `lifecycle.py` (+383 lines), `solver_engine.py` (+110 lines), `db_manager.py` (+196 lines) from `whitemagic0.2` archive
 - Doc drift detection (`check_doc_drift.py`) added to CI — validates version, tool counts, stale directory references
@@ -686,7 +686,7 @@ Canonical `grimoire/TRUTH_TABLE.md` established as the single source of truth fo
 
 ### Updated Counts
 - **479 callable tools** across **451 dispatch entries** + **28 Gana meta-tools**
-- **2,185 tests passing**, 0 failures, 67 skipped
+- **2,215 tests passing**, 0 failures, 67 skipped
 - **28 active cross-system fusions** (matching the 28 Ganas)
 - **0 unexplored synthesis opportunities**
 - Polyglot languages: **7** (Python + Rust + Haskell + Elixir + Go + Zig + Mojo)

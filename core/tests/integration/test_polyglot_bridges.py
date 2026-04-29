@@ -12,6 +12,9 @@ Tests the FFI bridges between Python and:
 import pytest
 from pathlib import Path
 
+# Compute repo root relative to this test file
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 class TestRustBridge:
     """Test Rust FFI bridge functionality."""
@@ -43,15 +46,16 @@ class TestRustBridge:
 class TestGoBridge:
     """Test Go FFI bridge functionality."""
 
+    _GO_BINARY = REPO_ROOT / "mesh_aux" / "cmd" / "mesh_aux" / "mesh_daemon"
+
     @pytest.mark.skipif(
-        not Path("/home/lucas/Desktop/WHITEMAGIC/core/mesh_aux/cmd/mesh_aux/mesh_daemon").exists(),
+        not _GO_BINARY.exists(),
         reason="Go binary not built"
     )
     def test_go_binary_exists(self):
         """Test that Go mesh binary exists."""
-        binary_path = Path("/home/lucas/Desktop/WHITEMAGIC/core/mesh_aux/cmd/mesh_aux/mesh_daemon")
-        assert binary_path.exists()
-        assert binary_path.is_file()
+        assert self._GO_BINARY.exists()
+        assert self._GO_BINARY.is_file()
 
     def test_go_mesh_client_import(self):
         """Test Go mesh client can be imported."""
@@ -65,41 +69,43 @@ class TestGoBridge:
 class TestKokaBridge:
     """Test Koka FFI bridge functionality."""
 
+    _KOKA_BUILD_SCRIPT = REPO_ROOT / "whitemagic-koka" / "build_native.sh"
+    _KOKA_SRC = REPO_ROOT / "whitemagic-koka" / "src"
+
     @pytest.mark.skipif(
-        not Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-koka/build_native.sh").exists(),
+        not _KOKA_BUILD_SCRIPT.exists(),
         reason="Koka build script not found"
     )
     def test_koka_build_script_exists(self):
         """Test that Koka build script exists."""
-        build_script = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-koka/build_native.sh")
-        assert build_script.exists()
-        assert build_script.is_file()
+        assert self._KOKA_BUILD_SCRIPT.exists()
+        assert self._KOKA_BUILD_SCRIPT.is_file()
 
     @pytest.mark.skipif(
-        not Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-koka/src").exists(),
+        not _KOKA_SRC.exists(),
         reason="Koka source directory not found"
     )
     def test_koka_source_structure(self):
         """Test that Koka source directory has expected structure."""
-        src_dir = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-koka/src")
-        assert src_dir.exists()
-        assert src_dir.is_dir()
+        assert self._KOKA_SRC.exists()
+        assert self._KOKA_SRC.is_dir()
         # Check for key source files
-        assert (src_dir / "psr").exists() or len(list(src_dir.iterdir())) > 0
+        assert (self._KOKA_SRC / "psr").exists() or len(list(self._KOKA_SRC.iterdir())) > 0
 
 
 class TestZigBridge:
     """Test Zig FFI bridge functionality."""
 
+    _ZIG_DIR = REPO_ROOT.parent / "polyglot" / "whitemagic-zig"
+
     @pytest.mark.skipif(
-        not Path("/media/lucas/SD_CARD/WHITEMAGIC/polyglot/zig").exists(),
+        not _ZIG_DIR.exists(),
         reason="Zig directory not found"
     )
     def test_zig_directory_exists(self):
         """Test that Zig directory exists."""
-        zig_dir = Path("/media/lucas/SD_CARD/WHITEMAGIC/polyglot/zig")
-        assert zig_dir.exists()
-        assert zig_dir.is_dir()
+        assert self._ZIG_DIR.exists()
+        assert self._ZIG_DIR.is_dir()
 
     def test_zig_processor_import(self):
         """Test Zig string processor can be imported."""
@@ -113,15 +119,16 @@ class TestZigBridge:
 class TestMojoBridge:
     """Test Mojo FFI bridge functionality."""
 
+    _MOJO_DIR = REPO_ROOT / "whitemagic-mojo"
+
     @pytest.mark.skipif(
-        not Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-mojo").exists(),
+        not _MOJO_DIR.exists(),
         reason="Mojo directory not found"
     )
     def test_mojo_directory_exists(self):
         """Test that Mojo directory exists."""
-        mojo_dir = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-mojo")
-        assert mojo_dir.exists()
-        assert mojo_dir.is_dir()
+        assert self._MOJO_DIR.exists()
+        assert self._MOJO_DIR.is_dir()
 
     def test_mojo_bridge_import(self):
         """Test Mojo bridge can be imported."""
@@ -135,15 +142,16 @@ class TestMojoBridge:
 class TestJuliaBridge:
     """Test Julia FFI bridge functionality."""
 
+    _JULIA_DIR = REPO_ROOT / "whitemagic-julia"
+
     @pytest.mark.skipif(
-        not Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-julia").exists(),
+        not _JULIA_DIR.exists(),
         reason="Julia directory not found"
     )
     def test_julia_directory_exists(self):
         """Test that Julia directory exists."""
-        julia_dir = Path("/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-julia")
-        assert julia_dir.exists()
-        assert julia_dir.is_dir()
+        assert self._JULIA_DIR.exists()
+        assert self._JULIA_DIR.is_dir()
 
 
 class TestPolyglotRouter:
@@ -190,12 +198,12 @@ class TestPolyglotStatus:
 
     def test_polyglot_status_module_exists(self):
         """Test that POLYGLOT_STATUS.md exists."""
-        status_file = Path(__file__).resolve().parent.parent.parent / "POLYGLOT_STATUS.md"
+        status_file = REPO_ROOT / "POLYGLOT_STATUS.md"
         assert status_file.exists()
 
     def test_polyglot_status_readable(self):
         """Test that polyglot status can be read."""
-        status_file = Path(__file__).resolve().parent.parent.parent / "POLYGLOT_STATUS.md"
+        status_file = REPO_ROOT / "POLYGLOT_STATUS.md"
         content = status_file.read_text()
         assert len(content) > 0
         # Check for key sections

@@ -14,7 +14,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
-from whitemagic.core.resonance import EventType, GanYingBus, ResonanceEvent, get_bus
+from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
 
 
 @dataclass

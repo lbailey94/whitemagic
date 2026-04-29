@@ -30,6 +30,12 @@ Usage:
 
 from typing import Any
 
+try:
+    from whitemagic.tools.coordinate_explainer import interpret_memory
+except ImportError:
+    def interpret_memory(_data: dict[str, Any]) -> dict[str, str]:  # type: ignore[misc]
+        return {"summary": "", "zone": ""}
+
 
 def find_by_zone(zone: str, limit: int = 20) -> list[dict[str, Any]]:
     """Find all memories in a specific galactic zone.

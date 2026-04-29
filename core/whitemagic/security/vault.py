@@ -17,7 +17,7 @@ import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +263,7 @@ class Vault:
         logger.info(f"Vault: re-keyed {count} secrets")
         return count
 
-    def __enter__(self) -> Vault:
+    def __enter__(self) -> "Vault":
         return self
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:

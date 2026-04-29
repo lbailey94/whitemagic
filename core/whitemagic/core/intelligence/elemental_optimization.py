@@ -6,8 +6,11 @@ Different task types map to different elements, which guide the reasoning strate
 Philosophy: Align reasoning approach with natural phases of work.
 """
 
+import logging
 from enum import Enum
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class ReasoningOptimization(Enum):

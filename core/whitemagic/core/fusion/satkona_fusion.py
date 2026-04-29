@@ -21,7 +21,6 @@ import os
 import sqlite3
 import subprocess
 from datetime import datetime
-from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 

@@ -4,7 +4,10 @@ Provides MCP tools for creating, switching, listing, and ingesting
 into project-scoped memory galaxies.
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def handle_galaxy_create(**kwargs: Any) -> dict[str, Any]:

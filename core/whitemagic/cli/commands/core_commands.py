@@ -1,4 +1,5 @@
 import shutil
+from importlib.util import find_spec
 from pathlib import Path
 
 import click
@@ -7,8 +8,6 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 try:
     from rich.console import Console
-    from rich.panel import Panel
-    from rich.table import Table
     from rich.tree import Tree
     HAS_RICH = True
     console = Console()
@@ -25,11 +24,12 @@ __all__ = [
     'explore_command', 'init_command', 'rules_command', 'systemmap_command',
     'start_session_cli', 'list_tools', 'setup', 'tools'
 ]
+HAS_CORE = find_spec("whitemagic.core") is not None
 HAS_VOICE = False
 HAS_GRAPH = False
 HAS_EXEC = False
 try:
-    from whitemagic.cli.cli_sangha import sangha_cli
+    from whitemagic.cli.cli_sangha import sangha_cli  # noqa: F401
     HAS_SANGHA = True
 except ImportError:
     HAS_SANGHA = False

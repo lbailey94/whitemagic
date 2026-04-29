@@ -381,7 +381,8 @@ _CACHE_MAX_SIZE = 64
 
 def _cache_key(gana: str, tool_name: str, tool_args: dict[str, Any], operation: str | None) -> str:
     """Deterministic cache key for a PRAT call."""
-    import hashlib, json
+    import hashlib
+    import json
     payload = json.dumps({"g": gana, "t": tool_name, "a": tool_args, "o": operation}, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 

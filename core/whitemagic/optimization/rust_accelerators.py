@@ -23,6 +23,7 @@ Usage:
 """
 
 import logging
+import sqlite3
 from typing import Any, cast
 
 from whitemagic.optimization._rust_fallbacks import (

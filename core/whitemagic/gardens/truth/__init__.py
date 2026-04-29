@@ -191,7 +191,6 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
         # Memory DB quick check
         try:
-            import sqlite3
             from whitemagic.core.memory.sqlite_backend import (
                 get_pool,  # type: ignore[attr-defined]
             )

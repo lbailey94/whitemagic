@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from whitemagic.core.dreaming.dream_artifacts import (
@@ -23,7 +23,6 @@ from whitemagic.core.dreaming.dream_artifacts import (
     archive_dream,
     expire_dream,
     promote_dream,
-    read_dream,
 )
 
 logger = logging.getLogger(__name__)

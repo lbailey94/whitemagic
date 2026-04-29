@@ -13,6 +13,7 @@ MCP tools:
 """
 
 import asyncio
+import logging
 import os
 import re
 import time
@@ -24,6 +25,8 @@ from uuid import uuid4
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 

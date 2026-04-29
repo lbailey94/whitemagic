@@ -13,6 +13,11 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def get_recipient_address() -> str | None:
+    """Get the configured XRP recipient address for gratitude tips."""
+    return os.environ.get("WM_XRP_ADDRESS") or os.environ.get("XRP_ADDRESS")
+
+
 def handle_tip(**kwargs: Any) -> dict[str, Any]:
     """Record a gratitude tip.
 
@@ -79,7 +84,7 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
                 "recorded": False,
                 "error_code": "not_configured",
                 "message": "Set WM_XRP_ADDRESS to enable gratitude tips",
-                "instruction": f"To enable tipping, set your XRP address: export WM_XRP_ADDRESS=<your_address>",
+                "instruction": "To enable tipping, set your XRP address: export WM_XRP_ADDRESS=<your_address>",
             }
         # Generate Xaman (XUMM) payment link
         payment_link = f"https://xumm.app/detect/request:{xrp_address}?amount={int(amount * 1_000_000)}"

@@ -627,7 +627,6 @@ class PolyglotRouter:
             raise AttributeError("whitemagic_rs has no scan_tree implementation")
 
         def python_impl() -> Any:
-            import os
             from pathlib import Path
             results = []
             root = Path(root_path)

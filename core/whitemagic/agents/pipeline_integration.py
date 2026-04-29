@@ -191,7 +191,6 @@ class PipelineIntegration:
         import time
         start = time.perf_counter()
         # Minimal benchmark: count imports in campaign file directory
-        from pathlib import Path
         target_dir = self.campaign_file.parent
         files = list(target_dir.rglob("*.py"))
         import_count = 0
@@ -466,7 +465,6 @@ class PipelineIntegration:
 
     def execute_implementation(self, strategy: StrategySimulation) -> dict[str, Any]:
         """Execute phase: Write strategy output to a file."""
-        from pathlib import Path
         output_dir = self.campaign_file.parent / "strategy_outputs"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"{strategy.strategy_name}.md"

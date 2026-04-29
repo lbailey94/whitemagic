@@ -15,10 +15,10 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass, field
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
-from whitemagic.utils.rust_helper import is_rust_available
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads

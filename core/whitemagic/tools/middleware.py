@@ -114,7 +114,7 @@ def _ensure_cached() -> None:
     try:
         from whitemagic.utils.core import compact_dict
         _compact_fn = compact_dict
-    except Exception as e:
+    except Exception:
         pass
     _cached = True
 

@@ -11,10 +11,13 @@ Concepts:
 - Spaghettification: The process of compressing captured memories into the attractor.
 """
 
+import logging
 import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

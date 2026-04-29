@@ -385,15 +385,6 @@ TOOL_TO_GANA: dict[str, str] = {
     # ── GHOST — Introspection sub-tools + watchers ──
     "capability_harness":          "gana_ghost",
     "get_agent_capabilities":      "gana_ghost",
-    "watcher_add":                 "gana_ghost",
-    "watcher_remove":              "gana_ghost",
-    "watcher_start":               "gana_ghost",
-    "watcher_stop":                "gana_ghost",
-    "watcher_list":                "gana_ghost",
-    "watcher_status":              "gana_ghost",
-    "watcher_stats":               "gana_ghost",
-    "watcher_recent_events":       "gana_ghost",
-
     # ── WILLOW — Grimoire sub-tools ──
     "grimoire_list":               "gana_willow",
     "grimoire_read":               "gana_willow",

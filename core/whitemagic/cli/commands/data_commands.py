@@ -3,11 +3,6 @@ from pathlib import Path
 
 import click
 
-try:
-    from whitemagic.config import paths as cfg_paths
-except ImportError:
-    pass
-
 __all__ = ['galaxy_command', 'backup_command', 'restore_command']
 
 @click.command(name="galaxy")
