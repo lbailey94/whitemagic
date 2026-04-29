@@ -63,6 +63,9 @@ core/haskell/dist-newstyle/
 *.bak.*
 dist/wasm/
 BUILD_HASHES.json
+
+# === Generated Reports ===
+core/reports/
 # Runtime dump files (avoid committing by accident)
 llms-full.txt
 # llms.txt is now a canonical project file per llmstxt.org convention
@@ -146,13 +149,16 @@ core/whitemagic-rust/src/*_v[0-9].rs
 core/whitemagic-rust/src/*_v[0-9][0-9].rs
 core/whitemagic-rust/src/*_final.rs
 
-# === IDE ===
+# === IDE / Tool caches ===
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 .windsurf_conversations/
+.strata-baseline.json
+.strata-cache.json
+.fragment/
 
 # === OS ===
 .DS_Store

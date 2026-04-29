@@ -716,4 +716,80 @@ python scripts/check_doc_drift.py
 
 ---
 
+---
+
+## 9. April 27, 2026 — Grant Pipeline Research & Documentation Sprint
+
+> **Session Date:** 2026-04-27
+> **Scope:** 15+ minutes of spiraling online + internal research to close Gap 2 (grant pipeline), followed by full documentation suite creation
+> **Final State:** 2,185 tests passed, 67 skipped, 0 failed; doc drift: all 9 checks pass
+> **New Artifacts:** 3 documents created, 1 page updated
+
+### 9.1 Research Phase (15+ minutes)
+
+Conducted parallel external and internal research:
+- **External**: Verified 8+ funding opportunities (Schmidt Sciences, SFF, Foresight, Manifund, BlueDot, Constellation, MATS, ARENA)
+- **Internal**: Deep archive reconnaissance (`whitemagic-aux/`), CODEX semantic search across docs, competitive landscape analysis
+- **Key discovery**: Schmidt Sciences "Science of Trustworthy AI" RFP deadline is **May 17, 2026** (~3 weeks) — highest-priority opportunity
+
+### 9.2 Documents Created
+
+1. **`docs/message_board/GRANT_STRATEGY_DEEP_DIVE_2026.md`** (~450 lines)
+   - Mathematical likelihood estimates for every opportunity (base-rate + structural fit + network proximity)
+   - Portfolio-effect analysis: P(at least one success | apply to 4) ≈ 65%
+   - Opportunity-by-opportunity strategy with budget breakdowns
+   - Fund-usage implications and restrictions per grantor
+   - 7-day action plan with day-by-day tasks
+
+2. **`docs/message_board/GRANT_PIPELINE_2026.md`** (~200 lines)
+   - Live tracker with deadlines, status, blockers, and next actions
+   - Prerequisites dashboard (which grants need what)
+   - Weekly review template
+   - Closed/missed opportunities catalog
+
+3. **`docs/message_board/GRANT_TIER_LIST_2026.md`** (~250 lines)
+   - Second-pass tiered ranking from Tier 0 (solo dev, no LLC) to Tier 3 (multi-PI required)
+   - Updated win rates after additional research (Coefficient Giving, LTFF, ACX Grants)
+   - Clear entity-requirement labels per opportunity
+   - Recommended application sequence: Phase 1 (immediate money) → Phase 4 (long-term runway)
+
+4. **`apps/site/app/grants/page.tsx`** (rewritten)
+   - Added 4 new sections: Urgent, Active, Deferred, Watchlist
+   - Added deadline badges (Urgent, Rolling, Theme)
+   - Updated all funders with verified 2026 deadlines and links
+   - Removed outdated entries, added watchlist for missed deadlines
+
+### 9.3 Key Strategic Insights
+
+- **Schmidt Sciences Tier 1** is feasible solo (12–18% success rate) but would benefit enormously from a co-PI or institutional affiliation
+- **SFF Rolling Application** is unblocked by incorporation (LLC) — can be submitted in 1 day once formed
+- **Foresight AI Nodes** has monthly deadlines — iterative application possible
+- **Manifund** is the fastest path to validation money ($25K–$50K in 2–4 weeks)
+- **No existing grant drafts** were found in any archive — we are starting from scratch
+
+### 9.4 Verification
+
+```bash
+cd core
+python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
+# Result: 2185 passed, 67 skipped, 0 failed
+
+python scripts/check_doc_drift.py
+# Result: All 9 checks passed — documentation is in sync.
+```
+
+### 9.5 Next Steps (from deep-dive doc)
+
+| Day | Action |
+|---|---|
+| Day 1 (Apr 28) | Incorporate LLC + open bank account |
+| Day 2 (Apr 29) | Submit Manifund + BlueDot applications |
+| Day 3 (Apr 30) | Submit Foresight AI Nodes application |
+| Day 3–5 (Apr 30–May 2) | Draft Schmidt Sciences proposal |
+| Day 5 (May 2) | Request letters of support |
+| Day 6–7 (May 3–4) | Polish + submit Schmidt application |
+| Day 7 (May 4) | Submit SFF Rolling Application |
+
+---
+
 *This document is a living artifact. Update it as work progresses.*

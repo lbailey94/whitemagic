@@ -134,7 +134,7 @@ python -m pytest tests/ --cov=whitemagic --cov-report=term-missing -q
 - **Module imports**: Use absolute imports (`from whitemagic.core.memory...`).
 
 ### Path Hygiene
-- **Never** use `Path.home()` or `.expanduser()` outside `config/paths.py`.
+- **Never** use `Path.home()` or `.expanduser()` outside `core/whitemagic/config/paths.py`.
 - All runtime state lives under `WM_STATE_ROOT`. Never write to the repo.
 - The repo must remain clean of `memory/`, `data/`, `logs/`, `.whitemagic/`.
 
@@ -242,7 +242,7 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 3. **Writing runtime state to the repo**. Always use `WM_STATE_ROOT`.
 4. **Duplicating `.md` files** in `core/whitemagic/grimoire/`. The canonical source is `grimoire/` (root).
 5. **Skipping tests** after "trivial" changes. The 1,280-test improvement came from fixing wiring, not from heroic test-writing.
-6. **Using `Path.home()` outside `config/paths.py`**. The path hygiene test will flag this.
+6. **Using `Path.home()` outside `core/whitemagic/config/paths.py`**. The path hygiene test will flag this.
 
 ---
 
@@ -254,7 +254,7 @@ Before declaring any task complete:
 - [ ] `python scripts/check_doc_drift.py` → All checks pass
 - [ ] `python scripts/check_versions.py` → Version consistent
 - [ ] `git status` → Only intended files modified
-- [ ] No new `Path.home()` or `.expanduser()` outside `config/paths.py`
+- [ ] No new `Path.home()` or `.expanduser()` outside `core/whitemagic/config/paths.py`
 - [ ] `INDEX.md` updated if docs added/moved
 
 ---
@@ -334,7 +334,27 @@ Every session produces:
 
 ---
 
-## 13. Contact & Context
+## 13. AI Context Retrieval
+
+This project is indexed with **Fragment** for fast AI context retrieval. Before asking AI assistants about this codebase, ensure the index is current:
+
+```bash
+# From the project root
+fragment index .
+
+# Query for relevant chunks
+fragment query . "how does memory holography work"
+
+# Or use the HTTP API for editor integration
+fragment serve . --bind 127.0.0.1:7727
+curl -s -X POST http://127.0.0.1:7727/api/query -H "Content-Type: application/json" -d '{"q":"dispatch pipeline","top":5}'
+```
+
+The index lives in `.fragment/` and is ignored by git. Re-index after significant architectural changes.
+
+---
+
+## 14. Contact & Context
 
 - **Project**: WhiteMagic v22.2.0
 - **Repository**: `/home/lucas/Desktop/WHITEMAGIC/`

@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0  
-**Last Updated**: April 26, 2026  
+**Last Updated**: April 27, 2026  
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -55,9 +55,16 @@ These files live at the repository root. They are the **public face** of the pro
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
+| `GRANT_EXECUTION_PLAN_2026-04-28.md` | Consolidated week-by-week grant action sequence with expected value math, tracking setup, and user-priority decisions | Apr 28 |
+| `GRANT_APPLICATION_TEMPLATES_2026.md` | Reverse-engineered application structures for Manifund, Foresight, SFF, Schmidt, LTFF — reusable content blocks, per-funder customization cheat sheet, rapid iteration system | Apr 28 |
+| `LLC_BANKING_ROADMAP_2026.md` | Georgia LLC formation costs, bank account comparison (Mercury/Novo/Truist/Axos), step-by-step timeline with exact costs and time projections | Apr 28 |
 | `PRIOR_ART_AND_PATHS_2026-04-27.md` | Cross-referenced WhiteMagic chronology vs. competitors (CODEX OpenAI/Grok/X archives) + branching-path math | Apr 27 |
 | `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape — Mem0/Cognee/Letta/Anthropic Claude Memory + Molty trifecta + A2A/x402/MCP numbers | Apr 27 |
 | `KARMA_LEDGER_PAPER_OUTLINE.md` | arxiv preprint outline — declared-vs-actual side-effect audit substrate + prior-art evidence chain | Apr 27 |
+| `GRANT_STRATEGY_DEEP_DIVE_2026.md` | Mathematical likelihood, tailored strategies, prerequisites, and fund-usage implications for all 2026 funding opportunities | Apr 27 |
+| `GRANT_PIPELINE_2026.md` | Live tracker — deadlines, status, blockers, and action items for every active grant application | Apr 27 |
+| `GRANT_TIER_LIST_2026.md` | Second-pass tiered ranking — solo-dev-friendly (Tier 0) to multi-PI required (Tier 3), with win rates and entity requirements | Apr 27 |
 | `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
 | `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 26 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
