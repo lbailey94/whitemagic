@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # WhiteMagic Local Installer (for testing before GitHub push)
 # =============================================================
 # This installs WhiteMagic v18 from local source files

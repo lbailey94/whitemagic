@@ -51,7 +51,8 @@ class RecursiveImprovementDriver:
                     data = json.loads(line)
                     if "meta" not in data and data.get("score", 0) >= 6:
                         findings.append(data)
-                except: continue
+                except Exception:
+                    continue
 
         print(f"Loaded {len(findings)} High-Confidence (Score >= 6) candidates.")
         

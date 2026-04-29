@@ -90,7 +90,8 @@ def survey_database(archaeologist: ChariotArchaeologist, db_path: Path):
                 if any(k in meta_obj for k in ["x", "y", "z", "w", "gana"]):
                     score += 2
                     matches.append("Structured_Meta")
-            except: pass
+            except Exception:
+                pass
 
             if matches or score >= 2 or gana:
                 finding = {
@@ -121,7 +122,8 @@ def generate_expanded_recovery_report(report_file: Path, output_md: Path):
         for line in f:
             try:
                 findings.append(json.loads(line))
-            except: continue
+            except Exception:
+                continue
 
     # Sort by score or significance
     findings.sort(key=lambda x: x.get("score", 0), reverse=True)

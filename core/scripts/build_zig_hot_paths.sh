@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # Build all Zig hot path modules for PSR-001
 
 set -e

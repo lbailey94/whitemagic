@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # WhiteMagic One-Click Installer
 # ==============================
 # Install WhiteMagic WASM + Python in one command

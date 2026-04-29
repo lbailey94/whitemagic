@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # Optimized test runner leveraging pytest-xdist for maximum parallelization across cores.
 
 set -e

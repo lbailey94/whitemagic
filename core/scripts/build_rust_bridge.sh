@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # WhiteMagic Rust Bridge Builder
 # Compiles whitemagic_rust and installs it for both .venv and system Python.
 #

@@ -157,7 +157,7 @@ fn compute_cache_key(query: []const u8, strategy: SearchStrategy, out: *[64]u8) 
     hash *%= FNV_PRIME;
 
     // Convert to hex string
-    _ = std.fmt.bufPrint(out, "{x:0>16}", .{hash}) catch unreachable;
+    _ = std.fmt.bufPrint(out, "{x:0>16}", .{hash}) catch @panic("compute_cache_key: bufPrint failed");
 }
 
 /// Batch route multiple queries (SIMD-friendly)

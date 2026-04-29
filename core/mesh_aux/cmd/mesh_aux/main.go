@@ -153,7 +153,11 @@ func main() {
 					"confidence": signal.Importance,
 					"timestamp":  time.Now().Format(time.RFC3339),
 				}
-				jsonBytes, _ := json.Marshal(event)
+				jsonBytes, err := json.Marshal(event)
+				if err != nil {
+					fmt.Printf("[MESH] ⚠️ JSON Marshal Error: %v\n", err)
+					continue
+				}
 				rdb.Publish(ctx, RedisChannel, string(jsonBytes))
 			}
 		}
@@ -198,7 +202,11 @@ func main() {
 				"confidence": testSignal.Importance,
 				"timestamp":  time.Now().Format(time.RFC3339),
 			}
-			jsonBytes, _ := json.Marshal(event)
+			jsonBytes, err := json.Marshal(event)
+			if err != nil {
+				fmt.Printf("[MESH] ⚠️ JSON Marshal Error: %v\n", err)
+				return
+			}
 			if err := rdb.Publish(ctx, RedisChannel, string(jsonBytes)).Err(); err != nil {
 				fmt.Printf("[MESH] ⚠️ Redis Publish Error: %v\n", err)
 			} else {

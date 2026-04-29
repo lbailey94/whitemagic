@@ -109,6 +109,16 @@ def has_framework_decorator(node: ast.FunctionDef | ast.AsyncFunctionDef) -> boo
     return False
 
 
+def is_protocol_class(class_node: ast.ClassDef) -> bool:
+    """Check if a class is a typing.Protocol (runtime_checkable or not)."""
+    for base in class_node.bases:
+        if isinstance(base, ast.Name) and base.id == "Protocol":
+            return True
+        if isinstance(base, ast.Attribute) and base.attr == "Protocol":
+            return True
+    return False
+
+
 def is_intentional_noop(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     """Check if method name indicates an intentional no-op hook."""
     return any(node.name.startswith(p) for p in INTENTIONAL_NOOP_PATTERNS)
@@ -120,6 +130,14 @@ class StubVisitor(ast.NodeVisitor):
     def __init__(self, filepath: Path) -> None:
         self.filepath = filepath
         self.issues: list[str] = []
+        self._in_protocol = False
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        was_protocol = self._in_protocol
+        if is_protocol_class(node):
+            self._in_protocol = True
+        self.generic_visit(node)
+        self._in_protocol = was_protocol
 
     def _check_docstring(self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> bool:
         """Return True if node has a stub-like docstring."""
@@ -157,6 +175,10 @@ class StubVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _check_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        # Skip Protocol methods — ellipsis bodies are standard Python syntax
+        if self._in_protocol:
+            return
+
         # Skip framework-decorated functions (Click, FastAPI, etc.)
         if has_framework_decorator(node):
             return

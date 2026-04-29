@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Backup script for Railway magicchat project
 echo "Starting backup process..."
 

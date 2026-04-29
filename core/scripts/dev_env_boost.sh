@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # Development Environment Booster
 # Sets optimization flags, clears temporary caches, and primes the Python environment.
 

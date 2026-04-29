@@ -193,7 +193,7 @@ def stress_consolidation(backend) -> None:
     """Trigger memory consolidation."""
     try:
         from whitemagic.core.memory.consolidation import MemoryConsolidator
-        consolidator = MemoryConsolidator(backend)
+        consolidator = MemoryConsolidator()
         consolidator.consolidate()
     except ImportError as exc:
         ERRORS.append(f"consolidation_import: {exc}")

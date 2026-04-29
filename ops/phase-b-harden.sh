@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # =============================================================================
 # Phase B — Hetzner VPS hardening + core packages for whitemagic.dev
 #

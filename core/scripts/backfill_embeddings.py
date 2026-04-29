@@ -13,7 +13,8 @@ import sys
 from pathlib import Path
 
 # Add core to path
-CORE_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent
+CORE_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(CORE_DIR))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -24,8 +25,12 @@ def get_db_path() -> Path:
     """Get the database path from environment or default."""
     if "WM_DB_PATH" in os.environ:
         return Path(os.environ["WM_DB_PATH"])
-    state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
-    return Path(state_root) / "whitemagic_working.db"
+    try:
+        from whitemagic.config.paths import WM_ROOT
+        return WM_ROOT / "whitemagic_working.db"
+    except Exception:
+        state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
+        return Path(state_root) / "whitemagic_working.db"
 
 
 def get_memories_without_embeddings(db_path: Path, limit: int | None = None) -> list[tuple[int, str]]:

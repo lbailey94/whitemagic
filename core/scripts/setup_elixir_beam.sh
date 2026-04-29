@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # Elixir BEAM Compilation and Setup Script
 # Activates CascadeExecutor and all OTP concurrency features
 

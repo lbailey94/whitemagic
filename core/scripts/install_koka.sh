@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # Koka Installation Script for WhiteMagic (S023)
 # Installs Koka v3.2.2 compiler to ~/.local/bin
 

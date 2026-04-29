@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # =============================================================================
 # Phase B — Lock down SSH (disable root login + password authentication)
 #

@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # Mojo CLI Setup Script
 # Installs magic CLI from get.modular.com
 

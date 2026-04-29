@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # WhiteMagic WASM Build Script
 # Builds WebAssembly packages for web and Node.js targets
 

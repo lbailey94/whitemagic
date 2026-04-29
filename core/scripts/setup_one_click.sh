@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # WhiteMagic One-Click Setup (WASM-First)
 # This script initializes the environment, builds native extensions, and prepares the WASM server.
 

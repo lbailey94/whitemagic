@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # sync_to_public.sh — One-way sync from whitemagicdev → whitemagicpublic
 #
 # Syncs SOURCE CODE, tests, and configs. Does NOT sync docs (they have

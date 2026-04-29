@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # Build script for Koka native compilation (S023)
 # Compiles Koka effects to native binaries for FFI
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # Safe Build Wrapper - Prevents Concurrent Builds
 # Usage: ./safe_build.sh <build_command>
 #

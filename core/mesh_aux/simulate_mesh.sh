@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 echo "🌐 Starting WhiteMagic Kinetic Mesh Simulation..."
 CGO_ENABLED=0 go build -o whitemagic-mesh main.go
 
