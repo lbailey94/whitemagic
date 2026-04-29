@@ -1,5 +1,7 @@
 # Grant Strategy Deep Dive — 2026
 
+> **For current execution priorities, see `GRANT_EXECUTION_PLAN_2026-04-28.md`.** This document contains exploratory analysis and research notes; the execution plan is the operational source of truth.
+
 **Date**: 2026-04-27
 **Scope**: Mathematical likelihood of success, tailored application strategies, prerequisites, and fund-usage implications for every active funding opportunity mapped to WhiteMagic Labs.
 **Status**: Living document — update after every submission and decision.
@@ -10,16 +12,18 @@
 
 | Opportunity | Deadline | Ask Range | Estimated Success Rate | Effort Hours | Priority |
 |---|---|---|---|---|---|
-| Schmidt Sciences — Trustworthy AI RFP | **May 17, 2026** | $300K–$1M (Tier 1) | **12–18%** | 40–60 | 🔴 P0 |
-| SFF Rolling Application | Rolling | $50K–$200K | **18–25%** | 15–25 | 🟡 P1 |
+| Manifund Regrants | Rolling | $5K–$50K | **40–55%** | 4–8 | 🔴 P0 |
 | Foresight Institute — AI Nodes | Monthly (last day) | $10K–$100K | **25–35%** | 10–15 | 🟡 P1 |
+| SFF Rolling Application | Rolling | $50K–$200K | **18–25%** | 15–25 | 🟡 P1 |
+| LTFF / EA Funds | Rolling | $5K–$100K | **15–25%** | 8–12 | 🟢 P2 |
+| Schmidt Sciences — Trustworthy AI RFP | **May 17, 2026** | $300K–$1M (Tier 1) | **12–18%** | 40–60 | 🔵 P3 (defer) |
 | Manifund Regrants | Rolling | $5K–$50K | **40–55%** | 4–8 | 🟢 P2 |
-| BlueDot Rapid Grants | Rolling | $50–$10K | **50–65%** | 2–4 | 🟢 P2 |
+| BlueDot Rapid Grants | Rolling | $50–$10K | **50–65%** (only if in network) | 2–4 | ⏸️ Skip (eligibility blocked) |
 | SFF 2026 Theme Round — HSEE | July 8, 2026 | $50K–$200K | **15–22%** | 20–30 | 🟡 P1 (defer) |
 | SFF 2026 Theme Round — Climate | June 10, 2026 | $50K–$200K | **10–15%** | 20–30 | 🔵 P3 |
 
 **Total addressable non-dilutive capital in next 6 months**: $435K–$1.56M
-**Combined probability of receiving ≥$100K**: ~65% (assuming we apply to 4+ opportunities)
+**Estimated chance of receiving ≥$100K**: roughly 60–70% (heuristic estimate assuming 4+ well-targeted applications with moderate positive correlation)
 
 ---
 
@@ -81,7 +85,7 @@ This is the single most important strategic insight: **volume of well-targeted a
 
 **Positive factors:**
 - WhiteMagic has a **verifiable prior-art trail** (Karma Ledger spec: May 26, 2025; implementation: Feb 7, 2026; Anthropic's structurally similar audit log: Apr 23, 2026). This is the kind of citation-friendly story peer reviewers like.
-- The codebase is **real and testable** (2,185 tests, MIT-licensed, public GitHub). Reviewers can clone and run it.
+- The codebase is **real and testable** (2,215 tests, MIT-licensed, public GitHub). Reviewers can clone and run it.
 - The framing as "governance + metacognition substrate" is **novel** — not "another memory startup."
 - We have a **pre-existing paper outline** (`KARMA_LEDGER_PAPER_OUTLINE.md`) that can be adapted into the proposal's "intellectual merit" section.
 
@@ -115,7 +119,7 @@ This is the single most important strategic insight: **volume of well-targeted a
 
 **Option B: Find a co-PI and apply jointly (recommended if feasible)**
 - Ideal co-PI profile: Assistant/associate professor in CS/AI safety at a US or UK university, with publications in agent safety, evaluation, or interpretability.
-- Value proposition for the co-PI: They get a working codebase (2,185 tests), a paper idea, and a funded research stream without having to build infrastructure from scratch.
+- Value proposition for the co-PI: They get a working codebase (2,215 tests), a paper idea, and a funded research stream without having to build infrastructure from scratch.
 - Timeline: Would need to identify, pitch, and align with a co-PI within **7–10 days** to have any chance of a May 17 submission. Extremely tight.
 
 #### 2.1.5 What We Need for Highest Success
@@ -207,7 +211,7 @@ The SFF process is deliberately designed to be more accessible than traditional 
 |---|---|---|
 | Fiscal sponsor (if applying as individual) or incorporation | ❌ Missing | **Critical.** Easiest path: incorporate as a single-member LLC (Delaware or Wyoming, ~$200 + $50/year). SFF accepts for-profits. |
 | Rolling application submitted | ❌ Missing | Can be done in 1 day once prerequisites are met. |
-| Public signal / reference | 🟡 Partial | GitHub repo + PyPI package history + 2,185 tests. Need to ensure these are prominently linked. |
+| Public signal / reference | 🟡 Partial | GitHub repo + PyPI package history + 2,215 tests. Need to ensure these are prominently linked. |
 
 #### 2.2.6 Fund Usage & Restrictions
 
@@ -232,7 +236,7 @@ The SFF process is deliberately designed to be more accessible than traditional 
 
 ### 2.3 Foresight Institute — AI for Science & Safety Nodes
 
-**Deadline**: Last day of every month (next: April 30, 2026)
+**Deadline**: Last day of every month (target: May 31, 2026)
 **Amount**: $10K–$100K typical; up to $300K for exceptional AI safety projects
 **Focus Areas**: AI for Security, Private AI, Decentralized & Cooperative AI, AI for Science & Epistemics
 **Node Locations**: San Francisco, Berlin
@@ -269,7 +273,7 @@ Foresight is smaller and more niche than Schmidt or SFF. They receive fewer appl
 
 #### 2.3.4 Tailored Strategy
 
-**Action: Apply by April 30 for the Decentralized & Cooperative AI focus area.**
+**Action: Apply by May 31 for the Decentralized & Cooperative AI focus area.**
 
 1. **Lead with the multi-agent governance story.** The Foresight agenda explicitly asks: "How can we ensure a verifiable chain from agent actions back to an authenticated human or organizational principal?" The Karma Ledger is literally this.
 2. **Propose a concrete node engagement plan.** Even if we can't relocate full-time, propose:
@@ -449,14 +453,14 @@ If Lucas is a BlueDot alumnus or has taken a BlueDot course, this is a **fast, l
 Rather than treating each application as independent, we should structure them as a **layered funding stack**:
 
 ### Layer 1: Fast validation money (Month 0–2)
-- **Manifund** ($25K–$50K) + **BlueDot** ($2K–$5K)
-- Purpose: Run LoCoMo benchmark, publish arxiv preprint, fix critical gaps
+- **Manifund** ($25K–$50K) + **LTFF** ($25K–$50K)
+- Purpose: Run benchmark, publish arxiv preprint, fix critical gaps
 - Timeline: Submit within 1 week; receive funds within 2–4 weeks
 
 ### Layer 2: Medium-term runway (Month 2–8)
 - **Foresight AI Nodes** ($75K–$125K)
 - Purpose: 12 months of focused governance-substrate development
-- Timeline: Submit by Apr 30 or May 31; receive funds by July–Aug 2026
+- Timeline: Submit by May 31; receive funds by July–Aug 2026
 
 ### Layer 3: Transformative research funding (Month 6–24)
 - **Schmidt Sciences Tier 1** ($400K–$800K) OR **SFF Main Round** ($120K–$180K)
@@ -472,7 +476,7 @@ Rather than treating each application as independent, we should structure them a
 
 ## 4. What Receiving One or More Grants Enables
 
-### 4.1 If we receive $25K–$50K (Manifund + BlueDot)
+### 4.1 If we receive $25K–$50K (Manifund + LTFF)
 
 **What we can do:**
 - Run the LoCoMo benchmark on WhiteMagic's memory system
@@ -541,14 +545,15 @@ If we secure Schmidt + Foresight + Manifund simultaneously (low probability but 
 
 | Day | Action | Owner | Deliverable |
 |---|---|---|---|
-| **Day 1 (Apr 28)** | Incorporate WhiteMagic Labs LLC (Delaware or Wyoming) | Lucas | Certificate of Formation, EIN |
-| **Day 1 (Apr 28)** | Open business bank account | Lucas | Account ready for grant deposits |
-| **Day 2 (Apr 29)** | Submit Manifund applications (2–3 scoped asks) | Lucas | 3 live Manifund project pages |
-| **Day 2 (Apr 29)** | Submit BlueDot Rapid Grant (if eligible) | Lucas | Airtable form submitted |
-| **Day 3 (Apr 30)** | Submit Foresight AI Nodes application | Lucas | Airtable form submitted |
-| **Day 3–5 (Apr 30–May 2)** | Draft Schmidt Sciences proposal | Lucas | Full proposal draft (6,000 words) |
-| **Day 5 (May 2)** | Identify 2–3 letter-of-support writers | Lucas | Email requests sent |
-| **Day 6–7 (May 3–4)** | Polish + submit Schmidt application | Lucas | Submitted via SurveyMonkey Apply |
+| **Day 1** | File Georgia LLC ($100) + get EIN | Lucas | LLC approved, EIN confirmed |
+| **Day 1–2** | Open Mercury business bank account (3 sub-accounts) | Lucas | Account active, cards ordered |
+| **Day 1–3** | Submit Manifund applications (1 primary + 1–2 secondary asks) | Lucas | 2–3 live Manifund project pages |
+| **Day 3–4** | Submit LTFF application (rolling, low-pressure) | Lucas | Online form submitted |
+| **Day 3** | Start SAM.gov registration (2–8 week clock) | Lucas | UEI assigned, CAGE pending |
+| **Day 4–5** | Deploy energy monitoring hardware (Shelly + PDU + Grafana) | Lucas | 12-month REAP baseline started |
+| **Day 5–7** | Draft Foresight AI Nodes application (target May 31) | Lucas | Draft complete, ready for polish |
+| **Week 2** | Polish + submit Foresight; begin arXiv preprint conversion | Lucas | Foresight submitted, preprint started |
+| **Ongoing** | Schmidt Sciences — revisit only if co-PI/letters/preprint emerge by May 10 | Lucas | Defer otherwise |
 | **Day 7 (May 4)** | Submit SFF Rolling Application | Lucas | Google Form submitted |
 
 **Total effort**: ~60 hours over 7 days. This is aggressive but feasible if prioritized.
@@ -607,7 +612,7 @@ That said — **you control your energy.** If Schmidt feels like a drag, skip it
 - **IP / scope overlap is fine** if both result in open-source MIT code. If one demands exclusive commercial rights, that's different — but none of these do.
 - **The only real conflict is your attention.** Sequence by deadline, not by exclusivity.
 
-**Tracking requirement**: If you receive multiple grants, you need **sophisticated time-and-expense tracking** (e.g., Harvest, Toggl, or a simple spreadsheet) to allocate hours and costs cleanly per grant. Some funders (Schmidt, SFF) require periodic reports; others (Manifund, BlueDot) are more flexible. Clean accounting from Day 1 prevents audit headaches later.
+**Tracking requirement**: If you receive multiple grants, you need **sophisticated time-and-expense tracking** (e.g., Harvest, Toggl, or a simple spreadsheet) to allocate hours and costs cleanly per grant. Some funders (Schmidt, SFF) require periodic reports; others (Manifund, LTFF) are more flexible. Clean accounting from Day 1 prevents audit headaches later.
 
 **Bank accounts**: One business checking account is sufficient for all grant deposits if the institution allows. However, some funders prefer or require separate accounts. For the scale we're targeting ($5K–$200K), a single business account with clear sub-ledgers (via accounting software like Wave or QuickBooks) is simpler and legally sufficient.
 
@@ -639,4 +644,73 @@ The **arXiv preprint is the single highest-ROI action.** It converts your outlin
 
 ---
 
-*Document maintained by WhiteMagic Labs. Last updated: 2026-04-28.*
+## 8. Federal Track Analysis (Track B)
+
+### 8.1 Why Federal Grants Are Different
+
+Federal SBIR/STTR grants are **not interchangeable** with EA/philanthropic grants. They serve a different strategic purpose:
+
+| Dimension | Track A (EA/Philanthropic) | Track B (Federal SBIR/STTR) |
+|---|---|---|
+| **Purpose** | Runway + credibility | Scale + commercial validation |
+| **Timeline** | 2 weeks – 3 months to cash | 6 – 18 months to cash |
+| **Amount** | $5K – $200K | Phase I: $50K–$275K; Phase II: $750K–$1.5M |
+| **Commercialization** | Not required | **Required** — "America's Seed Fund" |
+| **Compliance** | Light | Moderate (SF1408); DCAA only for DoD Phase II |
+| **Narrative** | Public good, safety, open-source | Product, market, government/enterprise customer |
+
+**Rule**: Run Track A for survival. Run Track B for scale. Do not replace Track A with Track B.
+
+### 8.2 Federal Opportunity Expected Value
+
+| Source | Ask | Win Rate | Expected Value | Timeline |
+|---|---|---|---|---|
+| DOE SBIR Phase I | $200K | 15% | $30K | Q4 2026–Q1 2027 |
+| NSF SBIR Phase I | $256K | 18% | $46K | Q4 2026–Q1 2027 |
+| USDA REAP | $90K | 50% | $45K | Q2 2027 |
+| DOE SBIR Phase II* | $1.1M | 40% | $440K | Q3 2027–Q4 2028 |
+| **Federal subtotal** | **$1.65M** | **~55–65% P≥1** | **$561K** | 12–24 months |
+
+*Phase II conditional on successful Phase I. Federal estimates are more uncertain than philanthropic due to longer timelines and commercialization requirements.*
+
+**Combined Track A + Track B estimated chance of ≥1 success**: roughly 70–85% (vs. 60–70% for Track A alone). These are heuristic estimates, not precise probabilities.
+
+### 8.3 The Commercialization Imperative
+
+SBIR reviewers score "Commercialization Potential" as a major criterion. The winning narrative for WhiteMagic:
+
+> "Open-sourcing the core memory substrate builds developer trust and creates a talent pipeline. Revenue comes from hardened, supported deployments for security-conscious government and enterprise customers who require SLAs, compliance certification, and air-gapped operation."
+
+This is the **Redis / MongoDB model**: open-core + commercial add-ons.
+
+**Government market**: Hardened WhiteMagic node for DOE National Labs, DOD forward operating bases, DHS secure facilities.
+**Enterprise market**: WhiteMagic Edge Appliance for financial services, healthcare, critical infrastructure.
+
+### 8.4 Federal Track Risk Analysis
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| SAM.gov delays block SBIR submission | Medium | High | Start SAM.gov immediately after LLC approval; expect 4–8 weeks |
+| SBIR commercialization conflicts with open-source mission | Low | Medium | Frame open-source as accelerant (Redis model) |
+| REAP rural eligibility denied | Medium | High | Verify USDA map before lease/signing |
+| 12-month energy baseline insufficient | Low | High | Start monitoring Day 1 |
+| DCAA audit failure on DoD Phase II | Low | High | Only pursue DoD after $100K+ revenue; hire DCAA consultant |
+
+### 8.5 Ranked Actions by ROI (Updated)
+
+| Rank | Action | Effort | Impact | Timeline |
+|------|--------|--------|--------|----------|
+| 1 | **Convert `KARMA_LEDGER_PAPER_OUTLINE.md` → arXiv preprint** | 8–12 hrs | **Massive** — strengthens every application | 2–3 days |
+| 2 | **File LLC ($100)** | 1–2 hrs active | **High** — unlocks SFF + federal track | 7–10 days wait |
+| 3 | **Submit 3 Manifund asks** | 6–10 hrs | **High** — fastest money, credibility signal | 1–2 days |
+| 4 | **Start SAM.gov registration** | 2–3 hrs | **High** — unlocks DOE/NSF SBIR | 2–8 weeks |
+| 5 | **Deploy energy monitoring stack** | 4–6 hrs | **High** — starts REAP baseline | 1 day |
+| 6 | **Submit Foresight (May 31)** | 6–8 hrs | **Medium-High** | By May 31 |
+| 7 | **Submit LTFF** | 4–6 hrs | **Medium** | Anytime |
+| 8 | **Submit SFF Rolling** | 12–16 hrs | **High** | After LLC formed |
+| 9 | **Draft DOE + NSF SBIR proposals** | 40–60 hrs | **Very High** | May–July 2026 |
+| 10 | **Run LoCoMo benchmark** | 4–8 hrs | **High** | If bandwidth allows |
+
+---
+
+*Document maintained by WhiteMagic Labs. Last updated: 2026-04-29.*

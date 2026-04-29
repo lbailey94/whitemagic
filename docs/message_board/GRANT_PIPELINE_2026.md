@@ -1,5 +1,7 @@
 # Grant Pipeline Tracker — 2026
 
+> **For current execution priorities, see `GRANT_EXECUTION_PLAN_2026-04-28.md`.** This document tracks status; the execution plan defines what to do next.
+
 **Date**: 2026-04-28
 **Next Review**: Weekly (Mondays)
 **Owner**: Lucas Bailey / WhiteMagic Labs
@@ -57,7 +59,7 @@
 
 | Field | Detail |
 |---|---|
-| **Deadline** | **Last day of every month** (next: April 30, 2026 — **2 days**; then May 31) |
+| **Deadline** | **Last day of every month** (target: May 31, 2026) |
 | **Amount** | $10K–$100K typical; up to $300K for AI safety |
 | **Recommended Ask** | $75K–$125K, 12 months |
 | **Fit** | **Strong** — "Decentralized & Cooperative AI" + "AI for Security" are direct matches |
@@ -70,7 +72,7 @@
 - ❌ Airtable application not yet filled
 
 **Next Action:**
-- [ ] Complete Airtable application by April 30 (for May review cycle) — **URGENT**
+- [ ] Complete Airtable application by May 31 (for June review cycle) — target date, not rushed
 - [ ] Draft node engagement plan (quarterly visits or remote participation)
 - [ ] Prepare budget breakdown
 
@@ -145,28 +147,26 @@
 
 ---
 
-### 1.5 🟢 P2 — BlueDot Rapid Grants
+### 1.5 ⏸️ Skip — BlueDot Rapid Grants
 
 | Field | Detail |
 |---|---|
 | **Deadline** | Rolling |
 | **Amount** | $50–$10K |
 | **Recommended Ask** | $3K — Compute + API credits for LoCoMo benchmark |
-| **Fit** | Moderate (eligibility depends on BlueDot community membership) |
+| **Fit** | Blocked — eligibility requires BlueDot course alumni / community membership |
 | **Portal** | [Airtable Form](https://airtable.com/appMVNtdBtvtJvu5E/pag9G3oF4DYAyassX/form) |
-| **Status** | 🔲 Not started |
+| **Status** | ⏸️ Skip |
 
 **Blockers:**
-- ❓ Lucas's BlueDot membership status unknown
+- ❌ Not in BlueDot network; no known eligibility path
 
-**Next Action:**
-- [ ] Confirm BlueDot eligibility
-- [ ] If eligible, submit $3K ask by May 3
+**Decision:** Do not spend time on this. If BlueDot eligibility emerges unexpectedly, it can be activated in <2 hours. Focus energy on Manifund, LTFF, and Foresight instead.
 
 **Notes:**
-- Fastest decision (~5 working days)
+- Fastest decision (~5 working days) — but only if already in network
 - Upfront payment by default
-- Good for removing immediate compute bottlenecks
+- Reactivate only if eligibility confirmed with zero effort
 
 ---
 
@@ -217,6 +217,33 @@
 | **Fit** | Strong for network building |
 | **Status** | ⏸️ Deferred until after funding secured (need runway to afford 3–6 months in Berkeley) |
 
+### 2.5 🟢 Federal Track — DOE SBIR
+
+| Field | Detail |
+|---|---|
+| **Deadline** | Q3 2026 solicitation window |
+| **Amount** | Phase I: ~$200K |
+| **Fit** | Strong — energy-efficient edge compute aligns with DOE priorities |
+| **Status** | ⏸️ Background drafting; submit when SAM.gov clears and solicitation opens |
+
+### 2.6 🟢 Federal Track — NSF SBIR
+
+| Field | Detail |
+|---|---|
+| **Deadline** | Rolling via SBIR.gov |
+| **Amount** | Phase I: $256K |
+| **Fit** | Medium-Strong — trustworthy AI memory aligns with NSF "Safe Learning-Enabled Systems" |
+| **Status** | ⏸️ Background drafting; submit after commercialization narrative is polished |
+
+### 2.7 🟡 Federal Track — USDA REAP
+
+| Field | Detail |
+|---|---|
+| **Deadline** | Annual cycle (apply May 2027 after 12-month baseline) |
+| **Amount** | Up to $1M (25–50% cost share) |
+| **Fit** | Strong if rural location confirmed |
+| **Status** | ⏸️ Start energy monitoring Day 1; apply after 12-month baseline |
+
 ---
 
 ## 3. Closed / Missed Opportunities
@@ -233,22 +260,28 @@
 
 ## 4. Prerequisites Dashboard
 
-| Prerequisite | Schmidt | SFF | Foresight | Manifund | BlueDot |
-|---|---|---|---|---|---|
-| Incorporation / fiscal sponsor | Preferred | **Required** | Preferred | Preferred | Not required |
-| Bank account | Preferred | **Required** | Preferred | Preferred | Not required |
-| Arxiv preprint | Strongly preferred | Preferred | Preferred | Helpful | Not required |
-| LoCoMo benchmark | Helpful | Not required | Helpful | Helpful | Not required |
-| Letters of support | **Required** | Helpful | Helpful | Not required | Not required |
-| Academic affiliation | Strongly preferred | Not required | Not required | Not required | Not required |
-| Public codebase | **Required** | Helpful | **Required** | Helpful | Helpful |
+| Prerequisite | Schmidt | SFF | Foresight | Manifund | BlueDot | DOE SBIR | NSF SBIR | USDA REAP |
+|---|---|---|---|---|---|---|---|---|
+| Incorporation / fiscal sponsor | Preferred | **Required** | Preferred | Preferred | Not required | **Required** | **Required** | **Required** |
+| Bank account | Preferred | **Required** | Preferred | Preferred | Not required | **Required** | **Required** | Preferred |
+| SAM.gov / UEI / CAGE | Not required | Not required | Not required | Not required | Not required | **Required** | **Required** | Not required |
+| Arxiv preprint | Strongly preferred | Preferred | Preferred | Helpful | Not required | Preferred | Preferred | Not required |
+| LoCoMo benchmark | Helpful | Not required | Helpful | Helpful | Not required | Helpful | Helpful | Not required |
+| Letters of support | **Required** | Helpful | Helpful | Not required | Not required | Helpful | Helpful | Not required |
+| Academic affiliation | Strongly preferred | Not required | Not required | Not required | Not required | Not required | Not required | Not required |
+| Public codebase | **Required** | Helpful | **Required** | Helpful | Helpful | Helpful | Helpful | Not required |
+| Commercialization plan | Not required | Not required | Not required | Not required | Not required | **Required** | **Required** | Not required |
+| Energy audit / baseline | Not required | Not required | Not required | Not required | Not required | Not required | Not required | **Required** |
 
 **Critical path:**
-1. Incorporate LLC + open bank account (unblocks SFF, helps others)
+1. Incorporate LLC + open bank account (unlocks SFF + federal track)
 2. Submit Manifund + LTFF (fast validation money; skip BlueDot — not in network)
 3. Submit Foresight (target May 31 with LLC on application)
-4. Revisit Schmidt only if bandwidth remains by May 10; otherwise defer
-5. Submit SFF Rolling (long-term runway, deferred to 2027)
+4. Start SAM.gov registration immediately after bank account opens (2–8 week clock)
+5. Deploy energy monitoring stack (starts 12-month REAP baseline)
+6. Revisit Schmidt only if bandwidth remains by May 10; otherwise defer
+7. Submit SFF Rolling (long-term runway, deferred to 2027)
+8. Draft DOE + NSF SBIR proposals in background (submit Q3 2026 / rolling)
 
 > **See also**: `GRANT_EXECUTION_PLAN_2026-04-28.md` for consolidated week-by-week actions and expected value math.
 

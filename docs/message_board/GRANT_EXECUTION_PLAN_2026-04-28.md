@@ -17,20 +17,42 @@
 | **SFF Rolling → P1 (after LLC)** | Life-changing if won; LLC unlocks it entirely. Funding arrives Q1 2027 regardless. |
 | **SFF HSEE → P1 (target July 8)** | Comfortable timeline; strong framing fit. |
 | **ACX → Defer to Dec 2026** | Line up wilder CODEX ideas for later. |
+| **Federal Track → P2 (background)** | DOE/NSF SBIR + USDA REAP are Year 2–3 transformative bets, not survival money. Start SAM.gov + energy monitoring now; submit proposals in Q3 2026. |
 
 ---
 
-## 1. Immediate Actions (Apr 28–May 5)
+## 0. Phase 0: Foundation — Entity & Federal Eligibility (Day 1–2)
 
-### 1.1 File LLC + EIN (Day 1–2)
+### 0.1 File LLC + EIN (Day 1)
 - **Action**: File Georgia LLC online via eCorp portal ($100)
-- **Alternative**: Use ZenBusiness/MaxFilings/Tailor Brands free plan (pay $100 state fee only; get 1 year free registered agent)
-- **Day 2**: Apply for EIN at irs.gov (free, 5 minutes) — but only after LLC is approved
-- **Wait**: 7 business days for LLC approval
+- **Name**: "WhiteMagic Labs LLC" (verify availability first)
+- **Wait**: 24–48 hours for Georgia approval
 
-### 1.2 Open Business Bank Account (Day 8–10, after LLC approval)
-- **Primary recommendation**: Mercury or Novo ($0 minimum, $0 monthly fee)
+### 0.2 Get EIN (Day 1–2, after LLC approval)
+- **Action**: Apply for EIN at irs.gov (free, 5 minutes)
+- **Output**: EIN confirmation letter (CP 575) — save as PDF
+
+### 0.3 Draft Operating Agreement (Day 1–2)
+- **Must include**:
+  - "Hereby assigns" IP clause (present tense, not future)
+  - Exhibit A listing all pre-LLC assets (Project Whitemagic codebase, hardware designs, benchmarks)
+  - AI-assisted work clause capturing prompt architectures and curated outputs
+- **Template**: See `FEDERAL_GRANT_PLAYBOOK.md` §4
+
+---
+
+## 1. Immediate Actions — Track A: Fast Money (Apr 28–May 5)
+
+### 1.1 Open Business Bank Account (Day 2–3, after EIN)
+- **Primary recommendation**: Mercury ($0 minimum, $0 monthly, multiple sub-accounts)
+  - Create 3 sub-accounts: "Restricted Grants", "Unrestricted Ops", "Payroll Reserve"
 - **Alternative**: Truist Simple ($100 minimum, $0 monthly, $400 bonus if deposit $2K within 30 days using promo `SB26Q2CHECKING` through 7/9/2026)
+
+### 1.2 Start SAM.gov Registration (Day 3, after bank account opens)
+- **Action**: Register at [sam.gov](https://sam.gov) using exact LLC legal name
+- **Required**: Bank routing/account numbers for EFT verification
+- **Timeline**: 2–8 weeks (start immediately; do not wait)
+- **Output**: UEI (auto-assigned) + CAGE code (1–2 weeks after SAM review)
 
 ### 1.3 Submit Manifund Applications (Day 1–3)
 - **Target regrantors**: Joel Becker (AI safety infra), Neel Nanda (interpretability), Gavin Leech (forecasting)
@@ -69,7 +91,7 @@
 
 ---
 
-## 3. Long-Term Runway (May 20–July 8)
+## 3. Long-Term Runway — Track A Continued (May 20–July 8)
 
 ### 3.1 Submit SFF Rolling Application (After LLC + bank account)
 - **Track**: Freedom Track
@@ -85,7 +107,39 @@
 
 ---
 
-## 4. Deferred / Background
+## 4. Track B: Federal Grants — Background Execution (May–Dec 2026)
+
+> **Rule**: Track B runs in parallel with Track A. It does not replace Track A. Federal grants are Year 2–3 transformative bets, not survival money.
+
+### 4.1 SAM.gov / UEI / CAGE (May, ongoing)
+- **Action**: Monitor SAM.gov registration status; respond to any kickbacks within 24 hours
+- **Output**: Active SAM.gov profile with UEI and CAGE code
+
+### 4.2 Energy Monitoring Stack (May, Day 1 of lab operation)
+- **Action**: Deploy Shelly Pro 3EM (panel-level) + APC Metered PDU (rack-level) + Prometheus/Grafana (data historian)
+- **Cost**: ~$300–$500 in hardware
+- **Output**: Minute-by-minute energy logs starting Day 1
+
+### 4.3 Draft DOE SBIR Phase I (May–July)
+- **Narrative**: "Self-optimizing, energy-aware AI substrate for low-power edge compute"
+- **Commercialization**: Hardened edge appliance for DOE National Labs / DOD forward operating bases
+- **Effort**: 20–30 hours
+- **Submit**: Next DOE SBIR solicitation window (likely Q3 2026)
+
+### 4.4 Draft NSF SBIR Phase I (May–July)
+- **Narrative**: "Karma Ledger — runtime audit substrate for trustworthy multi-agent coordination"
+- **Commercialization**: Governance API for enterprise AI orchestration ($0.01–$0.05 per audit call)
+- **Effort**: 20–30 hours
+- **Submit**: Rolling via SBIR.gov
+
+### 4.5 USDA REAP Preparation (May 2026–May 2027)
+- **Action**: Maintain 12-month energy baseline; schedule certified energy audit in Month 10
+- **Apply**: May 2027 (first eligible cycle after baseline)
+- **Expected award**: $45K–$200K (25–50% cost share)
+
+---
+
+## 5. Deferred / Background
 
 | Opportunity | Trigger | Action |
 |---|---|---|
@@ -96,9 +150,9 @@
 
 ---
 
-## 5. Expected Value Math
+## 6. Expected Value Math
 
-### Scenario: Execute All Immediate + Medium-Term Actions
+### Scenario A: Track A Only (EA/Philanthropic)
 
 | Source | Ask | Win Rate | Expected Value | Timeline |
 |---|---|---|---|---|
@@ -107,11 +161,28 @@
 | Foresight | $100K | 30% | $30K | 2 months |
 | SFF Rolling | $150K | 22% | $33K | Q1 2027 |
 | SFF HSEE | $125K | 18% | $22.5K | Nov 2026 |
-| **Combined P(at least one)** | — | **~72%** | — | — |
+| **Combined estimated chance of ≥1 success** | — | **~60–70%** | — | — |
 
 **Most likely near-term outcome**: $25K–$75K from Manifund + LTFF + Foresight within 3 months.
-**Most likely total outcome**: $50K–$150K across all sources by Q1 2027.
-**Best case**: $300K+ if SFF Rolling + Foresight + Manifund all hit.
+**Most likely total outcome**: $50K–$150K across all Track A sources by Q1 2027. These are heuristic estimates based on base-rate analysis, not guarantees.
+
+### Scenario B: Track A + Track B (Federal)
+
+| Source | Ask | Win Rate | Expected Value | Timeline |
+|---|---|---|---|---|
+| Track A (above) | $455K combined | ~60–70% P≥1 | $114K | 0–18 months |
+| DOE SBIR Phase I | $200K | 15% | $30K | Q4 2026–Q1 2027 |
+| NSF SBIR Phase I | $256K | 18% | $46K | Q4 2026–Q1 2027 |
+| USDA REAP | $90K | 50% | $45K | Q2 2027 |
+| DOE SBIR Phase II* | $1.1M | 40% | $440K | Q3 2027–Q4 2028 |
+| **Combined estimated chance of ≥1 success** | — | **~70–85%** | — | — |
+
+*Phase II win rate assumes successful Phase I completion.
+
+**Most likely total outcome (both tracks)**: $100K–$300K by Q1 2027; $300K–$1M+ by Q4 2027 if Phase II hits.
+**Best case**: $1.5M+ if SFF + DOE Phase II + REAP all hit.
+
+**Key insight**: Track B adds **$0 upfront cost** (just time) but increases the ceiling by 10x. The federal proposals can reuse 80% of the Track A narrative (team, prior art, technical approach) with a commercialization paragraph added.
 
 ---
 

@@ -1,8 +1,10 @@
 # Grant Opportunity Tier List — Second Pass (2026-04-27)
 
+> **For current execution priorities, see `GRANT_EXECUTION_PLAN_2026-04-28.md`.** This document is a strategic map; the execution plan is the operational source of truth.
+
 **Methodology**: Base-rate analysis + structural fit + network proximity + deadline proximity. Tier 0 = no legal entity required, highest win probability for a solo developer. Tier 3+ = requires LLC, academic affiliation, or team.
 
-**Portfolio math**: Applying to 4+ independent opportunities yields ~65% chance of ≥1 success. Applying to 6+ yields ~78%.
+**Portfolio math**: Applying to 4+ independent opportunities yields an estimated ~60–70% chance of ≥1 success. Applying to 6+ yields an estimated ~70–80%. These are heuristic estimates, not precise probabilities.
 
 ---
 
@@ -106,7 +108,7 @@
 
 | Field | Detail |
 |---|---|
-| **Deadline** | Last day of every month (next: Apr 30 / May 31) |
+| **Deadline** | Last day of every month (target: May 31) |
 | **Amount** | $10K–$100K typical; up to $300K for AI safety |
 | **Win Rate** | **25–35%** for well-matched projects |
 | **Speed** | ~2 months review |
@@ -181,6 +183,57 @@
 **Why Tier 1**: LTFF explicitly funds individuals working on long-termist AI safety. No entity required. They funded early-stage projects from now-major orgs.
 
 **Strategy**: Frame WhiteMagic as "open-source governance infrastructure for multi-agent AI safety." Emphasize the public good nature.
+
+---
+
+## Tier 1.5 — Federal Track: Transformative Capital (12–24 Month Horizon)
+
+> **Definition**: Federal SBIR/STTR and USDA grants. LLC required. SAM.gov/UEI/CAGE required. These are **Year 2–3 bets**, not Year 1 survival money. Run in parallel with Track A (EA/philanthropic).
+
+### 1.5.1 🔥 DOE SBIR — Energy-Efficient Edge Computing
+
+| Field | Detail |
+|---|---|
+| **Deadline** | Periodic solicitations (next likely: Q3 2026) |
+| **Amount** | Phase I: ~$200K (6–12 months); Phase II: ~$1.1M (24 months) |
+| **Win Rate** | **12–18%** first-time; **20–25%** with prior Phase I |
+| **Speed** | 6–9 months to award |
+| **Entity Required** | **YES** — US-owned LLC, <500 employees |
+| **Effort** | 20–30 hours per proposal |
+
+**Why Tier 1.5**: DOE explicitly funds edge-AI energy efficiency and microgrid resilience. WhiteMagic's self-throttling memory substrate is a direct match. Phase I is achievable as a first-time applicant; Phase II scales to $1M+.
+
+**Commercialization required**: Yes. Frame as "hardened edge appliance for DOE National Labs and DOD forward operating bases."
+
+---
+
+### 1.5.2 🔥 NSF SBIR — Trustworthy AI Memory Systems
+
+| Field | Detail |
+|---|---|
+| **Deadline** | Rolling via SBIR.gov |
+| **Amount** | Phase I: $256K (6 months); Phase II: $1M (24 months) |
+| **Win Rate** | **15–20%** first-time; **25–30%** with prior NSF funding |
+| **Speed** | 4–6 months to award |
+| **Entity Required** | **YES** — US-owned LLC, <500 employees |
+| **Effort** | 20–30 hours per proposal |
+
+**Why Tier 1.5**: NSF's "Safe Learning-Enabled Systems" program funds runtime verification and audit substrates. Karma Ledger is novel. Must articulate commercialization path (governance API for enterprise AI orchestration).
+
+---
+
+### 1.5.3 🟡 USDA REAP — Rural Energy Infrastructure
+
+| Field | Detail |
+|---|---|
+| **Deadline** | Annual cycles |
+| **Amount** | Up to $1M (25–50% cost share) for renewables; up to $500K for efficiency |
+| **Win Rate** | **40–60%** with certified energy audit + 12-month baseline |
+| **Speed** | 3–6 months to award |
+| **Entity Required** | **YES** — for-profit LLC qualifies |
+| **Effort** | 15–25 hours + energy audit ($500–$2,000) |
+
+**Why Tier 1.5**: Covers 25–50% of solar/battery/efficiency costs. Combined with Section 48E ITC (30% tax credit), can cover 55–80% of infrastructure. **Must start energy monitoring Day 1** — 12-month baseline is required.
 
 ---
 
@@ -327,9 +380,12 @@
 | **1** | LTFF / EA Funds | Rolling | $5K–$100K | 15–25% | No | 1–2 mo | 🟡 P1 |
 | **2** | **SFF Rolling** | Rolling | $50K–$200K | **18–25%** | **LLC Required** | 6–8 mo | 🟡 P1 |
 | **2** | **SFF HSEE Theme** | July 8 | $50K–$200K | **15–22%** | **LLC Required** | Nov 2026 | 🟡 P1 |
+| **1.5** | **DOE SBIR** | Q3 2026 | $200K–$1.1M | **12–18%** | LLC Required | 6–9 mo | 🟡 P1 (background) |
+| **1.5** | **NSF SBIR** | Rolling | $256K–$1M | **15–20%** | LLC Required | 4–6 mo | 🟡 P1 (background) |
+| **1.5** | **USDA REAP** | Annual | $45K–$1M | **40–60%** | LLC Required | 3–6 mo | 🟢 P2 (background) |
 | **2** | Foresight (funding-only) | Monthly | $10K–$100K | 10–15% | LLC Preferred | 2 mo | 🔵 P3 |
 | **3** | Schmidt Tier 2 | May 17 | $1M–$5M+ | **<3%** | Multi-PI | Summer | 🔵 P3 |
-| **3** | SBIR Phase I | Periodic | ~$275K | 10–15% | LLC Required | 6–12 mo | 🔵 P3 |
+| **3** | SBIR Phase I (Generic) | Periodic | ~$275K | 10–15% | LLC Required | 6–12 mo | 🔵 P3 |
 | **3** | ARIA | Various | £500K–£5M | 5–10% | UK entity | Varies | 🔵 P3 |
 
 ---
@@ -347,25 +403,36 @@
 | 7 | **Coefficient Giving** | "Low-odds long shot; door-opener after other wins" | 🔵 P3 — Activate after first credibility signal |
 | 8 | **SFF Rolling** | "Life-changing if we get it; LLC unlocks this" | 🟡 P1 — Submit after LLC formed (funding Q1 2027) |
 | 9 | **SFF HSEE Theme** | "Comfortable timeline; strong frame fit" | 🟡 P1 — Target July 8 with polished application |
+| 10 | **DOE SBIR** | "Year 2 transformative bet; start drafting now" | 🟢 P2 — Background drafting; submit Q3 2026 |
+| 11 | **NSF SBIR** | "Strong tech fit; commercialization angle required" | 🟢 P2 — Background drafting; submit rolling |
+| 12 | **USDA REAP** | "Start energy monitoring Day 1; apply Year 2" | 🟢 P2 — Start baseline now; apply after 12 months |
 
 ## Recommended Application Sequence
 
 ### Phase 1: Fast Money + Credibility (Apr 28–May 5)
 1. **Manifund** — Submit 3–5 scoped asks across 2–3 regrantors (Day 1–3)
 2. **LTFF** — Submit rolling application (Day 3–4)
-3. **File LLC + EIN** — Unlocks SFF and strengthens all other apps (Day 1–2)
+3. **File LLC + EIN** — Unlocks SFF, federal track, and strengthens all other apps (Day 1–2)
 
-### Phase 2: Medium-Term Runway (May 5–31)
+### Phase 2: Medium-Term Runway + Federal Foundation (May 5–31)
 4. **Foresight AI Nodes** — Submit by May 31 with LLC on application
 5. **SFF Rolling** — Submit once bank account is open (funding Q1 2027)
+6. **SAM.gov / UEI / CAGE** — Start registration immediately after bank account opens (2–8 week clock)
+7. **Energy monitoring stack** — Deploy Shelly Pro 3EM + Smart PDU + Prometheus/Grafana (starts REAP baseline)
 
 ### Phase 3: Transformative / Long-Shot (May 10–July)
-6. **Schmidt Tier 1** — Revisit only if bandwidth remains by May 10; otherwise skip
-7. **SFF HSEE Theme** — Submit by July 8 with strong polish
-8. **Coefficient Giving** — Activate after first Manifund/Foresight win as credibility signal
+8. **Schmidt Tier 1** — Revisit only if bandwidth remains by May 10; otherwise skip
+9. **SFF HSEE Theme** — Submit by July 8 with strong polish
+10. **Coefficient Giving** — Activate after first Manifund/Foresight win as credibility signal
 
-### Phase 4: Deferred
-9. **ACX Grants** — Bookmark for December 2026; scope CODEX wilder ideas then
+### Phase 4: Federal Track Execution (July–Dec 2026)
+11. **DOE SBIR Phase I** — Submit at next solicitation window (target Q3 2026)
+12. **NSF SBIR Phase I** — Submit rolling via SBIR.gov
+13. **arXiv preprint** — Strengthens all federal and philanthropic applications
+
+### Phase 5: Deferred / Year 2
+14. **USDA REAP** — Apply after 12-month energy baseline established (May 2027)
+15. **ACX Grants** — Bookmark for December 2026; scope CODEX wilder ideas then
 
 ---
 
