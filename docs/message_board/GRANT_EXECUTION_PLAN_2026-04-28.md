@@ -12,12 +12,14 @@
 |---|---|
 | **Schmidt Tier 1 → P3 (defer/skip)** | Perfectionism blocker + low solo odds (8–12%) + 19-day deadline. Revisit only if bandwidth remains after higher-ROI apps. |
 | **BlueDot → Skip** | Not in network; eligibility blocker. Don't spend time. |
-| **Manifund → P0 (immediate)** | 40–55% win rate, no entity required, fastest money. Target 3–5 scoped asks simultaneously across 2–3 regrantors. |
-| **Foresight → P1 (target May 31)** | Better with LLC + project pages visible. Not rushing for Apr 30 deadline. |
-| **SFF Rolling → P1 (after LLC)** | Life-changing if won; LLC unlocks it entirely. Funding arrives Q1 2027 regardless. |
+| **Manifund → P0 (immediate)** | 40–55% win rate, no entity required, fastest money. Lead with Karma Ledger benchmark ($25K); secondary asks as energy allows. |
+| **Foresight → P1 (target May 31)** | CyberBrain + Karma Ledger angle is unique (44K tokens CODEX prior art + working code). Not rushing for Apr 30. |
+| **SFF Rolling → P1 (after LLC)** | MandalaOS + Karma Ledger framing for Freedom Track. Life-changing if won; LLC unlocks it. Funding arrives Q1 2027. |
 | **SFF HSEE → P1 (target July 8)** | Comfortable timeline; strong framing fit. |
-| **ACX → Defer to Dec 2026** | Line up wilder CODEX ideas for later. |
+| **ACX → Defer to Dec 2026** | Cyberthon 1989 history or CODEX Platform are perfect ACX fits. Line up wilder CODEX ideas for later. |
 | **Federal Track → P2 (background)** | DOE/NSF SBIR + USDA REAP are Year 2–3 transformative bets, not survival money. Start SAM.gov + energy monitoring now; submit proposals in Q3 2026. |
+| **Templeton/Consciousness → P3 (Year 2)** | Different funder pool entirely. Neurotransmitter vector telemetry + CyberBrain consciousness framework = strong fit. Submit Q4 2026. |
+| **12 CODEX threads → Prior art, not 12 separate grants** | The 12 extracted projects strengthen 3 core applications. Do not chase 12 narratives. See `CODEX_SYNTHESIS_THREE_REVIEW.md`. |
 
 ---
 
@@ -55,12 +57,13 @@
 - **Output**: UEI (auto-assigned) + CAGE code (1–2 weeks after SAM review)
 
 ### 1.3 Submit Manifund Applications (Day 1–3)
-- **Target regrantors**: Joel Becker (AI safety infra), Neel Nanda (interpretability), Gavin Leech (forecasting)
-- **Scoped asks**:
-  1. **Joel Becker**: "$25K — Karma Ledger benchmark on 100+ tool interactions; publish open-source evaluation protocol"
+- **Primary ask** (submit first): **Joel Becker** — "$25K — Karma Ledger benchmark on 100+ tool interactions; publish open-source evaluation protocol"
+  - **CODEX angle**: "This benchmark draws on 12 months of documented governance research (316 AI-assisted conversations, May 2025–Apr 2026) and a working runtime audit substrate implemented in February 2026."
+- **Secondary asks** (submit if energy allows):
   2. **Neel Nanda**: "$15K — Voice Audit for tool-selection hallucination detection; adversarial red-team + measurement"
   3. **Gavin Leech**: "$10K — Foresight Engine drift prediction validation; 3-month forecasting benchmark"
-- **Effort**: 2–3 hours per ask (6–9 hours total)
+  4. **Any regrantor**: "$20K — CODEX Platform: AI conversation archaeology toolkit (Rust pipeline + Fragment search for research lineage)"
+- **Effort**: Primary 2–3 hrs; each secondary 45–90 min
 
 ### 1.4 Submit LTFF Application (Day 3–4)
 - **Frame**: "Open-source governance infrastructure for multi-agent AI safety"
@@ -76,6 +79,7 @@
 - **Effort**: 8–12 hours
 - **Impact**: Strengthens every grant application simultaneously
 - **Deadline**: Submit by May 10 (before Foresight and SFF applications)
+- **CODEX integration**: Include prior-art timeline showing Karma Ledger spec (May 2025) predates structurally similar commercial features (Apr 2026). Reference CODEX archive as documented research lineage.
 
 ### 2.2 Run LoCoMo Benchmark (Optional)
 - **Action**: Execute `core/eval_aux/locomo_v019_benchmark.py` or equivalent

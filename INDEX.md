@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0  
-**Last Updated**: April 27, 2026  
+**Last Updated**: April 29, 2026  
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -67,6 +67,7 @@ These files live at the repository root. They are the **public face** of the pro
 | `GRANT_PIPELINE_2026.md` | Live tracker — deadlines, status, blockers, and action items for every active grant application | Apr 27 |
 | `GRANT_TIER_LIST_2026.md` | Second-pass tiered ranking — solo-dev-friendly (Tier 0) to multi-PI required (Tier 3), with win rates and entity requirements | Apr 27 |
 | `FEDERAL_GRANT_PLAYBOOK.md` | SBIR/STTR, USDA REAP, DOE/NSF federal grants — registration, narrative strategy, commercialization, compliance, and energy monitoring | Apr 29 |
+| `CODEX_SYNTHESIS_THREE_REVIEW.md` | Synthesis of three independent review teams: code audit, grant strategy review, CODEX extraction — integrated execution plan with 12-project portfolio math | Apr 29 |
 | `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
 | `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 26 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
@@ -550,4 +551,4 @@ Language-specific docs for the polyglot core matrix.
 
 ---
 
-*This index is a living document. Last updated: 2026-04-25 by session agent.*
+*This index is a living document. Last updated: 2026-04-29 by session agent.*

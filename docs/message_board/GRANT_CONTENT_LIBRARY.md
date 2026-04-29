@@ -18,6 +18,7 @@
 - **Tools**: 479 callable across 451 dispatch entries, 28 Gana meta-tools (PRAT mode)
 - **License**: MIT
 - **Version**: 22.2.0
+- **CODEX Archive**: 316 conversations (219 OpenAI + 97 Grok), May 2025–Apr 2026, ~500K+ tokens across 8 knowledge domains
 
 ---
 
@@ -47,7 +48,7 @@
 > - **2,215 passing tests**, 0 failures, 67 skipped (optional-dependency features)
 > - **479 callable tools** across 451 dispatch entries, compressible to 28 Gana meta-tools via PRAT
 > - **MIT-licensed**, publicly available since [DATE]
-> - **Prior art**: Karma Ledger runtime audit spec (May 2025); independent development predating structurally similar commercial audit logs
+> - **Prior art**: 12-month documented research program across 316 AI-assisted conversations (CODEX archive, May 2025–Apr 2026). Karma Ledger spec drafted May 2025; implemented Feb 2026. CyberBrain architecture designed Sep 2025. MandalaOS governance spec drafted Oct 2025.
 > - **Development model**: Solo founder with AI-assisted development pipeline; all core code written and maintained by the founder with automated testing and CI verification
 >
 > **Collaborators**: Currently solo. Open to co-PI partnerships for Schmidt Sciences Tier 1+ applications.
@@ -100,12 +101,15 @@
 
 | Date | Milestone | Significance |
 |---|---|---|
-| May 2025 | Karma Ledger spec drafted | First documented runtime audit substrate for agent tool-use |
+| May 2025 | Karma Ledger spec drafted | First documented runtime audit substrate for agent tool-use (CODEX: `3_GOVERNANCE/`) |
+| Sep 2025 | CyberBrain architecture designed | Global neurosymbolic CNS hierarchy (CODEX: `1_CONSCIOUSNESS/CyberBrain Core Mapping.txt`, 44K tokens) |
+| Oct 2025 | MandalaOS governance spec drafted | Kernel-level ethical interception OS specification (CODEX: `mandalaos.txt`) |
 | [DATE] | WhiteMagic v1.0 released | Open-source cognitive substrate with 5D memory, Dharma governance |
 | Feb 2026 | Karma Ledger implemented | Working code with test-backed verification |
 | Apr 2026 | Anthropic Claude Memory audit log shipped | Structurally related commercial feature; validates problem space |
 | Apr 2026 | 2,215 tests, 0 failures verified | Production-grade engineering hygiene |
 | [DATE] | arXiv preprint submitted | Citable artifact for all future grant applications |
+| [DATE] | CODEX archive indexed | 316 conversations, 8 knowledge domains, ~500K+ tokens of documented research lineage |
 
 **Tone guidance**: Use "independently developed," "documented prior design," "parallel emergence," "structurally related," "open implementation." Avoid adversarial language ("predates," "copied," "years ahead").
 
@@ -173,4 +177,4 @@
 
 ---
 
-*Last updated: 2026-04-29 | Current metrics: 2,215 tests, 479 tools, v22.2.0*
+*Last updated: 2026-04-29 | Current metrics: 2,215 tests, 67 skipped, 0 failed, 479 tools, v22.2.0*
