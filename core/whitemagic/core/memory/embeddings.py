@@ -109,8 +109,8 @@ class EmbeddingEngine:
 
     def available(self, include_cache: bool = False) -> bool:
         """Check if embedding backend is available.
-        
-        If include_cache is True, returns True if at least the database 
+
+        If include_cache is True, returns True if at least the database
         cache of embeddings exists, even if the model cannot be loaded.
         """
         if include_cache:
@@ -514,7 +514,7 @@ class EmbeddingEngine:
 
     def _load_vec_cache(self) -> tuple[list[str], Any]:
         """Load or return cached vectors.
-        
+
         Returns (ids, vectors) where vectors is shape (N, 384) float32 if np else list[list[float]].
         """
         db = self._get_db()

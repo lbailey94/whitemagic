@@ -47,7 +47,6 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     from whitemagic.cli.lazy_groups import LazyGroup
 
     # Optional flags
-    HAS_LAZY_GROUPS = True
 
     def _warn_load(name: str, e: Exception) -> None:
         if HAS_RICH and console:

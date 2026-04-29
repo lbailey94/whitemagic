@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class SingletonRegistry:
     """Centralized registry for singleton instances.
-    
+
     Tracks singleton instances by name and provides a reset mechanism
     for test isolation. New singletons are automatically included in
     test resets without manual bookkeeping.
@@ -38,11 +38,11 @@ class SingletonRegistry:
     @classmethod
     def register(cls, name: str, factory: Callable[[], Any]) -> Any:
         """Register a singleton factory and return the instance.
-        
+
         Args:
             name: Unique identifier for the singleton (e.g., "module.ClassName")
             factory: Callable that creates the singleton instance
-            
+
         Returns:
             The singleton instance (cached or newly created)
         """
@@ -61,7 +61,7 @@ class SingletonRegistry:
     @classmethod
     def reset(cls, name: str) -> None:
         """Reset a specific singleton by clearing its cached instance.
-        
+
         Args:
             name: The singleton identifier
         """
@@ -72,7 +72,7 @@ class SingletonRegistry:
     @classmethod
     def reset_all(cls) -> None:
         """Reset all registered singletons.
-        
+
         Clears all cached instances, forcing them to be recreated on next access.
         """
         count = len(cls._instances)
@@ -82,7 +82,7 @@ class SingletonRegistry:
     @classmethod
     def get_registered_names(cls) -> list[str]:
         """Get list of all registered singleton names.
-        
+
         Returns:
             List of singleton identifiers
         """
@@ -91,10 +91,10 @@ class SingletonRegistry:
     @classmethod
     def is_registered(cls, name: str) -> bool:
         """Check if a singleton is registered.
-        
+
         Args:
             name: The singleton identifier
-            
+
         Returns:
             True if registered, False otherwise
         """
@@ -103,11 +103,11 @@ class SingletonRegistry:
 
 def register_singleton(name: str, factory: Callable[[], Any]) -> Any:
     """Convenience function to register a singleton.
-    
+
     Args:
         name: Unique identifier for the singleton
         factory: Callable that creates the singleton instance
-        
+
     Returns:
         The singleton instance
     """
@@ -116,7 +116,7 @@ def register_singleton(name: str, factory: Callable[[], Any]) -> Any:
 
 def reset_singleton(name: str) -> None:
     """Convenience function to reset a specific singleton.
-    
+
     Args:
         name: The singleton identifier
     """
@@ -130,7 +130,7 @@ def reset_all_singletons() -> None:
 
 def get_registered_singletons() -> list[str]:
     """Get list of all registered singleton names.
-    
+
     Returns:
         List of singleton identifiers
     """

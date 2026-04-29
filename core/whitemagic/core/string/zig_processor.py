@@ -49,11 +49,11 @@ class ZigStringProcessor:
     def extract_keywords(self, text: str, max_keywords: int = 100) -> list[str]:
         """
         Extract keywords from text using SIMD-accelerated processing.
-        
+
         Args:
             text: Input text
             max_keywords: Maximum number of keywords to extract
-            
+
         Returns:
             List of extracted keywords
         """
@@ -97,13 +97,13 @@ class ZigStringProcessor:
     def tokenize(self, text: str, max_tokens: int = 4096) -> list[tuple[str, int, int]]:
         """
         Tokenize text using SIMD-accelerated processing.
-        
+
         Note: wm_simd_tokenize not currently exported, using Python fallback.
-        
+
         Args:
             text: Input text
             max_tokens: Maximum number of tokens
-            
+
         Returns:
             List of (token, start_offset, end_offset) tuples
         """

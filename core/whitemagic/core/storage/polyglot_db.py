@@ -93,7 +93,7 @@ class PolyglotDB:
                 connect_args={"check_same_thread": False},
             )
             logger.debug("SQLite connection pool initialized")
-        except (sqlite3.Error, sqlite3.OperationalError) as e:
+        except Exception as e:
             logger.warning(f"SQLite pool initialization failed: {e}")
             # Fallback to direct connection
             try:

@@ -142,7 +142,7 @@ class ZodiacalClock:
 
     def get_resonance_multiplier(self, mansion_num: int) -> float:
         """Calculate the resonance multiplier for a given mansion.
-        
+
         Returns 1.5 if aligned with current Zodiac sign, 1.0 otherwise.
         """
         aligned_sign = NUMERICAL_MANSION_TO_SIGN.get(mansion_num)

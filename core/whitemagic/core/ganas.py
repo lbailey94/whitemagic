@@ -31,10 +31,34 @@ logger = logging.getLogger(__name__)
 # --- TYPES ---
 
 class LunarMansion(Enum):
-    HORN = "horn"; NECK = "neck"; ROOT = "root"; ROOM = "room"; HEART = "heart"; TAIL = "tail"; BASKET = "basket"
-    GHOST = "ghost"; WILLOW = "willow"; STAR = "star"; NET_EXT = "net_ext"; WINGS = "wings"; CHARIOT = "chariot"; ABUNDANCE = "abundance"
-    STRADDLING = "straddling"; MOUND = "mound"; STOMACH = "stomach"; HAIRY = "hairy"; NET = "net"; TURTLE = "turtle"; THREE_STARS = "three_stars"
-    DIPPER = "dipper"; OX = "ox"; GIRL = "girl"; VOID = "void"; ROOF = "roof"; ENCAMPMENT = "encampment"; WALL = "wall"
+    HORN = "horn"
+    NECK = "neck"
+    ROOT = "root"
+    ROOM = "room"
+    HEART = "heart"
+    TAIL = "tail"
+    BASKET = "basket"
+    GHOST = "ghost"
+    WILLOW = "willow"
+    STAR = "star"
+    NET_EXT = "net_ext"
+    WINGS = "wings"
+    CHARIOT = "chariot"
+    ABUNDANCE = "abundance"
+    STRADDLING = "straddling"
+    MOUND = "mound"
+    STOMACH = "stomach"
+    HAIRY = "hairy"
+    NET = "net"
+    TURTLE = "turtle"
+    THREE_STARS = "three_stars"
+    DIPPER = "dipper"
+    OX = "ox"
+    GIRL = "girl"
+    VOID = "void"
+    ROOF = "roof"
+    ENCAMPMENT = "encampment"
+    WALL = "wall"
 
 @dataclass
 class GanaCall:

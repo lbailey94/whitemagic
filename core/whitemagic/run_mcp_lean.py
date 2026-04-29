@@ -730,9 +730,9 @@ def _read_grimoire_resource(uri_str: str) -> str:
         if qdata:
             return frontmatter + f"""# {quadrant.title()} Quadrant
 
-**Chapters**: {qdata['chapters']}  
-**Element**: {qdata['element']}  
-**Season**: {qdata['season']}  
+**Chapters**: {qdata['chapters']}
+**Element**: {qdata['element']}
+**Season**: {qdata['season']}
 **Theme**: {qdata['theme']}
 
 ## Live Resonance

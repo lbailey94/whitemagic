@@ -51,7 +51,7 @@ def get_sutra_kernel() -> SutraKernelBridge:
 
 def list_zodiac_cores() -> dict[str, Any]:
     from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
-    cores_obj = get_zodiac_cores()
+    get_zodiac_cores()
     return {"cores": [sign for sign in ["aries", "taurus", "gemini", "cancer"]]}
 
 # --- MEDITATION & KAIZEN ---

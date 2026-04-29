@@ -53,7 +53,7 @@ def jl_batch_cosine(query: list[float], corpus: list[list[float]]) -> list[float
 
 def jl_spatial_status() -> dict[str, Any]:
     """Get Julia scientific computing core status."""
-    jl = _init_julia()
+    _init_julia()
     return {
         "has_julia": _HAS_JULIA,
         "backend": "julia_pyjulia" if _HAS_JULIA else "unavailable",

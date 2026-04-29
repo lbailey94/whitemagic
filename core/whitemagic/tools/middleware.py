@@ -426,7 +426,7 @@ def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, An
     - Sattvic (Read/Observe): Auto-executes immediately.
     - Rajasic (Write/Create): Auto-executes if intent is high, logs to Zodiac Ledger.
     - Tamasic (Delete/Destructive): Blocked/Paused, sent to Nexus UI via Iceoryx2 for explicit consent.
-    
+
     NOTE: This middleware is disabled by default. Enable with WM_ENABLE_SUTRA_AUTO_EXECUTE=1.
     """
     # Gate behind feature flag - disabled by default as Sutra Kernel is not fully integrated
@@ -473,8 +473,8 @@ def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, An
 
 def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Milestone 3.1: Inject Zodiacal Resonance boosts (Native Resonance) for aligned Ganas.
-    
-    Checks if the tool (or its parent Gana) belongs to a mansion currently aligned 
+
+    Checks if the tool (or its parent Gana) belongs to a mansion currently aligned
     with the 12-phase Zodiacal Clock cycle.
     """
     try:

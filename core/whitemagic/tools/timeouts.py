@@ -166,16 +166,16 @@ SKIP_NERVOUS_SYSTEM_CHECK: frozenset[str] = frozenset([
 
 def get_timeout_for_tool(tool_name: str) -> float:
     """Get the timeout (in seconds) for a specific tool.
-    
+
     Resolution order:
     1. Tool-specific override
     2. Timeout class mapping
     3. Class budget
     4. Default
-    
+
     Args:
         tool_name: The canonical tool name
-        
+
     Returns:
         Timeout in seconds
     """
@@ -197,7 +197,7 @@ def get_timeout_class(tool_name: str) -> str:
 
 def set_tool_timeout_override(tool_name: str, timeout: float) -> None:
     """Set a runtime timeout override for a specific tool.
-    
+
     This is intended for testing and emergency tuning.
     Permanent changes should be made in this config file.
     """

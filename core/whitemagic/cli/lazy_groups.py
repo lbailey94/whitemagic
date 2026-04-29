@@ -13,10 +13,10 @@ import click
 
 class LazyGroup(click.Group):
     """Click group that defers subcommand loading until first invocation.
-    
+
     This dramatically improves CLI startup time by avoiding imports for
     commands that aren't being used.
-    
+
     Usage:
         @main.group(cls=LazyGroup, invoke_without_command=True)
         def rust():
@@ -65,7 +65,7 @@ class LazyGroup(click.Group):
 
 class LazyCommand(click.Command):
     """Click command that defers loading until first invocation.
-    
+
     Useful for individual commands that have heavy dependencies.
     """
 
@@ -119,11 +119,11 @@ def _make_missing_dep_callback(error_msg: str) -> Callable:
 
 def optional_command(name: str, extra: str | None = None):
     """Decorator for commands with optional dependencies.
-    
+
     Args:
         name: Command name
         extra: Extra name for pip install (e.g., 'tui', 'rust')
-        
+
     Usage:
         @optional_command('galaxy', extra='tui')
         def galaxy_cmd():

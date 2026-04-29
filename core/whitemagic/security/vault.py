@@ -158,7 +158,7 @@ class Vault:
 
     def _get_or_create_machine_key(self) -> str | None:
         """Get or create a persistent machine-specific key for vault encryption.
-        
+
         This is stored in a file with 0o600 permissions, providing better security
         than the guessable login@hostname fallback.
         """

@@ -234,7 +234,7 @@ class NeurotransmitterVector:
             "glutamate": snap.glutamate,
         }
         max_nt = max(values, key=values.get)
-        min_nt = min(values, key=values.get)
+        min(values, key=values.get)
         snap.dominant = max_nt
 
         # Generate interpretation

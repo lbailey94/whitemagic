@@ -64,7 +64,7 @@ def hs_cosine_similarity(a: list[float], b: list[float]) -> float | None:
 
 def hs_spatial_status() -> dict[str, Any]:
     """Get Haskell spatial core status."""
-    lib = _load_lib()
+    _load_lib()
     return {
         "has_haskell": _HAS_HS,
         "lib_path": _find_hs_lib() or "not found",

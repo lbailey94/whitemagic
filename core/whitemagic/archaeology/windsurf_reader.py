@@ -88,10 +88,10 @@ class Conversation:
 class WindsurfConversationReader:
     """
     Read Windsurf/Cascade conversation files.
-    
+
     The conversations are stored as protobuf binary files at:
     ~/.codeium/windsurf/cascade/
-    
+
     This reader provides:
     - List available conversations
     - Read and parse conversation content
@@ -153,7 +153,7 @@ class WindsurfConversationReader:
     def parse_protobuf_simple(self, data: bytes) -> list[dict[str, Any]]:
         """
         Simple protobuf parser for extracting text content.
-        
+
         This is a best-effort parser that extracts string fields
         without requiring the full protobuf schema.
         """
@@ -216,10 +216,10 @@ class WindsurfConversationReader:
     def read_conversation(self, path: str) -> Conversation:
         """
         Read and parse a conversation file.
-        
+
         Args:
             path: Path to the .pb file
-            
+
         Returns:
             Conversation object with parsed messages
         """

@@ -169,7 +169,7 @@ class GraphEngine:
 
     def rebuild(self, sample_limit: int = 50000) -> dict[str, Any]:
         if not _NX_AVAILABLE: return {"status": "unavailable"}
-        start = time.perf_counter()
+        time.perf_counter()
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             pool = get_unified_memory().backend.pool
