@@ -57,7 +57,7 @@ def find_by_zone(zone: str, limit: int = 20) -> list[dict[str, Any]]:
     }
 
     if zone not in zone_ranges:
-        raise ValueError(f"Unknown zone: {zone}. Use: {list(zone_ranges.keys())}")
+        return []
 
     min_dist, max_dist = zone_ranges[zone]
 
@@ -193,9 +193,7 @@ def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weig
     Returns:
         List of neighboring memories with distances
     """
-    from whitemagic.core.memory.holographic import get_holographic_memory
     from whitemagic.core.memory.unified import get_unified_memory
-    from whitemagic.tools.coordinate_explainer import interpret_memory
 
     # Get reference memory coordinates
     um = get_unified_memory()
@@ -204,8 +202,12 @@ def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weig
     if not ref_mem:
         return []
 
-    # Use holographic index for efficient search
-    holo = get_holographic_memory()
+    # Use holographic index for efficient search if available
+    try:
+        from whitemagic.core.memory.holographic import get_holographic_memory
+        holo = get_holographic_memory()
+    except Exception:
+        return []
 
     # Build query from reference memory
     query_data = ref_mem.to_dict()

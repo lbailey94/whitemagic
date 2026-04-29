@@ -1,4 +1,5 @@
 //! Clone Army - Army Deployment and Coordination (PSR-005)
+//! STATUS: Research / Aspirational — not integrated into production dispatch.
 //! Target: 100× throughput improvement
 
 use pyo3::prelude::*;
@@ -36,7 +37,7 @@ impl CloneArmy {
 
     fn deploy(&mut self, tasks: Vec<String>) -> PyResult<Vec<String>> {
         let mut clone_ids = Vec::new();
-        let mut clones = self.active_clones.write().unwrap();
+        let mut clones = self.active_clones.write().unwrap_or_else(|e| e.into_inner());
         
         for (idx, task) in tasks.iter().enumerate() {
             let clone_id = format!("{}-clone-{}", self.army_id, idx);
@@ -59,7 +60,7 @@ impl CloneArmy {
     }
 
     fn complete_clone(&mut self, clone_id: String, result: String) -> PyResult<bool> {
-        let mut clones = self.active_clones.write().unwrap();
+        let mut clones = self.active_clones.write().unwrap_or_else(|e| e.into_inner());
         
         if let Some(status) = clones.get_mut(&clone_id) {
             status.status = format!("completed: {}", result);
@@ -70,17 +71,17 @@ impl CloneArmy {
     }
 
     fn get_active_count(&self) -> PyResult<usize> {
-        let clones = self.active_clones.read().unwrap();
+        let clones = self.active_clones.read().unwrap_or_else(|e| e.into_inner());
         Ok(clones.len())
     }
 
     fn get_status(&self, clone_id: String) -> PyResult<Option<String>> {
-        let clones = self.active_clones.read().unwrap();
+        let clones = self.active_clones.read().unwrap_or_else(|e| e.into_inner());
         Ok(clones.get(&clone_id).map(|s| s.status.clone()))
     }
 
     fn collect_results(&self) -> PyResult<Vec<(String, String)>> {
-        let clones = self.active_clones.read().unwrap();
+        let clones = self.active_clones.read().unwrap_or_else(|e| e.into_inner());
         Ok(clones
             .iter()
             .map(|(id, status)| (id.clone(), status.status.clone()))
@@ -88,7 +89,7 @@ impl CloneArmy {
     }
 
     fn clear_completed(&mut self) -> PyResult<usize> {
-        let mut clones = self.active_clones.write().unwrap();
+        let mut clones = self.active_clones.write().unwrap_or_else(|e| e.into_inner());
         let initial_count = clones.len();
         clones.retain(|_, status| !status.status.starts_with("completed"));
         Ok(initial_count - clones.len())

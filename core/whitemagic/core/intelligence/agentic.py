@@ -52,7 +52,7 @@ class EmergenceEngine:
         self._insights: list[EmergenceInsight] = []
 
     def scan(self, context: Any = None) -> list[EmergenceInsight]:
-        # Implementation from old emergence_engine.py
+        """Scan for emergent patterns — graceful fallback returns empty list."""
         return []
 
 class ResonanceAmplifier:

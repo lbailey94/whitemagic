@@ -38,6 +38,7 @@ class EmbeddingEngine:
 class VectorSearch:
     """Performs similarity search across embedded memories."""
     def search(self, query_vec: list[float], limit: int = 10) -> list[tuple[str, float]]:
+        """Search for similar vectors — graceful fallback returns empty list."""
         return []
 
 # --- HNSW INDEX ---

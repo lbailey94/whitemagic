@@ -36,10 +36,12 @@ class _PluginBase:
     description: str = ""
 
     def start(self) -> None:
-        pass
+        """Start the plugin — graceful no-op fallback."""
+        logger.debug("GrimoirePlugin.start: no-op fallback")
 
     def stop(self) -> None:
-        pass
+        """Stop the plugin — graceful no-op fallback."""
+        logger.debug("GrimoirePlugin.stop: no-op fallback")
 
     def status(self) -> dict[str, Any]:
         return {"name": self.name, "running": True}

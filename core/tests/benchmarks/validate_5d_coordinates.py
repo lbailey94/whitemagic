@@ -88,7 +88,7 @@ def validate_5d(num_samples: int = 50, k: int = 10):
                     mem_dict["resonance_score"] = meta.get("resonance_score", 0.0)
                     # CoordinateEncoder also looks at 'metadata' for garden bias
                     mem_dict["metadata"] = meta
-                except:
+                except Exception:
                     mem_dict["tags"] = []
                     mem_dict["joy_score"] = 0.0
                     mem_dict["resonance_score"] = 0.0

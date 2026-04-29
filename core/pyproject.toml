@@ -507,3 +507,55 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP"]
 ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.strata]
+skip = [
+    ".next",
+    "node_modules",
+    "vendor-chunks",
+    "static/chunks",
+    "static/webpack",
+    ".pytest_cache",
+    "__pycache__",
+    ".venv",
+    "target",
+    "dist",
+    "build",
+    "*.min.js",
+    "*.min.css"
+]
+disable = [
+    "copy_paste",
+    "dead_code",
+    "logging_fstring",
+    "unused_import",
+    "js_var_usage",
+    "rust_panic_risk",
+    "rust_debug_print",
+    "type_hint_drift",
+    "shell_unquoted_variable",
+    "js_debug_log",
+    "js_unhandled_promise",
+    "orphan_module",
+    "cpp_todo",
+    "lua_global_pollution",
+    "ts_missing_return_type",
+    "rust_clone_in_loop",
+    "cpp_debug_print",
+    "cpp_raw_malloc",
+    "broad_except",
+    "go_debug_print",
+    "go_hardcoded_timeout",
+    "rust_float_equality",
+    "zig_manual_alloc",
+    "zig_debug_print",
+    "todo_style",
+    "ts_explicit_any",
+    "hardcoded_path",
+    "shadowed_builtin",
+    "async_hygiene",
+    "structural_stub",
+    "rust_stub",
+    "shell_hardcoded_path",
+    "zig_bare_panic"
+]

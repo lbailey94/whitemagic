@@ -871,7 +871,9 @@ class UnifiedMemory:
 
     def save(self, memory_type: MemoryType | None = None) -> None:
         """Save memories to disk - No-op for SQLite (auto-save)."""
-        pass
+        # SQLite backend auto-saves; this method exists for API compatibility
+        # with file-based backends that require explicit persistence.
+        logger.debug("UnifiedMemory.save: no-op for SQLite backend")
 
     def get_stats(self) -> dict[str, Any]:
         """Get memory system statistics."""

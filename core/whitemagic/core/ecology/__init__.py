@@ -7,8 +7,8 @@ class ImpactCalculator:
         self.impacts: list[float] = []
 
     def calculate_impact(self, operation: str) -> float:
-        """Calculate impact of operation."""
-        return 0.0
+        """Calculate impact of operation — graceful fallback uses default estimates."""
+        return calculate_impact(operation, magnitude=1.0)
 
 class TokenEcologyMonitor:
     """Monitor token ecology."""

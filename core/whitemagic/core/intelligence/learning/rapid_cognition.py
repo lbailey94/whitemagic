@@ -11,6 +11,8 @@ try:
     from ..bindings import get_rust_bridge  # type: ignore[import-not-found]
 except ImportError:
     def get_rust_bridge() -> Any:
+        """Fallback when Rust bridge is not built — returns None."""
+        logger.debug("Rust bridge not available, using Python fallback")
         return None
 
 class RapidCognition:

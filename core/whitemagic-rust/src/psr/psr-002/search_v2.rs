@@ -61,7 +61,7 @@ impl Search {
         min_importance: Option<f64>,
         limit: Option<usize>
     ) -> PyResult<Vec<String>> {
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
         
         // Build SQL query with BM25 ranking
@@ -155,7 +155,7 @@ impl Search {
     
     /// Get search statistics
     fn get_stats(&self) -> PyResult<(usize, usize)> {
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
         
         let count: i64 = conn.query_row(

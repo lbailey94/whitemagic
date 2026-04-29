@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_dampening_allows_first_emit() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         event_bus_reset().unwrap();
 
         let result = event_bus_try_emit("test_event", 1.0, "test").unwrap();
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_dampening_blocks_rapid_repeat() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         event_bus_reset().unwrap();
 
         // First emit passes
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_stillness_blocks_non_critical() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         event_bus_reset().unwrap();
         IS_STILL.store(true, Ordering::Relaxed);
 
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_critical_events_bypass_dampening() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         event_bus_reset().unwrap();
 
         // First emit

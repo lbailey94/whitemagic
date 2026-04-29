@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+
+set -euo pipefail
 # WASM Build Script for WhiteMagic Rust Core
 # ============================================
 #

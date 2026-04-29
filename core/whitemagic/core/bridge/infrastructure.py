@@ -61,7 +61,12 @@ def run_benchmark(category: str = "all") -> dict[str, Any]:
 # --- GARDENS ---
 
 def list_gardens() -> list[str]:
-    return []
+    """List active gardens — graceful fallback queries the garden registry."""
+    try:
+        from whitemagic.gardens.base_garden import GardenRegistry
+        return list(GardenRegistry.list_gardens().keys())
+    except Exception:
+        return []
 
 # --- UTILS ---
 

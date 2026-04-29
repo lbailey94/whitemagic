@@ -35,7 +35,8 @@ class LoCoMoV019Optimizer:
     def __init__(self):
         self.embedder = EmbeddingEngine()
         import os
-        db_path = os.path.expanduser("~/.whitemagic/memory/whitemagic.db")
+        state_root = os.environ.get("WM_STATE_ROOT", os.path.expanduser("~/.whitemagic"))
+        db_path = os.path.join(state_root, "memory", "whitemagic.db")
         self.backend = SQLiteBackend(db_path)
         
         # Try to load polyglot acceleration

@@ -23,13 +23,24 @@ except ImportError:
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fileio import atomic_write, file_lock
 
-# Stub for missing seen_registry module (removed in v22)
 def get_seen_registry():
-    """Stub for removed seen_registry module."""
-    class _SeenRegistryStub:
-        def mark_seen(self, path, context=None):
-            pass
-    return _SeenRegistryStub()
+    """Return a simple file-backed seen registry."""
+    class _SeenRegistry:
+        def mark_seen(self, path: str, context: str | None = None) -> None:
+            entry = {"path": path, "context": context, "timestamp": datetime.now().isoformat()}
+            try:
+                with file_lock(SEEN_REGISTRY):
+                    data: list[dict[str, Any]] = []
+                    if SEEN_REGISTRY.exists():
+                        try:
+                            data = _json_loads(SEEN_REGISTRY.read_text()) or []
+                        except Exception:
+                            data = []
+                    data.append(entry)
+                    atomic_write(SEEN_REGISTRY, _json_dumps(data, indent=2))
+            except Exception as e:
+                logger.debug("Seen registry write skipped: %s", e)
+    return _SeenRegistry()
 
 logger = logging.getLogger(__name__)
 

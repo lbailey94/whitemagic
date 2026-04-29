@@ -32,11 +32,15 @@ pub struct SanghaBridge {
     queue: *mut std::ffi::c_void,
 }
 
+// SAFETY: SanghaBridge owns a C queue pointer; all access is synchronized through the C API.
 unsafe impl Send for SanghaBridge {}
+// SAFETY: SanghaBridge owns a C queue pointer; all access is synchronized through the C API.
 unsafe impl Sync for SanghaBridge {}
 
 impl SanghaBridge {
     pub fn new(capacity: usize) -> Self {
+        // SAFETY: sangha_queue_create is a C FFI function that allocates a new queue.
+        // The returned pointer is owned by this struct and freed in Drop.
         unsafe {
             Self {
                 queue: sangha_queue_create(capacity),
@@ -68,6 +72,8 @@ impl SanghaBridge {
             v: coords[4],
         });
 
+        // SAFETY: sangha_queue_push is a C FFI function. queue is valid (owned by self).
+        // Box::into_raw transfers ownership of the allocated signal to the C queue.
         unsafe {
             sangha_queue_push(self.queue, Box::into_raw(signal))
         }

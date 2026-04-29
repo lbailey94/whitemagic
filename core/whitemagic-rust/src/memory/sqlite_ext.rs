@@ -28,6 +28,7 @@ fn simd_holographic_distance(
 }
 
 // C-FFI API hooks for SQLite
+/// SAFETY: Standard SQLite extension entrypoint. All pointer arguments are provided by SQLite and are valid for the duration of the call.
 #[no_mangle]
 pub unsafe extern "C" fn sqlite3_whitemagicsqliters_init(
     _db: *mut std::ffi::c_void,

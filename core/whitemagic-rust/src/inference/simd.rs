@@ -22,6 +22,7 @@ pub fn matmul_f32_simd(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Ve
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx2") {
+            // SAFETY: AVX2 feature was detected at runtime.
             return unsafe { matmul_avx2(a, b, m, n, k) };
         }
     }
@@ -48,6 +49,7 @@ fn matmul_scalar(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32>
 }
 
 /// AVX2-accelerated matrix multiply
+/// SAFETY: Caller must ensure AVX2 is available (e.g., via `is_x86_feature_detected!("avx2")`).
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn matmul_avx2(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
@@ -140,6 +142,7 @@ pub fn relu_f32(values: &[f32]) -> Vec<f32> {
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx2") {
+            // SAFETY: AVX2 feature was detected at runtime.
             return unsafe { relu_avx2(values) };
         }
     }
@@ -147,6 +150,7 @@ pub fn relu_f32(values: &[f32]) -> Vec<f32> {
     values.iter().map(|&x| x.max(0.0)).collect()
 }
 
+/// SAFETY: Caller must ensure AVX2 is available (e.g., via `is_x86_feature_detected!("avx2")`).
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn relu_avx2(values: &[f32]) -> Vec<f32> {

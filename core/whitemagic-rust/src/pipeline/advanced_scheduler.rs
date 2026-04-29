@@ -43,7 +43,7 @@ impl AdvancedScheduler {
     }
 
     fn submit_task(&mut self, task_id: String, priority: i32, payload: String) -> PyResult<()> {
-        let mut queue = self.task_queue.lock().unwrap();
+        let mut queue = self.task_queue.lock().unwrap_or_else(|e| e.into_inner());
         queue.push_back(Task {
             id: task_id,
             _priority: priority,
@@ -53,7 +53,7 @@ impl AdvancedScheduler {
     }
 
     fn submit_batch(&mut self, tasks: Vec<(String, i32, String)>) -> PyResult<usize> {
-        let mut queue = self.task_queue.lock().unwrap();
+        let mut queue = self.task_queue.lock().unwrap_or_else(|e| e.into_inner());
         for (id, priority, payload) in tasks {
             queue.push_back(Task {
                 id,
@@ -66,7 +66,7 @@ impl AdvancedScheduler {
 
     fn execute_parallel(&mut self) -> PyResult<usize> {
         let tasks: Vec<Task> = {
-            let mut queue = self.task_queue.lock().unwrap();
+            let mut queue = self.task_queue.lock().unwrap_or_else(|e| e.into_inner());
             queue.drain(..).collect()
         };
 
@@ -86,12 +86,12 @@ impl AdvancedScheduler {
             .collect();
 
         let count = results.len();
-        self.results.lock().unwrap().extend(results);
+        self.results.lock().unwrap_or_else(|e| e.into_inner()).extend(results);
         Ok(count)
     }
 
     fn get_results(&self) -> PyResult<Vec<(String, String, f64)>> {
-        let results = self.results.lock().unwrap();
+        let results = self.results.lock().unwrap_or_else(|e| e.into_inner());
         Ok(results
             .iter()
             .map(|r| (r.task_id.clone(), r.result.clone(), r.duration_ms))
@@ -99,18 +99,18 @@ impl AdvancedScheduler {
     }
 
     fn clear_results(&mut self) -> PyResult<usize> {
-        let mut results = self.results.lock().unwrap();
+        let mut results = self.results.lock().unwrap_or_else(|e| e.into_inner());
         let count = results.len();
         results.clear();
         Ok(count)
     }
 
     fn pending_count(&self) -> PyResult<usize> {
-        Ok(self.task_queue.lock().unwrap().len())
+        Ok(self.task_queue.lock().unwrap_or_else(|e| e.into_inner()).len())
     }
 
     fn completed_count(&self) -> PyResult<usize> {
-        Ok(self.results.lock().unwrap().len())
+        Ok(self.results.lock().unwrap_or_else(|e| e.into_inner()).len())
     }
 }
 

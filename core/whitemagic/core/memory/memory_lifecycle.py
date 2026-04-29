@@ -15,7 +15,9 @@ class MemoryLifecycleManager:
         return "active"
 
     def archive(self, memory_id: str) -> None:
-        pass
+        """Archive a memory — graceful no-op fallback."""
+        logger.debug("MemoryLifecycleManager.archive: no-op for %s", memory_id)
 
     def promote(self, memory_id: str) -> None:
-        pass
+        """Promote a memory — graceful no-op fallback."""
+        logger.debug("MemoryLifecycleManager.promote: no-op for %s", memory_id)

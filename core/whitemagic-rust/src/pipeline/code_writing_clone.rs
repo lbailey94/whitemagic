@@ -88,7 +88,7 @@ impl CodeWritingClone {
     }
 
     fn add_operation(&mut self, operation: CodeOperation) -> PyResult<()> {
-        let mut ops = self.operations.write().unwrap();
+        let mut ops = self.operations.write().unwrap_or_else(|e| e.into_inner());
         ops.push(operation);
         Ok(())
     }
@@ -126,7 +126,7 @@ impl CodeWritingClone {
             },
         };
 
-        let mut results = self.results.write().unwrap();
+        let mut results = self.results.write().unwrap_or_else(|e| e.into_inner());
         results.push(code_result.clone());
 
         Ok(code_result)
@@ -134,7 +134,7 @@ impl CodeWritingClone {
 
     fn execute_all(&mut self) -> PyResult<Vec<CodeWritingResult>> {
         let operations = {
-            let ops = self.operations.read().unwrap();
+            let ops = self.operations.read().unwrap_or_else(|e| e.into_inner());
             ops.clone()
         };
 
@@ -173,19 +173,19 @@ impl CodeWritingClone {
             })
             .collect();
 
-        let mut stored_results = self.results.write().unwrap();
+        let mut stored_results = self.results.write().unwrap_or_else(|e| e.into_inner());
         stored_results.extend(results.clone());
 
         Ok(results)
     }
 
     fn get_results(&self) -> PyResult<Vec<CodeWritingResult>> {
-        let results = self.results.read().unwrap();
+        let results = self.results.read().unwrap_or_else(|e| e.into_inner());
         Ok(results.clone())
     }
 
     fn get_stats(&self) -> PyResult<HashMap<String, f64>> {
-        let results = self.results.read().unwrap();
+        let results = self.results.read().unwrap_or_else(|e| e.into_inner());
         
         let total_ops = results.len() as f64;
         let successful = results.iter().filter(|r| r.success).count() as f64;
@@ -403,7 +403,7 @@ impl CodeWritingArmy {
     }
 
     fn get_army_stats(&self) -> PyResult<HashMap<String, f64>> {
-        let clones = self.clones.read().unwrap();
+        let clones = self.clones.read().unwrap_or_else(|e| e.into_inner());
         
         let mut total_stats = HashMap::new();
         total_stats.insert("clone_count".to_string(), clones.len() as f64);

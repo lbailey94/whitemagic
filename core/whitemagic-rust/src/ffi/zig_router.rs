@@ -69,6 +69,8 @@ pub fn route_query(query: &str) -> QueryPlan {
         estimated_cost: 0,
     };
     
+    // SAFETY: zig_route_query is a C FFI function. query.as_ptr() is valid for query.len() bytes.
+    // c_plan is a mutable local allocated on the stack.
     unsafe {
         zig_route_query(
             query.as_ptr(),
@@ -91,6 +93,7 @@ pub fn get_strategy_weights(strategy: ZigSearchStrategy) -> (f32, f32) {
     let mut lexical = 0.0;
     let mut semantic = 0.0;
     
+    // SAFETY: zig_get_strategy_weights is a C FFI function. lexical and semantic are mutable locals on the stack.
     unsafe {
         zig_get_strategy_weights(
             strategy as i32,

@@ -89,7 +89,7 @@ impl HRREngine {
         let mut b_complex: Vec<Complex<f32>> = b.iter().map(|&x| Complex::new(x, 0.0)).collect();
         
         // FFT both vectors
-        let mut planner = self.fft_planner.lock().unwrap();
+        let mut planner = self.fft_planner.lock().unwrap_or_else(|e| e.into_inner());
         let fft = planner.plan_fft_forward(self.dim);
         
         fft.process(&mut a_complex);
@@ -126,7 +126,7 @@ impl HRREngine {
         let mut b_complex: Vec<Complex<f32>> = b.iter().map(|&x| Complex::new(x, 0.0)).collect();
         
         // FFT both vectors
-        let mut planner = self.fft_planner.lock().unwrap();
+        let mut planner = self.fft_planner.lock().unwrap_or_else(|e| e.into_inner());
         let fft = planner.plan_fft_forward(self.dim);
         
         fft.process(&mut bound_complex);

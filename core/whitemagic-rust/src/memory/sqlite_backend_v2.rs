@@ -41,7 +41,7 @@ impl SqliteBackendV2 {
     }
     
     fn execute(&self, query: String) -> PyResult<usize> {
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
         
         conn.execute(&query, [])

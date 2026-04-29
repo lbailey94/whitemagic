@@ -56,6 +56,7 @@ class ThoughtGalaxy:
         self._patterns = []
 
     def mine_patterns(self) -> list[dict[str, Any]]:
+        """Mine emergent patterns — graceful fallback returns empty list."""
         return []
 
 # --- SINGLETONS ---

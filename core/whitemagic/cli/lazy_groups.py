@@ -90,7 +90,11 @@ class LazyCommand(click.Command):
 
 
 def _create_missing_dep_command(error_msg: str) -> click.Command:
-    """Create a placeholder command that shows missing dependency error."""
+    """Create a CLI command that informs the user about a missing optional dependency.
+
+    This is the intended runtime behavior when an extra (e.g. 'mcp', 'api') is
+    not installed — not a development stub.
+    """
     @click.command(name="unavailable")
     @click.pass_context
     def unavailable_cmd(ctx):

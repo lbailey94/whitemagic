@@ -171,9 +171,14 @@ class OTelExporter:
                 self._buffer = self._buffer[-self._max_buffer:]
 
     def record_harmony_metrics(self, harmony_snapshot: dict[str, float]) -> None:
-        """Record Harmony Vector dimensions as metrics."""
-        # These are always tracked in-memory; OTEL gauges if available
-        pass  # Harmony Vector already has its own introspection
+        """Record Harmony Vector dimensions as metrics — graceful fallback."""
+        for dimension, value in harmony_snapshot.items():
+            self.record_metric(
+                name=f"harmony.{dimension}",
+                value=value,
+                metric_type="gauge",
+                tags={"source": "harmony_vector"},
+            )
 
     @contextmanager
     def tool_span(self, tool_name: str) -> Generator[dict[str, Any], None, None]:

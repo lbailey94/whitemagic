@@ -175,7 +175,7 @@ impl RateLimiter {
 
     /// Set a per-tool RPM override.
     pub fn set_override(&self, tool: &str, rpm: u64) {
-        self.overrides.write().unwrap().insert(tool.to_string(), rpm);
+        self.overrides.write().unwrap_or_else(|e| e.into_inner()).insert(tool.to_string(), rpm);
     }
 
     /// Try to acquire a permit for a tool invocation.
@@ -188,17 +188,17 @@ impl RateLimiter {
 
         // Get or create per-tool window
         let window = {
-            let read_guard = self.tool_windows.read().unwrap();
+            let read_guard = self.tool_windows.read().unwrap_or_else(|e| e.into_inner());
             if let Some(w) = read_guard.get(tool) {
                 Arc::clone(w)
             } else {
                 drop(read_guard);
-                let rpm = self.overrides.read().unwrap()
+                let rpm = self.overrides.read().unwrap_or_else(|e| e.into_inner())
                     .get(tool)
                     .copied()
                     .unwrap_or(self.default_tool_rpm);
                 let new_window = Arc::new(SlidingWindow::new(rpm, self.window_ms, self.burst_allowance));
-                self.tool_windows.write().unwrap()
+                self.tool_windows.write().unwrap_or_else(|e| e.into_inner())
                     .insert(tool.to_string(), Arc::clone(&new_window));
                 new_window
             }
@@ -215,7 +215,7 @@ impl RateLimiter {
     pub fn stats(&self) -> HashMap<String, f64> {
         let mut result = HashMap::new();
         result.insert("global_rate".to_string(), self.global_window.current_rate());
-        let guard = self.tool_windows.read().unwrap();
+        let guard = self.tool_windows.read().unwrap_or_else(|e| e.into_inner());
         for (tool, window) in guard.iter() {
             result.insert(format!("tool:{}", tool), window.current_rate());
         }

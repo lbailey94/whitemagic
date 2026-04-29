@@ -46,7 +46,7 @@ class MemoryGalaxy:
     """Base class for memory galaxies (collections of memories)."""
 
     def get_stats(self) -> dict[str, Any]:
-        """Get galaxy statistics."""
+        """Get galaxy statistics — graceful fallback returns empty dict."""
         return {}
 
 

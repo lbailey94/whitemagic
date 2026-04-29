@@ -75,7 +75,7 @@ impl PyUnifiedMemoryV3 {
         let tags_json = serde_json::to_string(&tags.unwrap_or_default()).unwrap_or_default();
         let title_str = title.as_deref().unwrap_or("");
 
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
 
         // Check dedup
@@ -106,7 +106,7 @@ impl PyUnifiedMemoryV3 {
 
     /// Returns Option<dict> with memory fields
     fn recall(&self, memory_id: String) -> PyResult<Option<HashMap<String, String>>> {
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
         let result = conn.query_row(
             "SELECT id, content, title, memory_type, importance, galactic_distance, \
@@ -149,7 +149,7 @@ impl PyUnifiedMemoryV3 {
         min_importance: Option<f64>,
         limit: Option<i64>,
     ) -> PyResult<Vec<String>> {
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
         let lim = limit.unwrap_or(10);
         let min_imp = min_importance.unwrap_or(0.0);
@@ -187,7 +187,7 @@ impl PyUnifiedMemoryV3 {
     }
 
     fn get_stats(&self) -> PyResult<HashMap<String, i64>> {
-        let pool = self.pool.lock().unwrap();
+        let pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         let conn = &pool[0];
         let mut stats = HashMap::new();
         let total: i64 = conn.query_row(

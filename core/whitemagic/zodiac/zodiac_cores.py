@@ -71,7 +71,7 @@ class ZodiacCore:
         return min(1.0, max(0.0, score))
 
     def _score_keywords(self, operation: str, intention: str) -> float:
-        """Score based on core-specific keywords"""
+        """Score based on core-specific keywords. Override in subclasses for precision."""
         return 0.0
 
     def activate(self, context: dict[str, Any]) -> CoreResponse:

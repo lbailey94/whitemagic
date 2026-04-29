@@ -100,8 +100,7 @@ class FeedbackController:
         """Handle repeated patterns.
         Action: Updates temporary metrics.
         """
-        # Lightweight tracking
-        pass
+        raise NotImplementedError("FeedbackController._on_pattern is not yet implemented")
 
     def _on_insight(self, event: ResonanceEvent) -> None:
         """Handle sudden insights (Flash).
@@ -126,7 +125,7 @@ class FeedbackController:
     def _on_state_change(self, event: ResonanceEvent) -> None:
         """Monitor system state for stability.
         """
-        pass
+        raise NotImplementedError("FeedbackController._on_state_change is not yet implemented")
 
 _controller = None
 

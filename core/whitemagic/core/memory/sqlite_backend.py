@@ -348,13 +348,22 @@ class SQLiteBackend:
             conn.close()
 
     def consolidate(self) -> int:
+        """Run consolidation on this backend — graceful fallback."""
+        logger.debug("SQLiteBackend.consolidate: using no-op fallback")
         return 0
 
     def get_constellation_memberships(self, memory_id: str) -> list[Any]:
+        """Return constellation memberships — graceful fallback."""
+        logger.debug("SQLiteBackend.get_constellation_memberships: using empty fallback for %s", memory_id)
         return []
 
     def count_with_rust(self, memory_type: str | None = None) -> int:
-        return 0
+        """Count memories — falls back to Python count when Rust is unavailable."""
+        logger.debug("SQLiteBackend.count_with_rust: falling back to Python count")
+        try:
+            return self._simple.count(memory_type)
+        except Exception:
+            return 0
 
     # --- Helpers ---
 

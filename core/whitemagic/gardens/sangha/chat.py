@@ -369,10 +369,18 @@ class SanghaChat:
         return [f.stem for f in self.chat_dir.glob("*.md")]
 
     def clear_channel(self, channel: str) -> None:
-        """Archive and clear a channel."""
-        # Implementation needed: Move channel to archive directory and create new empty channel
-        # Archive path: self.archive_dir / f"{channel}_{timestamp}.md"
-        pass
+        """Archive and clear a channel — graceful fallback archives to backup dir."""
+        src = self.chat_dir / f"{channel}.md"
+        if not src.exists():
+            return
+        backup_dir = self.chat_dir / "archive"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup = backup_dir / f"{channel}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        try:
+            src.rename(backup)
+            logger.info("Archived chat channel %s to %s", channel, backup)
+        except Exception as e:
+            logger.warning("Failed to archive channel %s: %s", channel, e)
 
     def create_task(self, title: str, description: str, created_by: str, assigned_to: str | None = None, status: str = "open", priority: str = "normal", due_date: datetime | None = None, channel: str | None = None) -> Task:
         """Create a new task for coordination."""

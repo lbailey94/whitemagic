@@ -21,6 +21,7 @@ pub fn batch_normalize_vectors_simd(vectors: &mut [f32], dim: usize) -> usize {
     
     // Check for AVX2 support
     if is_x86_feature_detected!("avx2") {
+        // SAFETY: AVX2 feature was detected at runtime.
         unsafe {
             batch_normalize_avx2(vectors, dim, num_vectors)
         }
@@ -30,6 +31,7 @@ pub fn batch_normalize_vectors_simd(vectors: &mut [f32], dim: usize) -> usize {
     }
 }
 
+/// SAFETY: Caller must ensure AVX2 is available (e.g., via `is_x86_feature_detected!("avx2")`).
 /// AVX2-accelerated batch normalization
 #[target_feature(enable = "avx2")]
 unsafe fn batch_normalize_avx2(vectors: &mut [f32], dim: usize, num_vectors: usize) -> usize {
@@ -135,6 +137,7 @@ pub fn batch_cosine_similarity_simd(
     }
     
     if is_x86_feature_detected!("avx2") {
+        // SAFETY: AVX2 feature was detected at runtime.
         unsafe {
             batch_cosine_avx2(query, matrix, dim, num_vectors, results)
         }
@@ -143,6 +146,7 @@ pub fn batch_cosine_similarity_simd(
     }
 }
 
+/// SAFETY: Caller must ensure AVX2 is available (e.g., via `is_x86_feature_detected!("avx2")`).
 /// AVX2-accelerated batch cosine similarity
 #[target_feature(enable = "avx2")]
 unsafe fn batch_cosine_avx2(

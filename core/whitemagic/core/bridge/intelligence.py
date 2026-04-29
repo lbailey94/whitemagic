@@ -70,4 +70,16 @@ def run_autonomous_inference(input_data: str, mode: str = "fast") -> dict[str, A
 # --- PATTERN RECOGNITION ---
 
 def detect_intelligence_patterns(content: str) -> list[dict[str, Any]]:
-    return []
+    """Detect patterns in content — graceful fallback returns basic keyword matches."""
+    patterns = []
+    keywords = {
+        "question": ["?", "what", "how", "why", "when"],
+        "decision": ["choose", "decide", "option", "alternative"],
+        "action": ["do", "run", "execute", "call", "invoke"],
+    }
+    content_lower = content.lower()
+    for pat_type, words in keywords.items():
+        score = sum(1 for w in words if w in content_lower) / len(words)
+        if score > 0:
+            patterns.append({"type": pat_type, "score": round(score, 3)})
+    return patterns

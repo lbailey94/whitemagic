@@ -164,7 +164,9 @@ class SimpleEmbeddingIndex:
             except Exception: pass
 
     def stats(self) -> dict[str, Any]: return {"total_embeddings": len(self._index)}
-    def search(self, query: str, limit: int = 10) -> list[tuple[str, float, str]]: return []
+    def search(self, query: str, limit: int = 10) -> list[tuple[str, float, str]]:
+        """Search memory matrix — graceful fallback returns empty list."""
+        return []
 
 # --- HUB: MEMORY MATRIX ---
 

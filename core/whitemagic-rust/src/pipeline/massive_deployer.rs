@@ -1,4 +1,5 @@
 //! Massive Clone Army Deployer - Rust Implementation
+//! STATUS: Research / Aspirational — not integrated into production dispatch.
 //! Target: 10-100× faster than Python version
 //!
 //! Python baseline: ~700K clones/sec
@@ -145,15 +146,15 @@ impl MassiveDeployer {
 
         // Update totals
         {
-            let mut total_clones = self.total_clones_deployed.write().unwrap();
+            let mut total_clones = self.total_clones_deployed.write().unwrap_or_else(|e| e.into_inner());
             *total_clones += clone_count;
         }
         {
-            let mut total_tasks = self.total_tasks_completed.write().unwrap();
+            let mut total_tasks = self.total_tasks_completed.write().unwrap_or_else(|e| e.into_inner());
             *total_tasks += tasks.len();
         }
         {
-            let mut results = self.results.write().unwrap();
+            let mut results = self.results.write().unwrap_or_else(|e| e.into_inner());
             results.push(result.clone());
         }
 
@@ -207,15 +208,15 @@ impl MassiveDeployer {
         let total_tasks: usize = results.iter().map(|r| r.tasks_completed).sum();
 
         {
-            let mut tc = self.total_clones_deployed.write().unwrap();
+            let mut tc = self.total_clones_deployed.write().unwrap_or_else(|e| e.into_inner());
             *tc += total_clones;
         }
         {
-            let mut tt = self.total_tasks_completed.write().unwrap();
+            let mut tt = self.total_tasks_completed.write().unwrap_or_else(|e| e.into_inner());
             *tt += total_tasks;
         }
         {
-            let mut res = self.results.write().unwrap();
+            let mut res = self.results.write().unwrap_or_else(|e| e.into_inner());
             res.extend(results.clone());
         }
 
@@ -237,17 +238,17 @@ impl MassiveDeployer {
     }
 
     fn get_results(&self) -> PyResult<Vec<DeploymentResult>> {
-        let results = self.results.read().unwrap();
+        let results = self.results.read().unwrap_or_else(|e| e.into_inner());
         Ok(results.clone())
     }
 
     fn get_total_clones(&self) -> PyResult<usize> {
-        let total = self.total_clones_deployed.read().unwrap();
+        let total = self.total_clones_deployed.read().unwrap_or_else(|e| e.into_inner());
         Ok(*total)
     }
 
     fn get_total_tasks(&self) -> PyResult<usize> {
-        let total = self.total_tasks_completed.read().unwrap();
+        let total = self.total_tasks_completed.read().unwrap_or_else(|e| e.into_inner());
         Ok(*total)
     }
 

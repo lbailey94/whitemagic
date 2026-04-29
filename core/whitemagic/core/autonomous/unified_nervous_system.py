@@ -397,9 +397,8 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
     get_apotheosis_engine()
 
     def apotheosis_handler(event: BiologicalEvent) -> None:
-        """Apotheosis monitors all events for patterns."""
-        # Record in pattern history for learning
-        pass
+        """Apotheosis monitors all events for patterns — graceful no-op fallback."""
+        logger.debug("Apotheosis handler received event: %s", event.event_type)
 
     uns.add_global_handler(apotheosis_handler)
 

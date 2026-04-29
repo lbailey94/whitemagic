@@ -130,6 +130,8 @@ fn init_board() {
         };
 
         if let Some(file) = file {
+            // SAFETY: mmap is called with a valid file descriptor from ensure_file.
+            // The file is kept open for the lifetime of the process. MAP_SHARED with PROT_READ | PROT_WRITE.
             unsafe {
                 let fd = {
                     use std::os::unix::io::AsRawFd;
@@ -160,6 +162,8 @@ fn init_board() {
 
 #[inline]
 fn get_atomic(offset: usize) -> Option<&'static AtomicU64> {
+    // SAFETY: MMAP_PTR is initialized via call_once and never modified after.
+    // The null check and bounds check ensure the pointer is valid before dereferencing.
     unsafe {
         if MMAP_PTR.is_null() || offset + 8 > FILE_SIZE {
             return None;
@@ -170,6 +174,8 @@ fn get_atomic(offset: usize) -> Option<&'static AtomicU64> {
 
 #[inline]
 fn read_f64(offset: usize) -> f64 {
+    // SAFETY: MMAP_PTR is initialized via call_once and never modified after.
+    // The null check and bounds check ensure the pointer is valid before dereferencing.
     unsafe {
         if MMAP_PTR.is_null() || offset + 8 > FILE_SIZE {
             return 0.0;
@@ -382,6 +388,7 @@ pub fn board_get_path() -> PyResult<String> {
 #[pyfunction]
 pub fn board_reset() -> PyResult<()> {
     init_board();
+    // SAFETY: MMAP_PTR is checked for non-null before use. The write is bounded to FILE_SIZE - 16.
     unsafe {
         if !MMAP_PTR.is_null() {
             // Zero everything after magic+version (16 bytes)

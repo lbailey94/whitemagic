@@ -1,4 +1,6 @@
 #!/bin/bash
+
+set -euo pipefail
 # WhiteMagic Math WASM Build & Optimization Script
 
 set -e

@@ -34,7 +34,7 @@ impl EmergenceDetector {
     }
     
     fn get_stats(&self) -> PyResult<usize> {
-        let data = self.data.read().unwrap();
+        let data = self.data.read().unwrap_or_else(|e| e.into_inner());
         Ok(data.len())
     }
 }

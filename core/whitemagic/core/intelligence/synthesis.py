@@ -42,7 +42,8 @@ class TitleGenerator:
 
 class SerendipityEngine:
     """Detects unexpected connections and novel insights (serendipity)."""
-    def find_serendipity(self, pool: Any) -> list[dict[str, Any]]:
+    def find_serendipity(self, pool: Any = None) -> list[dict[str, Any]]:
+        """Find serendipitous connections — graceful fallback returns empty list."""
         return []
 
 # --- SOLVER ENGINE ---

@@ -16,7 +16,7 @@ from pathlib import Path
 class Skeletonizer:
     """AST-based code skeletonizer for Python."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def skeletonize(self, code: str) -> str:

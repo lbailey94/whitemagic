@@ -24,11 +24,11 @@ class UnifiedNervousSystem:
 
     def _check_homeostasis(self):
         # 10ms loop - Check basic resource budgets (metabolism)
-        pass
+        raise NotImplementedError("CyberNervousSystem._check_homeostasis is not yet implemented")
 
     def _update_consciousness(self):
         # 1s loop - Gating and habit selection
-        pass
+        raise NotImplementedError("CyberNervousSystem._update_consciousness is not yet implemented")
 
     def _trigger_dream_cycle(self):
         # 1hr loop - Memory consolidation (hippocampal routing)

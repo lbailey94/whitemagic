@@ -1,4 +1,5 @@
 //! WM2 Unified Polyglot Clone Army
+//! STATUS: Research / Aspirational — not integrated into production dispatch.
 //!
 //! Synthesizes all 12 clone army types into a single unified commander:
 //!   - Immortal clones (persistent execution loops, Koka-modeled)
@@ -366,7 +367,7 @@ impl UnifiedCommander {
 
         // 3. UCB1 refinement (if enabled and we have history)
         if config.use_ucb1 {
-            let memory = self.memory.read().unwrap();
+            let memory = self.memory.read().unwrap_or_else(|e| e.into_inner());
             if memory.total_deployments > 10 {
                 // Get candidates: routed army + its zodiac neighbors
                 let candidates = vec![routed, ArmyType::Tokio, ArmyType::Shadow, ArmyType::Grand];
@@ -392,7 +393,7 @@ impl UnifiedCommander {
 
         // Record in persistent memory
         {
-            let mut memory = self.memory.write().unwrap();
+            let mut memory = self.memory.write().unwrap_or_else(|e| e.into_inner());
             memory.record_deployment(army, score);
             let findings: Vec<String> = results.iter()
                 .flat_map(|r| r.findings.clone())
@@ -573,7 +574,7 @@ impl PyWM2Army {
 
     /// Get persistent memory stats as JSON
     fn memory_stats(&self) -> PyResult<String> {
-        let memory = self.commander.memory.read().unwrap();
+        let memory = self.commander.memory.read().unwrap_or_else(|e| e.into_inner());
         serde_json::to_string_pretty(&*memory)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
     }
@@ -632,7 +633,7 @@ pub fn run_demo() {
     }
 
     // Show UCB1 learning
-    let memory = commander.memory.read().unwrap();
+    let memory = commander.memory.read().unwrap_or_else(|e| e.into_inner());
     println!("══════════════════════════════════════════════════════════════");
     println!("  UCB1 LEARNED ARMY RANKINGS (after {} deployments)", memory.total_deployments);
     println!("══════════════════════════════════════════════════════════════");

@@ -35,8 +35,8 @@ impl UnifiedMemory {
     }
     
     fn store(&mut self, key: String, value: String) -> PyResult<()> {
-        let mut memories = self.memories.write().unwrap();
-        let mut stats = self.stats.write().unwrap();
+        let mut memories = self.memories.write().unwrap_or_else(|e| e.into_inner());
+        let mut stats = self.stats.write().unwrap_or_else(|e| e.into_inner());
         
         stats.total_size += value.len();
         memories.insert(key, value);
@@ -46,12 +46,12 @@ impl UnifiedMemory {
     }
     
     fn retrieve(&self, key: String) -> PyResult<Option<String>> {
-        let memories = self.memories.read().unwrap();
+        let memories = self.memories.read().unwrap_or_else(|e| e.into_inner());
         Ok(memories.get(&key).cloned())
     }
     
     fn get_stats(&self) -> PyResult<MemoryStats> {
-        let stats = self.stats.read().unwrap();
+        let stats = self.stats.read().unwrap_or_else(|e| e.into_inner());
         Ok(stats.clone())
     }
 }

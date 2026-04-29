@@ -173,7 +173,7 @@ class GanYingMixin:
 
         Override in subclasses to listen for specific events.
         """
-        pass
+        raise NotImplementedError("BaseGarden._setup_event_listeners is not yet implemented")
 
 
 # Convenience function for getting garden bias

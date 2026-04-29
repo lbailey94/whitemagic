@@ -246,7 +246,7 @@ class MansionBridge:
     def run_mojo_binary(
         self,
         binary_name: str,
-        args: list[str] = [],
+        args: list[str] | None = None,
         stdin: str | None = None,
     ) -> str | None:
         """Run a compiled Mojo binary.
@@ -263,7 +263,7 @@ class MansionBridge:
 
         try:
             result = subprocess.run(
-                [str(bin_path)] + args,
+                [str(bin_path)] + (args or []),
                 capture_output=True,
                 text=True,
                 input=stdin,

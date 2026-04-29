@@ -58,6 +58,7 @@ impl LayerMmap {
         let size = metadata.len() as usize;
         
         // Memory map the file (zero-copy!)
+        // SAFETY: Mmap::map is safe when given a valid, open file. The file remains open for the lifetime of MmapLayer.
         let mmap = unsafe { Mmap::map(&file)? };
         
         Ok(Self {
@@ -76,6 +77,7 @@ impl LayerMmap {
     /// Prefetch layer into OS cache
     pub fn prefetch(&self) -> Result<(), std::io::Error> {
         // Advise kernel to read ahead
+        // SAFETY: madvise is called with a valid mmap pointer and size from a live Mmap object.
         #[cfg(target_os = "linux")]
         unsafe {
             libc::madvise(

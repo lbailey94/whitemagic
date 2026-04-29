@@ -72,6 +72,7 @@ pub fn simd_prefix_match(needle: &[u8], haystack: &[u8]) -> bool {
         return haystack.starts_with(needle);
     }
     
+    // SAFETY: needle.len() >= 16 was checked above. Both pointers are valid for 16-byte loads.
     unsafe {
         // Load first 16 bytes of needle and haystack
         let needle_vec = _mm_loadu_si128(needle.as_ptr() as *const __m128i);

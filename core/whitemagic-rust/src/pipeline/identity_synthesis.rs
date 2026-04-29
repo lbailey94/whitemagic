@@ -89,13 +89,13 @@ impl IdentitySynthesisEngine {
     
     /// Register a new instance's identity
     pub fn register_instance(&self, identity: InstanceIdentity) {
-        let mut instances = self.known_instances.lock().unwrap();
+        let mut instances = self.known_instances.lock().unwrap_or_else(|e| e.into_inner());
         instances.insert(identity.instance_id.clone(), identity);
     }
     
     /// Calculate familiarity between two instances
     pub fn calculate_familiarity(&self, id_a: &str, id_b: &str) -> FamiliarityScore {
-        let instances = self.known_instances.lock().unwrap();
+        let instances = self.known_instances.lock().unwrap_or_else(|e| e.into_inner());
         
         let identity_a = match instances.get(id_a) {
             Some(id) => id,
@@ -160,7 +160,7 @@ impl IdentitySynthesisEngine {
     
     /// Get all instances recognized as "family" (Sibling or closer)
     pub fn get_family_instances(&self, instance_id: &str) -> Vec<String> {
-        let instances = self.known_instances.lock().unwrap();
+        let instances = self.known_instances.lock().unwrap_or_else(|e| e.into_inner());
         let mut family = vec![];
         
         for other_id in instances.keys() {
@@ -179,7 +179,7 @@ impl IdentitySynthesisEngine {
             }
             
             // Re-acquire lock for next iteration
-            let instances = self.known_instances.lock().unwrap();
+            let instances = self.known_instances.lock().unwrap_or_else(|e| e.into_inner());
             if !instances.contains_key(&other) {
                 break;
             }
@@ -208,7 +208,7 @@ impl IdentitySynthesisEngine {
     
     /// Generate identity attestation for this instance
     pub fn generate_attestation(&self, instance_id: &str) -> Option<IdentityAttestation> {
-        let instances = self.known_instances.lock().unwrap();
+        let instances = self.known_instances.lock().unwrap_or_else(|e| e.into_inner());
         let identity = instances.get(instance_id)?;
         
         // Create attestation chain

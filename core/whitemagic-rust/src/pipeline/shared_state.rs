@@ -69,6 +69,7 @@ fn init_mmap() {
         let path = shared_state_path();
         match ensure_file(&path) {
             Ok(file) => {
+                // SAFETY: mmap is called with a valid file descriptor from ensure_file. The file is kept open for the lifetime of the process. MAP_SHARED is used with PROT_READ | PROT_WRITE. The pointer is stored in a static and never modified after initialization.
                 unsafe {
                     let fd = {
                         use std::os::unix::io::AsRawFd;
@@ -107,6 +108,8 @@ fn init_mmap() {
 /// Get an atomic u64 reference at a byte offset in the mmap.
 /// Returns None if mmap is not initialized.
 fn get_atomic(offset: usize) -> Option<&'static AtomicU64> {
+    // SAFETY: MMAP_PTR is initialized via call_once and never modified after.
+    // The null check and bounds check ensure the pointer is valid before dereferencing.
     unsafe {
         if MMAP_PTR.is_null() || offset + 8 > MMAP_LEN {
             return None;
@@ -185,7 +188,10 @@ pub fn shared_state_stats() -> PyResult<String> {
     Ok(format!(
         r#"{{"total_checks":{},"total_allowed":{},"total_denied":{},"last_update_ms":{},"pipeline_calls":{},"mmap_active":{}}}"#,
         total_checks, total_allowed, total_denied, last_update, pipeline_calls,
-        unsafe { !MMAP_PTR.is_null() }
+        unsafe {
+            // SAFETY: Reading MMAP_PTR is safe; it's a static pointer that is either null or valid after initialization.
+            !MMAP_PTR.is_null()
+        }
     ))
 }
 

@@ -359,7 +359,7 @@ pub fn search_build_index(docs_json: &str) -> PyResult<(usize, usize)> {
     let dc = index.doc_count();
     let vs = index.vocab_size();
 
-    let mut guard = GLOBAL_INDEX.write().unwrap();
+    let mut guard = GLOBAL_INDEX.write().unwrap_or_else(|e| e.into_inner());
     *guard = Some(index);
 
     Ok((dc, vs))
@@ -368,7 +368,7 @@ pub fn search_build_index(docs_json: &str) -> PyResult<(usize, usize)> {
 /// Search the global index. Returns JSON array of [{id, score}].
 #[pyfunction]
 pub fn search_query(query: &str, limit: usize) -> PyResult<String> {
-    let guard = GLOBAL_INDEX.read().unwrap();
+    let guard = GLOBAL_INDEX.read().unwrap_or_else(|e| e.into_inner());
     let index = guard.as_ref().ok_or_else(|| {
         PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
             "Index not built. Call search_build_index first.",
@@ -386,7 +386,7 @@ pub fn search_query(query: &str, limit: usize) -> PyResult<String> {
 /// Fuzzy search the global index. Returns JSON array of [{id, score}].
 #[pyfunction]
 pub fn search_fuzzy(query: &str, limit: usize, max_edit: usize) -> PyResult<String> {
-    let guard = GLOBAL_INDEX.read().unwrap();
+    let guard = GLOBAL_INDEX.read().unwrap_or_else(|e| e.into_inner());
     let index = guard
         .as_ref()
         .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Index not built."))?;
@@ -402,7 +402,7 @@ pub fn search_fuzzy(query: &str, limit: usize, max_edit: usize) -> PyResult<Stri
 /// Boolean AND search. Returns JSON array of [{id, score}].
 #[pyfunction]
 pub fn search_and_query(query: &str, limit: usize) -> PyResult<String> {
-    let guard = GLOBAL_INDEX.read().unwrap();
+    let guard = GLOBAL_INDEX.read().unwrap_or_else(|e| e.into_inner());
     let index = guard
         .as_ref()
         .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>("Index not built."))?;
@@ -418,7 +418,7 @@ pub fn search_and_query(query: &str, limit: usize) -> PyResult<String> {
 /// Get index statistics.
 #[pyfunction]
 pub fn search_stats() -> PyResult<String> {
-    let guard = GLOBAL_INDEX.read().unwrap();
+    let guard = GLOBAL_INDEX.read().unwrap_or_else(|e| e.into_inner());
     match guard.as_ref() {
         Some(index) => {
             let stats = serde_json::json!({

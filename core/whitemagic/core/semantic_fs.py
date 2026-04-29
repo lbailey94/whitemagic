@@ -83,9 +83,9 @@ class WatchConfig:
     emit_gan_ying: bool = True
     extract_themes: bool = True
 
-    # Default patterns for static access
-    DEFAULT_PATTERNS = ["*.py", "*.md", "*.json", "*.yaml", "*.yml", "*.ts", "*.js"]
-    DEFAULT_IGNORE = ["__pycache__", ".git", "node_modules", ".pytest_cache", "*.pyc"]
+    # Default patterns for static access (tuples prevent accidental mutation)
+    DEFAULT_PATTERNS: ClassVar[tuple[str, ...]] = ("*.py", "*.md", "*.json", "*.yaml", "*.yml", "*.ts", "*.js")
+    DEFAULT_IGNORE: ClassVar[tuple[str, ...]] = ("__pycache__", ".git", "node_modules", ".pytest_cache", "*.pyc")
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

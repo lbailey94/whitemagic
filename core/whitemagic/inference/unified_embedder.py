@@ -21,6 +21,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
+from whitemagic.config.paths import CACHE_DIR
+
 if TYPE_CHECKING:
     import numpy as np
 
@@ -54,16 +56,13 @@ class UnifiedEmbedder:
         # Look in standard locations
         possible_paths = [
             "models/all-MiniLM-L6-v2.onnx",
-            "~/.cache/whitemagic/models/all-MiniLM-L6-v2.onnx",
+            str(CACHE_DIR / "models" / "all-MiniLM-L6-v2.onnx"),
             "/usr/local/share/whitemagic/models/all-MiniLM-L6-v2.onnx",
         ]
 
         for path in possible_paths:
-            # Path expansion justified: Labs tier - archived code
-            # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-            expanded = os.path.expanduser(path)
-            if os.path.exists(expanded):
-                return expanded
+            if os.path.exists(path):
+                return path
 
         # Default fallback
         return "models/all-MiniLM-L6-v2.onnx"
