@@ -449,6 +449,8 @@ async fn cmd_embed(_provider: Option<&str>, resume: bool, config: &CodexConfig) 
         return Ok(());
     }
 
+    let base_url = config.embedding.provider.embedding_url();
+
     codex_embed::embed_directory(
         &input_dir,
         &output_dir,
@@ -459,6 +461,7 @@ async fn cmd_embed(_provider: Option<&str>, resume: bool, config: &CodexConfig) 
         config.embedding.rate_limit_rps,
         config.embedding.max_retries,
         resume,
+        base_url,
     ).await?;
 
     Ok(())
@@ -582,7 +585,7 @@ async fn cmd_query(query: &str, limit: usize, semantic: bool, config: &CodexConf
 
     if semantic {
         println!("Semantic query: '{}'", query);
-        let query_vec = codex_embed::embed_query_text(query)?;
+        let query_vec = codex_embed::embed_query(query)?;
         let vectors_path = base_path.join("40_index").join("vectors.bin");
         let embeddings = codex_index::read_vectors_binary(&vectors_path)?;
         let semantic_results = codex_index::query_semantic(&embeddings, &query_vec, limit);

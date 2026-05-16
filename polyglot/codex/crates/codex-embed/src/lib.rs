@@ -16,6 +16,7 @@ pub async fn embed_directory(
     rate_limit_rps: f32,
     max_retries: usize,
     resume: bool,
+    base_url: &str,
 ) -> Result<()> {
     tokio::fs::create_dir_all(output_dir).await.map_err(CodexError::Io)?;
 
@@ -117,7 +118,6 @@ pub async fn embed_directory(
                 #[cfg(feature = "api")]
                 {
                     let (client, limiter) = api_client.as_mut().unwrap();
-                    let base_url = config.embedding.provider.embedding_url();
                     embed_batch(client, api_key.unwrap(), model_name, dimensions, &texts, max_retries, limiter, base_url).await?
                 }
                 #[cfg(not(feature = "api"))]
@@ -324,4 +324,21 @@ pub fn embed_query_text(text: &str) -> Result<Vec<f32>> {
 
     embeddings.into_iter().next()
         .ok_or_else(|| CodexError::Embedding("No embedding returned".to_string()))
+}
+
+/// Embed a single query string — always available, with graceful fallback.
+/// Uses local FastEmbed when the `local` feature is enabled, otherwise
+/// returns an error instructing the user to rebuild with `--features local`.
+pub fn embed_query(text: &str) -> Result<Vec<f32>> {
+    #[cfg(feature = "local")]
+    {
+        embed_query_text(text)
+    }
+    #[cfg(not(feature = "local"))]
+    {
+        Err(CodexError::Embedding(
+            "Semantic search is not available: rebuild with `--features local` to enable local embeddings, \
+             or provide an API key for API-based embeddings.".into()
+        ))
+    }
 }

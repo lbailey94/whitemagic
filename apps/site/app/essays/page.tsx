@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { KnowledgeSphereWrapper } from "@/components/KnowledgeSphereWrapper";
+import { SemanticSearch } from "@/components/SemanticSearch";
 
 const DOMAINS = [
   {
@@ -66,11 +67,13 @@ export default function EssaysIndex() {
         <h2 className="mb-4 font-head text-2xl font-semibold text-ink">
           Knowledge Sphere
         </h2>
-        <p className="mb-6 max-w-prose text-muted">
+        <p className="mb-4 max-w-prose text-muted">
           {`10,768 semantic nodes from the CODEX pipeline — library documents,
           conversations, and research — positioned on a Fibonacci sphere by
           similarity. Hover to see content. Drag to explore.`}
         </p>
+        <SemanticSearch />
+        <div className="mb-8" />
         <KnowledgeSphereWrapper />
       </section>
     </main>
