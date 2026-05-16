@@ -8,6 +8,19 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** Every consequential action an agent takes should leave a tamper-evident, policy-queryable audit entry — implementable in ~1000 lines of Python + SQLite, and mapping cleanly onto EU AI Act Article 12.
+
+**3 Takeaways:**
+1. Runtime governance isn't optional — agents calling tools need ethical evaluation on every invocation, not a quarterly policy review.
+2. A Merkle hash chain provides append-only tamper evidence: each entry cryptographically links to the previous one.
+3. The Dharma Rule DSL lets non-engineers write policies like `on(action="deploy") require(consent_level >= "explicit")` — auditable, composable, reviewable.
+
+**Curiosity Hook:** WhiteMagic shipped a working karma ledger two months before Microsoft announced their Agent Governance Toolkit. What did we get right — and what would we build differently?
+
+---
+
 ## Thesis (one sentence)
 
 Every consequential action an agent takes should leave a tamper-evident, policy-queryable audit entry — this is not just good practice, it maps cleanly onto the EU AI Act's Article 12 record-keeping requirement, and it's implementable in ~1000 lines of Python + SQLite.

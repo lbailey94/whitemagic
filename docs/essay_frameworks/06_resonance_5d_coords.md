@@ -8,6 +8,17 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** Instead of retrieving memories purely by vector similarity or graph traversal, assign each memory a position in a small continuous 4D/5D coordinate space and retrieve by proximity in that space — this is cheap, interpretable, and captures associative patterns that pure cosine similarity misses.
+
+**3 Takeaways:**
+1. Pure vector similarity misses emotional and associative proximity — shared coordinates capture what embeddings overlook.
+2. Low-dim KD-tree/Ball-tree retrieval is O(log n), making coordinate-based recall cheap at scale.
+3. The "holographic" property means small input perturbations shift many memories' coordinates, enabling emergent association.
+
+**Curiosity Hook:** What if your memory wasn't stored as a list but as a point in space — and remembering was just finding what was nearby?
+
 ## Thesis (one sentence)
 
 Instead of retrieving memories purely by vector similarity or graph traversal, assign each memory a position in a small continuous 4D/5D coordinate space and retrieve by proximity in that space — this is cheap, interpretable, and captures associative patterns that pure cosine similarity misses.

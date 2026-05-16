@@ -8,6 +8,17 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** Every agent already produces a stream of action → outcome pairs; if you mine that stream for recurring (solution, context) tuples and (failed-attempt, context) tuples, you get a cheap, deployable form of experience-learning without touching model weights.
+
+**3 Takeaways:**
+1. Agent execution logs already contain the raw material for experience-learning — no additional instrumentation needed.
+2. Clustering successful action→outcome pairs yields reusable solution patterns without model fine-tuning.
+3. Anti-pattern detection surfaces recurring failure modes in logs before they appear in user complaints.
+
+**Curiosity Hook:** What if your agent pipeline could learn from its own mistakes — not by retraining, but by noticing what keeps going wrong?
+
 ## Thesis (one sentence)
 
 Every agent already produces a stream of action → outcome pairs; if you mine that stream for recurring (solution, context) tuples and (failed-attempt, context) tuples, you get a cheap, deployable form of experience-learning without touching model weights.

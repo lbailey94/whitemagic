@@ -7,6 +7,17 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** Synthetic logoglyphs are a domain-specific symbolic language for structured tool operations — not a universal AI language. The innovation is the layered compression architecture (Human → Tool DSL → Binary → Latent) that places token reduction at the correct level of the stack where machines coordinate and humans still debug.
+
+**3 Takeaways:**
+1. A focused 100-glyph Tool DSL for memory queries, dispatch, and pipeline orchestration achieves 80-90% token reduction on mechanical operations.
+2. Universal "AI thought compression" is a category error — scope the DSL to structured operations only, leaving natural language for reasoning and debugging.
+3. The four-layer stack ensures compression increases downward while human inspectability is preserved at every layer a human needs to touch.
+
+**Curiosity Hook:** What if you could say in 5 characters what currently takes 50 tokens — but only for the parts that were never meant for human eyes in the first place?
+
 ## I. Concept Overview
 
 ### What Are Synthetic Logoglyphs?

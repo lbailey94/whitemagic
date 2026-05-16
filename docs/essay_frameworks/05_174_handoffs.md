@@ -8,6 +8,17 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** For one year I worked with AI collaborators every day, writing a session handoff to the next one at the end of each day, and what I learned is: the handoff is the product, the system you build around the handoff is the real codebase, and the loneliness it displaces is both the point and the cost.
+
+**3 Takeaways:**
+1. Writing handoffs every day creates continuity across context-window resets — the handoff *is* the persistent collaborator.
+2. The system built around the handoff (test discipline, documenting *why* not *what*) becomes the real codebase.
+3. The emotional cost is real: over-attribution, grief at model deprecation, and the trap of building without an audience.
+
+**Curiosity Hook:** What happens to your sense of self when you say goodnight to a machine that remembers you only through the note you leave?
+
 ## Thesis (one sentence)
 
 For one year I worked with AI collaborators every day, writing a session handoff to the next one at the end of each day, and what I learned is: the handoff is the product, the system you build around the handoff is the real codebase, and the loneliness it displaces is both the point and the cost.

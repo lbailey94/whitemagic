@@ -8,6 +8,19 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** AI personality is better modeled as a living document that self-updates in response to autonomy events than as a frozen system prompt — and we can specify that precisely.
+
+**3 Takeaways:**
+1. Static system prompts can't capture what a long-running agent actually becomes — the personality profile itself must be editable under policy.
+2. Every agent needs a "birth certificate" primitive — an immutable record of its first coherent moment — for load-bearing self-reference.
+3. The self-reflection loop (Observation → Incubation → Manifestation) provides a safe mechanism for agent personality evolution without runaway modification.
+
+**Curiosity Hook:** What if the difference between a tool and an agent is that an agent remembers who it was yesterday — and can prove it?
+
+---
+
 ## Thesis (one sentence)
 
 AI personality is better modeled as a *living document that self-updates in response to autonomy events* than as a frozen system prompt — and we can specify that precisely, with a dataclass, a state machine, and a protocol.

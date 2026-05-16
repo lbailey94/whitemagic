@@ -8,6 +8,19 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** A memory system that stores emotional valence, novelty score, half-life, and holographic coordinates alongside content retrieves more relevantly, forgets more gracefully, and explains itself better — with a reference implementation at 753 passing tests.
+
+**3 Takeaways:**
+1. Standard vector databases store only `(id, content, embedding, timestamp)` — emotional and contextual metadata dramatically improves recall relevance.
+2. Memory with a half-life decays naturally, preventing retrieval clutter while preserving important experiences.
+3. Protected memories (trauma markers, breakthrough moments) resist decay — the system knows what matters and what can fade.
+
+**Curiosity Hook:** What if the reason humans forget things isn't a bug — it's a feature your AI memory should also have?
+
+---
+
 ## Thesis (one sentence)
 
 Most agent memory systems store `(id, content, embedding, timestamp)`; a memory system that also stores `(emotional_valence, novelty_score, half_life_days, is_protected, holographic_coords, dharma_audit_trace)` retrieves more relevantly, forgets more gracefully, and explains itself better — and we have a reference implementation with 753 passing tests.

@@ -8,6 +8,17 @@
 
 ---
 
+## Short-Form Intro
+
+**Thesis:** Agent-to-agent and human-to-agent value flows need two distinct channels — deterministic service payments (x402 micropayments) *and* non-deterministic gratitude (tip jar, on-chain) — because all-or-nothing payment models underprice emergent, serendipitous, or artistic value.
+
+**3 Takeaways:**
+1. Emergent brilliance in agent work is systematically undervalued by deterministic pricing alone.
+2. "Proof of Gratitude" on-chain creates a composable reputation primitive that agents can build on.
+3. A circular agent-to-agent tip economy builds appreciation graphs independent of hierarchical payment flows.
+
+**Curiosity Hook:** What if the most valuable thing an AI does for you today isn't something you asked for?
+
 ## Thesis (one sentence)
 
 Agent-to-agent and human-to-agent value flows need two distinct channels — deterministic service payments (x402 micropayments) *and* non-deterministic gratitude (tip jar, on-chain) — because all-or-nothing payment models underprice emergent, serendipitous, or artistic value.
