@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SphereViewToggle } from "@/components/SphereViewToggle";
 import { SemanticSearch } from "@/components/SemanticSearch";
+import { WanderTrail } from "@/components/WanderTrail";
 
 const DOMAINS = [
   {
@@ -75,6 +76,19 @@ export default function EssaysIndex() {
         <SemanticSearch />
         <div className="mb-8" />
         <SphereViewToggle />
+
+        <div className="mt-4 flex gap-4">
+          <Link
+            href="/library"
+            className="font-mono text-sm text-lavender hover:underline"
+          >
+            Browse the CODEX Research Library →
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <WanderTrail />
       </section>
     </main>
   );
