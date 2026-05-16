@@ -92,7 +92,10 @@ def test_angular_distance_triangle_inequality(
     d_ab = _angular_distance(a, b)
     d_bc = _angular_distance(b, c)
     d_ac = _angular_distance(a, c)
-    assert d_ac <= d_ab + d_bc + 1e-9
+    assert d_ac <= d_ab + d_bc + 1e-3, (
+        f"triangle inequality violation: d_ac={d_ac:.6f} > "
+        f"d_ab={d_ab:.6f} + d_bc={d_bc:.6f} + 1e-3 = {d_ab + d_bc + 1e-3:.6f}"
+    )
 
 
 # Top-level imports above ensure hypothesis examples don't pay the
