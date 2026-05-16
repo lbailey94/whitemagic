@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { KnowledgeSphereWrapper } from "@/components/KnowledgeSphereWrapper";
+import { SphereViewToggle } from "@/components/SphereViewToggle";
 import { SemanticSearch } from "@/components/SemanticSearch";
 
 const DOMAINS = [
@@ -74,7 +74,7 @@ export default function EssaysIndex() {
         </p>
         <SemanticSearch />
         <div className="mb-8" />
-        <KnowledgeSphereWrapper />
+        <SphereViewToggle />
       </section>
     </main>
   );

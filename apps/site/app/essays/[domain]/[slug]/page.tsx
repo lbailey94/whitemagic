@@ -18,6 +18,7 @@ const REGISTRY: Record<string, Record<string, EssayData>> = {
       title: "I built agent governance before Microsoft — here's what I learned",
       date: "2026-04",
       epistemicTag: "Proven",
+      lastVerified: "2026-05-15",
     },
     "private-ai-deployment-guide": {
       title: "How I deploy private AI for regulated teams",
