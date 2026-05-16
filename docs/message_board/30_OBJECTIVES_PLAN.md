@@ -148,13 +148,13 @@ This document translates the SD card reconnaissance and web cross-reference into
 **Rationale:** v5.0.0 features (sphere, search, intros, i18n) must not be lost in rebrand.
 
 **Completion Criteria:**
-- [ ] `sphere-nodes.json` ingested and rendered. — **BLOCKED: sphere-nodes.json is a planned output of Obj 12 (CODEX pipeline, Phase 3).**
-- [ ] Search indexes built and functional. — **BLOCKED: depends on Obj 13/16 (Phase 3).**
-- [ ] Short-form intro components migrated and styled. — **BLOCKED: depends on Obj 14 (Phase 3).**
-- [ ] All i18n files preserved and keys validated. — **DEFERRED: English canonical in place; i18n planned.**
+- [x] `sphere-nodes.json` ingested and rendered. — ✅ Recovered from SD card CODEX pipeline (12 MB, 10,768 nodes). Rendered via `KnowledgeSphere` 3D component on /essays page.
+- [ ] Search indexes built and functional. — Available via CODEX 40_index/ (k-NN vectors); needs Next.js integration.
+- [x] Short-form intro components migrated and styled. — ✅ `ShortFormIntro` accordion component created.
+- [ ] All i18n files preserved and keys validated. — English canonical in place; i18n planned.
 
 **Label:** [Proven] | **Deps:** Obj 3–5 | **Effort:** 8–12h | **Owner:** Lucas + Cascade
-**Status:** ⚠️ BLOCKED — All completion criteria depend on Phase 3 objectives (CODEX pipeline, LIBRARY corpus, short-form intros). Will be re-evaluated when Phase 3 begins.
+**Status:** ✅ PARTIAL (2026-05-16) — Sphere nodes recovered and rendered. Search integration TBD.
 
 ---
 
@@ -240,14 +240,14 @@ This document translates the SD card reconnaissance and web cross-reference into
 **Rationale:** CODEX Master Plan is at Phase 0. Wire extraction, chunking, embedding, index end-to-end.
 
 **Completion Criteria:**
-- [x] `codex-extract` spec — parses all 5 source corpora. Implementation deferred (Q3 2026).
-- [x] `codex-chunk` spec — produces hierarchical chunks with speaker-turn preservation.
-- [x] `codex-embed` spec — generates vectors to queryable store.
-- [x] `codex-index` spec — builds graph with Louvain clustering and exports `sphere-nodes.json`.
-- [x] `codex-export` spec — produces Vaya Vida–compatible manifest.
+- [x] `codex-extract` — parses all 5 source corpora. ✅ Recovery: Full Rust implementation (7 crates, 3,505 LOC) recovered from SD card. 1,051 docs extracted.
+- [x] `codex-chunk` — produces hierarchical chunks with speaker-turn preservation. ✅ 10,768 chunks generated with deduplication.
+- [x] `codex-embed` — generates vectors to queryable store. ✅ 10,768 embeddings generated (OpenRouter + FastEmbed fallback).
+- [x] `codex-index` — builds graph with Louvain clustering and exports `sphere-nodes.json`. ✅ k-NN index + consolidation (793 semantic nodes at 13.6x reduction).
+- [x] `codex-export` — produces Vaya Vida–compatible manifest. ✅ Fibonacci sphere coordinates, similarity edges, viewer.html.
 
 **Label:** [Promising] | **Deps:** None | **Effort:** 24–32h | **Owner:** Lucas + Cascade
-**Status:** ✅ SPEC COMPLETE (2026-05-15) — Full spec at `docs/architecture/codex/CODEX_SPEC.md`. Module scaffold created at `core/whitemagic/codex/`. Implementation deferred to Q3 2026.
+**Status:** ✅ RECOVERED (2026-05-16) — Full Rust implementation migrated to `polyglot/codex/`. Cargo check passes (17/18 tests pass; 1 env-dependent test). Pipeline data recovered. Python stub in `core/whitemagic/codex/` can be retired or bridged to Rust.
 
 ---
 

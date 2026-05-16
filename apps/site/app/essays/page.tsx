@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KnowledgeSphereWrapper } from "@/components/KnowledgeSphereWrapper";
 
 const DOMAINS = [
   {
@@ -60,6 +61,18 @@ export default function EssaysIndex() {
           </li>
         ))}
       </ul>
+
+      <section className="mt-16">
+        <h2 className="mb-4 font-head text-2xl font-semibold text-ink">
+          Knowledge Sphere
+        </h2>
+        <p className="mb-6 max-w-prose text-muted">
+          {`10,768 semantic nodes from the CODEX pipeline — library documents,
+          conversations, and research — positioned on a Fibonacci sphere by
+          similarity. Hover to see content. Drag to explore.`}
+        </p>
+        <KnowledgeSphereWrapper />
+      </section>
     </main>
   );
 }

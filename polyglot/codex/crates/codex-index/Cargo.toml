@@ -1,0 +1,27 @@
+[package]
+name = "codex-index"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+codex-core = { path = "../codex-core" }
+codex-embed = { path = "../codex-embed" }
+
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ndarray = "0.15"
+rayon = "1.8"
+
+# Graph database
+petgraph = { version = "0.6", optional = true }
+
+# Optional persistent storage
+surrealdb = { version = "1.0", optional = true }
+rocksdb = { version = "0.21", optional = true }
+
+[features]
+default = ["memory"]
+memory = ["petgraph"]
+persistent = ["surrealdb", "rocksdb"]
+full = ["memory", "persistent"]

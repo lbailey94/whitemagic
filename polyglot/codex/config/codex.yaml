@@ -1,0 +1,173 @@
+# CODEX Configuration v0.1.0
+# Semantic knowledge extraction pipeline
+
+project:
+  name: "Lucas Research Codex"
+  version: "1.0.0"
+  description: "Unified corpus of LIBRARY, OPENAI archives, and RESEARCH"
+  base_path: "/home/lucas/Desktop/CODEX"
+
+# Source configuration
+extraction:
+  source_paths:
+    - "00_source/library"
+    - "00_source/conversations"
+    - "00_source/research"
+  
+  include_patterns:
+    - "**/*.md"
+    - "**/*.txt"
+    - "**/*.markdown"
+    - "**/*.json"          # For conversation data
+    - "**/*.png"           # Images in RESEARCH
+    - "**/*.jpg"
+    - "**/*.jpeg"
+    - "**/*.webp"
+  
+  exclude_patterns:
+    - "**/.git/**"
+    - "**/node_modules/**"
+    - "**/.mypy_cache/**"
+    - "**/.ruff_cache/**"
+    - "**/__pycache__/**"
+    - "**/test-results/**"
+    - "**/playwright-report/**"
+    - "**/dist/**"
+    - "**/coverage/**"
+    - "**/*.zip"           # Skip archives
+    - "**/twitter*.zip"    # Skip massive Twitter archive
+  
+  # Image processing for RESEARCH folder
+  image_processing:
+    enabled: true
+    ocr_enabled: true
+    multimodal_api: "anthropic"   # or "openai"
+    api_key_env: "ANTHROPIC_API_KEY"
+    batch_size: 10
+    max_dimension: 2048
+    formats: ["png", "jpg", "jpeg", "webp"]
+    prompt_template: |
+      Extract all text, diagrams, charts, and visual concepts from this image.
+      Output a JSON object with:
+      - "text": any readable text
+      - "description": detailed visual description
+      - "concepts": list of key concepts identified
+      - "diagram_type": if applicable (chart, graph, map, etc.)
+  
+  preserve_raw: true   # Keep original content alongside processed
+
+# Semantic chunking configuration
+chunking:
+  strategy: hierarchical   # paragraph | semantic | hierarchical | conversation
+  
+  # Token targets for each hierarchy level
+  paragraph_target_tokens: 250
+  section_target_tokens: 1000
+  document_target_tokens: 4000
+  
+  overlap_tokens: 50       # Tokens to overlap between chunks
+  
+  # Special handling
+  preserve_frontmatter: true
+  respect_headers: true    # Split on markdown headers for sections
+  
+  # Conversation-specific (for OPENAI archives)
+  conversation:
+    preserve_speaker: true
+    chunk_by_turns: false  # If false, use token targets
+    max_turns_per_chunk: 5
+
+# Embedding configuration
+embedding:
+  provider: openrouter      # openai | openrouter | anthropic | local_onnx | local_candle
+  openrouter_key_env: "OPENROUTER_API_KEY"
+  api_key_env: "ANTHROPIC_API_KEY"
+  model: "google/gemini-2.0-flash-lite"  # Embedding model via OpenRouter
+  embedding_model: "text-embedding-3-large"  # For OpenAI-compatible embeddings
+  
+  dimensions: 3072       # text-embedding-3-large
+  batch_size: 100
+  rate_limit_rps: 10.0     # Requests per second (respect API limits)
+  
+  # Retry configuration
+  max_retries: 3
+  retry_delay_ms: 1000
+  
+  # Local model settings (if using local_onnx or local_candle)
+  local_model_path: null
+  local_threads: 4
+
+# Indexing configuration
+indexing:
+  graph_enabled: true
+  vector_index_enabled: true
+  tag_index_enabled: true
+  
+  # Connection thresholds
+  connection_threshold: 0.85   # Cosine similarity for automatic edges
+  max_connections_per_node: 10
+  
+  # Database (optional - uses in-memory if not specified)
+  # database_url: "surrealkv://40_index/graph.db"
+  
+  # Tag-based clustering
+  tag_clustering:
+    enabled: true
+    algorithm: "louvain"   # community detection
+
+# Export configuration
+export:
+  formats: [jsonl, json, yaml]
+  output_path: "50_export"
+  
+  # Vaya Vida integration
+  vaya_vida:
+    enabled: true
+    sphere_version: "v5.1.0"
+    output_file: "40_index/sphere-nodes-v2.json"
+    
+    # What to include in the sphere
+    include_library: true
+    include_conversations: true
+    include_research: true
+    
+    # Node limits
+    max_nodes: 200           # Target for initial integration
+    
+    # Coordinate generation
+    coordinate_algorithm: fibonacci   # fibonacci | thematic | force_directed
+    
+    # Visual styling
+    styling:
+      library_color: "#8b5cf6"        # Violet for LIBRARY
+      conversation_color: "#06b6d4"   # Cyan for conversations
+      research_color: "#f59e0b"       # Amber for research/images
+      
+      # Character display
+      library_char: "◆"
+      conversation_char: "◇"
+      research_char: "○"
+
+# Pipeline stages (used by `codex build`)
+pipeline:
+  stages:
+    - extract
+    - chunk
+    - embed
+    - index
+    - export
+  
+  # Checkpointing
+  checkpoint_interval: 100   # Save progress every N items
+  resume_enabled: true
+  
+  # Parallelism
+  workers: 8                 # Async tasks
+  rayon_threads: 4           # CPU-bound operations
+
+# Development settings
+dev:
+  log_level: info           # error | warn | info | debug | trace
+  progress_bars: true
+  dry_run: false            # If true, don't write anything
+  sample_size: null         # Process only N items (for testing)

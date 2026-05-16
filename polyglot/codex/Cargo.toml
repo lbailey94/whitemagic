@@ -1,0 +1,108 @@
+[package]
+name = "codex"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lucas <lucas@codex.systems>"]
+description = "Semantic knowledge extraction and codification pipeline"
+rust-version = "1.75"
+
+[[bin]]
+name = "codex"
+path = "src/main.rs"
+
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[dependencies]
+# Core async runtime
+tokio = { version = "1.35", features = ["full", "rt-multi-thread"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Parallelism
+rayon = "1.8"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+indicatif = "0.17"  # Progress bars
+console = "0.15"    # Terminal colors
+
+# HTTP server
+axum = "0.7"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+
+# File system
+walkdir = "2.4"
+glob = "0.3"
+notify = { version = "6.1", optional = true }  # File watching
+
+# Text processing
+regex = "1.10"
+pulldown-cmark = { version = "0.9", features = ["simd"] }
+html2text = "0.6"
+unicode-segmentation = "1.10"
+
+# Configuration
+config = "0.14"
+dirs = "5.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# HTTP client for API calls (embeddings, multimodal)
+reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"], optional = true }
+url = "2.5"
+
+# Image processing (for RESEARCH extraction)
+image = { version = "0.24", features = ["png", "jpeg", "webp"], optional = true }
+
+# Vector/ML (optional local embeddings)
+ndarray = { version = "0.15", optional = true }
+
+# Database (for graph index)
+surrealdb = { version = "1.0", optional = true }
+
+# Workspace crates
+codex-core = { path = "crates/codex-core" }
+codex-extract = { path = "crates/codex-extract" }
+codex-chunk = { path = "crates/codex-chunk", features = ["tiktoken"] }
+codex-embed = { path = "crates/codex-embed" }
+codex-index = { path = "crates/codex-index" }
+codex-export = { path = "crates/codex-export" }
+codex-consolidate = { path = "crates/codex-consolidate" }
+
+[features]
+default = ["extract", "chunk", "embed", "export"]
+extract = ["image"]
+chunk = ["ndarray"]
+embed = ["reqwest", "ndarray"]
+index = ["surrealdb"]
+export = []
+watch = ["notify"]
+full = ["extract", "chunk", "embed", "index", "export", "watch"]
+
+[dev-dependencies]
+tempfile = "3.8"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 1
+debug = true

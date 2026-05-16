@@ -36,6 +36,7 @@ tsconfig.tsbuildinfo
 core/whitemagic-rust/target/
 core/whitemagic-math/target/
 core/haskell/dist-newstyle/
+polyglot/codex/target/
 **/Cargo.lock
 
 # === Databases ===
