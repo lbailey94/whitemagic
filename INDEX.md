@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0  
-**Last Updated**: April 29, 2026  
+**Last Updated**: April 30, 2026
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -55,10 +55,19 @@ These files live at the repository root. They are the **public face** of the pro
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
+| `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
 | `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
 | `GRANT_EXECUTION_PLAN_2026-04-28.md` | Consolidated week-by-week grant action sequence with expected value math, tracking setup, and user-priority decisions | Apr 28 |
 | `GRANT_APPLICATION_TEMPLATES_2026.md` | Reverse-engineered application structures for Manifund, Foresight, SFF, Schmidt, LTFF — reusable content blocks, per-funder customization cheat sheet, rapid iteration system | Apr 28 |
-| `GRANT_CONTENT_LIBRARY.md` | Canonical copy-paste-ready content blocks for all grant applications — universal paragraph, team bio, technical achievements, budget templates, milestones, prior-art timeline, risk mitigation, open-source/IP language | Apr 29 |
+| `GRANT_CONTENT_LIBRARY.md` | Canonical copy-paste-ready content blocks for all grant applications — universal paragraph, team bio, technical achievements, budget templates, milestones, prior-art timeline, risk mitigation, open-source/IP language, theory of change, construct validity, calibrated confidence, failure modes, ecosystem connection, why now, founder advantage, ambitious vision | Apr 30 |
+| `GRANT_RUBRIC_AUDIT_2026.md` | Rubric audit — current templates vs. actual funder evaluation criteria (Manifund, LTFF, Foresight, SFF, Schmidt, NSF SBIR). Identifies 21 gaps with specific fixes and action items. | Apr 30 |
+| `A_PLUS_GRANT_GUIDE_2026.md` | From A- to A+ — 7 dimensions that separate competitive from winning applications, with 14-day action plan and honest assessment of time/cost/probability | Apr 30 |
+| `APPLICATION_MANIFUND_JOEL_BECKER_2026.md` | Ready-to-submit $25K Manifund ask (Joel Becker regrantor) — A- grade with A+ upgrade pathway | Apr 30 |
+| `APPLICATION_LTFF_2026.md` | Ready-to-submit $35K LTFF ask — A- grade with Theory of Change, Neglectedness, Cost-Effectiveness | Apr 30 |
+| `APPLICATION_FORESIGHT_2026.md` | Ready-to-submit $100K Foresight AI Nodes ask — A- grade with Node engagement plan and AGI timeline | Apr 30 |
+| `APPLICATION_SFF_2026.md` | Ready-to-submit $150K SFF Rolling Application — A- grade with Freedom Track alignment and calibrated confidence | Apr 30 |
+| `APPLICATION_SCHMIDT_SCIENCES_2026.md` | Draft $600K Schmidt Sciences Tier 1 ask — A- grade with construct validity argument and experiment design | Apr 30 |
 | `LLC_BANKING_ROADMAP_2026.md` | Georgia LLC formation costs, bank account comparison (Mercury/Novo/Truist/Axos), step-by-step timeline with exact costs and time projections | Apr 28 |
 | `PRIOR_ART_AND_PATHS_2026-04-27.md` | Cross-referenced WhiteMagic chronology vs. competitors (CODEX OpenAI/Grok/X archives) + branching-path math | Apr 27 |
 | `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape — Mem0/Cognee/Letta/Anthropic Claude Memory + Molty trifecta + A2A/x402/MCP numbers | Apr 27 |
@@ -123,6 +132,7 @@ High-level infrastructure decisions.
 |------|-------|
 | `INFRASTRUCTURE_DECISION.md` | Platform and hosting choices |
 | `MONOREPO_VS_MULTIREPO.md` | Why monorepo |
+| `IA_v1.md` | Information Architecture freeze — URL scheme, nav structure, redirect map, epistemic tagging, multilingual support (Obj 4) |
 
 ---
 
@@ -234,6 +244,19 @@ Strategic vision documents and market analysis.
 | `STRATEGY_AGENT_ECONOMY.md` | Agent economy strategy |
 | `ON_PREMISE_EDGE_AI_SCENARIOS.md` | On-premise edge AI scenarios |
 | `COMPETITIVE_LANDSCAPE_PHASE_03_ERRATA.md` | Competitive landscape errata |
+
+---
+
+## Brand & Voice: `docs/`
+
+Brand identity, editorial standards, and triage manifests.
+
+| File | Topic |
+|------|-------|
+| `VOICE_TONE_GUIDE.md` | WhiteMagic Labs voice & tone guide v1.0 — epistemic honesty, brand voice principles, formatting conventions (Obj 2) |
+| `content_triage_v1.json` | Content triage manifest — KEEP / DEFER / ARIA_CANON classification with rationale (Obj 5) |
+| `PRAT_GUIDE.md` | PRAT dispatch pipeline guide — how to add tools, register handlers, write tests, with Gana meta-tool examples (Obj 7) |
+| `KARMA_LEDGER_API.md` | Karma Ledger API reference v1.0.0 — record, report, verify_chain, merkle_root, XRPL anchoring (Obj 8) |
 
 ---
 

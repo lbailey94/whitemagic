@@ -209,6 +209,15 @@ docs/README.md
 !docs/public/design/
 !docs/public/misc/
 
+# === Polyglot Haskell build ===
+polyglot/whitemagic-hs/dist-newstyle/
+
+# === External projects (not part of WhiteMagic core) ===
+whitemagic-app/
+whitemagic-aux/
+WhiteMagic-Grants/
+test_zig
+
 # === Temporary ===
 tmp/
 temp_venv/
