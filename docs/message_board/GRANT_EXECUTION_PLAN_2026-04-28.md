@@ -53,8 +53,8 @@
 ### 1.2 Start SAM.gov Registration (Day 3, after bank account opens)
 - **Action**: Register at [sam.gov](https://sam.gov) using exact LLC legal name
 - **Required**: Bank routing/account numbers for EFT verification
-- **Timeline**: 2–8 weeks (start immediately; do not wait)
-- **Output**: UEI (auto-assigned) + CAGE code (1–2 weeks after SAM review)
+- **Timeline**: Up to 10 business days (start immediately; do not wait). Must renew annually.
+- **Output**: UEI (auto-assigned) + CAGE code (assigned during registration)
 
 ### 1.3 Submit Manifund Applications (Day 1–3)
 - **Primary ask** (submit first): **Joel Becker** — "$25K — Karma Ledger benchmark on 100+ tool interactions; publish open-source evaluation protocol"

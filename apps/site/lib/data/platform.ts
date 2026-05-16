@@ -36,7 +36,7 @@ export const CAPABILITIES: Record<CapabilitySlug, Capability> = {
     why: "Without a rule layer, agent policies live in system prompts — which the model can forget or be talked out of. A pre/post check in code can't be jailbroken.",
     status: "shipped",
     shipped: "2026-02-07 (v11.2.0)",
-    maps_to: ["OWASP Agentic Top 10: LLM01, LLM04", "EU AI Act Article 14"],
+    maps_to: ["OWASP LLM Top 10 (v1.1, covers agentic AI): LLM01, LLM04", "EU AI Act Article 14"],
   },
   "karma-ledger": {
     slug: "karma-ledger",
@@ -47,7 +47,7 @@ export const CAPABILITIES: Record<CapabilitySlug, Capability> = {
     why: "Regulators and boards increasingly ask 'what did the agent actually do, not what did it say?' The Karma Ledger is the answer.",
     status: "shipped",
     shipped: "2026-02-07 (v11.2.0)",
-    maps_to: ["OWASP Agentic Top 10: LLM08", "EU AI Act Article 14(3)(d)"],
+    maps_to: ["OWASP LLM Top 10 (v1.1, covers agentic AI): LLM08", "EU AI Act Article 14(3)(d)"],
   },
   "harmony-vector": {
     slug: "harmony-vector",

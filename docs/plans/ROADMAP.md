@@ -159,7 +159,7 @@ Scoped in `@apps/SCOPING_BROWSER_FIRST_DECIDED.md` §4 Phase P2. ~1 focused week
 ### Platform
 
 - **WhiteMagic v23+** feature direction driven by consultancy feedback loop (what clients actually need that the platform lacks).
-- **Dharma rule marketplace** — signed community-contributed rule packs (OWASP Agentic Top 10 coverage, EU AI Act Article 14 coverage, industry-specific).
+- **Dharma rule marketplace** — signed community-contributed rule packs (OWASP LLM Top 10 (v1.1, covers agentic AI) coverage, EU AI Act Article 14 coverage, industry-specific).
 - **Harmony Vector dashboards** — polished, exportable, suitable for board-level reporting.
 - **Polyglot narrowing** — after a year of dogfooding, decide which polyglot tracks earn their maintenance cost. Drop the ones that don't.
 

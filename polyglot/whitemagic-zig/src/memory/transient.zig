@@ -29,7 +29,7 @@ pub const TransientThoughtAllocator = struct {
 
 // C-compatible API for Rust FFI
 var global_allocator: ?TransientThoughtAllocator = null;
-var global_mutex: std.Thread.Mutex = .{};
+var global_mutex: @import("../mutex_compat.zig").Mutex = .{};
 
 pub fn zig_init_transient_allocator() void {
     global_mutex.lock();

@@ -92,7 +92,7 @@
 **Result**: **23/28** fusions active (target: 21/28)
 
 ### Phase 2 Deliverables
-- [x] 450+ tools with working handlers (443 dispatch / 471 callable)
+- [x] 450+ tools with working handlers (451 dispatch / 479 callable)
 - [x] Northern Quadrant chapters average 400+ lines
 - [x] Dashboard serves real data
 - [x] 21/28 fusions active
@@ -163,8 +163,8 @@
 
 | Metric | v22.0.0 | v22.2 Target | v22.2 Actual |
 |--------|---------|--------------|--------------|
-| Tests passing | 2,068 | 2,100+ | **2,154** |
-| Tools with handlers | ~400 | 450+ | **471 callable / 443 dispatch** |
+| Tests passing | 2,068 | 2,100+ | **2,216** |
+| Tools with handlers | ~400 | 450+ | **479 callable / 451 dispatch** |
 | Gana tools working | 0/28 | 28/28 | **28/28** |
 | Broken core tools | 2+ | 0 | **0** |
 | Fusions active | 13/28 | 21/28 | **21/28** |

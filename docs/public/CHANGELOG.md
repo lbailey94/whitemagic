@@ -15,13 +15,13 @@
 - **Corpus Callosum Bus**: Multi-round bicameral debate engine with tension-based escalation
 
 ### Surface Completion (Phase 2)
-- 443 dispatch tools, 471 callable tools — all with working handlers
+- 451 dispatch tools, 479 callable tools
 - Northern Quadrant Grimoire expanded to 484-line average
 - Dashboard wired to real Gan Ying event bus
 - 23/28 fusions active
 
 ### Metrics
-- Tests: **2,154 passed, 66 skipped, 0 failed**
+- Tests: **2,216 passed, 67 skipped, 0 failed**
 - Doc drift: **7/7 checks passing**
 - Zero broken core tools
 

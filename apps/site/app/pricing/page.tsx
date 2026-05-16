@@ -59,7 +59,7 @@ const TIERS: Tier[] = [
       "I read your agent or MCP codebase against the governance patterns that shipped 4 weeks before Microsoft AGT, and return a written deliverable you can act on Monday morning.",
     features: [
       "20–40 page written review, delivered in 5 business days",
-      "Risks mapped to OWASP Agentic Top 10 and EU AI Act Article 14",
+      "Risks mapped to OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act Article 14",
       "Prioritized, estimated remediation roadmap",
       "One 60-minute walkthrough call + 2 weeks of email follow-up",
       "NDA on request; source stays on your infrastructure",

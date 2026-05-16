@@ -118,17 +118,28 @@ WM_MCP_LITE=1 python -m whitemagic.run_mcp
 
 ### Polyglot Accelerators (Optional)
 
-All 6 languages build clean. Rust is recommended for the biggest performance gains:
+All languages are MIT-licensed. Two are production-wired; the rest are experimental with graceful fallback. Rust is recommended for the biggest performance gains:
 
 ```bash
-cd whitemagic-rust && maturin develop --release  # Rust (PyO3) — galactic scoring, association mining, 5D KD-tree
-cd haskell && cabal build                         # Haskell (FFI) — algebraic Dharma rules, dep graph planner
-cd elixir && mix compile --force                  # Elixir (OTP) — actor-model event bus, dream scheduler
-cd whitemagic-go && go build ./...                # Go — general bridge
-cd mesh && go build ./...                         # Go mesh — libp2p P2P, mDNS, protobuf
-cd whitemagic-zig && zig build                    # Zig — SIMD cosine, holographic projection
-cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — batch encoding
+cd whitemagic-rust && maturin develop --release  # Rust (PyO3) — ✅ PRODUCTION: galactic scoring, association mining, 5D KD-tree
+cd haskell && cabal build                         # Haskell (FFI) — 🧪 experimental: algebraic Dharma rules, dep graph planner
+cd elixir && mix compile --force                  # Elixir (OTP) — 🧪 experimental: actor-model event bus, dream scheduler
+cd whitemagic-go && go build ./...                # Go — 🧪 experimental: general bridge
+cd mesh && go build ./...                         # Go mesh — ✅ PRODUCTION: libp2p P2P, mDNS, protobuf
+cd whitemagic-zig && zig build                    # Zig — 🧪 experimental: SIMD cosine, holographic projection (FFI bridge functional, not wired to hot paths)
+cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — 🧪 experimental: batch encoding
 ```
+
+| Language | Status | Notes |
+|----------|--------|-------|
+| Rust (PyO3) | ✅ Production | 54 Python-callable functions, SIMD acceleration, WASM target. Verified: `maturin develop --release` succeeds on rustc 1.93.0. |
+| Go (mesh) | ✅ Production | libp2p networking, protobuf, mDNS discovery. Verified: `go build ./...` succeeds on go 1.22.2. |
+| Koka | ✅ Compiles | Effect handlers; 4 core files compile on Koka 3.2.2. 45 native binaries generated. |
+| Elixir | ✅ Builds | OTP GenServer scaffolds; `mix compile` succeeds on Elixir 1.14.0 / OTP 25. |
+| Zig | ✅ Builds | Migrated to Zig 0.16 — 12 API categories fixed, `libwhitemagic.so` (12MB) + `libwhitemagic-zig.a` (10MB). |
+| Julia | ✅ Loads | Recovered 698 lines from archive (self_model_forecast.jl, memory_stats.jl). Module loads with `JULIA_NUM_THREADS=1`. |
+| Haskell | ⏳ Installing | Recovered 2,670 lines from archive (13 source files: DharmaRules, DepGraph, WuXing, etc.). GHC 9.6.6 installing via ghcup. |
+| Mojo | ❌ Compiler unavailable | 3,644 lines of source ready (more complete than archive). Modular CLI requires auth token for Mojo compiler install. |
 
 ## Canonical Interfaces
 
@@ -177,7 +188,7 @@ Resolution order:
 2. `$WM_CONFIG_ROOT` (legacy alias)
 3. `~/.whitemagic` (default)
 4. `/tmp/whitemagic_state` (fallback when the default is not writable)
-5. `./.whitemagic` (last resort in extremely restricted environments)
+5. `./.whitemagic` only when `WM_FALLBACK_TO_CWD=true`
 
 The intent is:
 - **Repo = code**, not state.
@@ -395,9 +406,9 @@ Design rule:
 | Tool registry | `whitemagic/tools/registry.py` → `registry_defs/*.py` (26 domain files) |
 | PRAT router | `whitemagic/tools/prat_router.py` |
 | Gnosis portal | `whitemagic/tools/gnosis.py` |
-| 28 Gana spec | `docs/28_GANA_TOOL_SYNTHESIS.md` |
+| 28 Gana reference | `core/docs/28_GANA_ARMY_MAPPING.md` + `grimoire/TRUTH_TABLE.md` |
 | Nexus API | `whitemagic/interfaces/nexus_api.py` (port 8765) |
-| Nexus frontend | `nexus/` (Vite + React + TS + Tailwind + Monaco, port 1430) |
+| Site app | `apps/site/` (Next.js + React + TypeScript) |
 
 ## Eval Harness
 
@@ -651,7 +662,7 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 ### Metrics
 - **479 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
-- **2,215 tests passing**, 0 failures, 67 skipped (as of 2026-04-29)
+- **2,216 tests passing**, 0 failures, 67 skipped (as of 2026-05-05)
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 
 ---

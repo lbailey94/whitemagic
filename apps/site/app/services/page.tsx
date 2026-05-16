@@ -2,11 +2,12 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { ServiceCard } from "@/components/ServiceCard";
 import { ArrowRight, Plug, Server, Shield } from "lucide-react";
+import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
 
 export const metadata = {
   title: "Services — WhiteMagic Labs",
   description:
-    "Private AI deployment, agent governance, and MCP engineering for regulated teams.",
+    "Private AI deployment, agent governance, and MCP engineering for teams turning agent autonomy into auditable infrastructure.",
 };
 
 const SERVICES = [
@@ -22,7 +23,7 @@ const SERVICES = [
     icon: Shield,
     title: "Agent Governance",
     blurb:
-      "Runtime guardrails for autonomous agents: policy enforcement, identity, audit, approval workflows. Addresses the OWASP Agentic Top 10.",
+      "Runtime guardrails for autonomous agents: policy enforcement, identity, audit, approval workflows. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI).",
     priceHint: "Engagement · $10–30k",
     href: "/services/agent-governance",
   },
@@ -41,14 +42,36 @@ export default function ServicesPage() {
     <>
       <PageHeader
         eyebrow="Services"
-        title="Three ways we can work together."
-        lede="Every engagement starts with a 30-minute discovery call. If I'm not the right fit, I'll say so and try to point you at someone who is."
+        title="Governed agent infrastructure, built from shipped code."
+        lede="Every engagement starts with a 30-minute discovery call. The center of gravity is evidence: policy, audit, observability, and deployment choices your team can defend."
       />
       <section className="container-site py-16">
         <div className="grid gap-5 md:grid-cols-3">
           {SERVICES.map((s) => (
             <ServiceCard key={s.title} {...s} />
           ))}
+        </div>
+
+        <div className="mt-20 rounded-2xl border border-border bg-surface-alt p-8 md:p-12">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            2026 field map · updated {FIELD_MAP_UPDATED}
+          </p>
+          <h2 className="mb-6 font-head text-2xl font-semibold tracking-tight text-ink">
+            What changed in the market
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {FIELD_CONCLUSIONS.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-xl border border-border bg-surface p-5"
+              >
+                <h3 className="mb-2 font-head text-lg font-semibold text-ink">
+                  {item.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-muted">{item.body}</p>
+              </article>
+            ))}
+          </div>
         </div>
 
         <div className="mt-20 rounded-2xl border border-border bg-surface-alt p-8 md:p-12">

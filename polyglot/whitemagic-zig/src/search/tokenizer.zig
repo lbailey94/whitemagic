@@ -20,7 +20,7 @@ pub const Tokenizer = struct {
     
     /// Tokenize text into words (whitespace-separated)
     pub fn tokenize(self: *Tokenizer, text: []const u8) ![]Token {
-        var tokens: std.ArrayListUnmanaged(Token) = .{};
+        var tokens: std.ArrayListUnmanaged(Token) = .{ .items = &.{}, .capacity = 0 };
         
         var start: usize = 0;
         var in_token = false;
@@ -58,7 +58,7 @@ pub const Tokenizer = struct {
         const tokens = try self.tokenize(text);
         defer self.allocator.free(tokens);
         
-        var result: std.ArrayListUnmanaged([]u8) = .{};
+        var result: std.ArrayListUnmanaged([]u8) = {};
         
         for (tokens) |token| {
             var lower = try self.allocator.alloc(u8, token.text.len);

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { AnimatedTriquetra } from "./AnimatedTriquetra";
+import { WM_FACTS } from "@/lib/facts";
 
 export function Hero() {
   return (
@@ -9,32 +10,31 @@ export function Hero() {
         <div>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
             <ShieldCheck className="h-3.5 w-3.5 text-lavender" />
-            Private AI · on your infrastructure
+            Open-source governance infrastructure
           </div>
           <h1 className="mb-6 font-head text-4xl font-semibold leading-[1.05] tracking-tight text-ink md:text-6xl">
-            Private AI,<br />
-            deployed on{" "}
-            <span className="text-lavender">your infrastructure</span>.
+            Governance infrastructure<br />
+            for <span className="text-lavender">agentic AI</span>.
           </h1>
           <p className="mb-8 max-w-prose text-lg leading-relaxed text-muted">
-            Persistent memory, tool use, governance, and full audit — your
-            data never leaves the building. Built for regulated teams in law,
-            healthcare, and fintech.
+            WhiteMagic Labs publishes research, tools, and reference
+            implementations for memory, tool-use governance, and side-effect
+            audit. Consulting is available where the work is directly useful.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/contact" className="btn-primary">
-              Book a discovery call
+              Start a conversation
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href="/services" className="btn-ghost">
-              See the services
+            <Link href="/research" className="btn-ghost">
+              Read the research
             </Link>
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border-light pt-8">
-            <Stat label="Lines of OSS shipped" value="178K" />
-            <Stat label="Tests passing" value="2,185" />
-            <Stat label="MCP tools built" value="479" />
+            <Stat label="Lines of OSS shipped" value={WM_FACTS.linesShort} />
+            <Stat label="Tests passing" value={WM_FACTS.testsPassing} />
+            <Stat label="MCP tools built" value={WM_FACTS.callableTools} />
           </dl>
         </div>
 
@@ -46,7 +46,7 @@ export function Hero() {
           </div>
           <div className="absolute inset-x-0 bottom-0 p-6 text-center">
             <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
-              WhiteMagic Labs · Private AI
+              WhiteMagic Labs · Agent Governance
             </div>
           </div>
         </div>

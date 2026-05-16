@@ -6,9 +6,9 @@
 
 **v22.2.0** — April 26, 2026
 
-- Phase 2: Surface completion — 443 dispatch tools, 471 callable tools, 23/28 fusions
+- Phase 2: Surface completion — 451 dispatch tools, 479 callable tools, 23/28 fusions
 - Phase 3: Cognitive differentiation — Neurotransmitter Vectors, Grimoire MCP Resources (33), Memory Dreams YAML, Jaynes Voice Audit, Corpus Callosum Bus
-- Test suite: 2,154 passed, 66 skipped, 0 failed
+- Test suite: 2,216 passed, 67 skipped, 0 failed
 - See root `CHANGELOG.md` for detailed release notes.
 
 ---

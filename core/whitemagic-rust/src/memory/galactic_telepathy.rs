@@ -633,9 +633,9 @@ use pyo3::prelude::*;
 
 #[pyfunction]
 fn create_telepathy_engine() -> PyResult<PyObject> {
-    // This would return a wrapped Rust object to Python
-    // Implementation requires pyo3 class wrapping
-    unimplemented!("Python bindings in galactic_telepathy_ffi.rs")
+    Err(pyo3::exceptions::PyNotImplementedError::new_err(
+        "Python bindings are implemented in galactic_telepathy_ffi.rs and this compatibility entrypoint is not registered",
+    ))
 }
 
 #[pymodule]

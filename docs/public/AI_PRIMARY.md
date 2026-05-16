@@ -1,10 +1,10 @@
-# AI Primary Spec — Whitemagic v15.8.0
+# AI Primary Spec — Whitemagic v22.2.0
 
 **The tool contract for AI agents using Whitemagic.**
 
-Whitemagic is a memory and tool substrate for AI agents. It provides 374 MCP tools (28 in PRAT mode), tiered persistent memory, ethical governance, and polyglot accelerators. Agents bring reasoning; Whitemagic provides Hands, Memory, and Conscience.
+Whitemagic is a governance and metacognition substrate for AI agents. It provides 479 callable tools across 451 dispatch entries (28 in PRAT mode), tiered persistent memory, ethical governance, and polyglot accelerators. Agents bring reasoning; Whitemagic provides Hands, Memory, and Conscience.
 
-- **Hands** — 374 MCP tools for acting on the world
+- **Hands** — 479 callable tools across 451 dispatch entries
 - **Memory** — Tiered, persistent, semantic, no-delete galactic lifecycle
 - **Conscience** — Dharma rules, Karma ledger, Harmony Vector, Homeostatic Loop
 
@@ -36,7 +36,7 @@ WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 # Or lean mode (28 Gana meta-tools, recommended for new clients)
 python -m whitemagic.run_mcp_lean
 
-# Or classic mode (all 374 individual tools)
+# Or classic mode (451 dispatch tools)
 python -m whitemagic.run_mcp
 
 # Or lite mode (92 core tools)
@@ -56,7 +56,7 @@ WM_MCP_LITE=1 python -m whitemagic.run_mcp
 
 ### Polyglot Accelerators (Optional)
 
-All 10 compiled languages build clean. Rust is recommended for the biggest performance gains:
+All languages are MIT-licensed. Rust and Go mesh are production-wired; other accelerators are experimental or bridge-level with graceful fallback:
 
 ```bash
 cd whitemagic-rust && maturin develop --release  # Rust (PyO3) — galactic scoring, association mining, 5D KD-tree
@@ -72,7 +72,7 @@ cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — batch e
 
 Primary:
 - **MCP server (stdio):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (28 Gana meta-tools)
-- **MCP server (classic):** `python -m whitemagic.run_mcp` (374 individual tools)
+- **MCP server (classic):** `python -m whitemagic.run_mcp` (451 dispatch tools)
 
 Secondary:
 - **In-process Python:** `from whitemagic.tools.unified_api import call_tool`
@@ -89,7 +89,7 @@ On first connection, read these resources before tool calls:
 
 ## PRAT Mode — 28 Gana Meta-Tools
 
-The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 374 tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
+The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 451 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
 
 1. **Has a domain** — a specific operational concern (session, memory, health, ethics, etc.)
 2. **Supports 4 polymorphic operations** — search / analyze / transform / consolidate
@@ -115,7 +115,7 @@ Resolution order:
 2. `$WM_CONFIG_ROOT` (legacy alias)
 3. `~/.whitemagic` (default)
 4. `/tmp/whitemagic_state` (fallback when the default is not writable)
-5. `./.whitemagic` (last resort in extremely restricted environments)
+5. `./.whitemagic` only when `WM_FALLBACK_TO_CWD=true`
 
 The intent is:
 - **Repo = code**, not state.
@@ -333,9 +333,9 @@ Design rule:
 | Tool registry | `whitemagic/tools/registry.py` → `registry_defs/*.py` (26 domain files) |
 | PRAT router | `whitemagic/tools/prat_router.py` |
 | Gnosis portal | `whitemagic/tools/gnosis.py` |
-| 28 Gana spec | `docs/28_GANA_TOOL_SYNTHESIS.md` |
+| 28 Gana reference | `core/docs/28_GANA_ARMY_MAPPING.md` + `grimoire/TRUTH_TABLE.md` |
 | Nexus API | `whitemagic/interfaces/nexus_api.py` (port 8765) |
-| Nexus frontend | `nexus/` (Vite + React + TS + Tailwind + Monaco, port 1430) |
+| Site app | `apps/site/` (Next.js + React + TypeScript) |
 
 ## Eval Harness
 

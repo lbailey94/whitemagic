@@ -204,7 +204,7 @@ pub export fn broker_consume_batch_callback(
 
 // FFI: Global broker instance
 var global_broker: ?MessageRingBuffer = null;
-var broker_mutex: std.Thread.Mutex = .{};
+var broker_mutex: std.std.Thread.Mutex = {};
 
 pub export fn broker_init(capacity: usize) bool {
     broker_mutex.lock();

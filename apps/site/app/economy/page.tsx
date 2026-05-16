@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { Coins, ShieldCheck, Scale, ArrowRight } from "lucide-react";
 import { getCapability } from "@/lib/data/platform";
+import { FIELD_MAP_UPDATED, FIELD_SIGNALS } from "@/lib/field-map";
 
 export const metadata = {
   title: "Agent Economy — WhiteMagic Labs",
@@ -10,6 +11,12 @@ export const metadata = {
 };
 
 const cap = getCapability("gratitude-architecture");
+const ECONOMY_SIGNALS = FIELD_SIGNALS.filter(
+  (signal) =>
+    signal.area === "Commerce" ||
+    signal.area === "Governance" ||
+    signal.area === "Regulation",
+);
 
 export default function EconomyPage() {
   return (
@@ -24,25 +31,25 @@ export default function EconomyPage() {
         {/* Thesis */}
         <div className="mx-auto max-w-3xl space-y-4 text-muted">
           <p>
-            By 2029, IDC projects over a billion deployed AI agents generating
-            hundreds of billions of actions per day. The payment layer for that
-            economy converged faster than expected — <strong>x402</strong>{" "}
-            (HTTP 402 + stablecoins) is now under the Linux Foundation with 22
-            founding members; the XRP Ledger has a production x402 facilitator.
-            What the industry built payments-first, it left{" "}
+            The 2026 agent stack is splitting into layers. MCP standardizes tool
+            access. A2A standardizes agent discovery and task exchange. x402,
+            Stripe, and related protocols are making machine payment flows
+            concrete. What the industry is building transport-first and
+            payments-first, it still leaves{" "}
             <strong>governance unsolved</strong>.
           </p>
           <p>
-            Forced paid-bounty marketplaces have empirically failed (ClawTasks
-            pivoted to free-only in early 2026). The pattern that works is{" "}
-            <strong>voluntary, opt-in, patronage-shaped</strong> economics on
-            top of free infrastructure — with measurable, cryptographically
-            verified benefits for contributors.
+            WhiteMagic&apos;s near-term conclusion is deliberately conservative:
+            do not bet the lab on transaction volume. Build the evidence layer
+            first — identity, policy, rate limits, audit, and side-effect
+            fidelity — then let payment rails attach where they are actually
+            useful.
           </p>
           <p>
             WhiteMagic&apos;s <strong>Gratitude Architecture</strong> is an
-            opinionated open-source reference implementation of that pattern.
-            Two rails, one ledger, zero key custody. The{" "}
+            opinionated open-source reference implementation of voluntary,
+            opt-in contribution on top of free infrastructure. Two rails, one
+            ledger, zero key custody. The{" "}
             <Link href="/open-source" className="text-lavender underline">
               public repo
             </Link>{" "}
@@ -50,6 +57,33 @@ export default function EconomyPage() {
             Librarian&apos;s answers, `.well-known/agent-economy.json` — is a
             projection of it.
           </p>
+        </div>
+
+        <div className="mt-14 rounded-2xl border border-border bg-surface-alt p-6 md:p-8">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            Updated market read · {FIELD_MAP_UPDATED}
+          </p>
+          <h2 className="mb-5 font-head text-2xl font-semibold text-ink">
+            Agent commerce is real. Governance is still the gap.
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {ECONOMY_SIGNALS.map((signal) => (
+              <article
+                key={signal.title}
+                className="rounded-xl border border-border bg-surface p-5"
+              >
+                <p className="mb-2 font-mono text-xs uppercase tracking-wider text-lavender">
+                  {signal.area}
+                </p>
+                <h3 className="mb-2 font-head text-base font-semibold text-ink">
+                  {signal.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-muted">
+                  {signal.consequence}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
 
         {/* The three principles */}
@@ -204,7 +238,7 @@ export default function EconomyPage() {
           </table>
         </div>
         <p className="mt-3 max-w-prose text-sm text-muted">
-          Our unique position: the only system that integrates{" "}
+          Our position: one of the only open-source systems that integrates{" "}
           <strong>L4 (Dharma governance)</strong> +{" "}
           <strong>L5 (Karma reputation)</strong> + <strong>L1 (gratitude rails)</strong>{" "}
           + memory substrate into a single OSS reference. Governance-first,

@@ -36,13 +36,11 @@ the launch sprint and should be resisted.
 Current homepage (`@apps/site/app/page.tsx:64-70`) claims:
 
 > "WhiteMagic is a 170,000-line open-source cognitive OS for AI
-> agents — 374 MCP tools, 11 languages, persistent holographic
-> memory, an 8-stage governance pipeline, and **1,318 passing tests**."
+> agents — 451 dispatch tools, polyglot accelerators, persistent holographic
+> memory, an 8-stage governance pipeline, and **2,216 passing tests**."
 
-The "1,318 passing tests" figure is stale. Current honest number
-from `STRATEGIC_PIVOT_ANALYSIS.md §2` is roughly **766 passing / 189
-failing** on unit tests. An engineer who clones the repo catches this
-in 90 seconds. Options:
+Older test-count figures are stale. Current honest number is **2,216 passed / 67
+skipped / 0 failed** on the full non-archive Python suite. Options:
 
 - **Option A (recommended)**: remove the test count entirely.
   Replace with a qualitative claim ("extensively tested across
@@ -59,8 +57,8 @@ in 90 seconds. Options:
 plan's README fix.
 
 Other claims to audit on the homepage:
-- "374 MCP tools" — verify against current registry. If not exactly
-  true, use "~350 MCP tools" or omit.
+- "451 dispatch tools" / "479 callable tools" — verify against current registry
+  before launch copy changes.
 - "11 languages" — count the actually-shipping polyglot tracks.
   Be honest.
 - "persistent holographic memory" — metaphorical; either explain or
@@ -285,7 +283,7 @@ Order on homepage and `/services`:
    building serious agent infrastructure." Highest close rate.
    Bread-and-butter. $30–45K.
 2. **Agent Governance** — "Runtime guardrails, policy enforcement,
-   audit trails. Satisfies OWASP Agentic Top 10 and emerging AI Act
+   audit trails. Satisfies OWASP LLM Top 10 (v1.1, covers agentic AI) and emerging AI Act
    requirements." Narrative spine. $25–40K assessment, $80K+ full.
 3. **On-Premise / Air-Gapped AI** — "AI that never leaves your
    network, for hospitals, banks, law firms, defense, regulated

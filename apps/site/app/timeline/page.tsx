@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TimelineHorizontal } from "@/components/TimelineHorizontal";
+import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
 
 export const metadata = {
   title: "Timeline — WhiteMagic Labs",
@@ -28,8 +29,8 @@ export default function TimelinePage() {
             </code>
             . Every industry entry links to a{" "}
             <strong className="text-fg">verifiable public source</strong> —
-            Microsoft's blog, Anthropic's releases, the OWASP Top 10 PDF,
-            the MCP roadmap document.
+            Microsoft&apos;s blog, Anthropic&apos;s releases, the OWASP Top 10 PDF,
+            the MCP roadmap document, and current protocol documentation.
           </p>
           <p>
             I&apos;m not claiming to have invented everything first. Several
@@ -51,6 +52,23 @@ export default function TimelinePage() {
             the inflection points — when the slope was steepest and most
             people were still arguing whether the slope existed at all.
           </p>
+          <div className="rounded-2xl border border-border bg-surface p-5">
+            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+              Current conclusion · updated {FIELD_MAP_UPDATED}
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {FIELD_CONCLUSIONS.map((item) => (
+                <article key={item.title}>
+                  <h2 className="mb-1 font-head text-base font-semibold text-ink">
+                    {item.title}
+                  </h2>
+                  <p className="text-sm leading-relaxed text-muted">
+                    {item.body}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
           <p className="flex flex-wrap gap-4 pt-2 text-sm">
             <LegendDot label="WhiteMagic" color="bg-lavender" />
             <LegendDot label="Industry & standards" color="bg-muted" />
@@ -95,7 +113,7 @@ export default function TimelinePage() {
             />
             <Miss
               title="Agent marketplaces and micropayments at 2026 scale"
-              body="I built OMS (.mem portable packages) and XRPL integration on a thesis that agent-to-agent payment rails would mature by Q3 2026. The market is earlier than I projected. I still think the thesis is right; my timing was off."
+              body="I built OMS (.mem portable packages) and XRPL integration on a thesis that agent-to-agent payment rails would mature quickly enough to become a near-term business center. The rails are real; the better near-term posture is readiness, audit, and voluntary contribution infrastructure."
             />
           </ul>
         </div>

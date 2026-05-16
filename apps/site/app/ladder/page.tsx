@@ -140,7 +140,7 @@ const TIERS: Tier[] = [
     icon: Network,
     tagline: "Multi-agent systems. Runtime governance. Audit you can show a regulator.",
     looksLike:
-      "Specialized agent roles (researcher, writer, reviewer) coordinating via message passing or explicit orchestration. Policy engines enforcing rules at the agent-call boundary, not just at the API gateway. Full karma-style ledgers of what each agent did, intended vs actual side effects, and who approved what. Fine-tuning or LoRA on domain data. Governance mapped to OWASP Agentic Top 10 and regulatory regimes (EU AI Act, Colorado AI Act, NY SHIELD).",
+      "Specialized agent roles (researcher, writer, reviewer) coordinating via message passing or explicit orchestration. Policy engines enforcing rules at the agent-call boundary, not just at the API gateway. Full karma-style ledgers of what each agent did, intended vs actual side effects, and who approved what. Fine-tuning or LoRA on domain data. Governance mapped to OWASP LLM Top 10 (v1.1, covers agentic AI) and regulatory regimes (EU AI Act, Colorado AI Act, NY SHIELD).",
     signals: [
       "Audit logs are first-class product artifacts, not afterthoughts",
       "Policy changes deploy through the same CI/CD as code",
@@ -304,7 +304,7 @@ export default function LadderPage() {
             </DiagRow>
             <DiagRow>
               Can you show a regulator a complete, enforced, auditable chain
-              of agent decisions mapped to OWASP Agentic Top 10?{" "}
+              of agent decisions mapped to OWASP LLM Top 10 (v1.1, covers agentic AI)?{" "}
               <strong className="text-fg">Tier 6</strong>. The{" "}
               <Link
                 href="/services/agent-governance"

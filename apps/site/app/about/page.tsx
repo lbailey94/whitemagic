@@ -4,11 +4,12 @@ import { Prose } from "@/components/Prose";
 import { ArrowRight } from "lucide-react";
 import { JsonLd } from "@/components/JsonLd";
 import { personLd } from "@/lib/jsonld";
+import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 
 export const metadata = {
   title: "About — WhiteMagic Labs",
   description:
-    "WhiteMagic Labs is Lucas — a self-taught engineer who built a 170K-line cognitive OS for AI agents before the market caught up.",
+    `WhiteMagic Labs is Lucas — a self-taught engineer who built a ${WM_FACTS.linesShort}-line cognitive OS for AI agents before the market caught up.`,
 };
 
 export default function AboutPage() {
@@ -25,16 +26,16 @@ export default function AboutPage() {
         <Prose className="mx-auto">
           <h2>The short version</h2>
           <p>
-            I spent the last six months building <strong>WhiteMagic</strong>{" "}
-            — a 170,000-line open-source cognitive operating system for AI
-            agents. Persistent memory, 374 MCP tools across 28 categories,
-            11-language polyglot architecture with Rust and Zig performance
-            bridges, an 8-stage governance pipeline, 1,300+ passing tests.
-            I designed it, wrote it, and shipped it solo.
+            I spent the last twelve months building <strong>WhiteMagic</strong>{" "}
+            — a {WM_FACTS.linesLong}-line open-source cognitive operating
+            system for AI agents. Persistent memory, {WM_FACT_TEXT.mcpSurface},
+            polyglot runtime with Rust production accelerators, Zig/Mojo/Haskell
+            experimental bridges, an 8-stage governance pipeline,{" "}
+            {WM_FACT_TEXT.shortPassingSuite}. I designed the architecture and directed the implementation — using an AI-native development workflow that compresses weeks of traditional engineering into focused sessions (documented in the <Link href="/writing/minutes-to-days-paradox" className="text-lavender underline">Minutes-to-Days Paradox</Link>).
           </p>
           <p>
-            Along the way I independently invented several patterns that
-            have since been shipped by larger organizations — tool
+            Along the way I independently implemented several patterns that
+            were later shipped independently by larger organizations — tool
             compression, runtime agent governance, private AI memory
             layers. Some of that was prescient; some of it was just being
             willing to build what other people were still arguing about.
@@ -55,7 +56,7 @@ export default function AboutPage() {
             also taught me something else: building the right thing in
             the right market at the right time is not the same as
             building the right thing in the right market. A solo developer
-            shipping a 170K-line platform is a research project, not a
+            shipping a {WM_FACTS.linesShort}-line platform is a research project, not a
             product. I&apos;m making peace with that and turning the
             hard-won expertise into something that actually helps teams
             I can reach.

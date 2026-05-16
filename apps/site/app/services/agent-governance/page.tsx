@@ -4,15 +4,16 @@ import { Prose } from "@/components/Prose";
 import { ArrowRight, Check } from "lucide-react";
 import { JsonLd } from "@/components/JsonLd";
 import { serviceLd } from "@/lib/jsonld";
+import { FIELD_MAP_UPDATED, FIELD_SIGNALS } from "@/lib/field-map";
 
 export const metadata = {
   title: "Agent Governance — WhiteMagic Labs",
   description:
-    "Runtime guardrails for autonomous AI agents. Policy enforcement, identity, audit, approval workflows. Maps to the OWASP Agentic Top 10 and EU AI Act obligations.",
+    "Runtime guardrails for autonomous AI agents. Policy enforcement, identity, audit, approval workflows. Maps to the OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act obligations.",
 };
 
 const INCLUDED = [
-  "Audit of your current agent stack against the OWASP Agentic Top 10",
+  "Audit of your current agent stack against the OWASP LLM Top 10 (v1.1, covers agentic AI)",
   "Policy engine — declarative rules, graduated responses, sub-millisecond evaluation",
   "Append-only audit ledger with hash-chained integrity",
   "RBAC — role-scoped capability gating for every agent and tool",
@@ -31,6 +32,13 @@ const RISKS = [
   { name: "Rogue agents", mit: "Isolation rings & kill switch" },
 ];
 
+const GOVERNANCE_SIGNALS = FIELD_SIGNALS.filter(
+  (signal) =>
+    signal.area === "Governance" ||
+    signal.area === "Observability" ||
+    signal.area === "Regulation",
+);
+
 export default function Page() {
   return (
     <>
@@ -45,20 +53,20 @@ export default function Page() {
         <Prose>
           <h2>Why this matters now</h2>
           <p>
-            In December 2025 OWASP published the{" "}
-            <strong>Top 10 for Agentic Applications</strong> — the first
-            formal risk taxonomy for autonomous agents. In August 2026 the
-            EU AI Act&apos;s high-risk obligations take effect. Colorado&apos;s
-            AI Act is already enforceable. Every major cloud vendor is
-            shipping governance toolkits. The question &quot;who governs
-            what your agents do&quot; is no longer optional.
+            The field has moved from &quot;can agents call tools?&quot; to{" "}
+            <strong>who governs what those tool calls are allowed to do</strong>.
+            OpenAI&apos;s Agents SDK exposes guardrails and traces. OpenTelemetry
+            is standardizing GenAI and MCP spans. OWASP&apos;s GenAI work gives
+            teams a risk vocabulary, and EU AI Act transparency obligations
+            start taking effect in August 2026.
           </p>
           <p>
             Most teams deploying agents have model governance (evals,
             bias testing, red-teaming). Almost none have{" "}
             <strong>agent governance</strong> — the layer between
             &quot;the model is fine&quot; and &quot;the agent has production
-            access.&quot; That gap is where incidents happen.
+            access.&quot; That gap is where side effects, approvals, audit trails,
+            and recovery procedures either exist or fail.
           </p>
 
           <h2>What I deploy</h2>
@@ -96,10 +104,10 @@ export default function Page() {
           <p>
             I built this layer — Dharma rules engine, Karma audit ledger,
             eight-stage middleware pipeline — inside WhiteMagic starting
-            in late 2025. That&apos;s months before Microsoft released
-            their Agent Governance Toolkit and before the OWASP list
-            existed. You get a consultant who has already walked the
-            design trade-offs on his own time, on his own dime.
+            in late 2025. Recent SDK and standards work validates the shape:
+            guardrails, traces, tool-call policy, and evidence generation are
+            becoming table stakes. You get a consultant who has already walked
+            those design trade-offs in a working codebase.
           </p>
           <p>
             For teams already committed to Microsoft&apos;s toolkit,
@@ -110,6 +118,20 @@ export default function Page() {
         </Prose>
 
         <aside className="space-y-8 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-2xl border border-border bg-surface p-6">
+            <div className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
+              Field map · {FIELD_MAP_UPDATED}
+            </div>
+            <ul className="space-y-4 text-sm">
+              {GOVERNANCE_SIGNALS.map((signal) => (
+                <li key={signal.title}>
+                  <div className="font-medium text-ink">{signal.area}</div>
+                  <div className="text-muted">{signal.consequence}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <div className="rounded-2xl border border-border bg-surface p-6">
             <div className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
               At a glance
@@ -131,7 +153,7 @@ export default function Page() {
 
           <div className="rounded-2xl border border-border bg-surface p-6">
             <div className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
-              OWASP Agentic Top 10 coverage
+              OWASP LLM Top 10 (v1.1, covers agentic AI) coverage
             </div>
             <ul className="space-y-3 text-sm">
               {RISKS.map((r) => (

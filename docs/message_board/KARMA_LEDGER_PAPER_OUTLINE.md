@@ -3,7 +3,7 @@
 **Target venue**: arxiv.org (preprint) + submit to ICML/NeurIPS Workshop on Agentic Systems or ACM FAccT  
 **Length**: ~6,000 words  
 **Figures**: 1 architecture diagram, 1 comparison table  
-**Code repository**: https://github.com/whitemagic-ai/whitemagic (v22.2.0, 2,215 tests)  
+**Code repository**: https://github.com/whitemagic-ai/whitemagic (v22.2.0, 2,216 tests)
 **Date of first spec**: 2025-05-26 (MandalaOS Concept Review, ChatGPT conversation archive)  
 **Date of implementation**: 2026-02-07 (WhiteMagic v11.2.0)  
 **Date of public release**: 2026-04-16 (WhiteMagic v22.0.0)
@@ -45,7 +45,7 @@ We introduce the Karma Ledger, a runtime substrate that tracks declared versus a
 ### 2.2 Agent safety and audit
 - Anthropic Claude Managed Agents with persistent memory (2026-04-23)
 - Cloudflare Project Think persistent identity (2026-04-15)
-- OWASP Agentic Top 10 (2025)
+- OWASP LLM Top 10 (v1.1, covers agentic AI) (2025)
 - EU AI Act Article 12 (audit logging requirements)
 
 ### 2.3 Effect systems and capability security
@@ -133,7 +133,7 @@ We introduce the Karma Ledger, a runtime substrate that tracks declared versus a
 
 ### 6.1 Codebase
 - Python 3.12, Pydantic V2, pytest + Hypothesis
-- 2,215 tests, 67 skipped (optional deps), 0 failures
+- 2,216 tests, 67 skipped (optional deps), 0 failures
 - 479 callable tools across 451 dispatch entries
 - Property tests for distance metrics, karma debt bounds, galactic zone classification
 
@@ -154,7 +154,7 @@ We introduce the Karma Ledger, a runtime substrate that tracks declared versus a
 | Ethical governance | Declarative YAML rules (Dharma) | Constitutional AI (hidden) |
 | Health metric | 7-dim Harmony Vector | Not exposed |
 | Open source | MIT + Apache-2.0 | Proprietary |
-| Test coverage | 2,215 property + unit tests | Unknown |
+| Test coverage | 2,216 property + unit tests | Unknown |
 
 **Statement**: Neither system caused the other. The prior-art trail for Karma Ledger is documented via dated conversation archives and version-control history. Anthropic's system is a production-grade implementation of a similar intuition from a well-resourced lab. Both advance the field.
 

@@ -55,7 +55,7 @@ export function personLd(): Record<string, unknown> {
       "Agent governance",
       "Model Context Protocol",
       "Private AI deployment",
-      "OWASP Agentic Top 10",
+      "OWASP LLM Top 10 (v1.1, covers agentic AI)",
       "EU AI Act",
     ],
   };

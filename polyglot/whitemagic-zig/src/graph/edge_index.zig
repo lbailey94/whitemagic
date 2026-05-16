@@ -18,14 +18,14 @@ pub const EdgeIndex = struct {
         _ = allocator;
         return EdgeIndex{
             .allocator = undefined,
-            .edges = .{},
+            .edges = .{ .items = &.{}, .capacity = 0 },
         };
     }
     
     pub fn initWithAllocator(allocator: std.mem.Allocator) EdgeIndex {
         return EdgeIndex{
             .allocator = allocator,
-            .edges = .{},
+            .edges = .{ .items = &.{}, .capacity = 0 },
         };
     }
     

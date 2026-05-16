@@ -1,4 +1,4 @@
-# Whitemagic v22.0.0 System Map
+# Whitemagic v22.2.0 System Map
 
 This file is the **canonical repo map** for humans and AIs.
 
@@ -47,7 +47,7 @@ State root resolution (intended):
 2. `$WM_CONFIG_ROOT`
 3. `~/.whitemagic`
 4. Fallback: `/tmp/whitemagic_state` (if the default isn’t writable)
-5. Last resort: `./.whitemagic` (extremely restricted environments)
+5. Opt-in only: `./.whitemagic` when `WM_FALLBACK_TO_CWD=true`
 
 Nothing under runtime state should ever be committed.
 
@@ -114,7 +114,7 @@ WHITEMAGIC/
 │   ├── ...
 │   └── templates/
 │
-├── polyglot/                           # 11-language acceleration cores
+├── polyglot/                           # 8-language acceleration cores
 │   ├── mojo/                           # Mojo 0.26.1 kernels
 │   ├── whitemagic-koka/                # Koka effect handlers
 │   ├── whitemagic-zig/                 # Zig SIMD
@@ -337,18 +337,18 @@ Both `intelligence/` (51 files, 86 import sites) and `core/intelligence/` (32 fi
 
 Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Mojo ~1.2K, Go ~913, Zig ~795, Koka ~800.
 
-### Polyglot Status (v22.2)
+### Polyglot Status (v22.2 — verified 2026-05-01)
 
-| Language | Status | Bridge Location | Notes |
-|----------|--------|-----------------|-------|
-| **Rust** | ✅ Production | `core/whitemagic-rust/` | PyO3 + maturin, SIMD, WASM |
-| **Go** | ✅ Production | `core/mesh_aux/` | Mesh networking, gRPC |
-| **Zig** | 🧪 Buildable | `polyglot/whitemagic-zig/` | FFI shared lib, `simd_cosine.py` fallback |
-| **Koka** | 🧪 Experimental | `polyglot/whitemagic-koka/` | Effect handlers, 30 files |
-| **Mojo** | ❌ Deferred | `polyglot/mojo/` | Await SDK maturity |
-| **Elixir** | 🧪 Stubs | `polyglot/elixir/` | OTP structures only |
-| **Haskell** | 🧪 Scaffolded | `polyglot/whitemagic-hs/` | Spatial core, FFI stubs (new v22.2) |
-| **Julia** | 🧪 Scaffolded | `polyglot/whitemagic-jl/` | Scientific computing, PyJulia bridge (new v22.2) |
+| Language | Status | Lines | Notes |
+|----------|--------|-------|-------|
+| **Rust** | ✅ Production | 46,983 | `maturin develop --release` succeeds; 54 Python functions |
+| **Go** | ✅ Production | 1,923 | `go build ./...` succeeds; mesh/libp2p |
+| **Zig** | ✅ Builds | 11,387 | Migrated to 0.16; `libwhitemagic.so` (12MB) + `.a` (10MB) |
+| **Koka** | ✅ Compiles | 9,237 | 45 native binaries from 4 core `.kk` files on 3.2.2 |
+| **Elixir** | ✅ Builds | 19+lib | `mix compile` succeeds on 1.14.0/OTP 25 |
+| **Haskell** | ✅ Builds | 2,670 | GHC 9.6.6; 13 recovered modules; `.a` + `.so` artifacts |
+| **Julia** | ✅ Loads | 698 | Julia 1.12.5; recovered modules load with `JULIA_NUM_THREADS=1` |
+| **Mojo** | ❌ Compiler unavailable | 3,644 | Source ready; Modular CLI requires auth token |
 
 ## Public Interfaces
 
@@ -666,12 +666,12 @@ Integrated into `whitemagic/core/memory/embeddings.py`. Uses `hnswlib` 0.8.0 for
 
 ---
 
-## v22.0.0 — "Cognitive Operating System" (Current)
+## v22.2.0 — "Cognitive Operating System" (Current)
 
 The first release where the codebase declares itself a **cognitive operating system** rather than a memory backend. Major structural stabilization, test recovery, and documentation reconciliation.
 
 ### Structural Stabilization
-- **2,215 tests passing**, 0 failures, 67 skipped (up from 783/173/259 at v15 baseline; 2,063 at v22.0 release; +29 tests added 2026-04-29)
+- **2,216 tests passing**, 0 failures, 67 skipped (up from 783/173/259 at v15 baseline; 2,063 at v22.0 release)
 - **41 structural stubs eliminated** via 4-sprint "Stub Zero" plan
 - **3 critical archive recoveries**: `lifecycle.py` (+383 lines), `solver_engine.py` (+110 lines), `db_manager.py` (+196 lines) from `whitemagic0.2` archive
 - Doc drift detection (`check_doc_drift.py`) added to CI — validates version, tool counts, stale directory references
@@ -686,7 +686,7 @@ Canonical `grimoire/TRUTH_TABLE.md` established as the single source of truth fo
 
 ### Updated Counts
 - **479 callable tools** across **451 dispatch entries** + **28 Gana meta-tools**
-- **2,215 tests passing**, 0 failures, 67 skipped
+- **2,216 tests passing**, 0 failures, 67 skipped
 - **28 active cross-system fusions** (matching the 28 Ganas)
 - **0 unexplored synthesis opportunities**
 - Polyglot languages: **7** (Python + Rust + Haskell + Elixir + Go + Zig + Mojo)

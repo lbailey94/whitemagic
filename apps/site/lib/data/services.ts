@@ -50,10 +50,10 @@ export const SERVICES: Record<ServiceSlug, Service> = {
     name: "Agent Governance",
     shortName: "Governance",
     oneLiner:
-      "Implementation of Dharma Rules, Karma Ledger, and Harmony Vector monitoring for existing agent systems.",
+      "Framework-agnostic policy, side-effect audit, and observability for existing agent systems.",
     whoThisIsFor: [
       "Teams with agents already in production that need audit + policy layers",
-      "Organizations mapping to OWASP Agentic Top 10 or EU AI Act Article 14",
+      "Organizations mapping to OWASP LLM Top 10 (v1.1, covers agentic AI) or EU AI Act Article 14",
       "Leaders who've been asked 'can we prove what the agent did?' and didn't have an answer",
     ],
     whatYouGet: [
@@ -61,6 +61,7 @@ export const SERVICES: Record<ServiceSlug, Service> = {
       "Karma Ledger recording declared vs actual side effects",
       "Circuit breakers on all external tool calls",
       "Harmony Vector dashboard: 7-dimensional live health metric",
+      "OpenTelemetry-compatible trace plan for agent and tool events",
       "Mapping document: each control → OWASP / EU AI Act reference",
     ],
     typicalDuration: "3–5 weeks",
@@ -78,16 +79,17 @@ export const SERVICES: Record<ServiceSlug, Service> = {
     name: "MCP Engineering",
     shortName: "MCP",
     oneLiner:
-      "Custom MCP servers, tool contract design, 28-Gana compression integration.",
+      "Production MCP servers, tool contract design, observability, and governance integration.",
     whoThisIsFor: [
       "Teams building agent systems that need to scale context efficiently",
       "Engineers whose agents already burn too many tokens on tool descriptions",
       "Anyone exposing business logic to Claude Desktop, Cursor, Windsurf, or VS Code Agent",
     ],
     whatYouGet: [
-      "Custom MCP server(s) for your domain, stdio or HTTP transport",
+      "Custom MCP server(s) for your domain, stdio or Streamable HTTP transport",
       "Tool contract design: input/output schemas that minimize bloat",
       "28-Gana compression integration where it fits (87% token reduction on tool payloads)",
+      "Auth, idempotency, structured errors, and audit middleware",
       "Client wiring examples for Claude Desktop / Cursor / Windsurf",
     ],
     typicalDuration: "2–4 weeks",

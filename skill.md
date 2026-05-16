@@ -30,7 +30,7 @@ WhiteMagic provides 479 callable MCP tools across 451 dispatch entries (or 28 Ga
 - **8-stage dispatch pipeline** — input sanitizer → circuit breaker → rate limiter → RBAC → maturity gate → governor → handler → compact response
 - **Polyglot accelerators** — Rust, Haskell, Elixir, Go, Zig, Mojo (graceful Python fallback when missing)
 
-2,215 tests pass on every commit. MIT-licensed. No telemetry, no API keys required, no runtime state written into the repo (`WM_STATE_ROOT` controls all writes).
+2,216 tests pass on every commit. MIT-licensed. No telemetry, no API keys required, no runtime state written into the repo (`WM_STATE_ROOT` controls all writes).
 
 ## Install
 

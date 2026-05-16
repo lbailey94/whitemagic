@@ -25,7 +25,7 @@ pub const IChingEngine = struct {
 
     pub fn init() IChingEngine {
         if (global_rng == null) {
-            global_rng = std.Random.DefaultPrng.init(@intCast(@as(i128, std.time.timestamp())));
+            global_rng = std.Random.DefaultPrng.init(0);
         }
         return IChingEngine{
             .rng = &global_rng.?,

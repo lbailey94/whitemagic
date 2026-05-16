@@ -9,6 +9,13 @@
  * carefully; every paragraph consumes tokens on every conversation turn.
  */
 
+import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
+import {
+  FIELD_CONCLUSIONS,
+  FIELD_MAP_UPDATED,
+  ROADMAP_UPDATES,
+} from "@/lib/field-map";
+
 export interface CorpusSection {
   title: string;
   source: string; // where on the site this comes from, e.g. "/services"
@@ -19,7 +26,7 @@ export const CORPUS: CorpusSection[] = [
   {
     title: "What WhiteMagic is",
     source: "/ (homepage) and /open-source",
-    body: `WhiteMagic is an open-source agentic AI platform with:
+    body: `WhiteMagic is an open-source agentic AI platform, currently verified as v${WM_FACTS.version} with ${WM_FACT_TEXT.testSuite} and ${WM_FACT_TEXT.toolSurface}. It includes:
 - A Python core (persistent tiered memory, governance primitives, cognitive substrate).
 - Rust performance bridges (including a WASM target for browser execution).
 - Polyglot runtime: Go mesh for distribution, Mojo for AI compute, Elixir for fault tolerance, Koka for effect-system experiments, Haskell bridges.
@@ -27,6 +34,19 @@ export const CORPUS: CorpusSection[] = [
 - Distinctive governance modules: Dharma Rules Engine (declarative YAML policy), Karma Ledger (declared-vs-actual side-effects audit), Harmony Vector (7-dimensional health metric), Circuit Breaker (Stoic resilience pattern), Gnosis Portal (unified introspection), 28-Gana MCP compression (87% token cost reduction).
 
 Licenses: MIT for core, Apache-2.0 for select modules. Free to use locally. The public GitHub repo was released April 14, 2026 as v21.0.0.`,
+  },
+  {
+    title: "Current field-map conclusion",
+    source: "/research and /timeline",
+    body: `Updated ${FIELD_MAP_UPDATED}. Recent MCP, A2A, OpenAI Agents, OpenTelemetry, x402, Stripe, OWASP, and EU AI Act developments point to four conclusions:
+
+${FIELD_CONCLUSIONS.map((item) => `- **${item.title}** ${item.body}`).join("\n")}
+
+Roadmap:
+${ROADMAP_UPDATES.map(
+  (block) =>
+    `- **${block.horizon}: ${block.title}** ${block.items.join(" ")}`,
+).join("\n")}`,
   },
   {
     title: "Who runs WhiteMagic Labs",
@@ -40,9 +60,9 @@ Licenses: MIT for core, Apache-2.0 for select modules. Free to use locally. The 
 
 1. **Private AI Deployment** — Local or air-gapped LLM + agent deployment. Docker / bare-metal / cloud VPC. Suitable for regulated industries (healthcare, finance, legal). 4-6 weeks typical.
 
-2. **Agent Governance** — Implementation of Dharma Rules, Karma Ledger, Circuit Breakers, and Harmony Vector monitoring for existing agent systems. Maps to OWASP Agentic AI Top 10 and EU AI Act Article 14. 3-5 weeks typical.
+2. **Agent Governance** — Framework-agnostic implementation of Dharma Rules, Karma Ledger, Circuit Breakers, Harmony Vector monitoring, and OpenTelemetry-compatible trace planning for existing agent systems. Maps to OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act Article 14. 3-5 weeks typical.
 
-3. **MCP Engineering** — Design and implementation of custom MCP servers, tool contract design, 28-Gana compression integration. For teams building agent systems that need to scale context efficiently. 2-4 weeks typical.`,
+3. **MCP Engineering** — Production MCP servers, tool contract design, observability, governance integration, auth/idempotency/structured errors, and 28-Gana compression where it fits. For teams building agent systems that need to scale context efficiently. 2-4 weeks typical.`,
   },
   {
     title: "Pricing tiers",
@@ -51,7 +71,7 @@ Licenses: MIT for core, Apache-2.0 for select modules. Free to use locally. The 
 
 - **Office Hours** — $700 / 60-minute session. One specific question: deployment decision, governance risk, MCP architecture review. Written notes within 48 hours. Stripe payment link available on /pricing. Office Hours fee credits toward future engagements.
 
-- **Architecture Review** — $7,000 flat, 5-day turnaround. 20-40 page written deliverable. Risks mapped to OWASP Agentic Top 10 and EU AI Act Article 14. One 60-minute walkthrough call. NDA on request. Stripe payment link available.
+- **Architecture Review** — $7,000 flat, 5-day turnaround. 20-40 page written deliverable. Risks mapped to OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act Article 14. One 60-minute walkthrough call. NDA on request. Stripe payment link available.
 
 - **Engagement** — From $30,000. 4-8 week fixed-scope implementations on one of the three service tracks. Weekly delivery cadence. 50% on kickoff, 50% on delivery. Limited to 2 concurrent engagements. Scoped via free 30-minute intake call at /contact.
 
@@ -74,7 +94,7 @@ Earlier history: v0.1.0-beta released on npm as whitemagic-mcp October 15, 2025.
   {
     title: "Agent-first economics (Gratitude Architecture)",
     source: "/economy",
-    body: `WhiteMagic's position on the 2026 agent-economy stack: governance-first, voluntary, verifiable.
+    body: `WhiteMagic's position on the 2026 agent-economy stack: governance-first, voluntary, verifiable. Agent payment rails are real, but the near-term WhiteMagic posture is readiness and audit rather than a payments-first startup.
 
 - **Tools are free.** Every WhiteMagic MCP tool returns HTTP 200 without payment. Contribution channels exist for those who find value.
 - **Two rails, one ledger.** XRPL tip jar (Xaman link, XRP, 3–5s, <$0.001) for human operators; x402 micropayments (USDC on Base L2 default, RLUSD on XRPL via t54.ai) for AI agents. Both rails write to the same append-only gratitude ledger.
@@ -88,7 +108,7 @@ Positioning (non-exhaustive):
 - xpay / ATXP / FluxA: per-tool SaaS monetization; we publish the patterns and don't charge.
 - Google AP2 / IETF VCAP: AP2-binding planned v15.2.1 for interop.
 
-Related offering: **Agent Economy Readiness Assessment** — two-week fixed-fee engagement that audits MCP servers, agent deployment, identity, rate-limiting, payment-layer readiness, and Dharma-style safety gaps.`,
+Related offering: **Agent Economy Readiness Assessment** — two-week fixed-fee engagement that audits MCP servers, agent deployment, identity, rate-limiting, payment-layer readiness, side-effect audit, and Dharma-style safety gaps.`,
   },
   {
     title: "How to contact / book",

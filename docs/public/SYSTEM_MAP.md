@@ -49,7 +49,7 @@ State root resolution (intended):
 2. `$WM_CONFIG_ROOT`
 3. `~/.whitemagic`
 4. Fallback: `/tmp/whitemagic_state` (if the default isn’t writable)
-5. Last resort: `./.whitemagic` (extremely restricted environments)
+5. Opt-in only: `./.whitemagic` when `WM_FALLBACK_TO_CWD=true`
 
 Nothing under runtime state should ever be committed.
 

@@ -368,7 +368,7 @@ money can't buy.
 
 ### 4.2 Where to plant flags, in priority order
 
-1. **OWASP Agentic Top 10** — active, under-resourced, perfectly
+1. **OWASP LLM Top 10 (v1.1, covers agentic AI)** — active, under-resourced, perfectly
    aligned with our Dharma / Karma work. Contribution path:
    submit concrete control mappings for Tops 1–3 drawn from our
    reference implementation. Attend monthly call.
@@ -418,7 +418,7 @@ Each metric gets a live endpoint + a weekly snapshot:
   rate, churn, monetization rate
 - `/observatory/x402` — daily volume (filtered), top endpoints,
   genuine-vs-artificial ratio (our own heuristic, documented)
-- `/observatory/governance` — OWASP Agentic Top 10 vulns
+- `/observatory/governance` — OWASP LLM Top 10 (v1.1, covers agentic AI) vulns
   disclosed, CVE mapping, time-to-patch medians
 - `/observatory/policy` — EU AI Act enforcement actions, US state
   AI laws enacted, public sector procurement mentions of "agent

@@ -3,7 +3,7 @@
 [![CI](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-22.0.0-purple.svg)](core/VERSION)
+[![Version](https://img.shields.io/badge/version-22.2.0-purple.svg)](core/VERSION)
 
 A polyglot agentic AI platform with Python core, Rust performance bridges, and multi-language support for AI agents, memory systems, and distributed orchestration.
 
@@ -48,7 +48,7 @@ whitemagic/
 │   ├── whitemagic-rust/     # Rust crate (PyO3 + WASM)
 │   ├── whitemagic-math/     # Shared math crate
 │   ├── haskell/             # Haskell divination module
-│   └── tests/               # 2259 tests
+│   └── tests/               # 2,216 passing tests, 67 skipped
 ├── polyglot/                # Language bridges
 │   ├── mojo/                # GPU/SIMD acceleration
 │   ├── whitemagic-koka/     # Effect handler orchestration

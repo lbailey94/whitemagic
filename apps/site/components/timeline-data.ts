@@ -1,3 +1,5 @@
+import { WM_FACTS } from "@/lib/facts";
+
 /**
  * Timeline data — authoritative dates.
  *
@@ -161,9 +163,9 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     monthKey: "2025-12",
     monthLabel: "December 2025",
     category: "industry",
-    title: "OWASP Top 10 for Agentic Applications 2026 published",
+    title: "OWASP Top 10 for LLM Applications v1.1 published",
     description:
-      "First formal taxonomy of agent-specific risks (ASI01–ASI10): goal hijacking, tool misuse, identity abuse, memory poisoning, cascading failures, rogue agents. Shapes every vendor's governance roadmap for 2026.",
+      "First formal taxonomy of LLM-specific risks including agentic AI categories (LLM07 Insecure Plugin Design, LLM08 Excessive Agency). Shapes vendor governance roadmaps for 2026. Covers 10 categories: Prompt Injection, Insecure Output Handling, Training Data Poisoning, Model DoS, Supply Chain, Sensitive Info Disclosure, Insecure Plugin Design, Excessive Agency, Overreliance, Model Theft.",
     source: {
       label: "OWASP GenAI Security Project",
       url: "https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/",
@@ -354,7 +356,7 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     category: "industry",
     title: "Microsoft publishes Agent Governance Toolkit announcement",
     description:
-      "Official Microsoft Open Source blog post: runtime governance for AI agents, covers 10/10 OWASP Agentic Top 10, 9,500+ tests. The category has crystallized.",
+      "Official Microsoft Open Source blog post: runtime governance for AI agents, covers 10/10 OWASP LLM Top 10 (v1.1, covers agentic AI), 9,500+ tests. The category has crystallized.",
     source: {
       label: "opensource.microsoft.com",
       url: "https://opensource.microsoft.com/blog/2026/04/02/introducing-the-agent-governance-toolkit-open-source-runtime-security-for-ai-agents/",
@@ -394,7 +396,7 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     title:
       "WhiteMagic v22.0.0 — 28 PRAT Gana MCP meta-tools, Rust + PyO3, WASM",
     description:
-      "Modular install tiers (lite/mcp/cli/api/embeddings/heavy). 28 PRAT Gana compression router formalized as MCP meta-tools — addressing the context-bloat problem the MCP roadmap named weeks earlier. Rust core with PyO3 bindings (memory, search, embeddings, graph, safety). WASM target for browser/edge. Polyglot bridges added: Koka, Mojo, Haskell. 2,259 tests.",
+      "Modular install tiers (lite/mcp/cli/api/embeddings/heavy). 28 PRAT Gana compression router formalized as MCP meta-tools — addressing the context-bloat problem the MCP roadmap named weeks earlier. Rust core with PyO3 bindings (memory, search, embeddings, graph, safety). WASM target for browser/edge. Polyglot bridges added: Koka, Mojo, Haskell.",
     version: "v22.0.0",
     gap: "Taxonomy shipped Feb 7; MCP router formalized 5 weeks after MCP roadmap named context bloat a priority",
   },
@@ -453,7 +455,75 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     title:
       "Prior-art verification + competitive-landscape audit published",
     description:
-      "Cross-referenced WhiteMagic's design chronology (CODEX OpenAI archive, Grok export, public X archive, Git history, public PyPI/npm release timestamps) against the verified competitor timeline. Confirmed: the Karma Ledger spec (May 26 2025) predates Anthropic Claude Memory's audit log + rollback (Apr 23 2026) by 11 months in concept, and Microsoft AGT v1.0.0 (Mar 4 2026) by ~9 months. Bicameral reasoning, voice audit, foresight engine, and the 28-Gana cultural mapping remain — as of Apr 27 — without publicly-shipping equivalents at any major lab. 2,185 passing tests, 0 failures. Documentation drift checks 9/9 green.",
+      "Cross-referenced WhiteMagic's design chronology (CODEX OpenAI archive, Grok export, public X archive, Git history, public PyPI/npm release timestamps) against the verified competitor timeline. Confirmed: the Karma Ledger spec (May 26 2025) predates Anthropic Claude Memory's audit log + rollback (Apr 23 2026) by 11 months in concept, and Microsoft AGT v1.0.0 (Mar 4 2026) by ~9 months. Bicameral reasoning, voice audit, foresight engine, and the 28-Gana cultural mapping remain — as of Apr 27 — without publicly-shipping equivalents at any major lab. Documentation drift checks 9/9 green.",
+  },
+
+  // ── 2026 Apr 28–30 — grant pipeline sprint ───────────────────────────
+  {
+    date: "2026-04-28",
+    displayDate: "Apr 28",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "whitemagic",
+    title: "Grant pipeline research sprint — 6 applications drafted",
+    description:
+      "Completed comprehensive grant strategy: 14+ documents covering strategy, execution plan, application templates, content library, rubric audits, tier lists, and federal playbook. Applications drafted for Manifund ($25K, Joel Becker), LTFF ($35K), Foresight ($100K), SFF ($150K), and Schmidt Sciences ($600K). Competitive landscape verified against external sources.",
+    pin: true,
+  },
+  {
+    date: "2026-04-29",
+    displayDate: "Apr 29",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "CODEX synthesis — 12 research threads integrated into 3 core applications",
+    description:
+      "Three independent review teams converged: code audit (21 stubs → 0), grant strategy review (content library, execution focus, cross-reference discipline), and CODEX extraction (334 indexed files, 12 grant-fundable research threads). Core insight: the 12 threads strengthen 3 applications, not 12 separate grants.",
+  },
+  {
+    date: "2026-04-30",
+    displayDate: "Apr 30",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "whitemagic",
+    title: "Growth tiers + rubric audit + A+ upgrade guide completed",
+    description:
+      "6-tier organizational growth model (Legal Formation → Deep Tech R&D) with entry/exit criteria, decision gates, failure modes, and honest probability estimates. Grant rubric audit comparing application templates against actual funder evaluation criteria — identified 21 gaps. A- to A+ upgrade guide with 14-day action plan.",
+  },
+  {
+    date: "2026-04-30",
+    displayDate: "Apr 30",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "Foresight Institute AI Nodes page goes password-protected",
+    description:
+      "Foresight Institute restricts public access to AI Nodes application page ahead of next monthly deadline (May 31). WhiteMagic application prepared.",
+    source: { label: "foresight.org" },
+  },
+
+  // ── 2026 May — audit & launch ─────────────────────────────────────────
+  {
+    date: "2026-05-01",
+    displayDate: "May 1",
+    monthKey: "2026-05",
+    monthLabel: "May 2026",
+    category: "whitemagic",
+    title: "Comprehensive project audit + polyglot truth-table + site refresh",
+    description:
+      `Independent audit of full project: ${WM_FACTS.testsPassing} tests pass, 9/9 doc drift checks green, honest polyglot status published (Rust + Go mesh = production; Zig/Koka/Mojo/Haskell/Elixir/Julia = experimental). Site updated: test counts corrected, grants page expanded with Schmidt Sciences + federal track, timeline extended through May 2026. Strategy: file LLC after first Manifund win.`,
+    pin: true,
+  },
+  {
+    date: "2026-05-14",
+    displayDate: "May 14",
+    monthKey: "2026-05",
+    monthLabel: "May 2026",
+    category: "whitemagic",
+    title: "WhiteMagic field-map synthesis — governance and evidence layer",
+    description:
+      "Cross-referenced recent MCP, A2A, OpenTelemetry, x402, agent SDK, and regulatory developments against internal strategy. Conclusion: WhiteMagic's strongest public position is protocol-compatible governance and observability infrastructure — policy, side-effect audit, memory continuity, and evidence packaging — not memory-as-a-service or a payments-first startup.",
+    pin: true,
   },
 
   // ── Upcoming ─────────────────────────────────────────────────────────
@@ -478,14 +548,15 @@ export const TIMELINE_DATA: TimelineEntry[] = [
       "Targets the four priority areas from the 2026 roadmap. Stateless Streamable HTTP and Enterprise Readiness extensions expected.",
   },
   {
-    date: "2026-08-01",
-    displayDate: "Aug",
+    date: "2026-08-02",
+    displayDate: "Aug 2",
     monthKey: "2026-08",
     monthLabel: "August 2026 (upcoming)",
     category: "regulatory",
-    title: "EU AI Act high-risk obligations take effect",
+    title: "EU AI Act Article 14 high-risk obligations take effect",
     description:
-      "Article 14 (human oversight) and related high-risk AI system requirements become enforceable across the EU. Organizations deploying autonomous agents in regulated domains must demonstrate audit trails, policy enforcement, and operator oversight — exactly the features WhiteMagic shipped on Feb 7, 2026.",
+      "Article 14 (human oversight) and related high-risk AI system requirements become enforceable across the EU. Organizations deploying autonomous agents in regulated domains must demonstrate audit trails, policy enforcement, and operator oversight — exactly the features WhiteMagic shipped on Feb 7, 2026. Also applies to Annex III high-risk systems.",
+    source: { label: "artificialintelligenceact.eu/article/14" },
   },
 ];
 

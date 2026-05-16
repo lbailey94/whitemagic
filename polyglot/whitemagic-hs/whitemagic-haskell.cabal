@@ -1,0 +1,38 @@
+cabal-version: 3.0
+name: whitemagic-haskell
+version: 22.2.0
+synopsis: WhiteMagic Haskell Acceleration Core
+description: Algebraic Dharma rules engine, tool dependency graph planner, Wu Xing elemental mapping, I Ching hexagram engine, boundary detection, and FFI bridge for WhiteMagic cognitive OS.
+license: MIT
+author: WhiteMagic Labs
+build-type: Simple
+
+library
+  exposed-modules:
+    DharmaRules
+    DepGraph
+    DharmaFFI
+    WuXing
+    IChing
+    HexagramData
+    Casting
+    RuleComposer
+    MaturityGate
+    BoundaryDetection
+    Transform
+    Query
+    FFI
+  hs-source-dirs: src
+  default-language: Haskell2010
+  build-depends:
+    base >= 4.16 && < 5,
+    aeson,
+    bytestring,
+    text,
+    containers,
+    unordered-containers,
+    vector,
+    scientific,
+    time
+  ghc-options: -Wall -O2
+

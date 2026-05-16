@@ -63,7 +63,7 @@ pub export fn wm_graph_transition_batch(
         prob = @min(prob, @as(VecF32, @splat(1.0)));
         
         // Store results
-        for (0..LANE_WIDTH) |j| {
+        inline for (0..LANE_WIDTH) |j| {
             probs_out[i + j] = prob[j];
         }
     }

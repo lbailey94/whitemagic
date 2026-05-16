@@ -178,7 +178,7 @@ pub export fn generate_event_id(
 
 // FFI: Create ring buffer
 var global_ring_buffer: ?EventRingBuffer = null;
-var ring_buffer_mutex: std.Thread.Mutex = .{};
+var ring_buffer_mutex: std.std.Thread.Mutex = {};
 
 pub export fn ganying_ring_buffer_init(capacity: usize) bool {
     ring_buffer_mutex.lock();

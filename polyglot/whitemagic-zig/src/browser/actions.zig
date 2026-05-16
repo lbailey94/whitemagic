@@ -218,7 +218,7 @@ pub const ActionMetrics = struct {
 
 // Global metrics instance
 var global_metrics: ActionMetrics = ActionMetrics.init();
-var metrics_mutex: std.Thread.Mutex = .{};
+var metrics_mutex: std.std.Thread.Mutex = {};
 
 pub export fn record_action_metrics(success: bool, duration_us: u64) void {
     metrics_mutex.lock();

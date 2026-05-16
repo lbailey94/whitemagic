@@ -10,7 +10,7 @@ export default async function Image() {
     eyebrow: "About",
     title: "Self-taught. Already shipped.",
     tagline:
-      "A 170K-line cognitive OS for AI agents, built before the market caught up.",
+      "A 178K-line cognitive OS for AI agents, built before the market caught up.",
     footerRight: "About",
   });
 }

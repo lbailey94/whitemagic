@@ -190,7 +190,19 @@ def normalize_raw(
         out.setdefault("request_id", request_id)
         out.setdefault("tool", tool)
         out.setdefault("idempotency_key", idempotency_key)
+        out.setdefault("message", "ok" if out.get("status") == "success" else "error")
+        out.setdefault("error_code", None if out.get("status") == "success" else "internal_error")
+        out.setdefault("retryable", False)
+        out.setdefault("writes", [])
+        out.setdefault("artifacts", [])
+        out.setdefault("metrics", {})
+        out.setdefault("side_effects", {})
+        out.setdefault("warnings", [])
         out.setdefault("timestamp", timestamp)
+        out.setdefault("envelope_version", ENVELOPE_VERSION)
+        out.setdefault("tool_contract_version", TOOL_CONTRACT_VERSION)
+        if not isinstance(out.get("details"), Mapping):
+            out["details"] = {"value": out.get("details")}
         return _ensure_jsonable_dict(out)
 
     # Normalize to dict payload.

@@ -85,7 +85,7 @@ This is the single most important strategic insight: **volume of well-targeted a
 
 **Positive factors:**
 - WhiteMagic has a **verifiable prior-art trail** (Karma Ledger spec: May 26, 2025; implementation: Feb 7, 2026; Anthropic's structurally similar audit log: Apr 23, 2026). This is the kind of citation-friendly story peer reviewers like.
-- The codebase is **real and testable** (2,215 tests, MIT-licensed, public GitHub). Reviewers can clone and run it.
+- The codebase is **real and testable** (2,216 tests, MIT-licensed, public GitHub). Reviewers can clone and run it.
 - The framing as "governance + metacognition substrate" is **novel** — not "another memory startup."
 - We have a **pre-existing paper outline** (`KARMA_LEDGER_PAPER_OUTLINE.md`) that can be adapted into the proposal's "intellectual merit" section.
 
@@ -119,7 +119,7 @@ This is the single most important strategic insight: **volume of well-targeted a
 
 **Option B: Find a co-PI and apply jointly (recommended if feasible)**
 - Ideal co-PI profile: Assistant/associate professor in CS/AI safety at a US or UK university, with publications in agent safety, evaluation, or interpretability.
-- Value proposition for the co-PI: They get a working codebase (2,215 tests), a paper idea, and a funded research stream without having to build infrastructure from scratch.
+- Value proposition for the co-PI: They get a working codebase (2,216 tests), a paper idea, and a funded research stream without having to build infrastructure from scratch.
 - Timeline: Would need to identify, pitch, and align with a co-PI within **7–10 days** to have any chance of a May 17 submission. Extremely tight.
 
 #### 2.1.5 What We Need for Highest Success
@@ -211,7 +211,7 @@ The SFF process is deliberately designed to be more accessible than traditional 
 |---|---|---|
 | Fiscal sponsor (if applying as individual) or incorporation | ❌ Missing | **Critical.** Easiest path: incorporate as a single-member LLC (Delaware or Wyoming, ~$200 + $50/year). SFF accepts for-profits. |
 | Rolling application submitted | ❌ Missing | Can be done in 1 day once prerequisites are met. |
-| Public signal / reference | 🟡 Partial | GitHub repo + PyPI package history + 2,215 tests. Need to ensure these are prominently linked. |
+| Public signal / reference | 🟡 Partial | GitHub repo + PyPI package history + 2,216 tests. Need to ensure these are prominently linked. |
 
 #### 2.2.6 Fund Usage & Restrictions
 
@@ -690,7 +690,7 @@ This is the **Redis / MongoDB model**: open-core + commercial add-ons.
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| SAM.gov delays block SBIR submission | Medium | High | Start SAM.gov immediately after LLC approval; expect 4–8 weeks |
+| SAM.gov delays block SBIR submission | Low | Medium | Start SAM.gov immediately after LLC approval; typically ~10 business days |
 | SBIR commercialization conflicts with open-source mission | Low | Medium | Frame open-source as accelerant (Redis model) |
 | REAP rural eligibility denied | Medium | High | Verify USDA map before lease/signing |
 | 12-month energy baseline insufficient | Low | High | Start monitoring Day 1 |
@@ -703,7 +703,7 @@ This is the **Redis / MongoDB model**: open-core + commercial add-ons.
 | 1 | **Convert `KARMA_LEDGER_PAPER_OUTLINE.md` → arXiv preprint** | 8–12 hrs | **Massive** — strengthens every application | 2–3 days |
 | 2 | **File LLC ($100)** | 1–2 hrs active | **High** — unlocks SFF + federal track | 7–10 days wait |
 | 3 | **Submit 3 Manifund asks** | 6–10 hrs | **High** — fastest money, credibility signal | 1–2 days |
-| 4 | **Start SAM.gov registration** | 2–3 hrs | **High** — unlocks DOE/NSF SBIR | 2–8 weeks |
+| 4 | **Start SAM.gov registration** | 2–3 hrs | **High** — unlocks DOE/NSF SBIR | ~10 business days |
 | 5 | **Deploy energy monitoring stack** | 4–6 hrs | **High** — starts REAP baseline | 1 day |
 | 6 | **Submit Foresight (May 31)** | 6–8 hrs | **Medium-High** | By May 31 |
 | 7 | **Submit LTFF** | 4–6 hrs | **Medium** | Anytime |

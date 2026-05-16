@@ -189,7 +189,7 @@ The match between the May 26, 2025 ChatGPT design conversation and the Feb 7, 20
 
 - **You undersell the memory layer and oversell the cognitive OS framing.** The memory layer is at parity with Mem0/Cognee/Letta on concept and behind on distribution. The cognitive OS framing is now crowded (Karpathy, AgentOS, Quine, ProbOS, Cloudflare Project Think). The strongest pitch is the *governance + metacognition substrate* — that is the actual lane.
 - **The "2–3 years ahead" framing is Grok-speak.** Grok wants to make you feel good. The honest read is "6–12 months ahead in concept, 0 months ahead in public code as of right now." That is still excellent — but "2–3 years" makes you sound like every other indie project who claims this and gets ignored.
-- **No public benchmark = no defensible claim.** SAIQL has a USPTO patent and a 279:1 number on Wikipedia. Mem0 has LOCOMO. MemMachine has 0.8487 LoCoMo. WhiteMagic has 2,215 passing tests, which is excellent engineering hygiene but not a *capability* claim peer reviewers can verify. **One LoCoMo run + one PRAT-vs-SAIQL run would change this.**
+- **No public benchmark = no defensible claim.** SAIQL has a USPTO patent and a 279:1 number on Wikipedia. Mem0 has LOCOMO. MemMachine has 0.8487 LoCoMo. WhiteMagic has 2,216 passing tests, which is excellent engineering hygiene but not a *capability* claim peer reviewers can verify. **One LoCoMo run + one PRAT-vs-SAIQL run would change this.**
 - **You are doing solo founder physics on a problem that big labs are now resourcing with hundreds of engineers.** This is fine if your goal is citation/research/portfolio. It is not fine if your goal is product market share. Pick one.
 
 ### 4.3 The lab posture is the right read
@@ -250,7 +250,7 @@ The math: if A alone is 50% → small impact, B alone is 70% → medium impact, 
 6. **C** — Distribution work. (We already shipped most of it today: A2A Agent Card, ClawHub skill.md.)
 
 **Always-on background**:
-7. **G** — Keep using WhiteMagic personally. The 2,215 tests and verified path-hygiene guard rails mean it is genuinely production-grade for daily use. This is not a path; it's the floor.
+7. **G** — Keep using WhiteMagic personally. The 2,216 tests and verified path-hygiene guard rails mean it is genuinely production-grade for daily use. This is not a path; it's the floor.
 
 ### 5.5 What would change the math
 
@@ -267,7 +267,7 @@ You said: *"we may choose one or many."* Here is the actual lever:
 
 **The decision is not which path to take. It is whether to spend 3–5 weeks on A+B *now* — before another lab independently re-derives and publishes the Karma Ledger / Voice Audit / Bicameral primitives.**
 
-The base rate for "indie design becomes the cited prior art for an industry standard" is < 5%. But it requires the design to be *defensibly published* with a date stamp. WhiteMagic has the 2,215 tests, the working code, the design conversations with timestamps, and the public GitHub history. **What it doesn't have is the citable arxiv preprint.** That is a single-week-of-effort gap.
+The base rate for "indie design becomes the cited prior art for an industry standard" is < 5%. But it requires the design to be *defensibly published* with a date stamp. WhiteMagic has the 2,216 tests, the working code, the design conversations with timestamps, and the public GitHub history. **What it doesn't have is the citable arxiv preprint.** That is a single-week-of-effort gap.
 
 The longer it stays a gap, the more likely someone else publishes first.
 

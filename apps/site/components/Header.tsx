@@ -4,15 +4,10 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LangToggle } from "./LangToggle";
 
 const NAV = [
-  { href: "/services", label: "Services" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/ladder", label: "Ladder" },
-  { href: "/timeline", label: "Timeline" },
-  { href: "/economy", label: "Economy" },
-  { href: "/librarian", label: "Librarian" },
-  { href: "/work", label: "Work" },
-  { href: "/writing", label: "Writing" },
+  { href: "/research", label: "Research" },
   { href: "/open-source", label: "Open Source" },
+  { href: "/services", label: "Services" },
+  { href: "/writing", label: "Writing" },
   { href: "/about", label: "About" },
 ];
 
@@ -36,7 +31,7 @@ export function Header() {
           <LangToggle />
           <ThemeToggle />
           <Link href="/contact" className="btn-primary hidden sm:inline-flex">
-            Book a call
+            Contact
           </Link>
         </div>
       </div>

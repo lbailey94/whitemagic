@@ -2,8 +2,10 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/JsonLd";
 import { serviceLd } from "@/lib/jsonld";
+import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 import { Prose } from "@/components/Prose";
 import { ArrowRight, Check } from "lucide-react";
+import { FIELD_MAP_UPDATED, FIELD_SIGNALS } from "@/lib/field-map";
 
 export const metadata = {
   title: "MCP Engineering — WhiteMagic Labs",
@@ -16,9 +18,10 @@ const CAPABILITIES = [
   "Tool design with strict schemas, idempotency, stable error codes",
   "Middleware pipelines — auth, rate limiting, audit, sanitization",
   "Multi-server gateways and tool federation",
+  "OpenTelemetry-compatible trace design for tools, sessions, and side-effect audit events",
   "Integration with Claude, Cursor, Windsurf, VS Code + Copilot, and custom clients",
   "Performance tuning — sub-second handshakes, streaming responses, connection pooling",
-  "Tool compression strategies for large tool catalogs (375+ tool deployments)",
+  `Tool compression strategies for large tool catalogs (${WM_FACTS.callableTools} callable-tool deployments)`,
   "Testing, observability, and production runbooks",
 ];
 
@@ -37,6 +40,10 @@ const FORMATS = [
   },
 ];
 
+const MCP_SIGNALS = FIELD_SIGNALS.filter(
+  (signal) => signal.area === "Protocols" || signal.area === "Observability",
+);
+
 export default function Page() {
   return (
     <>
@@ -51,20 +58,18 @@ export default function Page() {
         <Prose>
           <h2>Why this is trickier than it looks</h2>
           <p>
-            MCP is new enough that most servers in production right now
-            are hobby-grade. They work until they don&apos;t: auth is a
-            single shared key, tools aren&apos;t idempotent, errors are
-            unstructured strings, nothing is audited, and every Claude
-            session starts by paying 30 seconds of handshake tax because
-            the server loads the world on boot.
+            MCP is no longer just a local bridge for a chat client. The
+            protocol surface is moving toward production concerns: Streamable
+            HTTP, authorization, registries, load-balanced sessions, and
+            enterprise audit expectations. That makes the boring details matter.
           </p>
           <p>
             When an enterprise adopts MCP seriously, all of those become
-            visible at once. I&apos;ve already made those mistakes — on
-            my own time, in my own repository, with a server that now
-            exposes 374 tools across 28 categories, handshakes in under
-            a second, and passes 1,300+ tests. That&apos;s the muscle
-            memory you get.
+            visible at once: auth, idempotency, schema drift, unstructured
+            errors, observability, tool-catalog bloat, and side effects that no
+            one recorded. I&apos;ve already worked through those trade-offs in a
+            repository that exposes {WM_FACT_TEXT.mcpSurface}, handshakes in
+            under a second, and passes {WM_FACTS.testsPassing} tests.
           </p>
 
           <h2>How I work with teams</h2>
@@ -94,6 +99,20 @@ export default function Page() {
         <aside className="space-y-8 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-border bg-surface p-6">
             <div className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
+              Field map · {FIELD_MAP_UPDATED}
+            </div>
+            <ul className="space-y-4 text-sm">
+              {MCP_SIGNALS.map((signal) => (
+                <li key={signal.title}>
+                  <div className="font-medium text-ink">{signal.area}</div>
+                  <div className="text-muted">{signal.consequence}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-surface p-6">
+            <div className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
               At a glance
             </div>
             <dl className="space-y-3 text-sm">
@@ -116,10 +135,11 @@ export default function Page() {
               Proof
             </div>
             <p className="text-sm leading-relaxed text-muted">
-              Author of WhiteMagic — a 170K-line open-source MCP server
-              with 374 tools, 28 meta-categories, 8-stage middleware
-              pipeline, 11-language polyglot stack, and a passing test
-              suite.
+              Author of WhiteMagic — a {WM_FACTS.linesShort}-line open-source
+              MCP platform with {WM_FACTS.callableTools} tools,{" "}
+              {WM_FACTS.ganaTools} Gana meta-tools, 8-stage middleware
+              pipeline, Rust production accelerators, and a {WM_FACTS.testsPassing}-test
+              passing suite (0 failures).
             </p>
             <Link
               href="https://github.com/whitemagic-ai/whitemagic"

@@ -1,13 +1,17 @@
 """Tests for whitemagic.tools.envelope — envelope construction & coercion."""
 import json
-from datetime import datetime, date
+from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
 
-
-from whitemagic.tools.envelope import ok, err, is_enveloped, normalize_raw, coerce_jsonable
 from whitemagic.tools.contract import ENVELOPE_VERSION, TOOL_CONTRACT_VERSION
-
+from whitemagic.tools.envelope import (
+    coerce_jsonable,
+    err,
+    is_enveloped,
+    normalize_raw,
+    ok,
+)
 
 # ---------------------------------------------------------------------------
 # coerce_jsonable
@@ -171,3 +175,10 @@ def test_normalize_raw_already_enveloped():
     # Should preserve original tool but add missing meta
     assert result["tool"] == "original"
     assert result["request_id"] == "r1"  # original is kept via setdefault
+
+
+def test_normalize_raw_legacy_envelope_gets_contract_versions():
+    raw = {"status": "success", "tool": "legacy", "details": {"value": 1}}
+    result = normalize_raw(tool="t", request_id="r", raw=raw)
+    assert result["envelope_version"] == ENVELOPE_VERSION
+    assert result["tool_contract_version"] == TOOL_CONTRACT_VERSION

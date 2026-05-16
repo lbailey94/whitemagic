@@ -48,12 +48,12 @@ export const PRICING_TIERS: Record<TierSlug, PricingTier> = {
     price: "$7,000",
     priceNote: "flat, 5-day turnaround",
     oneLiner:
-      "Full written review of your agent / MCP / private-AI architecture mapped to OWASP Agentic Top 10 and EU AI Act Article 14.",
+      "Full written review of your agent / MCP / private-AI architecture mapped to OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act Article 14.",
     bestFor:
       "CTOs and tech leads preparing for audit, board review, or production deployment.",
     whatIsIncluded: [
       "20–40 page written deliverable",
-      "Risk mapping: OWASP Agentic Top 10 + EU AI Act Article 14",
+      "Risk mapping: OWASP LLM Top 10 (v1.1, covers agentic AI) + EU AI Act Article 14",
       "One 60-minute walkthrough call",
       "NDA on request",
       "Revision pass within 2 weeks if scope changes",

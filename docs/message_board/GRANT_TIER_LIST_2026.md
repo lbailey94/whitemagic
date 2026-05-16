@@ -1,10 +1,17 @@
 # Grant Opportunity Tier List — Second Pass (2026-04-27)
 
 > **For current execution priorities, see `GRANT_EXECUTION_PLAN_2026-04-28.md`.** This document is a strategic map; the execution plan is the operational source of truth.
+> 
+> **For organizational growth stages**, see `WHITEMAGIC_LABS_GROWTH_TIERS.md`. This document ranks funding opportunities; the growth tiers document describes how the organization itself evolves from formation to deep-tech R&D.
 
 **Methodology**: Base-rate analysis + structural fit + network proximity + deadline proximity. Tier 0 = no legal entity required, highest win probability for a solo developer. Tier 3+ = requires LLC, academic affiliation, or team.
 
 **Portfolio math**: Applying to 4+ independent opportunities yields an estimated ~60–70% chance of ≥1 success. Applying to 6+ yields an estimated ~70–80%. These are heuristic estimates, not precise probabilities.
+
+**Quick cross-reference**:
+- `GRANT_TIER_LIST_2026.md` (this doc) = *Which grants to apply for, ranked by accessibility*
+- `GRANT_EXECUTION_PLAN_2026-04-28.md` = *What to do this week*
+- `WHITEMAGIC_LABS_GROWTH_TIERS.md` = *How the organization evolves, stage by stage*
 
 ---
 

@@ -49,6 +49,8 @@ Federal grants are **not a Year 1 survival strategy** — they are a **Year 2–
 | **Timeline** | Rolling submissions via SBIR.gov; 4–6 month review cycle |
 | **Entity** | LLC required; must be US-owned and <500 employees |
 
+**⚠️ CURRENT STATUS (April 2026)**: NSF has temporarily paused new Project Pitch submissions. Monitor [nsf.gov/eng/iip/sbir/](https://www.nsf.gov/eng/iip/sbir/) or email sbir@nsf.gov for reopening. Existing pitches are still being processed. Do not draft a full NSF SBIR proposal until Project Pitches reopen.
+
 **Why it fits**: NSF's "Safe Learning-Enabled Systems" and "Trustworthy AI" program areas explicitly fund runtime verification, audit substrates, and memory systems with safety guarantees. The Karma Ledger's declared-vs-actual side-effect tracking is a novel contribution. The commercialization path (governance API for enterprise AI orchestration) is more mature than the DOE energy angle.
 
 ---
@@ -85,6 +87,26 @@ Federal grants are **not a Year 1 survival strategy** — they are a **Year 2–
 
 ---
 
+### 2.4 Other Federal Platforms to Monitor
+
+Beyond SBIR/STTR, these platforms offer faster, lower-bureaucracy paths to federal funding:
+
+| Platform | Type | Amount | Effort | Best For | URL |
+|---|---|---|---|---|---|
+| **Challenge.gov** | Prize competition | $5K–$250K | Low (5-page white paper) | Specific technical problems with bounty payouts | challenge.gov |
+| **DIU CSO** | Fast-track defense contract | $500K–$3M | Medium (pitch deck) | Air-gapped tactical AI, austere compute | diu.mil |
+| **AFWERX** | Air Force SBIR + OTAs | Phase I: $50K–$150K | Medium (standard SBIR) | Autonomous systems, edge AI | afrl.af.mil/afwerx |
+| **NASA iTech** | Tech scouting | $10K–$100K | Low (2-page white paper) | Robotics, energy, AI | nasa.gov/itech |
+| **ARPA-E** | DOE high-risk research | $500K–$3M | High (full proposal) | Energy-efficient computing, microgrids | arpa-e.energy.gov |
+| **HeroX / Wazoku** | Private crowdsourcing | $5K–$100K | Low (solution brief) | Microgrid optimization, hardware design | herox.com |
+| **Grants.gov** | Federal grant aggregator | Varies | High (full application) | All federal grants | grants.gov |
+
+**The "bounty board" model**: Challenge.gov and DIU CSO function like bounty boards — government posts a problem, solvers submit solutions, winner gets cash. No equity, no IP transfer (usually), much faster than SBIR.
+
+**When to use**: After you have a working prototype and credibility from 1–2 smaller grants. These platforms expect demonstrated capability, not just a proposal.
+
+---
+
 ## 3. SAM.gov Registration Guide
 
 You cannot submit a federal grant application without an active SAM.gov profile. This is the hard gate.
@@ -97,15 +119,43 @@ You cannot submit a federal grant application without an active SAM.gov profile.
 | 2 | **Get EIN** from IRS | $0 | 5 min | [irs.gov/ein](https://irs.gov/ein) |
 | 3 | **Open business bank account** | $0 | 1–3 days | Mercury / Novo / Truist |
 | 4 | **Get Unique Entity ID (UEI)** | $0 | Instant | [sam.gov](https://sam.gov) — auto-assigned on registration |
-| 5 | **Complete SAM.gov registration** | $0 | 2–8 weeks | [sam.gov](https://sam.gov) |
-| 6 | **Receive CAGE Code** | $0 | 1–2 weeks (after SAM review) | Assigned by Defense Logistics Agency |
+| 5 | **Complete SAM.gov registration** | $0 | Up to 10 business days | [sam.gov](https://sam.gov) |
+| 6 | **Receive CAGE Code** | $0 | Included in SAM registration | Assigned by Defense Logistics Agency |
 
 ### SAM.gov Pro Tips
-- **Do not wait** to start SAM.gov. It is notoriously slow (2–8 weeks) and often kicks back applications for minor formatting issues.
+- **Do not wait** to start SAM.gov. While processing is typically 10 business days, it can take longer if there are formatting issues. Start immediately after bank account opens.
+- **Annual renewal required**: SAM.gov registration must be renewed every 365 days. Set a calendar reminder.
 - **Use your LLC's legal name exactly** as it appears on the Georgia Secretary of State website. Any mismatch blocks approval.
 - **Physical address**: Use your home address if you don't have a commercial lab yet. You can update it later.
 - **NAICS codes**: Select **541715** (R&D in Physical/Engineering/Life Sciences) as primary. Add **541511** (Custom Computer Programming) as secondary.
 - **Electronic Funds Transfer (EFT)**: The government verifies your bank routing and account numbers. You cannot complete SAM.gov without an active business bank account.
+
+## 3.5 Business Credit Cards & Early Financing (Month 0–6)
+
+Before grants arrive, you need cash flow for servers, tools, and fabrication. Business credit cards are the fastest, lowest-friction option for a new LLC.
+
+### How It Works
+- Issuers (Amex, Chase, Capital One) approve based on **your personal credit** + EIN
+- You provide a **personal guarantee** — if the business defaults, you're personally liable
+- This is standard for new LLCs and does **not** affect SBIR eligibility
+
+### Recommended Cards
+| Card | Reward | 0% APR Period | Best For |
+|---|---|---|---|
+| **Chase Ink Business Unlimited** | 1.5% cash back | 12 months | Simple, no annual fee |
+| **Amex Blue Business Plus** | 2x Membership Rewards | 12 months | Points flexibility |
+| **Capital One Spark Cash** | 2% cash back | None | Highest flat rate |
+
+### Strategy
+1. **Apply immediately after EIN** (same day as bank account)
+2. **Use for all business expenses** — builds business credit history
+3. **Pay in full monthly** — never carry a balance past the 0% intro period
+4. **Typical limit**: $5K–$25K for good personal credit
+
+### SBA Microloans (Month 3–6)
+Once you have 3 months of operation + a business plan, SBA Microloans (up to $50K through community intermediaries) become viable. Average microloan is ~$13K–$15K. Requirements vary by intermediary.
+
+**Rule**: Credit cards float Month 0–3. Microloans or equipment financing kick in Month 3–6. Federal grants (Month 6–18) replace both.
 
 ---
 
@@ -263,7 +313,7 @@ To build an auditable 12-month energy trail, deploy this stack on Day 1:
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| SAM.gov delays block SBIR submission | Medium | High | Start SAM.gov immediately after LLC approval; expect 4–8 weeks |
+| SAM.gov delays block SBIR submission | Low | Medium | Start SAM.gov immediately after LLC approval; typically ~10 business days |
 | SBIR commercialization requirement conflicts with open-source mission | Low | Medium | Frame open-source as accelerant, not blocker (Redis model) |
 | REAP rural eligibility denied | Medium | High | Verify USDA map before lease/signing; Thunderbolt/Effingham County likely qualify |
 | 12-month energy baseline insufficient for REAP | Low | High | Start monitoring Day 1; 12 months is a hard requirement |

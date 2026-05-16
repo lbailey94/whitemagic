@@ -268,7 +268,7 @@ pub const GalacticTelepathyEngine = struct {
     allocator: std.mem.Allocator,
     watermarks: std.StringHashMap(SyncWatermark),
     watermark_path: []const u8,
-    mutex: std.Thread.Mutex,
+    mutex: std.std.Thread.Mutex,
 
     pub fn init(allocator: std.mem.Allocator) !GalacticTelepathyEngine {
         const home_dir = try std.process.getEnvVarOwned(allocator, "HOME");
@@ -280,7 +280,7 @@ pub const GalacticTelepathyEngine = struct {
             .allocator = allocator,
             .watermarks = std.StringHashMap(SyncWatermark).init(allocator),
             .watermark_path = wm_path,
-            .mutex = .{},
+            .mutex = {},
         };
         
         try engine.loadWatermarks();

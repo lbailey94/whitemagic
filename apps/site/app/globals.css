@@ -120,4 +120,7 @@
   .btn-ghost {
     @apply btn bg-transparent text-fg hover:bg-lavender-bg hover:border-lavender;
   }
+  .btn-secondary {
+    @apply btn bg-surface text-fg hover:bg-lavender-bg hover:border-lavender;
+  }
 }

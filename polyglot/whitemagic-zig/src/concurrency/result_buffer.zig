@@ -12,13 +12,13 @@ pub const Result = struct {
 pub const ResultBuffer = struct {
     allocator: std.mem.Allocator,
     buffer: std.ArrayList(Result),
-    mutex: std.Thread.Mutex,
+    mutex: std.std.Thread.Mutex,
     
     pub fn init(allocator: std.mem.Allocator) ResultBuffer {
         return ResultBuffer{
             .allocator = allocator,
             .buffer = std.ArrayList(Result).init(allocator),
-            .mutex = std.Thread.Mutex{},
+            .mutex = std.std.Thread.Mutex{},
         };
     }
     

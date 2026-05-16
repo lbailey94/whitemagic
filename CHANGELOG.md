@@ -26,9 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Corpus Callosum Bus** (`core/intelligence/corpus_callosum.py`) — multi-round bicameral debate (max 3 rounds, tension threshold escalation); `LeftHemisphereAgent` + `RightHemisphereAgent` event listeners
 
 ### Changed
-- `dispatch_table.py`: 443 dispatch tools, 471 callable tools
+- `dispatch_table.py`: 451 dispatch tools, 479 callable tools
 - `prat_mappings.py`: full coverage of all dispatch tools
-- Test suite: 2,154 passed, 66 skipped, 0 failed (+91 from v22.0.0)
+- Test suite: 2,216 passed, 67 skipped, 0 failed
 - Doc drift checker: 7/7 checks passing
 
 ### Fixed
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `salience.spotlight` functional after replacing deprecation shim
 - All browser tools have working handlers
 - Path hygiene tests (`test_strict_mode_blocks_cwd_fallback`, etc.) converted from xfail to real assertions
-- Stale v15.0 references in `AI_PRIMARY.md` updated to v22.0.0
+- Stale v15.0 references in `AI_PRIMARY.md` updated to v22.2.0
 - `grimoire/TRUTH_TABLE.md` stale registry bug warning corrected
 
 ## [22.0.0] - 2026-04-16
@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - WASM compilation target for browser/edge deployment
 - Polyglot bridges: Koka, Mojo, Haskell
 - CI/CD workflow (GitHub Actions)
-- Comprehensive test suite (2259 tests)
+- Comprehensive test suite recovery and CI workflow
 - Safety governance: Governor, input sanitizer, rate limiter, constitutional checks
 - MCP health endpoint (`whitemagic://health`) for liveness checks
 - CLI command registration registry pattern for better decoupling

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
+import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 import { Github, ExternalLink } from "lucide-react";
 
 export const metadata = {
@@ -23,12 +25,12 @@ const PROJECTS: Project[] = [
     name: "WhiteMagic",
     tagline: "Cognitive operating system for AI agents",
     description:
-      "A 178K-line polyglot platform: persistent holographic memory, 479 callable tools (451 dispatch + 28 PRAT Gana meta-tools), 8-stage governance pipeline, 11 languages with Rust and Zig acceleration. The lab where every technique used in client engagements gets pressure-tested first.",
+      `A ${WM_FACTS.linesShort}-line polyglot platform: persistent 5D holographic memory, ${WM_FACT_TEXT.toolSurface}, 8-stage governance pipeline, ${WM_FACTS.languages} verified polyglot languages (Rust/Go/Zig/Koka/Haskell/Elixir/Julia). The lab where every technique used in client engagements gets pressure-tested first.`,
     stats: [
-      { label: "Lines", value: "178K" },
-      { label: "Callable tools", value: "479" },
-      { label: "Tests passing", value: "2,185" },
-      { label: "Languages", value: "11" },
+      { label: "Lines", value: WM_FACTS.linesShort },
+      { label: "Callable tools", value: WM_FACTS.callableTools },
+      { label: "Tests passing", value: WM_FACTS.testsPassing },
+      { label: "Languages", value: WM_FACTS.languages },
     ],
     status: "Active",
     href: "https://github.com/whitemagic-ai/whitemagic",
@@ -38,7 +40,7 @@ const PROJECTS: Project[] = [
     name: "agent-guardrails",
     tagline: "Runtime governance middleware for AI agents",
     description:
-      "A focused extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP Agentic Top 10 with deterministic, sub-millisecond policy evaluation.",
+      "A focused extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI) with deterministic, sub-millisecond policy evaluation.",
     stats: [
       { label: "Target size", value: "~2K lines" },
       { label: "OWASP Top 10", value: "10/10" },
@@ -55,8 +57,8 @@ export default function OpenSourcePage() {
     <>
       <PageHeader
         eyebrow="Open Source"
-        title="Everything I can share, I share."
-        lede="The work behind the services. MIT-licensed, publicly audit-able, and the first-party source for every technique I deploy in engagements."
+        title="Reference implementation first. Services second."
+        lede="WhiteMagic is the public substrate behind the lab's claims: memory, tool governance, side-effect audit, and protocol-compatible agent infrastructure."
       />
 
       <section className="container-site py-16">
@@ -64,6 +66,28 @@ export default function OpenSourcePage() {
           {PROJECTS.map((p) => (
             <ProjectCard key={p.name} project={p} />
           ))}
+        </div>
+
+        <div className="mt-16 rounded-2xl border border-border bg-surface-alt p-8">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            2026 field map · updated {FIELD_MAP_UPDATED}
+          </p>
+          <h2 className="mb-5 font-head text-xl font-semibold text-ink">
+            Why this remains open source
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {FIELD_CONCLUSIONS.slice(0, 2).map((item) => (
+              <article
+                key={item.title}
+                className="rounded-xl border border-border bg-surface p-5"
+              >
+                <h3 className="mb-2 font-head text-lg font-semibold text-ink">
+                  {item.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-muted">{item.body}</p>
+              </article>
+            ))}
+          </div>
         </div>
 
         <div className="mt-16 rounded-2xl border border-border bg-surface-alt p-8">

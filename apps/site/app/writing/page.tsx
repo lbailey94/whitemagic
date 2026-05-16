@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import { WM_FACTS } from "@/lib/facts";
 
 export const metadata = {
   title: "Writing — WhiteMagic Labs",
   description:
-    "Technical writing on private AI, agent governance, MCP engineering, and the honest lessons from shipping a 170K-line solo project.",
+    `Technical writing on private AI, agent governance, MCP engineering, and the honest lessons from shipping a ${WM_FACTS.linesShort}-line solo project.`,
 };
 
 interface Post {
@@ -21,7 +22,7 @@ const POSTS: Post[] = [
     slug: "whitemagic-post-mortem",
     title: "WhiteMagic: an honest post-mortem",
     blurb:
-      "Six months, 178,000 lines, 2,185 passing tests, and a hard lesson in the difference between building a product and running a research lab. What worked, what didn't, and what I'd do differently.",
+      `Six months, ${WM_FACTS.linesLong} lines, ${WM_FACTS.testsPassing} passing tests, and a hard lesson in the difference between building a product and running a research lab. What worked, what didn't, and what I'd do differently.`,
     date: "2026-04",
     cluster: "Strategy",
     ready: false,

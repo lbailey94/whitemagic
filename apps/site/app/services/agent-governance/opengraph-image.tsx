@@ -10,7 +10,7 @@ export default async function Image() {
     eyebrow: "Service",
     title: "Guardrails that turn autonomy into trust.",
     tagline:
-      "Dharma Rules, Karma Ledger, Harmony Vector — mapped to OWASP Agentic Top 10 and EU AI Act.",
+      "Dharma Rules, Karma Ledger, Harmony Vector — mapped to OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act.",
     footerRight: "Agent Governance",
   });
 }
