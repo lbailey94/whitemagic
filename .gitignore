@@ -57,6 +57,7 @@ polyglot/codex/target/
 *.log
 *.stats
 *.jsonl
+!apps/site/public/consolidated_*.jsonl
 
 # === Build Artifacts ===
 *.bak
@@ -171,6 +172,7 @@ Thumbs.db
 
 # === Private / Not for public release ===
 aria/
+!apps/site/app/api/aria/
 archive/
 legacy/
 whitemagic-site/

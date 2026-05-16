@@ -125,7 +125,7 @@ export function ConsolidatedSphere() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/consolidated_synthesized.jsonl")
+    fetch("/consolidated_relabeled.jsonl")
       .then((res) => res.text())
       .then((text) => {
         const clusters: ClusterNode[] = text
