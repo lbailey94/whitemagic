@@ -1,5 +1,36 @@
 # WhiteMagic v22.0.0 + v22.2 — Session Summary & Handoff Document
 
+## Current Status Addendum — 2026-05-21
+
+> **Read this first.** The April session summary below is preserved as historical context. The current working baseline is newer.
+
+| Surface | Current State |
+|---------|---------------|
+| Release baseline | v22.2.0 release baseline: 2,216 passed, 67 skipped, 0 failed |
+| Current local audit baseline | 2,243 passed, 67 skipped, 0 failed as of 2026-05-20/21 |
+| Tool surface | 479 callable tools, 451 dispatch entries, 28 Gana meta-tools |
+| Documentation policy | Option C: docs distinguish frozen release baseline from current local audit baseline |
+| Root Markdown hygiene | Previously untracked root Markdown docs classified and moved to ignored `docs/private/` |
+| Private docs policy | `docs/private/` is local-only and ignored; private filenames are intentionally not enumerated in `INDEX.md` |
+
+### May 20/21 Verified Gates
+
+| Gate | Result |
+|------|--------|
+| `scripts/check_doc_drift.py` | Passed |
+| `scripts/check_versions.py` | Passed |
+| Full core test suite | 2,243 passed, 67 skipped, 1 warning |
+| Untracked public Markdown | None via `git ls-files -o --exclude-standard '*.md'` |
+
+### Current Handoff
+
+1. Treat the April sections below as historical release context, not the live baseline.
+2. Keep root docs limited to canonical public/project files listed in `INDEX.md`.
+3. Keep private Aria, Vaya Vida, Garden, ontology, and local handoff material under ignored `docs/private/`.
+4. Next high-leverage docs work: audit active `docs/message_board/` materials for staleness, public/private audience, and grant-strategy drift before any public upload.
+
+---
+
 > **Session Date:** 2026-04-25
 > **Scope:** Complete codebase stabilization from broken baseline to release-ready, followed by v22.2 surface completion and cognitive architecture expansion
 > **Final State:** 2,154 tests passed, 0 failed, 66 skipped

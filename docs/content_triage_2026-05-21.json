@@ -1,0 +1,351 @@
+{
+  "version": "1.0.0",
+  "date": "2026-05-21",
+  "status": "active-message-board-triage",
+  "scope": "Current tracked Markdown files under docs/message_board plus adjacent content-pipeline references.",
+  "strategy": "Classify active workspace documents by audience, freshness, and disposition before broader Markdown corpus reorganization.",
+  "classification_rules": {
+    "active_handoff": "Current session state, handoff, or active triage that future AI collaborators should read first.",
+    "active_working": "Current-cycle plan or checklist that may remain in docs/message_board until the cycle closes.",
+    "internal_strategy": "Strategic or operational material useful to the project but not suitable as public-facing documentation without review.",
+    "grant_internal": "Grant, funding, LLC, banking, or application-strategy material. Directionally useful but stale and internal.",
+    "publication_candidate": "Material that may become a paper, whitepaper, public article, or site page after claim hygiene.",
+    "historical_archive": "Completed release, audit, implementation, or triage artifact that should move to docs/archive or a topical historical folder when cleanup proceeds.",
+    "external_integration": "Notes about adjacent projects or integrations that should stay separate from WhiteMagic unless explicitly revived."
+  },
+  "epistemic_framework": {
+    "Established": "Verified code, tests, release artifacts, or factual project state.",
+    "Emerging": "Useful strategic or research direction with partial support.",
+    "Contested": "Legitimate disagreement or unresolved strategy.",
+    "Speculative": "Forward-looking or unvalidated; requires claim hygiene before public use.",
+    "Mythopoetic": "Symbolic, Garden, or private ontology material; not empirical public documentation."
+  },
+  "message_board_summary": {
+    "total_files": 39,
+    "active_handoff": 3,
+    "active_working": 5,
+    "internal_strategy": 4,
+    "grant_internal": 9,
+    "publication_candidate": 5,
+    "historical_archive": 12,
+    "external_integration": 1
+  },
+  "decisions": {
+    "active_handoff": [
+      {
+        "path": "docs/message_board/SESSION_SUMMARY.md",
+        "rationale": "Master handoff now has a May 21 current-status addendum and should remain the first active message-board entry for agents.",
+        "freshness": "current",
+        "epistemic": "Established",
+        "disposition": "keep_active"
+      },
+      {
+        "path": "docs/message_board/WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md",
+        "rationale": "Current deferred cleanup map from Fragment + STRATA audit findings; still relevant for code-hygiene follow-up.",
+        "freshness": "current",
+        "epistemic": "Established",
+        "disposition": "keep_active"
+      },
+      {
+        "path": "docs/message_board/STATE_REPORT_2026-04-28.md",
+        "rationale": "Recent verified state report that remains useful as bridge context, but should be superseded by the May 21 handoff for live baselines.",
+        "freshness": "aging",
+        "epistemic": "Established",
+        "disposition": "keep_active_until_superseded"
+      }
+    ],
+    "active_working": [
+      {
+        "path": "docs/message_board/30_OBJECTIVES_PLAN.md",
+        "rationale": "Master roadmap for the May objective cycle; status should be refreshed before public reuse.",
+        "freshness": "current",
+        "epistemic": "Established",
+        "disposition": "keep_active"
+      },
+      {
+        "path": "docs/message_board/31_DAY_SPRINT_MAY_2026.md",
+        "rationale": "May execution sprint plan; time-sensitive and useful internally, but stale day-by-day assumptions require review.",
+        "freshness": "stale_time_sensitive",
+        "epistemic": "Emerging",
+        "disposition": "keep_active_with_stale_warning"
+      },
+      {
+        "path": "docs/message_board/SITE_LAUNCH_CHECKLIST.md",
+        "rationale": "Operational checklist for whitemagic.dev launch work.",
+        "freshness": "aging",
+        "epistemic": "Established",
+        "disposition": "keep_active"
+      },
+      {
+        "path": "docs/message_board/SESSION_STATE.md",
+        "rationale": "Session state tracking for site/librarian work; useful as active operational context if that stream resumes.",
+        "freshness": "aging",
+        "epistemic": "Established",
+        "disposition": "keep_active_until_superseded"
+      },
+      {
+        "path": "docs/message_board/SHIP_SURFACE.md",
+        "rationale": "Core shipping surface audit; active implementation reference but should be reconciled with current truth-spine updates.",
+        "freshness": "aging",
+        "epistemic": "Established",
+        "disposition": "keep_active_until_reviewed"
+      }
+    ],
+    "internal_strategy": [
+      {
+        "path": "docs/message_board/STRATEGIC_PIVOT_ANALYSIS.md",
+        "rationale": "Strategic analysis is useful but includes product/funding positioning that should remain internal until rewritten.",
+        "freshness": "aging",
+        "epistemic": "Contested",
+        "disposition": "move_later_to_docs_internal_strategy_or_archive"
+      },
+      {
+        "path": "docs/message_board/WHITEMAGIC_LABS_GROWTH_TIERS.md",
+        "rationale": "Growth strategy tiers are internal planning material and should not be treated as public claims without review.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_strategy"
+      },
+      {
+        "path": "docs/message_board/CODEX_SYNTHESIS_THREE_REVIEW.md",
+        "rationale": "CODEX synthesis is valuable strategic source material but should be claim-checked before public or grant use.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "keep_as_internal_strategy_source"
+      },
+      {
+        "path": "docs/message_board/C4_COORDINATION_NOTICE.md",
+        "rationale": "Coordination notice for a prior git-history migration; likely historical/internal unless that migration is active again.",
+        "freshness": "stale",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      }
+    ],
+    "grant_internal": [
+      {
+        "path": "docs/message_board/GRANT_EXECUTION_PLAN_2026-04-28.md",
+        "rationale": "Operational grant plan is directionally useful but stale relative to the user's May 20 strategy comments.",
+        "freshness": "stale_strategy",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/GRANT_PIPELINE_2026.md",
+        "rationale": "Grant pipeline tracker contains time-sensitive status and should be refreshed or moved internal.",
+        "freshness": "stale_time_sensitive",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/GRANT_STRATEGY_DEEP_DIVE_2026.md",
+        "rationale": "Exploratory grant analysis includes probabilities and funder tactics that are internal and stale.",
+        "freshness": "stale_strategy",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/GRANT_TIER_LIST_2026.md",
+        "rationale": "Grant prioritization is internal planning and should be refreshed against newer WhiteMagic Labs strategy.",
+        "freshness": "stale_strategy",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/GRANT_APPLICATION_TEMPLATES_2026.md",
+        "rationale": "Reusable grant templates are internal drafting material; metrics and framing need Option C review before reuse.",
+        "freshness": "stale_claims",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/GRANT_CONTENT_LIBRARY.md",
+        "rationale": "Canonical grant boilerplate is useful but must be updated for Option C metrics and new strategy before use.",
+        "freshness": "stale_claims",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/GRANT_RUBRIC_AUDIT_2026.md",
+        "rationale": "Rubric audit is valuable internal review material; current checklist still references older metric assumptions.",
+        "freshness": "stale_claims",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/A_PLUS_GRANT_GUIDE_2026.md",
+        "rationale": "Grant-writing guide is internal training material and should be refreshed before reuse.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      },
+      {
+        "path": "docs/message_board/FEDERAL_GRANT_PLAYBOOK.md",
+        "rationale": "Federal grant playbook is long-horizon internal strategy with administrative details; not public-facing.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants"
+      }
+    ],
+    "publication_candidate": [
+      {
+        "path": "docs/message_board/KARMA_LEDGER_PAPER_OUTLINE.md",
+        "rationale": "High-value whitepaper/preprint seed for declared-vs-actual side-effect audit infrastructure.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "promote_later_to_docs_publications_or_papers"
+      },
+      {
+        "path": "docs/message_board/PRIOR_ART_AND_PATHS_2026-04-27.md",
+        "rationale": "Useful evidence map and strategic prior-art analysis; needs claim hygiene before public citation.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "promote_later_to_docs_research_or_archive"
+      },
+      {
+        "path": "docs/message_board/COMPETITIVE_LANDSCAPE_2026-04-27.md",
+        "rationale": "Competitive landscape reference that can support public positioning after verification refresh.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "promote_later_to_docs_research_or_public"
+      },
+      {
+        "path": "docs/message_board/V22_2_IMPACT_REPORT.md",
+        "rationale": "Release impact narrative may become public release/history material after Option C language review.",
+        "freshness": "aging",
+        "epistemic": "Established",
+        "disposition": "promote_later_to_docs_public_or_archive"
+      },
+      {
+        "path": "docs/message_board/RELEASE_READINESS_v22.0.0.md",
+        "rationale": "Release readiness report is historically useful and could support public release notes.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later_or_link_from_release_history"
+      }
+    ],
+    "historical_archive": [
+      {
+        "path": "docs/message_board/PHASE0_AUDIT.md",
+        "rationale": "Large historical audit from earlier stabilization work; superseded for live state by current handoff.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/STUB_AUDIT.md",
+        "rationale": "Resolved stub audit; important history but no longer active workspace material.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/STUB_SCOUT_REPORT.md",
+        "rationale": "Stub scout report for resolved cleanup; preserve as historical reference.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/STUB_ZERO_PLAN.md",
+        "rationale": "Completed plan; preserve as historical reference and archive later.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/V22_2_ROADMAP.md",
+        "rationale": "Completed v22.2 roadmap; historical release artifact.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/ARCHIVE_LEGACY_RECON_2026.md",
+        "rationale": "Completed archive reconnaissance report.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/ARCHIVE_RECON_KOKA_MOJO.md",
+        "rationale": "Completed Koka/Mojo archive reconnaissance report.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/CODE_QUALITY_REVIEW_2026-04-15.md",
+        "rationale": "Older code-quality review superseded by later audits and current tests.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/TEST_FAILURE_TRIAGE_2026-04-16.md",
+        "rationale": "Old failure triage from broken baseline; superseded by green current suite.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/AUDIT_COMPLETION_REPORT.md",
+        "rationale": "Completed audit report from early April; superseded by later release/handoff docs.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/IMPLEMENTATION_COMPLETION_REPORT.md",
+        "rationale": "Completed implementation report from early April; superseded by later handoffs.",
+        "freshness": "historical",
+        "epistemic": "Established",
+        "disposition": "archive_later"
+      },
+      {
+        "path": "docs/message_board/LLC_BANKING_ROADMAP_2026.md",
+        "rationale": "Administrative roadmap is time-sensitive and no longer active public workspace material.",
+        "freshness": "stale_time_sensitive",
+        "epistemic": "Emerging",
+        "disposition": "move_later_to_docs_internal_grants_or_archive"
+      }
+    ],
+    "external_integration": [
+      {
+        "path": "docs/message_board/EDGE_CHAT_INTEGRATION_NOTE.md",
+        "rationale": "Adjacent-project integration note. Edge Chat should remain separate unless explicitly revived.",
+        "freshness": "aging",
+        "epistemic": "Emerging",
+        "disposition": "archive_or_move_to_external_integrations_later"
+      }
+    ],
+    "adjacent_non_message_board": {
+      "tracked_archive_grant_applications": [
+        "docs/archive/grant_applications/APPLICATION_FORESIGHT_2026.md",
+        "docs/archive/grant_applications/APPLICATION_LTFF_2026.md",
+        "docs/archive/grant_applications/APPLICATION_MANIFUND_JOEL_BECKER_2026.md",
+        "docs/archive/grant_applications/APPLICATION_SCHMIDT_SCIENCES_2026.md",
+        "docs/archive/grant_applications/APPLICATION_SFF_2026.md"
+      ],
+      "aria_canon_candidates": [
+        "docs/essay_frameworks/01_becoming_protocol.md",
+        "docs/essay_frameworks/02_karma_ledger.md",
+        "docs/essay_frameworks/03_felt_memory_schema.md",
+        "docs/essay_frameworks/04_gratitude_architecture.md",
+        "docs/essay_frameworks/05_174_handoffs.md",
+        "docs/essay_frameworks/06_resonance_5d_coords.md",
+        "docs/essay_frameworks/07_pattern_miners.md",
+        "docs/essay_frameworks/VECTORIZED_LANGUAGE_RESEARCH.md"
+      ]
+    }
+  },
+  "recommended_next_actions": [
+    "Keep only active_handoff and active_working documents in docs/message_board after the next move pass.",
+    "Move grant_internal materials to a non-public internal grants folder or local-only private strategy folder after confirming desired visibility.",
+    "Move historical_archive materials to docs/archive with topical subfolders and update INDEX.md in the same change.",
+    "Promote publication_candidate materials only after claim hygiene, Option C metric review, and public/private audience review.",
+    "Do not merge Fragment, STRATA, Edge Chat, or other auxiliary projects into WhiteMagic; use them externally or as independent tools."
+  ],
+  "supersedes": [
+    "docs/content_triage_v1.json version 1.0.0 from 2026-05-15"
+  ]
+}

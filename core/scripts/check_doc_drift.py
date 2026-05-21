@@ -241,10 +241,10 @@ def check_test_count_consistency() -> None:
     looked at tool counts.
 
     Strategy here: find every ``N passing tests`` / ``N tests passing``
-    / ``N passed`` reference, group them, and require all docs to
-    agree. The check does NOT shell out to pytest (too slow); it only
-    enforces *consistency* across docs. Update the docs together and
-    this stays green.
+    reference and require it to be clearly labeled as either the frozen
+    v22.2.0 release baseline or the current local audit baseline. The
+    check does NOT shell out to pytest (too slow); it enforces the
+    canonical Option C wording policy.
     """
     print("\n[8/9] Test-count consistency across canonical docs...")
     docs = [
@@ -255,43 +255,57 @@ def check_test_count_consistency() -> None:
         ROOT / "README.md",
     ]
 
-    # Match e.g. "2,179 passing tests", "2179 tests passing", "2,063 tests passing"
-    # but NOT "2,179 passed" because that phrase appears in copy-pasted pytest
+    # Match e.g. "2,216 passing tests", "2243 tests passing", "2,063 tests passing"
+    # but NOT "2,243 passed" because that phrase appears in copy-pasted pytest
     # summary blocks where short-term staleness is acceptable.
     pat = re.compile(
         r"(\d[\d,]*)\s+(?:passing\s+tests|tests\s+passing|tests passing)",
         re.IGNORECASE,
     )
 
-    seen: dict[str, list[tuple[str, int]]] = {}
+    release_baseline = 2216
+    current_audit_baseline = 2243
+    release_markers = ("release baseline", "v22.2.0 release", "v22.2 release")
+    current_markers = ("current local audit", "current audit baseline", "live audit baseline")
+    seen: dict[str, list[tuple[str, int, str]]] = {}
     for doc in docs:
         if not doc.exists():
             continue
         text = doc.read_text()
         rel = str(doc.relative_to(ROOT))
+        lines = text.splitlines()
         for match in pat.finditer(text):
             count = int(match.group(1).replace(",", ""))
             line_num = text[: match.start()].count("\n") + 1
-            seen.setdefault(rel, []).append((f"line {line_num}", count))
+            line_text = lines[line_num - 1].lower()
+            seen.setdefault(rel, []).append((f"line {line_num}", count, line_text))
 
-    # Flatten all counts and check for drift
     all_counts: list[int] = []
     for entries in seen.values():
-        for _, count in entries:
+        for _, count, _ in entries:
             all_counts.append(count)
 
     if not all_counts:
         ok("No test-count references found in canonical docs (skipped)")
         return
 
-    if len(set(all_counts)) == 1:
-        ok(f"All {len(all_counts)} test-count references agree on {all_counts[0]:,}")
-        return
-
-    error(f"Test-count drift detected: docs disagree across {len(set(all_counts))} different values")
+    drift_count = 0
     for doc_rel, entries in sorted(seen.items()):
-        for where, count in entries:
-            print(f"    {doc_rel}:{where} → {count:,}")
+        for where, count, line_text in entries:
+            is_release = count == release_baseline and any(marker in line_text for marker in release_markers)
+            is_current = count == current_audit_baseline and any(marker in line_text for marker in current_markers)
+            if not (is_release or is_current):
+                error(
+                    f"{doc_rel}:{where} claims {count:,} tests without an accepted Option C baseline label"
+                )
+                drift_count += 1
+
+    if drift_count == 0:
+        ok(
+            f"All {len(all_counts)} test-count references use Option C "
+            f"({release_baseline:,} release / {current_audit_baseline:,} current audit)"
+        )
+        return
 
 
 # ---------------------------------------------------------------------------

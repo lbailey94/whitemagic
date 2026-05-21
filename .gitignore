@@ -219,6 +219,7 @@ polyglot/whitemagic-hs/dist-newstyle/
 whitemagic-app/
 whitemagic-aux/
 WhiteMagic-Grants/
+/auxiliary projects/
 test_zig
 
 # === Temporary ===

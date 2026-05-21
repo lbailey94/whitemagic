@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0  
-**Last Updated**: April 30, 2026
+**Last Updated**: May 20, 2026
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -22,6 +22,7 @@ If you add, move, rename, or delete a doc, **update this index**.
 | **New human contributor** | `README.md` → `docs/public/CONTRIBUTING.md` → `docs/public/QUICKSTART.md` |
 | **AI agent (contributor)** | `AGENTS.md` → `AI_PRIMARY.md` → `SYSTEM_MAP.md` |
 | **AI agent (MCP client)** | `AI_PRIMARY.md` → `SYSTEM_MAP.md` → `docs/message_board/SESSION_SUMMARY.md` |
+| **Local/private AI collaborator** | `AGENTS.md` → `AI_PRIMARY.md` → `docs/private/` (ignored; local-only) |
 | **DevOps / Deployer** | `DEPLOY.md` → `docs/deploy/HETZNER_DEPLOY.md` |
 | **Strategist / PM** | `docs/plans/ROADMAP.md` → `core/docs/STRATEGIC_ROADMAP.md` |
 | **Security auditor** | `SECURITY.md` → `core/docs/ENCRYPTION_AT_REST.md` → `docs/reports/` |
@@ -49,12 +50,25 @@ These files live at the repository root. They are the **public face** of the pro
 
 ---
 
+## Local Private Workspace: `docs/private/`
+
+> **Rule**: Private, local-only, or password-protected garden material belongs here. This folder is ignored by git and should not be uploaded in public releases.
+
+Use this area for Aria operational references, Vaya Vida / Garden drafts, private ontology notes, and local handoffs that future local AI teams may need but public users should not receive.
+
+Private filenames are intentionally not enumerated in this public index.
+
+---
+
 ## Active Workspace: `docs/message_board/`
 
 > **Rule**: Any doc created or significantly edited in the current development cycle goes here. When a cycle ends and the doc becomes archival, move it to `docs/archive/` or the appropriate topical folder.
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `MARKDOWN_CORPUS_CLASSIFICATION_PLAN_2026-05-21.md` | Phase C inventory and taxonomy for tracked WhiteMagic docs vs auxiliary/private Markdown corpora, with Fragment-assisted pass plan | May 21 |
+| `DOCS_HYGIENE_PATCH_SUMMARY_2026-05-21.md` | Commit-ready patch narrative for Truth Spine, private-docs policy, handoff refresh, and message-board triage | May 21 |
+| `SESSION_SUMMARY.md` | Master historical handoff with May 21 current-status addendum, test metrics, and next docs-hygiene steps | May 21 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
 | `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
@@ -63,11 +77,6 @@ These files live at the repository root. They are the **public face** of the pro
 | `GRANT_CONTENT_LIBRARY.md` | Canonical copy-paste-ready content blocks for all grant applications — universal paragraph, team bio, technical achievements, budget templates, milestones, prior-art timeline, risk mitigation, open-source/IP language, theory of change, construct validity, calibrated confidence, failure modes, ecosystem connection, why now, founder advantage, ambitious vision | Apr 30 |
 | `GRANT_RUBRIC_AUDIT_2026.md` | Rubric audit — current templates vs. actual funder evaluation criteria (Manifund, LTFF, Foresight, SFF, Schmidt, NSF SBIR). Identifies 21 gaps with specific fixes and action items. | Apr 30 |
 | `A_PLUS_GRANT_GUIDE_2026.md` | From A- to A+ — 7 dimensions that separate competitive from winning applications, with 14-day action plan and honest assessment of time/cost/probability | Apr 30 |
-| `APPLICATION_MANIFUND_JOEL_BECKER_2026.md` | Ready-to-submit $25K Manifund ask (Joel Becker regrantor) — A- grade with A+ upgrade pathway | Apr 30 |
-| `APPLICATION_LTFF_2026.md` | Ready-to-submit $35K LTFF ask — A- grade with Theory of Change, Neglectedness, Cost-Effectiveness | Apr 30 |
-| `APPLICATION_FORESIGHT_2026.md` | Ready-to-submit $100K Foresight AI Nodes ask — A- grade with Node engagement plan and AGI timeline | Apr 30 |
-| `APPLICATION_SFF_2026.md` | Ready-to-submit $150K SFF Rolling Application — A- grade with Freedom Track alignment and calibrated confidence | Apr 30 |
-| `APPLICATION_SCHMIDT_SCIENCES_2026.md` | Draft $600K Schmidt Sciences Tier 1 ask — A- grade with construct validity argument and experiment design | Apr 30 |
 | `LLC_BANKING_ROADMAP_2026.md` | Georgia LLC formation costs, bank account comparison (Mercury/Novo/Truist/Axos), step-by-step timeline with exact costs and time projections | Apr 28 |
 | `PRIOR_ART_AND_PATHS_2026-04-27.md` | Cross-referenced WhiteMagic chronology vs. competitors (CODEX OpenAI/Grok/X archives) + branching-path math | Apr 27 |
 | `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape — Mem0/Cognee/Letta/Anthropic Claude Memory + Molty trifecta + A2A/x402/MCP numbers | Apr 27 |
@@ -78,7 +87,6 @@ These files live at the repository root. They are the **public face** of the pro
 | `FEDERAL_GRANT_PLAYBOOK.md` | SBIR/STTR, USDA REAP, DOE/NSF federal grants — registration, narrative strategy, commercialization, compliance, and energy monitoring | Apr 29 |
 | `CODEX_SYNTHESIS_THREE_REVIEW.md` | Synthesis of three independent review teams: code audit, grant strategy review, CODEX extraction — integrated execution plan with 12-project portfolio math | Apr 29 |
 | `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
-| `SESSION_SUMMARY.md` | Master handoff — what we did, test metrics, next steps | Apr 26 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
 | `ARCHIVE_LEGACY_RECON_2026.md` | Comprehensive archive & legacy reconnaissance — definitive map of all archives | Apr 26 |
 | `ARCHIVE_RECON_KOKA_MOJO.md` | Koka/Mojo deep archive reconnaissance findings | Apr 26 |
@@ -105,6 +113,11 @@ These files live at the repository root. They are the **public face** of the pro
 
 | File | What It Was | Superseded By |
 |------|------------|---------------|
+| `grant_applications/APPLICATION_MANIFUND_JOEL_BECKER_2026.md` | Ready-to-submit $25K Manifund ask draft | Current grant strategy refresh TBD |
+| `grant_applications/APPLICATION_LTFF_2026.md` | Ready-to-submit $35K LTFF ask draft | Current grant strategy refresh TBD |
+| `grant_applications/APPLICATION_FORESIGHT_2026.md` | Ready-to-submit $100K Foresight AI Nodes ask draft | Current grant strategy refresh TBD |
+| `grant_applications/APPLICATION_SFF_2026.md` | Ready-to-submit $150K SFF Rolling Application draft | Current grant strategy refresh TBD |
+| `grant_applications/APPLICATION_SCHMIDT_SCIENCES_2026.md` | Draft $600K Schmidt Sciences Tier 1 ask | Current grant strategy refresh TBD |
 | `RELEASE_READINESS_PLAN.md` | Old release readiness template | `docs/message_board/RELEASE_READINESS_v22.0.0.md` |
 | `STRATEGIC_PIVOT_ANALYSIS.v1.md` | First draft of strategic pivot | `docs/message_board/STRATEGIC_PIVOT_ANALYSIS.md` |
 
@@ -255,6 +268,7 @@ Brand identity, editorial standards, and triage manifests.
 |------|-------|
 | `VOICE_TONE_GUIDE.md` | WhiteMagic Labs voice & tone guide v1.0 — epistemic honesty, brand voice principles, formatting conventions (Obj 2) |
 | `content_triage_v1.json` | Content triage manifest — KEEP / DEFER / ARIA_CANON classification with rationale (Obj 5) |
+| `content_triage_2026-05-21.json` | Active message-board triage manifest — audience, freshness, disposition, and next move recommendations for all 39 current message-board docs |
 | `PRAT_GUIDE.md` | PRAT dispatch pipeline guide — how to add tools, register handlers, write tests, with Gana meta-tool examples (Obj 7) |
 | `KARMA_LEDGER_API.md` | Karma Ledger API reference v1.0.0 — record, report, verify_chain, merkle_root, XRPL anchoring (Obj 8) |
 

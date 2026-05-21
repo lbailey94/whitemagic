@@ -1,11 +1,11 @@
-# WhiteMagic — Agentic AI Platform
+# WhiteMagic — Agentic AI Governance & Metacognition Substrate
 
 [![CI](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-22.2.0-purple.svg)](core/VERSION)
 
-A polyglot agentic AI platform with Python core, Rust performance bridges, and multi-language support for AI agents, memory systems, and distributed orchestration.
+A locally runnable, MIT-licensed research/lab artifact and source library for agentic AI governance, metacognition, memory substrate experiments, and distributed orchestration.
 
 **28 PRAT Gana meta-tools** · **Rust SIMD acceleration** · **WASM compilation target** · **Safety governance**
 
@@ -48,7 +48,7 @@ whitemagic/
 │   ├── whitemagic-rust/     # Rust crate (PyO3 + WASM)
 │   ├── whitemagic-math/     # Shared math crate
 │   ├── haskell/             # Haskell divination module
-│   └── tests/               # 2,216 passing tests, 67 skipped
+│   └── tests/               # v22.2.0 release baseline: 2,216 passing tests, 67 skipped
 ├── polyglot/                # Language bridges
 │   ├── mojo/                # GPU/SIMD acceleration
 │   ├── whitemagic-koka/     # Effect handler orchestration
@@ -95,6 +95,13 @@ cd core/whitemagic-rust && cargo check --features python
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.
+
+## Verification Baselines
+
+| Baseline | Result |
+|----------|--------|
+| **v22.2.0 release baseline** | 2,216 passing tests, 67 skipped, 0 failed |
+| **Current local audit baseline** | 2,243 passing tests, 67 skipped, 0 failed as of 2026-05-20 |
 
 ## Documentation
 

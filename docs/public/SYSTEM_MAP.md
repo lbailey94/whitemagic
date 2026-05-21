@@ -588,7 +588,7 @@ The first public-ready release. Major structural cleanup, documentation overhaul
 - **Stale _GANA_TOOLS**: Replaced hardcoded dict with dynamic generation from `GANA_TO_TOOLS`
 - **Context injection pipeline** (ollama.py): hybrid_recall for RAG, Memory-Augmented Generation
 - **Agent loop**: 3B model autonomously called `pattern_search`, synthesized in 2 iterations
-- 1318 unit tests passing
+- Historical baseline: 1318 unit tests passing
 
 ---
 

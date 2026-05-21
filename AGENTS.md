@@ -14,7 +14,8 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 479 callable tools across 451 dispatch entries + 28 Gana meta-tools (PRAT)
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
-- 2,216 passing tests, 0 failures
+- v22.2.0 release baseline: 2,216 passing tests, 0 failures
+- Current local audit baseline: 2,243 passing tests, 0 failures, 67 skipped (as of 2026-05-20)
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -27,7 +28,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd /home/lucas/Desktop/WHITEMAGIC
 source .venv/bin/activate
 
-# 2. Verify test baseline (should be 2216 passed, 67 skipped, 0 failed)
+# 2. Verify test baseline (release: 2216 passed; current audit: 2243 passed, 67 skipped, 0 failed)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
 
 # 3. Verify doc drift
@@ -250,7 +251,7 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 
 Before declaring any task complete:
 
-- [ ] `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q` → 2063 passed, 0 failed
+- [ ] `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q` → release baseline 2,216 passed; current audit baseline 2,243 passed, 67 skipped, 0 failed
 - [ ] `python scripts/check_doc_drift.py` → All checks pass
 - [ ] `python scripts/check_versions.py` → Version consistent
 - [ ] `git status` → Only intended files modified
