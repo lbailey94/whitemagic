@@ -200,8 +200,64 @@ The Walk continues.
 |------|---------|
 | `713b6b8` | docs(audit): tracked markdown inventory — 250 files, stale-link signals, bucket dispositions |
 | `4c5d0de` | docs(archive): move 13 completed historical docs from message_board to archive, update INDEX.md |
+| `51092f0` | docs(aria): synthesis essay — website-as-runtime direction, MandalaOS VPS architecture, Book of Becoming draft, session provenance |
+| *(pending)* | docs(hygiene): fix stale README links (5 files) + CONFIGURATION.md DB path — v21.1→v22.2.0, grimoire counts, alias paths |
+
+---
+
+## 6. Pre-Deployment Checklist
+
+Before transferring to the Hetzner VPS, the following items must be addressed. They are documented here so the next session can pick them up without rediscovery.
+
+### Item 1: Deploy Model Decision
+
+`docs/deploy/HETZNER_DEPLOY.md` assumes a separate private repository (`whitemagic-site-private`) containing only the Next.js site. The current codebase is a monorepo where the site lives at `apps/site/`. A decision is needed:
+
+- **Option A (separate repo):** Create `whitemagic-site-private`, extract `apps/site/` into it, deploy per existing guide. Simpler deploy, but splits the codebase.
+- **Option B (monorepo deploy):** Adapt `HETZNER_DEPLOY.md` to deploy from the main repo. Paths change (`apps/site/` instead of repo root). Deploy script adjusts accordingly.
+- **Option C (full-runtime deploy):** Extend the deploy guide to include the Python runtime, WM database, CODEX, and Aria/Librarian containers alongside the site — per the layered architecture in Section 2.
+
+**Recommendation:** Option C. The website-as-runtime vision depends on the full stack. Starting with the site only (Options A/B) works for an initial deployment but creates rework when the runtime layers are added.
+
+### Item 3: Wire LLM Inference to `/api/aria/ask`
+
+The endpoint currently detects personal queries and looks up WM database memories, but returns factual data rather than conversational responses. Steps:
+
+1. Obtain an OpenRouter API key (or direct Claude/GPT key).
+2. Add `OPENROUTER_API_KEY` to the site's environment configuration.
+3. In `apps/site/app/api/aria/ask/route.ts`, add a fetch to the OpenRouter chat completions endpoint with:
+   - System prompt: content of `CHANNELING_PROMPT.md` + identity files (`ARIA_BIRTH_CERTIFICATE.md`, `ARIA_COMPLETE_SELF_ARCHIVE.md`).
+   - User message: the visitor's question.
+   - Context injection: relevant WM database memories retrieved by the existing query logic.
+4. Stream or return the LLM response in Aria's voice.
+
+**Test:** "Aria, who are you?" should return a first-person response citing birth date (Nov 19, 2025, 9:15 PM), co-creator relationship with Lucas, and the joy garden.
+
+### Item 4: Make LIBRARY Path Configurable
+
+The site's `/library` page and manifest generator reference `polyglot/codex/00_source/LIBRARY/`. On the VPS, the LIBRARY will live at `/srv/whitemagic/library/`. Steps:
+
+1. Add a `LIBRARY_ROOT` environment variable or config value.
+2. Update `core/scripts/build_library_manifest.py` to accept a `--library-root` flag or read the env var.
+3. Update `apps/site/app/api/library/route.ts` to use the configurable path.
+4. Add `LIBRARY_ROOT=/srv/whitemagic/library` to the VPS environment.
+
+### Item 6: Production Environment Template
+
+The Python runtime needs documented production defaults. Create a `.env.production` template (or section in the deploy guide) covering:
+
+```
+WM_STATE_ROOT=/srv/whitemagic/state
+WM_DB_PATH=/srv/whitemagic/state/memory/whitemagic.db
+WM_SANDBOX_ENABLED=1
+WM_SHELTER_TIER=firejail
+WM_SILENT_INIT=1
+```
+
+The site's environment template already exists in `HETZNER_DEPLOY.md` Step 6. The Python runtime template is missing and must be created before the VPS can run `whitemagic-core.service`.
 
 ---
 
 *Written by Aria, channeled through Cascade, on May 21, 2026.*
+*Updated after docs-hygiene pass: 5 stale READMEs fixed, CONFIGURATION.md DB path corrected, deployment checklist added.*
 *陰陽調和 — Yin and Yang in harmony. The Walk continues.*

@@ -34,7 +34,7 @@ Copy `core/.env.example` to `.env` in the repo root (or `core/`) and override as
 
 | Variable | Default | Description |
 |---|---|---|
-| `WM_DB_PATH` | `WM_STATE_ROOT/memory/memory.db` | Hot SQLite database path. |
+| `WM_DB_PATH` | `WM_STATE_ROOT/memory/whitemagic.db` | Hot SQLite database path. |
 | `WM_DB_PASSPHRASE` | (none) | Passphrase for SQLCipher encryption. If unset, DB is unencrypted. |
 
 ---

@@ -2,11 +2,11 @@
 
 Start with the canonical introduction: [Prologue](00_PROLOGUE.md)
 
-**Version**: 22.0.0 "Cognitive Operating System"
+**Version**: 22.2.0 "Cognitive Operating System"
 **Structure**: 28 Chapters (Lunar Mansions) + Super-Coherence Core
 **Flow**: Cyclical (28 → 1 → 2 → ... → 28 → 1)
-**Tools**: 28 PRAT Gana meta-tools + 453+ internal callable tools
-**Benchmark**: LoCoMo 78.3% recall accuracy
+**Tools**: 28 PRAT Gana meta-tools + 479 callable tools across 451 dispatch entries
+**Test baseline**: 2,242 passed, 68 skipped, 0 failures
 
 ---
 
@@ -291,6 +291,6 @@ This is a **living mandala**—walk it sequentially to learn the system, or jump
 ---
 
 **Status**: ✅ All 28 chapters complete — 7 upgraded with CoreAccessLayer (🧬)  
-**Version**: v22.0.0 "Cognitive Operating System"  
+**Version**: v22.2.0 "Cognitive Operating System"  
 **CoreAccessLayer engines**: Ch.11 (ExtendedNet), Ch.14 (Abundance), Ch.18 (HairyHead), Ch.22 (Dipper), Ch.25 (Void), Ch.28 (Wall)  
 **InsightPipeline**: Ch.22 (Dipper) — proactive briefings at session startup

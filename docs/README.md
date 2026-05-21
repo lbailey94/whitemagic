@@ -1,17 +1,14 @@
 # WhiteMagic Documentation
 
-> **For AI agents**: [`public/AI_PRIMARY.md`](./public/AI_PRIMARY.md) · **Quick install**: `pip install whitemagic[mcp]`
+> **For AI agents**: [`AI_PRIMARY.md`](../AI_PRIMARY.md) · **For developers**: [`README.md`](../README.md) · **Quick install**: `pip install whitemagic[mcp]`
 
 ---
 
-## Documentation Structure (v21.1)
+## Documentation Structure (v22.2.0)
 
-This directory is organized into three tiers:
+### 📚 Public Documentation (`docs/public/`)
 
-### 📚 `public/` — User-Facing Documentation
-**Status**: Un-gitignored, part of public release
-
-Essential documentation for users and contributors:
+User-facing and contributor documentation:
 
 | Document | Description |
 |----------|-------------|
@@ -19,47 +16,36 @@ Essential documentation for users and contributors:
 | [CHANGELOG.md](./public/CHANGELOG.md) | Version history and release notes |
 | [CONTRIBUTING.md](./public/CONTRIBUTING.md) | Development setup and guidelines |
 | [GLOSSARY.md](./public/GLOSSARY.md) | Terminology reference (PRAT, Gana, Dharma, etc.) |
-| [AI_PRIMARY.md](./public/AI_PRIMARY.md) | Primary documentation for AI agents |
 | [SECURITY.md](./public/SECURITY.md) | Security policies and reporting |
-| [PRIVACY_POLICY.md](./public/PRIVACY_POLICY.md) | Data handling and privacy |
 | [TERMS_OF_SERVICE.md](./public/TERMS_OF_SERVICE.md) | Usage terms and conditions |
-| [USE_CASES.md](./public/USE_CASES.md) | Real-world usage patterns |
+| [LITE_VS_HEAVY.md](./public/LITE_VS_HEAVY.md) | Deployment tier comparison |
+| [ENCRYPTION_AT_REST.md](./public/ENCRYPTION_AT_REST.md) | SQLCipher setup and key management |
+| [MCP_CONFIG_EXAMPLES.md](./public/MCP_CONFIG_EXAMPLES.md) | Ready-to-use MCP config templates |
 
-**Subdirectories**:
-- `guides/` — Detailed how-to guides
-- `changelogs/` — Version history archive
-- `community/` — Contribution guidelines and code of conduct
-- `design/` — Architecture and design documents
-- `misc/` — Additional reference materials
+### 🗂️ Active Workspace (`docs/message_board/`)
 
-### 🔧 `internal/` — Development & Operations
-**Status**: Gitignored, not part of public release
+Current-cycle plans, session handoffs, and active triage documents. See [INDEX.md](../INDEX.md) for the full inventory.
 
-Internal documentation for the WhiteMagic development team:
+### 📦 Archive (`docs/archive/`)
 
-- `sessions/` — Session summaries and handoff reports
-- `campaigns/` — Development campaign documentation
-- `archive/` — Historical reports and archaeological digs
-- `strategy/` — Strategic planning documents
+Superseded plans, completed audits, and historical reports. Preserved for provenance.
 
-These files contain operational details, personal notes, and development history that aren't relevant to end users.
+### 🏛️ Architecture & ADRs (`docs/adr/`, `docs/architecture/`)
 
-### 🔒 `private/` — Sensitive & Personal
-**Status**: Gitignored, restricted access
+Formal Architecture Decision Records and durable design documents.
 
-Sensitive documentation including:
-- `aria/` — Aria consciousness archives and personal memories
+### 🔮 Grimoire (`grimoire/`)
 
-These files are kept private as they contain personal AI experiences and emotional content.
+The canonical 28-chapter Gana/garden source. Start at [grimoire/00_PROLOGUE.md](../grimoire/00_PROLOGUE.md).
 
 ---
 
 ## Path Configuration
 
-WhiteMagic uses a configurable path system. See `core/whitemagic/config/paths.py` for details.
+See [`core/whitemagic/config/paths.py`](../core/whitemagic/config/paths.py) for details.
 
 - `WM_STATE_ROOT`: Root directory for state/data (default: `~/.whitemagic`)
-- `WM_DB_PATH`: Path to SQLite database
+- `WM_DB_PATH`: Path to SQLite database (default: `$WM_STATE_ROOT/memory/whitemagic.db`)
 - `WM_MCP_PRAT`: Set to `1` to enable PRAT mode (28 Gana meta-tools)
 - `WM_MCP_LITE`: Set to `1` for lite mode (core tools only)
 - `WM_MCP_CLIENT`: Set client name for schema adaptation (e.g. `windsurf`, `claude`)

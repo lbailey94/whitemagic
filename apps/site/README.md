@@ -37,11 +37,11 @@ public/             Static assets (video, fonts, og images)
 
 Phase 0–1 complete (scaffold + real pages). Phase L.2 complete
 (site-wide tool-using Librarian + public Karma ledger). See
-`PHASE_ROADMAP.md` in this directory and `@docs/SESSION_STATE.md`
-at the repo root for current state.
+`PHASE_ROADMAP.md` in this directory and `docs/message_board/SESSION_STATE.md`
+for current state.
 
 ## Deploy
 
 Self-hosted on Hetzner (Next.js `output: 'standalone'` → systemd →
-Caddy → Cloudflare). Walkthrough: `@docs/deploy/HETZNER_DEPLOY.md`.
-Rationale: `@docs/architecture/INFRASTRUCTURE_DECISION.md`.
+Caddy → Cloudflare). Walkthrough: `docs/deploy/HETZNER_DEPLOY.md`.
+Rationale: `docs/architecture/INFRASTRUCTURE_DECISION.md`.

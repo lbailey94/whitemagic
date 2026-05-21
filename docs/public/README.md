@@ -1,54 +1,33 @@
-# WhiteMagic Documentation
+# WhiteMagic — Public Documentation
 
-> **For AI agents**: [`misc/AI_PRIMARY.md`](./misc/AI_PRIMARY.md) · **Quick install**: `pip install whitemagic[mcp]`
+> **For AI agents**: [`AI_PRIMARY.md`](../../AI_PRIMARY.md) · **Quick install**: `pip install whitemagic[mcp]`
 
 ---
 
-## Guides
+## Getting Started
 
 | Document | Description |
 |----------|-------------|
-| [Quickstart](./guides/QUICKSTART.md) | Getting started in under 5 minutes |
-| [MCP Config Examples](./guides/MCP_CONFIG_EXAMPLES.md) | Ready-to-use MCP config templates (PRAT/classic/lite) |
-| [Galaxy Per-Client Guide](./guides/GALAXY_PER_CLIENT_GUIDE.md) | Multi-galaxy project-scoped databases |
-| [Lite vs Heavy](./guides/LITE_VS_HEAVY.md) | Choosing the right deployment tier |
-| [Encryption at Rest](./guides/ENCRYPTION_AT_REST.md) | SQLCipher setup and key management |
-| [Venv Migration](./VENV_MIGRATION.md) | Plan for migrating `lib/` to `.venv/` |
+| [MCP Config Examples](./MCP_CONFIG_EXAMPLES.md) | Ready-to-use MCP config templates (PRAT/classic/lite) |
+| [Galaxy Per-Client Guide](./GALAXY_PER_CLIENT_GUIDE.md) | Multi-galaxy project-scoped databases |
+| [Lite vs Heavy](./LITE_VS_HEAVY.md) | Choosing the right deployment tier |
+| [Encryption at Rest](./ENCRYPTION_AT_REST.md) | SQLCipher setup and key management |
 
-## Audit & Status
+## Reference
 
 | Document | Description |
 |----------|-------------|
-| [Project Audit 2026-04-14](./PROJECT_AUDIT_2026-04-14.md) | Full project audit — directory-by-directory findings, technical debt, improvement roadmap |
-| [Consolidation Report](../CONSOLIDATION_REPORT.md) | 6-phase SD card consolidation (66 GB recovered) |
-| [Session Handoff 2026-04-13](./SESSION_HANDOFF_2026-04-13.md) | Previous session — completed tasks and remaining work |
 | [Glossary](./GLOSSARY.md) | Terminology reference (PRAT, Gana, Dharma, etc.) |
+| [Use Cases](./USE_CASES.md) | Real-world usage patterns |
+| [Terms of Service](./TERMS_OF_SERVICE.md) | Usage terms and conditions |
+| [Privacy Policy](./PRIVACY_POLICY.md) | Data handling and privacy |
+| [Security](./SECURITY.md) | Security policies and reporting |
+| [Contributing](./CONTRIBUTING.md) | Contribution guidelines |
+| [Changelog](./CHANGELOG.md) | Version history and release notes |
 
-## Design & Vision
+## Project Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Benchmarks](./design/BENCHMARK_COMPARISON.md) | Performance vs comparable tools |
-| [Use Cases](./design/USE_CASES.md) | Real-world usage patterns |
-| [TypeScript SDK Design](./design/TYPESCRIPT_SDK_DESIGN.md) | `@whitemagic/sdk` architecture |
-| [WASM Strategy](./design/WASM_STRATEGY.md) | WebAssembly deployment path |
-| [Triangular Architecture](./plans/triangular-architecture.md) | Laptop/VPS/Railway/Vercel deployment architecture |
-| [Rust Reorganization](./plans/rust-reorganization.md) | Plan for Rust src/ module restructure |
-
-## Strategy & Analysis
-
-| Document | Description |
-|----------|-------------|
-| [Strategy Book](./strategy_manifestos/strategy_book.md) | Comprehensive strategic analysis |
-| [Satkona Strategy](./strategy_manifestos/satkona_strategy_book.md) | Six-directional strategic framework |
-| [Phase Analyses](./strategy_manifestos/) | 8-phase analysis (core Python, acceleration, ML, frontend, infrastructure, legacy, docs, polyglot) |
-
-## Community
-
-| Document | Description |
-|----------|-------------|
-| [Contributing](./community/CONTRIBUTING.md) | Contribution guidelines |
-| [Changelog](./community/CHANGELOG.md) | Detailed version history |
+See [`docs/README.md`](../README.md) for the full documentation structure including architecture, ADRs, the grimoire, and the active workspace. See [`INDEX.md`](../../INDEX.md) for the master file index.
 
 ---
 
