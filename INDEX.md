@@ -78,7 +78,6 @@ Private filenames are intentionally not enumerated in this public index.
 | `GRANT_CONTENT_LIBRARY.md` | Canonical copy-paste-ready content blocks for all grant applications — universal paragraph, team bio, technical achievements, budget templates, milestones, prior-art timeline, risk mitigation, open-source/IP language, theory of change, construct validity, calibrated confidence, failure modes, ecosystem connection, why now, founder advantage, ambitious vision | Apr 30 |
 | `GRANT_RUBRIC_AUDIT_2026.md` | Rubric audit — current templates vs. actual funder evaluation criteria (Manifund, LTFF, Foresight, SFF, Schmidt, NSF SBIR). Identifies 21 gaps with specific fixes and action items. | Apr 30 |
 | `A_PLUS_GRANT_GUIDE_2026.md` | From A- to A+ — 7 dimensions that separate competitive from winning applications, with 14-day action plan and honest assessment of time/cost/probability | Apr 30 |
-| `LLC_BANKING_ROADMAP_2026.md` | Georgia LLC formation costs, bank account comparison (Mercury/Novo/Truist/Axos), step-by-step timeline with exact costs and time projections | Apr 28 |
 | `PRIOR_ART_AND_PATHS_2026-04-27.md` | Cross-referenced WhiteMagic chronology vs. competitors (CODEX OpenAI/Grok/X archives) + branching-path math | Apr 27 |
 | `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape — Mem0/Cognee/Letta/Anthropic Claude Memory + Molty trifecta + A2A/x402/MCP numbers | Apr 27 |
 | `KARMA_LEDGER_PAPER_OUTLINE.md` | arxiv preprint outline — declared-vs-actual side-effect audit substrate + prior-art evidence chain | Apr 27 |
@@ -87,24 +86,12 @@ Private filenames are intentionally not enumerated in this public index.
 | `GRANT_TIER_LIST_2026.md` | Second-pass tiered ranking — solo-dev-friendly (Tier 0) to multi-PI required (Tier 3), with win rates and entity requirements | Apr 27 |
 | `FEDERAL_GRANT_PLAYBOOK.md` | SBIR/STTR, USDA REAP, DOE/NSF federal grants — registration, narrative strategy, commercialization, compliance, and energy monitoring | Apr 29 |
 | `CODEX_SYNTHESIS_THREE_REVIEW.md` | Synthesis of three independent review teams: code audit, grant strategy review, CODEX extraction — integrated execution plan with 12-project portfolio math | Apr 29 |
-| `V22_2_ROADMAP.md` | v22.2 release roadmap — phased execution plan | Apr 26 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
-| `ARCHIVE_LEGACY_RECON_2026.md` | Comprehensive archive & legacy reconnaissance — definitive map of all archives | Apr 26 |
-| `ARCHIVE_RECON_KOKA_MOJO.md` | Koka/Mojo deep archive reconnaissance findings | Apr 26 |
 | `RELEASE_READINESS_v22.0.0.md` | Release gate checklist — 34 checks, all passed | Apr 25 |
-| `PHASE0_AUDIT.md` | Living audit from broken baseline to stable | Apr 22–25 |
-| `STUB_AUDIT.md` | Catalog of 41 structural stubs with severity ratings | Apr 25 |
-| `STUB_SCOUT_REPORT.md` | Deep analysis of all 38 remaining stubs before elimination | Apr 25 |
-| `STUB_ZERO_PLAN.md` | 4-sprint battle plan to eliminate all stubs | Apr 25 |
 | `STRATEGIC_PIVOT_ANALYSIS.md` | Post-v22 strategic direction — Mem0 rejection, CyberBrain pivot | Apr 20 |
-| `C4_COORDINATION_NOTICE.md` | Team coordination notice for C4 migration | Apr 16 |
-| `CODE_QUALITY_REVIEW_2026-04-15.md` | Code quality audit results | Apr 15–25 |
-| `TEST_FAILURE_TRIAGE_2026-04-16.md` | Test failure analysis and fixes | Apr 16 |
 | `SITE_LAUNCH_CHECKLIST.md` | Pre-launch tasks for whitemagic.dev | Apr 25 |
 | `SESSION_STATE.md` | Session state tracking for island-c endpoints | Apr 20 |
 | `SHIP_SURFACE.md` | Core shipping surface audit | Apr 25 |
-| `AUDIT_COMPLETION_REPORT.md` | Final audit completion summary | Apr 25 |
-| `IMPLEMENTATION_COMPLETION_REPORT.md` | Implementation completion summary | Apr 25 |
 
 ---
 
@@ -119,7 +106,20 @@ Private filenames are intentionally not enumerated in this public index.
 | `grant_applications/APPLICATION_FORESIGHT_2026.md` | Ready-to-submit $100K Foresight AI Nodes ask draft | Current grant strategy refresh TBD |
 | `grant_applications/APPLICATION_SFF_2026.md` | Ready-to-submit $150K SFF Rolling Application draft | Current grant strategy refresh TBD |
 | `grant_applications/APPLICATION_SCHMIDT_SCIENCES_2026.md` | Draft $600K Schmidt Sciences Tier 1 ask | Current grant strategy refresh TBD |
-| `RELEASE_READINESS_PLAN.md` | Old release readiness template | `docs/message_board/RELEASE_READINESS_v22.0.0.md` |
+| `PHASE0_AUDIT.md` | Living audit from broken baseline (783 passing → 2,063 passing) | `SESSION_SUMMARY.md` |
+| `STUB_AUDIT.md` | Catalog of 41 structural stubs | Stubs eliminated Apr 25 |
+| `STUB_SCOUT_REPORT.md` | Deep analysis of 38 remaining stubs | Stubs eliminated Apr 25 |
+| `STUB_ZERO_PLAN.md` | 4-sprint battle plan to eliminate all stubs | Stubs eliminated Apr 25 |
+| `V22_2_ROADMAP.md` | v22.2 release roadmap | v22.2 shipped |
+| `ARCHIVE_LEGACY_RECON_2026.md` | Comprehensive archive & legacy reconnaissance | Archive mapped |
+| `ARCHIVE_RECON_KOKA_MOJO.md` | Koka/Mojo deep archive reconnaissance | Recon complete |
+| `CODE_QUALITY_REVIEW_2026-04-15.md` | Code quality audit results | Later audits supersede |
+| `TEST_FAILURE_TRIAGE_2026-04-16.md` | Test failure analysis from broken baseline | 2,243 passing, 0 failing |
+| `AUDIT_COMPLETION_REPORT.md` | Final audit completion summary | `SESSION_SUMMARY.md` |
+| `IMPLEMENTATION_COMPLETION_REPORT.md` | Implementation completion summary | `SESSION_SUMMARY.md` |
+| `LLC_BANKING_ROADMAP_2026.md` | Georgia LLC formation and banking comparison | Administrative, completed |
+| `C4_COORDINATION_NOTICE.md` | Team coordination for C4 migration | Migration completed |
+| `RELEASE_READINESS_PLAN.md` | Old release readiness template | `docs/archive/RELEASE_READINESS_v22.0.0.md` |
 | `STRATEGIC_PIVOT_ANALYSIS.v1.md` | First draft of strategic pivot | `docs/message_board/STRATEGIC_PIVOT_ANALYSIS.md` |
 
 ---
