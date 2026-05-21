@@ -66,6 +66,7 @@ Private filenames are intentionally not enumerated in this public index.
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `TRACKED_MARKDOWN_AUDIT_2026-05-21.md` | Tracked-files-first Markdown audit — inventory, stale-link signals, bucket dispositions, and recommended cleanup order | May 21 |
 | `MARKDOWN_CORPUS_CLASSIFICATION_PLAN_2026-05-21.md` | Phase C inventory and taxonomy for tracked WhiteMagic docs vs auxiliary/private Markdown corpora, with Fragment-assisted pass plan | May 21 |
 | `DOCS_HYGIENE_PATCH_SUMMARY_2026-05-21.md` | Commit-ready patch narrative for Truth Spine, private-docs policy, handoff refresh, and message-board triage | May 21 |
 | `SESSION_SUMMARY.md` | Master historical handoff with May 21 current-status addendum, test metrics, and next docs-hygiene steps | May 21 |
