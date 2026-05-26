@@ -296,10 +296,17 @@ class TemporalForecastDB:
         forecasts = [r["confidence"] for r in closed]
         outcomes = [1 if r["status"] == "validated" else 0 for r in closed]
 
-        from whitemagic.forecasting.brier import brier_score as _bs, brier_skill_score as _bss
+        from whitemagic.forecasting.brier import (
+            brier_score as _bs,
+            brier_skill_score as _bss,
+            brier_index as _bi,
+            calibration_gap as _cg,
+        )
 
         bs = _bs(forecasts, outcomes) if closed else float("nan")
         bss = _bss(forecasts, outcomes) if closed else float("nan")
+        bi = _bi(bs) if bs == bs else float("nan")
+        cg = _cg(forecasts, outcomes) if closed else float("nan")
 
         categories: dict[str, int] = {}
         for r in validated:
@@ -315,6 +322,8 @@ class TemporalForecastDB:
             "avg_lead_weeks": round(avg_lead, 1),
             "brier_score": round(bs, 4) if bs == bs else None,
             "brier_skill_score": round(bss, 4) if bss == bss else None,
+            "brier_index": round(bi, 1) if bi == bi else None,
+            "calibration_gap": round(cg, 3) if cg == cg else None,
             "categories": categories,
         }
 

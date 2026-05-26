@@ -63,7 +63,7 @@ def summary() -> None:
     click.echo(f"  Brier score:        {s['brier_score']}")
     click.echo(f"  Brier skill score:  {s['brier_skill_score']}")
     click.echo(f"  Brier Index:        {s['brier_index']}%  (superforecasters ≈ 71%)")
-    click.echo(f"  Calibration gap:    {s['calibration_gap']:+.3f}  (+ = underconfident)")
+    click.echo(f"  Calibration gap:    {s['calibration_gap']:+.3f}  (- = underconfident)")
     click.echo()
     click.echo("Categories:")
     for cat, count in s["categories"].items():

@@ -2,27 +2,40 @@
 
 ## Supported Versions
 
-Currently only the latest version of Whitemagic is supported for security updates.
-
 | Version | Supported          |
 | ------- | ------------------ |
-| v14.x   | :white_check_mark: |
-| v13.x   | :white_check_mark: |
-| < v13   | :x:                |
+| 22.x    | :white_check_mark: |
+| < 22.0  | :x:                |
 
 ## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities via public GitHub issues.**
+We take the security of WhiteMagic seriously. If you have discovered a security vulnerability, please report it privately.
 
-Instead, use one of these private channels:
+**Do NOT file a public issue.**
 
-1. **GitHub Security Advisories** (preferred): Go to the [Security tab](https://github.com/whitemagic-ai/whitemagic/security/advisories) and click "Report a vulnerability."
-2. **Email**: Send details to the maintainers via the email listed on their GitHub profile.
+Instead, please report vulnerabilities by:
+
+1. Opening a GitHub Security Advisory (preferred)
+2. Emailing the maintainers directly
 
 Please include:
-- A description of the vulnerability
+
+- Description of the vulnerability
 - Steps to reproduce
-- Potential impact assessment
+- Affected versions
+- Potential impact
 - Suggested fix (if any)
 
-We will acknowledge your report within 48 hours and provide a timeline for a fix if necessary.
+We will acknowledge receipt within 48 hours and provide a detailed response within 7 days.
+
+## Security Features
+
+WhiteMagic includes built-in safety mechanisms:
+
+- **Governor**: Pre-execution validation for forbidden actions
+- **Input Sanitizer**: Validates and sanitizes all tool inputs
+- **Rate Limiter**: Prevents resource exhaustion
+- **Tool Permissions**: Fine-grained access control for each PRAT Gana
+- **Constitutional Checks**: Ethical governance constraints
+
+See `docs/CONTRIBUTING.md` for details on the safety architecture.

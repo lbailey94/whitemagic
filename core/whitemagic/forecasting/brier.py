@@ -160,8 +160,8 @@ def calibration_gap(
 ) -> float:
     """Mean forecast probability minus mean outcome (base rate).
 
-    Positive = systematically underconfident (forecasts lower than reality).
-    Negative = systematically overconfident (forecasts higher than reality).
+    Positive = systematically overconfident (forecasts higher than reality).
+    Negative = systematically underconfident (forecasts lower than reality).
     Near zero = well-calibrated.
     """
     if not forecasts or not outcomes or len(forecasts) != len(outcomes):

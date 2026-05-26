@@ -106,7 +106,8 @@ class TestDecompose:
     def test_decomposition_keys(self):
         result = decompose_brier([0.7, 0.3], [1, 0])
         assert set(result.keys()) == {
-            "brier_score", "reliability", "resolution", "uncertainty", "bss"
+            "brier_score", "reliability", "resolution", "uncertainty", "bss",
+            "brier_index", "calibration_gap",
         }
 
     def test_brier_score_consistent(self):
