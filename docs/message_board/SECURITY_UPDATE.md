@@ -1,12 +1,24 @@
 # WhiteMagic Security Update — v23.0.0 Architecture
 
 **Date**: 2026-05-26
-**Status**: Design Document (Ready for Implementation)
+**Status**: Design Document (Implementation In Progress — Session 17)
 **Target**: Sessions 17–19
+**Session 17 Start**: 15:33:51
 
 ---
 
-## 1. Threat Model
+## 1.1 AI Review Notes (2026-05-26, Session 17)
+
+**Scope correction**: Session 17 split into hardening-only. Presence deferred to separate session.
+**Auth correction**: HMAC token auth replaced with X25519 key-exchange-as-auth. The key exchange *is* the authentication.
+**Replay protection**: Added nonce field to all WebSocket messages. Ed25519 signatures alone don't prevent replay.
+**Rate limiting**: `slowapi` decorator removed — WebSocket rate limiting uses token bucket inside handler.
+**Coordinate perturbation**: Flagged for review — epsilon=0.1 may corrupt galactic zone boundaries. Alternative: perturb only for server storage, maintain true coords client-side with zone validation on the client.
+**Presence granularity**: Cursor quantization changed from 0.1 units to whole galactic bands.
+
+---
+
+## 2. Threat Model
 
 ### Assets to Protect
 
@@ -398,28 +410,85 @@ ALLOWED_ORIGINS = [
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, ...)
 ```
 
-### 6.2 WebSocket Auth Tokens
+### 6.2 WebSocket Auth via X25519 Key Exchange
 
 ```python
-# Client generates HMAC token
-token = HMAC-SHA256(api_secret, f"{user_id}:{timestamp}").hexdigest()
+# Client generates X25519 keypair on first connect
+# Sends: {user_id, x25519_public_key, timestamp, nonce}
+# Server stores public key, returns server_x25519_public_key + nonce
+# Both derive shared secret: ECDH(private, peer_public)
+# All subsequent messages authenticated via derived key
 
-# Server verifies
-expected = HMAC-SHA256(api_secret, f"{user_id}:{timestamp}").hexdigest()
-if token != expected or timestamp_expired:
-    await ws.close(code=4001, reason="Invalid auth token")
+# Server-side verification
+@app.websocket("/sync")
+async def sync_websocket(ws: WebSocket):
+    await ws.accept()
+    
+    # Auth handshake
+    handshake = await ws.receive_json()
+    user_id = handshake.get("user_id")
+    client_public = handshake.get("x25519_public_key")
+    client_nonce = handshake.get("nonce")
+    timestamp = handshake.get("timestamp")
+    
+    if not all([user_id, client_public, client_nonce, timestamp]):
+        await ws.close(code=4001, reason="Missing auth fields")
+        return
+    
+    # Verify timestamp not expired (5 min window)
+    if abs(time.time() - float(timestamp)) > 300:
+        await ws.close(code=4002, reason="Timestamp expired")
+        return
+    
+    # Verify nonce not reused (prevent replay)
+    if is_nonce_replayed(client_nonce):
+        await ws.close(code=4003, reason="Nonce replayed")
+        return
+    
+    # Derive shared secret
+    server_private = x25519.PrivateKey.generate()
+    server_public = server_private.public_key()
+    shared_secret = server_private.exchange(x25519.PublicKey.from_base64(client_public))
+    
+    # Send server public key + nonce back
+    await ws.send_json({
+        "type": "auth_ack",
+        "server_public_key": server_public.to_base64(),
+        "server_nonce": generate_nonce(),
+    })
+    
+    # Store session with derived keys
+    session_key = HKDF(shared_secret, info=b"whitemagic-sync-v1")
+    sync_manager.register_session(user_id, ws, session_key)
 ```
 
-### 6.3 Rate Limiting
+**Why this is better than HMAC**: No shared secret needs to be stored in the browser. The X25519 keypair is generated per-session. The public key serves as the identity. Replay is prevented by nonces + timestamp window.
+
+### 6.3 Rate Limiting (WebSocket Token Bucket)
 
 ```python
-from slowapi import Limiter
-limiter = Limiter(key_func=get_remote_address)
+# slowapi doesn't work for long-lived WebSocket connections.
+# Use an in-memory token bucket per session.
 
-@app.websocket("/sync")
-@limiter.limit("30/minute")
-async def sync_websocket(ws: WebSocket):
-    ...
+class TokenBucket:
+    def __init__(self, rate: float, capacity: int = 10):
+        self.rate = rate  # tokens per second
+        self.capacity = capacity
+        self.tokens = capacity
+        self.last_refill = time.monotonic()
+    
+    def consume(self) -> bool:
+        now = time.monotonic()
+        elapsed = now - self.last_refill
+        self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
+        self.last_refill = now
+        if self.tokens >= 1:
+            self.tokens -= 1
+            return True
+        return False
+
+# Per-user buckets stored in SyncManager
+# Default: 30 messages/minute, burst capacity 10
 ```
 
 ### 6.4 Input Validation (WebSocket)
@@ -428,7 +497,8 @@ async def sync_websocket(ws: WebSocket):
 class SyncMessage(BaseModel):
     type: Literal["sync_request", "memory_created", "memory_updated", ...]
     userId: str = Field(..., min_length=8, max_length=64)
-    timestamp: str
+    timestamp: float = Field(..., gt=0)
+    nonce: str = Field(..., min_length=16, max_length=64)  # Replay protection
     vectorClock: dict[str, int] = Field(..., max_items=100)
     payload: dict | None = None
 
@@ -437,6 +507,12 @@ try:
     msg = SyncMessage.model_validate(data)
 except ValidationError as e:
     await ws.send_json({"type": "error", "error": str(e)})
+    return
+
+# Verify nonce not reused (in-memory LRU cache, 5-min TTL)
+if nonce_seen(msg.nonce):
+    await ws.send_json({"type": "error", "error": "Replay detected"})
+    await ws.close(code=4003, reason="Nonce replayed")
     return
 ```
 
@@ -457,18 +533,18 @@ header {
 
 ## 7. Implementation Roadmap
 
-### Session 17: Security Hardening + Presence Indicators (~2h)
+### Session 17: Security Hardening (~2h)
 
 | Task | Effort | Dependencies |
 |------|--------|--------------|
 | CORS restriction | 15min | None |
-| WebSocket auth tokens | 30min | API secret generation |
-| Rate limiting | 20min | `slowapi` install |
-| Input validation | 30min | Pydantic models |
+| WebSocket X25519 auth | 45min | `cryptography` install |
+| Token bucket rate limiter | 30min | None |
+| Input validation + nonce replay check | 30min | Pydantic models |
 | CSP headers | 15min | Caddyfile edit |
-| Presence data model | 30min | WebSocket infra |
-| Presence broadcast | 45min | SyncManager extension |
-| Presence UI component | 45min | Galaxy component |
+| Audit logging stub | 30min | None |
+
+**Presence indicators deferred to separate session.**
 
 ### Session 18: E2EE Foundation (~3h)
 
@@ -497,22 +573,30 @@ header {
 
 ## 8. Security Checklist (Pre-Deployment)
 
+### Session 17 (Hardening)
 - [ ] CORS restricted to specific origins
-- [ ] WebSocket auth tokens implemented
-- [ ] Rate limiting on all endpoints
-- [ ] Input validation on WebSocket messages
+- [ ] WebSocket X25519 key-exchange auth implemented
+- [ ] Nonce replay protection active
+- [ ] Token bucket rate limiter on WebSocket messages
+- [ ] Input validation on WebSocket messages (Pydantic)
 - [ ] CSP headers configured
 - [ ] HTTPS enforced (Caddy auto-HTTPS)
-- [ ] No secrets in code or logs
-- [ ] Audit logging enabled
-- [ ] Presence opt-in by default
+- [ ] Audit logging stub active
+
+### Session 18 (E2EE)
 - [ ] E2EE key exchange working
+- [ ] AES-GCM encrypt/decrypt for payloads
+- [ ] IndexedDB key storage
+- [ ] Password-based unlock
+- [ ] Key export/backup functional
+
+### Session 19 (Metadata Anonymity)
+- [ ] Presence opt-in by default
 - [ ] Metadata anonymized (opaque tags)
-- [ ] Coordinates perturbed (differential privacy)
+- [ ] Coordinates perturbed (differential privacy) — **review zone boundary impact**
 - [ ] Timestamps granular (4-hour buckets)
 - [ ] Access counts bucketed (logarithmic)
-- [ ] Key backup/export functional
-- [ ] Password-based unlock tested
+- [ ] No secrets in code or logs
 - [ ] Penetration test completed
 
 ---

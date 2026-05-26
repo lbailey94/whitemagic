@@ -32,9 +32,11 @@ import json
 import logging
 import math
 import random
+import secrets
 import sqlite3
 import sys
 import time
+from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -43,10 +45,13 @@ from typing import Any
 # Ensure whitemagic is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes, serialization
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 from uvicorn import Config, Server
 
 from whitemagic.config.paths import DB_PATH, ensure_paths
@@ -128,13 +133,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow browser/PWA access
+# CORS — restrict to known origins (production + dev)
+ALLOWED_ORIGINS = [
+    "https://whitemagic.dev",
+    "https://app.whitemagic.dev",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-User-Id"],
 )
 
 
@@ -159,54 +171,131 @@ class ToolResponse(BaseModel):
     timestamp: str
 
 
+# ── Security: Token Bucket, Nonce Cache, WebSocket Validation ────────────
+
+class TokenBucket:
+    """In-memory token bucket for WebSocket rate limiting."""
+
+    def __init__(self, rate: float = 0.5, capacity: int = 10):
+        self.rate = rate  # tokens per second (0.5 = 30/min)
+        self.capacity = capacity
+        self.tokens = float(capacity)
+        self.last_refill = time.monotonic()
+
+    def consume(self) -> bool:
+        now = time.monotonic()
+        elapsed = now - self.last_refill
+        self.tokens = min(self.capacity, self.tokens + elapsed * self.rate)
+        self.last_refill = now
+        if self.tokens >= 1.0:
+            self.tokens -= 1.0
+            return True
+        return False
+
+
+class NonceCache:
+    """LRU cache for seen nonces to prevent replay attacks."""
+
+    def __init__(self, max_size: int = 10000, ttl: float = 300):
+        self.max_size = max_size
+        self.ttl = ttl  # 5 minutes
+        self.seen: deque[tuple[str, float]] = deque(maxlen=max_size)
+        self._set: set[str] = set()
+
+    def check_and_add(self, nonce: str) -> bool:
+        """Return True if nonce is NEW (not replayed). False if replayed."""
+        if nonce in self._set:
+            return False
+        now = time.time()
+        # Evict expired nonces
+        while self.seen and now - self.seen[0][1] > self.ttl:
+            _, old_nonce = self.seen.popleft()
+            self._set.discard(old_nonce)
+        self.seen.append((nonce, now))
+        self._set.add(nonce)
+        return True
+
+
+class SyncSession:
+    """Per-session state for authenticated WebSocket connections."""
+
+    def __init__(self, user_id: str, ws: WebSocket, session_key: bytes):
+        self.user_id = user_id
+        self.ws = ws
+        self.session_key = session_key  # 32-byte HKDF-derived key
+        self.rate_limiter = TokenBucket()
+        self.connected_at = time.time()
+
+
+class SyncMessage(BaseModel):
+    """Validated WebSocket message schema."""
+    type: str
+    userId: str = Field(..., min_length=3, max_length=64)
+    timestamp: float = Field(..., gt=0)
+    nonce: str = Field(..., min_length=16, max_length=64)
+    vectorClock: dict[str, int] = Field(default_factory=dict, max_items=100)
+    payload: dict | None = None
+
+
 # ── WebSocket Sync Manager ───────────────────────────────────────────────
 
 class SyncManager:
     """Manages WebSocket connections for real-time sync."""
 
     def __init__(self):
-        self.connections: dict[str, list[WebSocket]] = {}  # user_id -> [ws]
+        self.sessions: dict[str, list[SyncSession]] = {}  # user_id -> [sessions]
         self.vector_clocks: dict[str, dict[str, int]] = {}  # user_id -> {user_id: clock}
         self.pending_ops: dict[str, list[dict]] = {}  # user_id -> [ops]
+        self.nonce_cache = NonceCache()
+        self.server_private_key = X25519PrivateKey.generate()
+        self.server_public_key = self.server_private_key.public_key()
 
-    def add_connection(self, user_id: str, ws: WebSocket):
-        self.connections.setdefault(user_id, []).append(ws)
+    def add_session(self, user_id: str, ws: WebSocket, session_key: bytes) -> SyncSession:
+        session = SyncSession(user_id, ws, session_key)
+        self.sessions.setdefault(user_id, []).append(session)
         self.vector_clocks.setdefault(user_id, {})
-        logger.info("Sync client connected: %s (total: %d)", user_id, len(self.connections[user_id]))
+        logger.info("Sync client authenticated: %s (total sessions: %d)", user_id, len(self.sessions[user_id]))
+        return session
 
-    def remove_connection(self, user_id: str, ws: WebSocket):
-        if user_id in self.connections:
-            self.connections[user_id] = [c for c in self.connections[user_id] if c != ws]
-            if not self.connections[user_id]:
-                del self.connections[user_id]
+    def remove_session(self, user_id: str, ws: WebSocket):
+        if user_id in self.sessions:
+            self.sessions[user_id] = [s for s in self.sessions[user_id] if s.ws != ws]
+            if not self.sessions[user_id]:
+                del self.sessions[user_id]
             logger.info("Sync client disconnected: %s", user_id)
+
+    def get_rate_limiter(self, user_id: str) -> TokenBucket | None:
+        """Get the rate limiter for the user's first active session."""
+        if user_id in self.sessions and self.sessions[user_id]:
+            return self.sessions[user_id][0].rate_limiter
+        return None
 
     async def broadcast(self, message: dict, exclude_user: str | None = None):
         """Broadcast message to all connected users."""
         dead = []
-        for user_id, clients in self.connections.items():
-            if user_id == exclude_user:
+        for uid, sessions in self.sessions.items():
+            if uid == exclude_user:
                 continue
-            for ws in clients:
+            for session in sessions:
                 try:
-                    await ws.send_json(message)
+                    await session.ws.send_json(message)
                 except Exception:
-                    dead.append((user_id, ws))
-        for user_id, ws in dead:
-            self.remove_connection(user_id, ws)
+                    dead.append((uid, session.ws))
+        for uid, ws in dead:
+            self.remove_session(uid, ws)
 
     async def send_to_user(self, user_id: str, message: dict):
         """Send message to specific user."""
-        if user_id not in self.connections:
+        if user_id not in self.sessions:
             return
         dead = []
-        for ws in self.connections[user_id]:
+        for session in self.sessions[user_id]:
             try:
-                await ws.send_json(message)
+                await session.ws.send_json(message)
             except Exception:
-                dead.append((user_id, ws))
+                dead.append((user_id, session.ws))
         for uid, ws in dead:
-            self.remove_connection(uid, ws)
+            self.remove_session(uid, ws)
 
     def merge_vector_clock(self, user_id: str, remote_clock: dict[str, int]) -> dict[str, int]:
         """Merge remote vector clock with local."""
@@ -223,6 +312,71 @@ class SyncManager:
 
 
 sync_manager = SyncManager()
+
+
+# ── Crypto Helpers ───────────────────────────────────────────────────────
+
+import base64
+
+
+def _b64encode(data: bytes) -> str:
+    return base64.b64encode(data).decode("ascii")
+
+
+def _b64decode(s: str) -> bytes:
+    return base64.b64decode(s)
+
+
+def _derive_session_key(shared_secret: bytes) -> bytes:
+    """Derive 32-byte session key from X25519 shared secret via HKDF."""
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b"whitemagic-sync-v1",
+    )
+    return hkdf.derive(shared_secret)
+
+
+# ── Audit Logger ─────────────────────────────────────────────────────────
+
+class AuditLogger:
+    """Append-only security audit log."""
+
+    def __init__(self, log_path: Path | None = None):
+        from whitemagic.config.paths import get_state_root
+        state_root = get_state_root()
+        state_root.mkdir(exist_ok=True, parents=True)
+        self.log_path = log_path or state_root / "security_audit.jsonl"
+
+    def log(self, event_type: str, user_id: str | None = None, details: dict | None = None, severity: str = "info"):
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "event_type": event_type,
+            "user_id": user_id,
+            "severity": severity,
+            "details": details or {},
+        }
+        with open(self.log_path, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+
+    def get_recent(self, limit: int = 50) -> list[dict]:
+        """Get recent audit entries."""
+        if not self.log_path.exists():
+            return []
+        entries = []
+        with open(self.log_path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        entries.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        return entries[-limit:]
+
+
+audit_logger = AuditLogger()
 
 
 # ── SSE Event Buffer ─────────────────────────────────────────────────────
@@ -830,52 +984,118 @@ async def event_stream():
 
 @app.websocket("/sync")
 async def sync_websocket(ws: WebSocket):
-    """WebSocket endpoint for real-time bidirectional sync.
+    """WebSocket endpoint with X25519 key-exchange auth, nonce replay protection, and rate limiting.
 
     Message flow:
-    1. Client connects and sends auth message with user_id
-    2. Server acknowledges and sends pending ops
-    3. Client sends ops (memory_created, memory_updated, etc.)
-    4. Server broadcasts to other users and stores in DB
-    5. Server sends sync_response with updated vector clock
+    1. Client connects, sends handshake with user_id + X25519 public key + nonce
+    2. Server verifies nonce, derives shared secret, returns server public key + nonce
+    3. Both sides derive session key via HKDF
+    4. Client sends ops (memory_created, memory_updated, etc.) with nonce per message
+    5. Server validates nonce, rate-limits, broadcasts, stores in DB
     """
     await ws.accept()
     user_id = None
 
     try:
+        # ── Phase 1: X25519 Handshake ─────────────────────────────────
+        handshake = await ws.receive_json()
+
+        # Validate handshake fields
+        user_id = handshake.get("userId")
+        client_public_b64 = handshake.get("x25519_public_key")
+        client_nonce = handshake.get("nonce")
+        timestamp = handshake.get("timestamp")
+
+        if not all([user_id, client_public_b64, client_nonce, timestamp]):
+            audit_logger.log("auth_failed", details={"reason": "missing_fields"}, severity="warning")
+            await ws.send_json({"type": "error", "error": "Missing handshake fields"})
+            await ws.close(code=4001, reason="Incomplete handshake")
+            return
+
+        # Verify timestamp (5-minute window)
+        try:
+            ts = float(timestamp)
+        except (ValueError, TypeError):
+            await ws.send_json({"type": "error", "error": "Invalid timestamp"})
+            await ws.close(code=4002, reason="Bad timestamp")
+            return
+
+        if abs(time.time() - ts) > 300:
+            audit_logger.log("auth_failed", user_id=user_id, details={"reason": "timestamp_expired"}, severity="warning")
+            await ws.send_json({"type": "error", "error": "Timestamp expired"})
+            await ws.close(code=4002, reason="Timestamp expired")
+            return
+
+        # Verify nonce not replayed
+        if not sync_manager.nonce_cache.check_and_add(client_nonce):
+            audit_logger.log("nonce_replay", user_id=user_id, severity="critical")
+            await ws.send_json({"type": "error", "error": "Nonce replayed"})
+            await ws.close(code=4003, reason="Replay detected")
+            return
+
+        # Derive shared secret via X25519
+        try:
+            client_public = X25519PublicKey.from_public_bytes(
+                _b64decode(client_public_b64)
+            )
+        except Exception:
+            audit_logger.log("auth_failed", user_id=user_id, details={"reason": "invalid_public_key"}, severity="warning")
+            await ws.send_json({"type": "error", "error": "Invalid public key"})
+            await ws.close(code=4004, reason="Bad key")
+            return
+
+        shared_secret = sync_manager.server_private_key.exchange(client_public)
+        session_key = _derive_session_key(shared_secret)
+
+        # Send server public key + server nonce
+        server_public_b64 = _b64encode(
+            sync_manager.server_public_key.public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw
+            )
+        )
+        server_nonce = secrets.token_hex(16)
+
+        await ws.send_json({
+            "type": "auth_ack",
+            "server_public_key": server_public_b64,
+            "nonce": server_nonce,
+            "timestamp": time.time(),
+        })
+
+        # Register session
+        sync_manager.add_session(user_id, ws, session_key)
+        audit_logger.log("auth_success", user_id=user_id, details={"method": "x25519"})
+
+        # ── Phase 2: Message Loop ─────────────────────────────────────
         while True:
             data = await ws.receive_json()
-            msg_type = data.get("type", "")
-            user_id = data.get("userId")
 
-            if not user_id:
-                await ws.send_json({
-                    "type": "error",
-                    "error": "userId required",
-                    "timestamp": datetime.now().isoformat(),
-                })
+            # Validate message schema
+            try:
+                msg = SyncMessage.model_validate(data)
+            except ValidationError as e:
+                await ws.send_json({"type": "error", "error": str(e)})
                 continue
 
-            # Handle auth
-            if msg_type == "sync_request":
-                payload = data.get("payload", {})
-                if payload.get("action") == "auth":
-                    sync_manager.add_connection(user_id, ws)
-                    remote_clock = data.get("vectorClock", {})
-                    sync_manager.merge_vector_clock(user_id, remote_clock)
+            # Check nonce replay
+            if not sync_manager.nonce_cache.check_and_add(msg.nonce):
+                audit_logger.log("nonce_replay", user_id=msg.userId, severity="critical")
+                await ws.send_json({"type": "error", "error": "Nonce replayed"})
+                await ws.close(code=4003, reason="Replay detected")
+                return
 
-                    await ws.send_json({
-                        "type": "sync_response",
-                        "userId": "server",
-                        "timestamp": datetime.now().isoformat(),
-                        "vectorClock": sync_manager.vector_clocks.get(user_id, {}),
-                        "payload": {"status": "authenticated", "pending_ops": 0},
-                    })
-                    continue
+            # Rate limit
+            limiter = sync_manager.get_rate_limiter(msg.userId)
+            if limiter and not limiter.consume():
+                audit_logger.log("rate_limited", user_id=msg.userId, severity="warning")
+                await ws.send_json({"type": "error", "error": "Rate limited"})
+                continue
+
+            user_id = msg.userId
 
             # Handle heartbeat
-            if msg_type == "heartbeat":
-                sync_manager.merge_vector_clock(user_id, data.get("vectorClock", {}))
+            if msg.type == "heartbeat":
+                sync_manager.merge_vector_clock(user_id, msg.vectorClock)
                 await ws.send_json({
                     "type": "heartbeat",
                     "userId": "server",
@@ -885,59 +1105,53 @@ async def sync_websocket(ws: WebSocket):
                 continue
 
             # Handle sync operations
-            if msg_type in ("memory_created", "memory_updated", "memory_deleted",
+            if msg.type in ("memory_created", "memory_updated", "memory_deleted",
                            "association_created", "association_deleted"):
-                # Merge vector clock
-                remote_clock = data.get("vectorClock", {})
+                remote_clock = msg.vectorClock or {}
                 clock = sync_manager.merge_vector_clock(user_id, remote_clock)
 
-                # Store in database if applicable
-                payload = data.get("payload", {})
+                payload = msg.payload or {}
                 try:
-                    if msg_type == "memory_created":
+                    if msg.type == "memory_created":
                         _store_synced_memory(payload, user_id)
-                    elif msg_type == "memory_updated":
+                    elif msg.type == "memory_updated":
                         _update_synced_memory(payload, user_id)
-                    elif msg_type == "memory_deleted":
+                    elif msg.type == "memory_deleted":
                         _delete_synced_memory(payload, user_id)
                 except Exception as e:
                     logger.warning("Sync DB operation failed: %s", e)
 
-                # Increment server clock
                 clock = sync_manager.increment_clock(user_id)
 
-                # Broadcast to other users
                 await sync_manager.broadcast({
-                    "type": msg_type,
+                    "type": msg.type,
                     "userId": user_id,
-                    "timestamp": data.get("timestamp", datetime.now().isoformat()),
+                    "timestamp": datetime.now().isoformat(),
                     "vectorClock": clock,
                     "payload": payload,
                 }, exclude_user=user_id)
 
-                # Send ack to sender
                 await ws.send_json({
                     "type": "sync_response",
                     "userId": "server",
                     "timestamp": datetime.now().isoformat(),
                     "vectorClock": clock,
-                    "payload": {"status": "synced", "op": msg_type},
+                    "payload": {"status": "synced", "op": msg.type},
                 })
 
-                # Emit SSE event
                 _emit_event(
                     event_type="sync_operation",
                     source="websocket",
-                    data={"user_id": user_id, "op": msg_type},
+                    data={"user_id": user_id, "op": msg.type},
                 )
 
     except WebSocketDisconnect:
         if user_id:
-            sync_manager.remove_connection(user_id, ws)
+            sync_manager.remove_session(user_id, ws)
     except Exception as e:
         logger.error("WebSocket sync error: %s", e)
         if user_id:
-            sync_manager.remove_connection(user_id, ws)
+            sync_manager.remove_session(user_id, ws)
 
 
 def _store_synced_memory(payload: dict, user_id: str):
@@ -1017,11 +1231,18 @@ def _delete_synced_memory(payload: dict, user_id: str):
 def sync_status():
     """WebSocket sync server status."""
     return {
-        "connected_users": len(sync_manager.connections),
-        "total_connections": sum(len(clients) for clients in sync_manager.connections.values()),
-        "users": list(sync_manager.connections.keys()),
+        "connected_users": len(sync_manager.sessions),
+        "total_sessions": sum(len(sessions) for sessions in sync_manager.sessions.values()),
+        "users": list(sync_manager.sessions.keys()),
         "vector_clocks": sync_manager.vector_clocks,
+        "nonce_cache_size": len(sync_manager.nonce_cache._set),
     }
+
+
+@app.get("/audit/log")
+def audit_log(limit: int = 50):
+    """Recent security audit log entries."""
+    return {"entries": audit_logger.get_recent(limit)}
 
 
 @app.get("/resonance/analysis")
