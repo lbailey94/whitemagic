@@ -261,9 +261,9 @@ async function* mockStream(
 
 You asked: "${last.slice(0, 140)}${last.length > 140 ? "..." : ""}"
 
-Once Lucas sets OPENROUTER_API_KEY in the Vercel environment, I'll answer for real. In the meantime, try /services for consulting tracks, /pricing for tiers, or /timeline for the technical history.
+Once the API key is set in the Vercel environment, I'll answer for real. In the meantime, try /services for consulting tracks, /pricing for tiers, or /timeline for the technical history.
 
-If this is a real decision point, ask Lucas directly at /contact.`;
+If this is a real decision point, reach out directly at /contact.`;
 
   const words = canned.split(/(\s+)/);
   for (const w of words) {

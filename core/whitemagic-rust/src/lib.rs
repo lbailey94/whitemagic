@@ -90,9 +90,12 @@ pub use memory::unified;
 pub use embeddings::vector_search;
 
 // --- Remaining flat modules ---
+#[cfg(feature = "python")]
 pub mod hot_paths;
 #[cfg(feature = "python")]
 pub mod sutra_kernel;
+#[cfg(feature = "python")]
+pub mod geneseed_miner;
 
 // WASM-specific module
 #[cfg(feature = "wasm")]
@@ -248,6 +251,62 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Add zig_ffi functions directly to main module for Zig bridge support
     zig_ffi::register_zig_ffi(m)?;
 
+    // Geneseed Vault — git history pattern mining
+    m.add_class::<geneseed_miner::OptimizationPattern>()?;
+    m.add_class::<geneseed_miner::GeneseedStats>()?;
+    m.add_function(wrap_pyfunction!(geneseed_miner::mine_geneseed_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(geneseed_miner::get_geneseed_stats, m)?)?;
+
+    // Convergence Detector — multi-domain signal convergence scoring
+    m.add_class::<search::convergence_detector::ConvergenceSignal>()?;
+    m.add_class::<search::convergence_detector::ConvergenceCluster>()?;
+    m.add_function(wrap_pyfunction!(search::convergence_detector::detect_convergence, m)?)?;
+    m.add_function(wrap_pyfunction!(search::convergence_detector::convergence_score, m)?)?;
+
+    // Pattern scoring — multi-factor confidence scoring (PSR companion to geneseed)
+    m.add_class::<search::pattern_scorer::ScoringConfig>()?;
+    m.add_class::<search::pattern_scorer::ScoredPattern>()?;
+    m.add_function(wrap_pyfunction!(search::pattern_scorer::batch_score_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_scorer::score_galaxy_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_scorer::score_geneseed_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_scorer::apply_cross_source_boost, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_scorer::filter_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_scorer::get_scoring_stats, m)?)?;
+
+    // Pattern cross-validation — multi-source validation with Rayon parallel processing
+    m.add_class::<search::pattern_cross_validator::CrossValidatedPattern>()?;
+    m.add_function(wrap_pyfunction!(search::pattern_cross_validator::cross_validate_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_cross_validator::get_top_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(search::pattern_cross_validator::get_pattern_stats, m)?)?;
+
+    // RRF Fusion — Reciprocal Rank Fusion for hybrid search
+    m.add_class::<search::rrf_fusion::FusionResult>()?;
+    m.add_class::<search::rrf_fusion::PyRRFFusion>()?;
+
+    // PageRank — parallel PageRank over knowledge graphs
+    m.add_class::<graph::pagerank::PyPageRank>()?;
+
+    // Predictive Engine — time-series forecasting with sliding window
+    m.add_class::<pipeline::predictive_engine::Prediction>()?;
+    m.add_class::<pipeline::predictive_engine::PyPredictiveEngine>()?;
+
+    // Orchestration Engine — task DAG execution
+    m.add_class::<pipeline::orchestration_engine::Task>()?;
+    m.add_class::<pipeline::orchestration_engine::PyOrchestrationEngine>()?;
+
+    // State Machine — FSM for agent lifecycle management
+    m.add_class::<pipeline::state_machine::State>()?;
+    m.add_class::<pipeline::state_machine::PyStateMachine>()?;
+
+    // StateBoard — mmap-backed shared-memory blackboard for system vital signs
+    pipeline::state_board::register_state_board(m)?;
+
+    // Monte Carlo forecasting calibration (Sprint F)
+    m.add_class::<monte_carlo::PercentileSummary>()?;
+    m.add_class::<monte_carlo::MonteCarloResult>()?;
+    m.add_class::<monte_carlo::MonteCarloForecast>()?;
+    m.add_function(wrap_pyfunction!(monte_carlo::run_mc_forecast_calibration, m)?)?;
+
     Ok(())
 }
 
@@ -257,5 +316,6 @@ pub use wasm::*;
 
 pub mod monte_carlo;
 
-// Zig FFI module for polyglot bridge support
+// Zig FFI module for polyglot bridge support (Python only)
+#[cfg(feature = "python")]
 mod zig_ffi;

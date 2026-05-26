@@ -405,8 +405,8 @@ function BookingCard({
       </p>
       <p className="mb-3 text-xs text-muted">
         {data.isStripe
-          ? "Click through to complete payment — Lucas will email you within 2 business hours to schedule."
-          : "Click through to the contact form — Lucas will reach out within 1 business day."}
+          ? "Click through to complete payment — I'll email you within 2 business hours to schedule."
+          : "Click through to the contact form — I'll reach out within 1 business day."}
       </p>
       <a
         href={data.checkoutUrl}
@@ -433,7 +433,7 @@ function ContactSubmittedCard({
       <CardLabel>Contact request submitted</CardLabel>
       <p className="mb-2 text-sm leading-relaxed text-fg">
         <CheckCircle2 className="mr-1.5 inline h-4 w-4 text-emerald-600" />
-        Lucas will be in touch. Your reference is{" "}
+        I'll be in touch. Your reference is{" "}
         <span className="font-mono text-xs">{data.reference}</span>.
       </p>
       <div className="mt-2 border-t border-border-light/50 pt-2 text-xs text-muted">

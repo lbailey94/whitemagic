@@ -1,9 +1,6 @@
 import Link from "next/link";
 
-/**
- * Site wordmark. Logo slot is intentionally empty — triquetra / celtic mark
- * will drop in here later. Keep dimensions stable so brand swap is non-breaking.
- */
+/** Site wordmark with animated triquetra mark. */
 export function Wordmark({ href = "/" }: { href?: string }) {
   return (
     <Link

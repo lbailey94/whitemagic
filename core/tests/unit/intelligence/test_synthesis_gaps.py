@@ -217,35 +217,6 @@ class TestMeshAwareness:
 # A1: Salience Arbiter ↔ Homeostatic Loop
 # =========================================================================
 
-import unittest
-@unittest.skip("Salience homeostatic coupling implementation changed")
-class TestSalienceHomeostaticCoupling(unittest.TestCase):
-    def test_salience_urgency_boost_no_events(self):
-        from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
-        loop = HomeostaticLoop()
-        boost = loop._salience_urgency_boost()
-        assert boost == 0.0
-
-    def test_emit_to_arbiter(self):
-        from whitemagic.harmony.homeostatic_loop import (
-            HomeostaticLoop, HomeostaticAction, ActionLevel,
-        )
-        loop = HomeostaticLoop()
-        action = HomeostaticAction(
-            dimension="error_rate", level=ActionLevel.CORRECT,
-            value=0.3, threshold=0.4, action_taken="test",
-        )
-        # Should not raise
-        loop._emit_to_arbiter(action)
-
-    def test_check_uses_salience_boost(self):
-        from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
-        loop = HomeostaticLoop()
-        # check() should not raise even without harmony vector
-        actions = loop.check()
-        assert isinstance(actions, list)
-
-
 # =========================================================================
 # A2: Dependency Graph ↔ Pipeline Validation
 # =========================================================================

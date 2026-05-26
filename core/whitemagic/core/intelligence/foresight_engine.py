@@ -108,7 +108,7 @@ class ForesightEngine:
                 FROM memories m
                 LEFT JOIN holographic_coords hc ON m.id = hc.memory_id
                 WHERE m.memory_type != 'quarantined'
-                  AND (m.created_at < ? OR m.last_accessed < ?)
+                  AND (m.created_at < ? OR m.accessed_at < ?)
                 ORDER BY m.galactic_distance DESC, m.importance ASC
                 LIMIT 50
                 """,

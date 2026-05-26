@@ -178,7 +178,7 @@ export const TOOL_SCHEMAS = [
     function: {
       name: "submit_contact_request",
       description:
-        "Submit a contact request on the visitor's behalf — for engagement interest, general questions, or when they'd rather have Lucas reach out than book a paid session. Requires explicit consent from the visitor with their email.",
+        "Submit a contact request on the visitor's behalf — for engagement interest, general questions, or when they'd rather have the founder reach out than book a paid session. Requires explicit consent from the visitor with their email.",
       parameters: {
         type: "object",
         properties: {
@@ -306,7 +306,7 @@ const HANDLERS: Record<string, ToolHandler> = {
       };
     }
     const { url, isStripe } = resolveCheckoutUrl(tier);
-    // Append topic as query param so Lucas sees it on the Stripe dashboard
+    // Append topic as query param so it appears on the Stripe dashboard
     // or pre-fills the contact form.
     const sep = url.includes("?") ? "&" : "?";
     const fullUrl = `${url}${sep}client_reference_id=${encodeURIComponent(topic.slice(0, 200))}`;

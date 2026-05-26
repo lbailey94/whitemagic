@@ -11,6 +11,7 @@
 //! Expected speedup: 10-50× for 100K+ memories.
 
 // Active sub-modules
+pub mod convergence_detector;
 pub mod keyword_extract;
 pub mod hybrid_rrf;
 

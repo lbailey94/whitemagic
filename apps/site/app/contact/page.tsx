@@ -8,8 +8,8 @@ export const metadata = {
     "Book a discovery call or reach out directly. 30-minute conversation, no pitch deck.",
 };
 
-// TODO: replace with real Cal.com or Calendly URL once configured.
-const BOOKING_URL = "https://cal.com/whitemagic-labs";
+// Cal.com to be configured — for now, direct email booking.
+const BOOKING_URL = "mailto:whitemagicdev@proton.me?subject=WhiteMagic%20Discovery%20Call&body=Hi%20there%2C%0A%0AI'd%20like%20to%20schedule%20a%2030-minute%20discovery%20call.%0A%0AHere's%20what%20I'm%20working%20on%3A%0A%0A";
 const EMAIL = "whitemagicdev@proton.me";
 const GITHUB = "https://github.com/whitemagic-ai";
 
@@ -27,8 +27,8 @@ export default function ContactPage() {
           <ContactCard
             icon={Calendar}
             title="Book a call"
-            body="Pick a 30-minute slot that works. You'll get a calendar invite with a video link and a short form to prep me on what you're working on."
-            cta="Open booking"
+            body="Send an email to request a 30-minute discovery call. I'll reply with availability and a video link within one business day."
+            cta="Request a call"
             href={BOOKING_URL}
           />
           <ContactCard
@@ -45,8 +45,8 @@ export default function ContactPage() {
             Or send a message
           </h2>
           <p className="mb-6 text-sm text-muted">
-            Plain form. Goes to the same inbox, no ceremony. Lucas replies
-            within two business days.
+            Plain form. Goes to the same inbox, no ceremony. I reply within
+            two business days.
           </p>
           <ContactForm />
         </div>

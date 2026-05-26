@@ -35,7 +35,7 @@ const INITIAL_GREETING: DisplayMessage = {
   id: "greet-0",
   role: "assistant",
   content:
-    "Hi — I'm the Librarian for WhiteMagic Labs. Ask me about services, pricing, the timeline, or how a specific capability works — I can pull the details inline. For anything I can't answer, I'll point you at Lucas.",
+    "Hi — I'm the Librarian for WhiteMagic Labs. Ask me about services, pricing, the timeline, or how a specific capability works — I can pull the details inline. For anything I can't answer, I'll point you at the contact page.",
 };
 
 export interface LibrarianChatProps {
@@ -208,7 +208,7 @@ export function LibrarianChat({
             ? {
                 ...m,
                 content:
-                  "Something went wrong on my end. Please try again, or reach Lucas at /contact.",
+                  "Something went wrong on my end. Please try again, or reach out at /contact.",
                 refusal: {
                   reason: "internal_error",
                   message: "client error",
@@ -292,7 +292,7 @@ export function LibrarianChat({
           </button>
         </div>
         <p className="mt-2 text-xs text-muted">
-          Scope: public site + open-source components. Not for private Lucas
+          Scope: public site + open-source components. Not for private
           material. Conversations reset when you close this tab.
         </p>
       </form>

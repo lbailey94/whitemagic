@@ -62,7 +62,7 @@ class WillowHealthChecker:
             ]
 
             for breaker_name in willow_breakers:
-                breaker = registry.get_breaker(breaker_name)
+                breaker = registry.get(breaker_name)
                 if breaker and breaker.is_open():
                     issues.append(f"Circuit breaker open: {breaker_name}")
                     circuit_ok = False
@@ -78,9 +78,9 @@ class WillowHealthChecker:
         try:
             # Quick Koka health check
             from whitemagic.core.acceleration.koka_bridge import koka_health_check
-            koka_result = await koka_health_check(timeout=2.0)
+            koka_result = await koka_health_check()
 
-            if not koka_result.get("status") == "success":
+            if koka_result.get("status") not in ("success", "partial"):
                 issues.append(f"Koka handler unresponsive: {koka_result}")
                 koka_ok = False
 

@@ -3,21 +3,24 @@
 // Phase A: 25 functions translated to Rust
 
 use pyo3::prelude::*;
+use numpy::{PyReadonlyArray1, PyReadonlyArray2};
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 /// Batch Jaccard similarity computation (parallelized)
 #[pyfunction]
-fn batch_jaccard_py(query: Vec<String>, candidates: Vec<Vec<String>>) -> Vec<f64> {
-    let query_set: HashSet<String> = query.into_iter().collect();
+fn batch_jaccard_py(py: Python<'_>, query: Vec<String>, candidates: Vec<Vec<String>>) -> Vec<f64> {
+    py.allow_threads(|| {
+        let query_set: HashSet<String> = query.into_iter().collect();
 
-    candidates
-        .par_iter()
-        .map(|cand| {
-            let cand_set: HashSet<String> = cand.iter().cloned().collect();
-            jaccard_similarity(&query_set, &cand_set)
-        })
-        .collect()
+        candidates
+            .par_iter()
+            .map(|cand| {
+                let cand_set: HashSet<String> = cand.iter().cloned().collect();
+                jaccard_similarity(&query_set, &cand_set)
+            })
+            .collect()
+    })
 }
 
 fn jaccard_similarity(a: &HashSet<String>, b: &HashSet<String>) -> f64 {
@@ -61,19 +64,21 @@ fn compute_retention(
 
 /// Batch retention computation (parallel)
 #[pyfunction]
-fn batch_retention_to_distance(retention_scores: Vec<f64>, protected_flags: Vec<bool>) -> Vec<f64> {
-    retention_scores
-        .par_iter()
-        .zip(protected_flags.par_iter())
-        .map(|(&retention, &protected)| {
-            if protected {
-                0.0
-            } else {
-                let distance = 1.0 - retention;
-                distance.powf(0.7).clamp(0.0, 1.0)
-            }
-        })
-        .collect()
+fn batch_retention_to_distance(py: Python<'_>, retention_scores: Vec<f64>, protected_flags: Vec<bool>) -> Vec<f64> {
+    py.allow_threads(|| {
+        retention_scores
+            .par_iter()
+            .zip(protected_flags.par_iter())
+            .map(|(&retention, &protected)| {
+                if protected {
+                    0.0
+                } else {
+                    let distance = 1.0 - retention;
+                    distance.powf(0.7).clamp(0.0, 1.0)
+                }
+            })
+            .collect()
+    })
 }
 
 /// Compute SHA-256 content hash
@@ -87,23 +92,27 @@ fn compute_sha256(content: String) -> String {
 
 /// Batch SHA-256 computation (parallel)
 #[pyfunction]
-fn batch_sha256(contents: Vec<String>) -> Vec<String> {
-    contents
-        .par_iter()
-        .map(|c| compute_sha256(c.clone()))
-        .collect()
+fn batch_sha256(py: Python<'_>, contents: Vec<String>) -> Vec<String> {
+    py.allow_threads(|| {
+        contents
+            .par_iter()
+            .map(|c| compute_sha256(c.clone()))
+            .collect()
+    })
 }
 
 /// Parallel sort for large collections
 #[pyfunction]
-fn parallel_sort(data: Vec<f64>, reverse: bool) -> Vec<f64> {
-    let mut sorted = data;
-    if reverse {
-        sorted.par_sort_by(|a, b| b.partial_cmp(a).unwrap());
-    } else {
-        sorted.par_sort_by(|a, b| a.partial_cmp(b).unwrap());
-    }
-    sorted
+fn parallel_sort(py: Python<'_>, data: Vec<f64>, reverse: bool) -> Vec<f64> {
+    py.allow_threads(|| {
+        let mut sorted = data;
+        if reverse {
+            sorted.par_sort_by(|a, b| b.partial_cmp(a).unwrap());
+        } else {
+            sorted.par_sort_by(|a, b| a.partial_cmp(b).unwrap());
+        }
+        sorted
+    })
 }
 
 /// Top-k selection without full sort
@@ -165,62 +174,64 @@ fn compute_decay(days_since_access: f64, half_life_days: f64, importance: f64) -
 
 /// Grid-based clustering (HDBSCAN fallback)
 #[pyfunction]
-fn grid_cluster(points: Vec<Vec<f64>>, min_cluster_size: usize) -> Vec<i32> {
-    if points.is_empty() {
-        return Vec::new();
-    }
-
-    let dims = points[0].len();
-    let mut labels: Vec<i32> = vec![-1; points.len()];
-    let mut cluster_id = 0;
-
-    // Compute bounds per dimension
-    let mut mins = vec![f64::INFINITY; dims];
-    let mut maxs = vec![f64::NEG_INFINITY; dims];
-
-    for point in &points {
-        for d in 0..dims {
-            mins[d] = mins[d].min(point[d]);
-            maxs[d] = maxs[d].max(point[d]);
+fn grid_cluster(py: Python<'_>, points: Vec<Vec<f64>>, min_cluster_size: usize) -> Vec<i32> {
+    py.allow_threads(|| {
+        if points.is_empty() {
+            return Vec::new();
         }
-    }
 
-    // Cell size: divide average range by 10
-    let ranges: Vec<f64> = mins
-        .iter()
-        .zip(maxs.iter())
-        .map(|(min, max)| max - min)
-        .collect();
-    let avg_range: f64 = ranges.iter().sum::<f64>() / dims as f64;
-    let cell_size = if avg_range > 0.0 {
-        avg_range / 10.0
-    } else {
-        1.0
-    };
+        let dims = points[0].len();
+        let mut labels: Vec<i32> = vec![-1; points.len()];
+        let mut cluster_id = 0;
 
-    // Assign points to cells
-    let mut cells: HashMap<Vec<i32>, Vec<usize>> = HashMap::new();
+        // Compute bounds per dimension
+        let mut mins = vec![f64::INFINITY; dims];
+        let mut maxs = vec![f64::NEG_INFINITY; dims];
 
-    for (i, point) in points.iter().enumerate() {
-        let cell: Vec<i32> = point
-            .iter()
-            .enumerate()
-            .map(|(d, &v)| ((v - mins[d]) / cell_size).floor() as i32)
-            .collect();
-        cells.entry(cell).or_default().push(i);
-    }
-
-    // Find dense cells
-    for (_cell, indices) in cells {
-        if indices.len() >= min_cluster_size {
-            for &idx in &indices {
-                labels[idx] = cluster_id;
+        for point in &points {
+            for d in 0..dims {
+                mins[d] = mins[d].min(point[d]);
+                maxs[d] = maxs[d].max(point[d]);
             }
-            cluster_id += 1;
         }
-    }
 
-    labels
+        // Cell size: divide average range by 10
+        let ranges: Vec<f64> = mins
+            .iter()
+            .zip(maxs.iter())
+            .map(|(min, max)| max - min)
+            .collect();
+        let avg_range: f64 = ranges.iter().sum::<f64>() / dims as f64;
+        let cell_size = if avg_range > 0.0 {
+            avg_range / 10.0
+        } else {
+            1.0
+        };
+
+        // Assign points to cells
+        let mut cells: HashMap<Vec<i32>, Vec<usize>> = HashMap::new();
+
+        for (i, point) in points.iter().enumerate() {
+            let cell: Vec<i32> = point
+                .iter()
+                .enumerate()
+                .map(|(d, &v)| ((v - mins[d]) / cell_size).floor() as i32)
+                .collect();
+            cells.entry(cell).or_default().push(i);
+        }
+
+        // Find dense cells
+        for (_cell, indices) in cells {
+            if indices.len() >= min_cluster_size {
+                for &idx in &indices {
+                    labels[idx] = cluster_id;
+                }
+                cluster_id += 1;
+            }
+        }
+
+        labels
+    })
 }
 
 /// Compute centroid of points
@@ -313,37 +324,34 @@ fn predict_next(
 
 /// Mine causal links between events
 #[pyfunction]
-fn mine_causal(
-    events: Vec<(String, f64, Vec<String>)>, // (id, timestamp, tags)
-    min_correlation: f64,
-    max_time_delta: f64,
-) -> Vec<(String, String, f64, f64)> {
-    // (cause, effect, strength, time_delta)
-    let mut links: Vec<(String, String, f64, f64)> = Vec::new();
-    let n = events.len();
+fn mine_causal(py: Python<'_>, events: Vec<(String, f64, Vec<String>)>, min_correlation: f64, max_time_delta: f64) -> Vec<(String, String, f64, f64)> {
+    py.allow_threads(|| {
+        let mut links: Vec<(String, String, f64, f64)> = Vec::new();
+        let n = events.len();
 
-    for (i, (id_a, time_a, tags_a)) in events.iter().enumerate().take(n) {
-        let set_a: HashSet<String> = tags_a.iter().cloned().collect();
+        for (i, (id_a, time_a, tags_a)) in events.iter().enumerate().take(n) {
+            let set_a: HashSet<String> = tags_a.iter().cloned().collect();
 
-        for (id_b, time_b, tags_b) in events.iter().skip(i + 1).take(n - (i + 1)) {
-            let delta = time_b - time_a;
+            for (id_b, time_b, tags_b) in events.iter().skip(i + 1).take(n - (i + 1)) {
+                let delta = time_b - time_a;
 
-            if delta > max_time_delta {
-                break;
-            }
+                if delta > max_time_delta {
+                    break;
+                }
 
-            let set_b: HashSet<String> = tags_b.iter().cloned().collect();
-            let score = jaccard_similarity(&set_a, &set_b);
+                let set_b: HashSet<String> = tags_b.iter().cloned().collect();
+                let score = jaccard_similarity(&set_a, &set_b);
 
-            if score >= min_correlation {
-                links.push((id_a.clone(), id_b.clone(), score, delta));
+                if score >= min_correlation {
+                    links.push((id_a.clone(), id_b.clone(), score, delta));
+                }
             }
         }
-    }
 
-    links.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
-    links.truncate(100);
-    links
+        links.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+        links.truncate(100);
+        links
+    })
 }
 
 /// Compute clone ID deterministically
@@ -359,11 +367,13 @@ fn compute_clone_id(seed: String, objective: String, index: i32) -> String {
 
 /// Batch clone ID generation
 #[pyfunction]
-fn batch_clone_ids(seed: String, objective: String, count: i32) -> Vec<String> {
-    (0..count)
-        .into_par_iter()
-        .map(|i| compute_clone_id(seed.clone(), objective.clone(), i))
-        .collect()
+fn batch_clone_ids(py: Python<'_>, seed: String, objective: String, count: i32) -> Vec<String> {
+    py.allow_threads(|| {
+        (0..count)
+            .into_par_iter()
+            .map(|i| compute_clone_id(seed.clone(), objective.clone(), i))
+            .collect()
+    })
 }
 
 /// Aggregate findings (consensus voting)
@@ -394,95 +404,188 @@ fn compute_priority(urgency: f64, importance: f64, energy_cost: f64, time_pressu
 
 /// Fast cosine similarity using chunked iterators for autovectorization
 #[pyfunction]
-fn rust_cosine_similarity(a: Vec<f64>, b: Vec<f64>) -> f64 {
-    let len = a.len();
-    if len != b.len() || len == 0 {
-        return 0.0;
-    }
+fn rust_cosine_similarity(py: Python<'_>, a: Vec<f64>, b: Vec<f64>) -> f64 {
+    py.allow_threads(|| {
+        let len = a.len();
+        if len != b.len() || len == 0 {
+            return 0.0;
+        }
 
-    let mut dot = 0.0;
-    let mut norm_a = 0.0;
-    let mut norm_b = 0.0;
+        let mut dot = 0.0;
+        let mut norm_a = 0.0;
+        let mut norm_b = 0.0;
 
-    // Process in chunks of 4 to encourage SIMD autovectorization
-    let chunks_a = a.chunks_exact(4);
-    let chunks_b = b.chunks_exact(4);
-    let rem_a = chunks_a.remainder();
-    let rem_b = chunks_b.remainder();
+        // Process in chunks of 4 to encourage SIMD autovectorization
+        let chunks_a = a.chunks_exact(4);
+        let chunks_b = b.chunks_exact(4);
+        let rem_a = chunks_a.remainder();
+        let rem_b = chunks_b.remainder();
 
-    for (ca, cb) in chunks_a.zip(chunks_b) {
-        dot += ca[0] * cb[0] + ca[1] * cb[1] + ca[2] * cb[2] + ca[3] * cb[3];
-        norm_a += ca[0] * ca[0] + ca[1] * ca[1] + ca[2] * ca[2] + ca[3] * ca[3];
-        norm_b += cb[0] * cb[0] + cb[1] * cb[1] + cb[2] * cb[2] + cb[3] * cb[3];
-    }
+        for (ca, cb) in chunks_a.zip(chunks_b) {
+            dot += ca[0] * cb[0] + ca[1] * cb[1] + ca[2] * cb[2] + ca[3] * cb[3];
+            norm_a += ca[0] * ca[0] + ca[1] * ca[1] + ca[2] * ca[2] + ca[3] * ca[3];
+            norm_b += cb[0] * cb[0] + cb[1] * cb[1] + cb[2] * cb[2] + cb[3] * cb[3];
+        }
 
-    for (ra, rb) in rem_a.iter().zip(rem_b.iter()) {
-        dot += ra * rb;
-        norm_a += ra * ra;
-        norm_b += rb * rb;
-    }
+        for (ra, rb) in rem_a.iter().zip(rem_b.iter()) {
+            dot += ra * rb;
+            norm_a += ra * ra;
+            norm_b += rb * rb;
+        }
 
-    if norm_a <= 0.0 || norm_b <= 0.0 {
-        return 0.0;
-    }
+        if norm_a <= 0.0 || norm_b <= 0.0 {
+            return 0.0;
+        }
 
-    dot / (norm_a.sqrt() * norm_b.sqrt())
+        dot / (norm_a.sqrt() * norm_b.sqrt())
+    })
+}
+
+/// Numpy-based cosine similarity with true GIL release.
+/// Accepts numpy arrays directly, avoiding Python list conversion overhead.
+#[pyfunction]
+fn rust_cosine_similarity_numpy(
+    py: Python<'_>,
+    a: PyReadonlyArray1<'_, f64>,
+    b: PyReadonlyArray1<'_, f64>,
+) -> f64 {
+    // Get raw pointers to numpy data (no GIL needed after this)
+    let a_slice = a.as_slice().expect("Failed to get array slice");
+    let b_slice = b.as_slice().expect("Failed to get array slice");
+
+    py.allow_threads(|| {
+        let len = a_slice.len();
+        if len != b_slice.len() || len == 0 {
+            return 0.0;
+        }
+
+        let mut dot = 0.0;
+        let mut norm_a = 0.0;
+        let mut norm_b = 0.0;
+
+        // Process in chunks of 8 for SIMD
+        let chunks_a = a_slice.chunks_exact(8);
+        let chunks_b = b_slice.chunks_exact(8);
+        let rem_a = chunks_a.remainder();
+        let rem_b = chunks_b.remainder();
+
+        for (ca, cb) in chunks_a.zip(chunks_b) {
+            dot += ca[0] * cb[0] + ca[1] * cb[1] + ca[2] * cb[2] + ca[3] * cb[3]
+                 + ca[4] * cb[4] + ca[5] * cb[5] + ca[6] * cb[6] + ca[7] * cb[7];
+            norm_a += ca[0] * ca[0] + ca[1] * ca[1] + ca[2] * ca[2] + ca[3] * ca[3]
+                   + ca[4] * ca[4] + ca[5] * ca[5] + ca[6] * ca[6] + ca[7] * ca[7];
+            norm_b += cb[0] * cb[0] + cb[1] * cb[1] + cb[2] * cb[2] + cb[3] * cb[3]
+                   + cb[4] * cb[4] + cb[5] * cb[5] + cb[6] * cb[6] + cb[7] * cb[7];
+        }
+
+        for (ra, rb) in rem_a.iter().zip(rem_b.iter()) {
+            dot += ra * rb;
+            norm_a += ra * ra;
+            norm_b += rb * rb;
+        }
+
+        if norm_a <= 0.0 || norm_b <= 0.0 {
+            return 0.0;
+        }
+
+        dot / (norm_a.sqrt() * norm_b.sqrt())
+    })
+}
+
+/// Batch cosine similarity using numpy arrays with true GIL release.
+/// Computes cosine similarity between a query vector and N candidate vectors.
+#[pyfunction]
+fn rust_batch_cosine_numpy(
+    py: Python<'_>,
+    query: PyReadonlyArray1<'_, f64>,
+    candidates: PyReadonlyArray2<'_, f64>,
+) -> Vec<f64> {
+    let query_slice = query.as_slice().expect("Failed to get query slice");
+    let candidates_slice = candidates.as_slice().expect("Failed to get candidates slice");
+    let dim = query_slice.len();
+    let n = candidates_slice.len() / dim;
+
+    py.allow_threads(|| {
+        let mut scores = Vec::with_capacity(n);
+
+        for i in 0..n {
+            let cand = &candidates_slice[i * dim..(i + 1) * dim];
+            let mut dot = 0.0;
+            let mut norm_q = 0.0;
+            let mut norm_c = 0.0;
+
+            for j in 0..dim {
+                dot += query_slice[j] * cand[j];
+                norm_q += query_slice[j] * query_slice[j];
+                norm_c += cand[j] * cand[j];
+            }
+
+            let denom = norm_q.sqrt() * norm_c.sqrt();
+            scores.push(if denom > 0.0 { dot / denom } else { 0.0 });
+        }
+
+        scores
+    })
 }
 
 /// Euclidean distance in N dimensions (optimized)
 #[pyfunction]
-fn euclidean_distance(a: Vec<f64>, b: Vec<f64>) -> f64 {
-    let len = a.len();
-    if len != b.len() || len == 0 {
-        return 0.0;
-    }
+fn euclidean_distance(py: Python<'_>, a: Vec<f64>, b: Vec<f64>) -> f64 {
+    py.allow_threads(|| {
+        let len = a.len();
+        if len != b.len() || len == 0 {
+            return 0.0;
+        }
 
-    let mut sum_sq = 0.0;
-    let chunks_a = a.chunks_exact(4);
-    let chunks_b = b.chunks_exact(4);
-    let rem_a = chunks_a.remainder();
-    let rem_b = chunks_b.remainder();
+        let mut sum_sq = 0.0;
+        let chunks_a = a.chunks_exact(4);
+        let chunks_b = b.chunks_exact(4);
+        let rem_a = chunks_a.remainder();
+        let rem_b = chunks_b.remainder();
 
-    for (ca, cb) in chunks_a.zip(chunks_b) {
-        let d0 = ca[0] - cb[0];
-        let d1 = ca[1] - cb[1];
-        let d2 = ca[2] - cb[2];
-        let d3 = ca[3] - cb[3];
-        sum_sq += d0 * d0 + d1 * d1 + d2 * d2 + d3 * d3;
-    }
+        for (ca, cb) in chunks_a.zip(chunks_b) {
+            let d0 = ca[0] - cb[0];
+            let d1 = ca[1] - cb[1];
+            let d2 = ca[2] - cb[2];
+            let d3 = ca[3] - cb[3];
+            sum_sq += d0 * d0 + d1 * d1 + d2 * d2 + d3 * d3;
+        }
 
-    for (ra, rb) in rem_a.iter().zip(rem_b.iter()) {
-        let d = ra - rb;
-        sum_sq += d * d;
-    }
+        for (ra, rb) in rem_a.iter().zip(rem_b.iter()) {
+            let d = ra - rb;
+            sum_sq += d * d;
+        }
 
-    sum_sq.sqrt()
+        sum_sq.sqrt()
+    })
 }
 
 /// Weighted centroid computation
 #[pyfunction]
-fn weighted_centroid(vectors: Vec<Vec<f64>>, weights: Vec<f64>) -> Vec<f64> {
-    if vectors.is_empty() {
-        return Vec::new();
-    }
+fn weighted_centroid(py: Python<'_>, vectors: Vec<Vec<f64>>, weights: Vec<f64>) -> Vec<f64> {
+    py.allow_threads(|| {
+        if vectors.is_empty() {
+            return Vec::new();
+        }
 
-    let dims = vectors[0].len();
-    let total_weight: f64 = weights.iter().sum();
+        let dims = vectors[0].len();
+        let total_weight: f64 = weights.iter().sum();
 
-    if total_weight == 0.0 {
-        return vec![0.0; dims];
-    }
+        if total_weight == 0.0 {
+            return vec![0.0; dims];
+        }
 
-    (0..dims)
-        .map(|d| {
-            vectors
-                .iter()
-                .zip(weights.iter())
-                .map(|(v, w)| v[d] * w)
-                .sum::<f64>()
-                / total_weight
-        })
-        .collect()
+        (0..dims)
+            .map(|d| {
+                vectors
+                    .iter()
+                    .zip(weights.iter())
+                    .map(|(v, w)| v[d] * w)
+                    .sum::<f64>()
+                    / total_weight
+            })
+            .collect()
+    })
 }
 
 /// Register module
@@ -508,5 +611,7 @@ pub fn hot_paths(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(euclidean_distance, m)?)?;
     m.add_function(wrap_pyfunction!(weighted_centroid, m)?)?;
     m.add_function(wrap_pyfunction!(rust_cosine_similarity, m)?)?;
+    m.add_function(wrap_pyfunction!(rust_cosine_similarity_numpy, m)?)?;
+    m.add_function(wrap_pyfunction!(rust_batch_cosine_numpy, m)?)?;
     Ok(())
 }

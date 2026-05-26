@@ -6,7 +6,7 @@ import { LibrarianChat } from "@/components/LibrarianChat";
 export const metadata = {
   title: "Librarian — WhiteMagic Labs",
   description:
-    "Ask the Librarian about WhiteMagic, the services Lucas offers, pricing, and the open-source platform. Scope is the public site; no private material.",
+    "Ask the Librarian about WhiteMagic, services, pricing, and the open-source platform. Scope is the public site; no private material.",
 };
 
 export default function LibrarianPage() {
@@ -15,7 +15,7 @@ export default function LibrarianPage() {
       <PageHeader
         eyebrow="Librarian"
         title="Ask the Librarian."
-        lede="A site-aware AI that knows the public WhiteMagic corpus — services, pricing, timeline, open-source components — and can help you find what you need. Not a substitute for a real conversation with Lucas, but a decent first pass."
+        lede="A site-aware AI that knows the public WhiteMagic corpus — services, pricing, timeline, open-source components — and can help you find what you need. Not a substitute for a real conversation, but a decent first pass."
       />
 
       <section className="container-site py-8 md:py-12">
@@ -34,7 +34,7 @@ export default function LibrarianPage() {
             <li>
               <strong className="text-fg">Scope</strong> — the Librarian
               only knows what&apos;s on the public site. It will refuse
-              questions about private material, Lucas&apos;s personal
+              questions about private material, personal
               life, or unreleased work.
             </li>
             <li>
@@ -63,7 +63,7 @@ export default function LibrarianPage() {
 
           <div className="flex flex-wrap gap-3">
             <Link href="/contact" className="btn-primary">
-              Reach Lucas directly
+              Reach out directly
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
             <Link href="/open-source" className="btn-secondary">

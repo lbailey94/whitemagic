@@ -28,7 +28,7 @@ export interface RoadmapUpdate {
   items: string[];
 }
 
-export const FIELD_MAP_UPDATED = "May 14, 2026";
+export const FIELD_MAP_UPDATED = "May 24, 2026";
 
 export const FIELD_SIGNALS: FieldSignal[] = [
   {

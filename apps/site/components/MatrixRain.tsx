@@ -1,29 +1,33 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useTheme } from "next-themes";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { neoStore, emitGlimmer, subscribeRainToggle } from "@/store/neoStore";
 
 /**
- * Subtle polyglot matrix rain.
+ * Polyglot matrix rain with pastel rainbow fade.
  *
- * - Fixed canvas behind all content (pointer-events:none).
- * - Theme-aware: lavender on ink (dark) or cream (light).
- * - ~12 fps throttled, DPR-scaled, pauses on tab hide.
- * - Respects prefers-reduced-motion (skips effect).
- *
- * Column layout:
- *   Column stride is wider than font size so double-width CJK / Hangul / Arabic
- *   glyphs don't bleed into adjacent columns (which created a "twinned" look
- *   in the previous version). Characters render center-aligned within their
- *   column so any residual width difference is symmetric, not a left-bias.
- *
- * Character set (deduped, single pass per glyph to avoid visible pairing):
- *   CJK hanzi (traditional + simplified), katakana, hangul, Cyrillic,
- *   Greek, Devanagari, Arabic, Hebrew, Latin, digits, binary emphasis.
+ * - clearRect each frame for zero residue (no destination-out ghosting).
+ * - High density: tight column spacing.
+ * - Longer trail with gradual pastel fade.
+ * - Glimmer linger: white chars freeze in place and fade while the
+ *   column continues dropping beneath them.
+ * - Freeze glitch: columns occasionally stall before resuming.
+ * - Reads live parameters from neoStore for NEO arcade controls.
+ * - Emits glimmer events for the Glimmer Tracker typewriter.
+ * - DPR-scaled, pauses on tab hide, respects prefers-reduced-motion.
  */
 export function MatrixRain() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { resolvedTheme } = useTheme();
+  const [enabled, setEnabled] = useState(neoStore.rainEnabled);
+
+  useEffect(() => {
+    const unsub = subscribeRainToggle(() => setEnabled(neoStore.rainEnabled));
+    return unsub;
+  }, []);
+
+  const toggle = useCallback(() => {
+    neoStore.toggleRain();
+  }, []);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -34,122 +38,236 @@ export function MatrixRain() {
     if (!ctxMaybe) return;
 
     const canvas: HTMLCanvasElement = el;
-    const ctx: CanvasRenderingContext2D = ctxMaybe;
+    let ctx: CanvasRenderingContext2D | null = ctxMaybe;
 
-    const CHARS = Array.from(
+    const BASE_CHARS = Array.from(
       new Set(
         (
-          // ── CJK hanzi (Chinese + shared Japanese kanji) ──
           "白術龍鳳虎龜磁氣道靈神光影陰陽水火木金土日月山川風雷雨雪石玉心意志行性命天地" +
-          // ── Japanese katakana ──
           "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロ" +
-          // ── Korean hangul (syllable sampler) ──
           "가나다라마바사아자차카타파하거너더러머버서어저처커터퍼허고노도로모보소오조초코토포호" +
-          // ── Cyrillic ──
           "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ" +
-          // ── Greek ──
           "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω" +
-          // ── Devanagari (Sanskrit sampler) ──
           "अआइईउऊऋएऐओऔकखगघचछजझञटठडढणतथदधनपफबभमयरलवशषसह" +
-          // ── Arabic (isolated letters — canvas renders these without shaping) ──
           "ابتثجحخدذرزسشصضطظعغفقكلمنهوي" +
           "٠١٢٣٤٥٦٧٨٩" +
-          // ── Hebrew ──
           "אבגדהוזחטיכלמנסעפצקרשת" +
-          // ── Latin uppercase + a few lowercase for variety ──
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij" +
-          // ── Digits + binary emphasis (single, not repeating — avoids paired appearance) ──
           "0123456789"
         ).split(""),
       ),
     );
 
+    // Genetic code character set for DNA mode
+    const DNA_CHARS = "ATGCUatgcuΔΨΩ∑∏∂∞≈≠≤≥←↑→↓↔⇌⇄⇅".split("");
+
     const FONT_SIZE = 16;
-    const COLUMN_STRIDE = 22; // wider than font to accommodate double-width glyphs
-    const FRAME_MS = 70; // slightly faster than the original 80
-    const FADE_ALPHA = 0.12; // high enough that trails fully clear within ~1.5s
-    const DROP_STEP = FONT_SIZE; // full row per frame — original cadence
+
+    // Read mutable params from neoStore — canvas reads these each frame
+    const getParams = () => neoStore.matrixRain;
+
+    interface GlimmerLinger {
+      y: number;
+      ch: string;
+      hue: number;
+      timer: number;
+    }
 
     let drops: number[] = [];
+    let charTimers: number[] = [];
+    let freezeTimers: number[] = [];
+    let glimmerLingers: (GlimmerLinger | null)[] = [];
+    let columnChars: string[] = [];
+    let morphStates: ({ stepsLeft: number; targetChar: string } | null)[] = [];
     let raf = 0;
-    let last = 0;
+    let lastFrameTime = 0;
     let running = true;
-
-    const isDark = () =>
-      resolvedTheme === "dark" ||
-      (resolvedTheme === "system" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    let disposed = false;
+    let hue = 0;
+    let lastColumnStride = getParams().columnStride;
 
     const resize = () => {
+      if (!ctx || disposed) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = window.innerWidth + "px";
-      canvas.style.height = window.innerHeight + "px";
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      // Wipe any stale pixels from prior effect runs (HMR in dev keeps the
-      // canvas DOM element alive; without this clear, edits to fade logic
-      // don't visually take effect until a hard refresh).
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      const columns = Math.ceil(window.innerWidth / COLUMN_STRIDE);
+      ctx.clearRect(0, 0, w, h);
+      const stride = getParams().columnStride;
+      const columns = Math.ceil(w / stride);
+      const chars = neoStore.dnaActive ? DNA_CHARS : BASE_CHARS;
       drops = new Array(columns)
         .fill(0)
-        .map(() => Math.random() * -window.innerHeight);
+        .map(() => Math.random() * -h);
+      charTimers = new Array(columns).fill(0);
+      freezeTimers = new Array(columns).fill(0);
+      glimmerLingers = new Array(columns).fill(null);
+      columnChars = new Array(columns)
+        .fill("")
+        .map(() => chars[Math.floor(Math.random() * chars.length)]);
+      morphStates = new Array(columns).fill(null);
+      lastColumnStride = stride;
     };
 
-    const render = (t: number) => {
-      if (!running) return;
-      if (t - last > FRAME_MS) {
-        const dark = isDark();
+    const render = (currentTime: number) => {
+      if (disposed || !running || !ctx) return;
 
-        // Trail fade using destination-out composite. This actually SUBTRACTS
-        // alpha from existing pixels each frame instead of painting a
-        // translucent color over them. On a transparent canvas, source-over
-        // fading can never reach alpha=0 — trails accumulate as permanent
-        // column stripes over time. destination-out properly decays pixels
-        // back to transparent, so no ghost stripes build up regardless of
-        // how long the site is left open.
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.fillStyle = `rgba(0,0,0,${FADE_ALPHA})`;
-        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-        ctx.globalCompositeOperation = "source-over";
+      raf = requestAnimationFrame(render);
 
-        ctx.fillStyle = dark
-          ? "rgba(184, 169, 212, 0.42)"
-          : "rgba(124, 92, 191, 0.18)";
-        // Font stack includes Noto Sans fallbacks so CJK/Arabic/Devanagari
-        // get rendered as proper glyphs instead of tofu. Browsers will pick
-        // whatever's installed locally; failing that, the system default
-        // still supplies at least one covering font on every major OS.
-        ctx.font = `${FONT_SIZE}px "JetBrains Mono", "Noto Sans CJK SC", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Hebrew", "Noto Sans", monospace`;
+      const p = getParams();
+      const fpsInterval = 1000 / p.fps;
+      const elapsed = currentTime - lastFrameTime;
+      if (elapsed < fpsInterval) return;
+      lastFrameTime = currentTime - (elapsed % fpsInterval);
+      hue = (hue + 0.35) % 360;
 
-        for (let i = 0; i < drops.length; i++) {
-          const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-          // Center each glyph within its column stride — wide glyphs overflow
-          // symmetrically instead of bleeding right into the next column.
-          const x = i * COLUMN_STRIDE + COLUMN_STRIDE / 2;
-          const y = drops[i];
-          ctx.fillText(ch, x, y);
-          if (y > window.innerHeight && Math.random() > 0.975) {
-            drops[i] = 0;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      // Resize if column stride changed via NEO controls
+      if (p.columnStride !== lastColumnStride) {
+        resize();
+      }
+
+      // Full clear each frame — zero residue, no ghosting
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.font = `${FONT_SIZE}px "JetBrains Mono", "Noto Sans CJK SC", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Hebrew", "Noto Sans", monospace`;
+
+      const dna = neoStore.dnaActive;
+      const activeChars = dna ? DNA_CHARS : BASE_CHARS;
+      const charsLen = activeChars.length;
+      const baseH = hue;
+      const glimmerThreshold = dna ? p.glimmerChance * 2 : p.glimmerChance;
+
+      // Recombination: swap adjacent columns occasionally
+      if (dna && Math.random() < 0.001 && drops.length > 2) {
+        const swapIdx = 1 + Math.floor(Math.random() * (drops.length - 2));
+        const tmp = drops[swapIdx];
+        drops[swapIdx] = drops[swapIdx + 1];
+        drops[swapIdx + 1] = tmp;
+      }
+
+      for (let i = 0; i < drops.length; i++) {
+        const x = i * p.columnStride + p.columnStride / 2;
+        const y = drops[i];
+        const colH = (baseH + i * 4) % 360;
+
+        // Character changes at controlled rate with optional morph steps
+        charTimers[i]++;
+        let ch = columnChars[i] ?? activeChars[Math.floor(Math.random() * charsLen)];
+        let isMorphing = false;
+        if (charTimers[i] >= p.charChangeInterval && !morphStates[i]) {
+          charTimers[i] = 0;
+          const newChar = activeChars[Math.floor(Math.random() * charsLen)];
+          if (p.morphSteps > 0) {
+            morphStates[i] = { stepsLeft: p.morphSteps, targetChar: newChar };
           } else {
-            drops[i] = y + DROP_STEP;
+            columnChars[i] = newChar;
+            ch = newChar;
           }
         }
-        last = t;
+        const morph = morphStates[i];
+        if (morph) {
+          isMorphing = true;
+          ch = activeChars[Math.floor(Math.random() * charsLen)];
+          morph.stepsLeft--;
+          if (morph.stepsLeft <= 0) {
+            columnChars[i] = morph.targetChar;
+            morphStates[i] = null;
+          }
+        }
+
+        // Glimmer: occasional white flash — DNA doubles the rate
+        const glimmer = Math.random() < glimmerThreshold;
+        if (glimmer && !glimmerLingers[i]) {
+          glimmerLingers[i] = {
+            y,
+            ch,
+            hue: colH,
+            timer: p.lingerFrames,
+          };
+          emitGlimmer();
+        }
+
+        // Mutation flash: DNA mode occasionally colors chars red/blue
+        const mutating = dna && Math.random() < 0.03;
+        const leadingColor = glimmer
+          ? `rgba(255,255,255,${0.75 + (charTimers[i] / p.charChangeInterval) * 0.15})`
+          : mutating
+            ? (Math.random() < 0.5 ? "rgba(255,100,100,0.55)" : "rgba(100,150,255,0.55)")
+            : isMorphing
+              ? `hsla(${colH}, 85%, 78%, 0.75)`
+              : `hsla(${colH}, 70%, 65%, 0.42)`;
+
+        ctx.fillStyle = leadingColor;
+        ctx.fillText(ch, x, y);
+
+        // Trail with hue shift — live trail length from store
+        for (let trail = 1; trail <= p.trailSteps; trail++) {
+          const trailAlpha = 0.28 - trail * 0.022;
+          if (trailAlpha > 0) {
+            const trailH = (colH + trail * 6) % 360;
+            ctx.fillStyle = dna
+              ? (Math.random() < 0.5
+                ? `rgba(255,120,120,${trailAlpha})`
+                : `rgba(120,180,255,${trailAlpha})`)
+              : `hsla(${trailH}, 60%, 55%, ${trailAlpha})`;
+            ctx.fillText(
+              activeChars[Math.floor(Math.random() * charsLen)],
+              x,
+              y - trail * FONT_SIZE,
+            );
+          }
+        }
+
+        // Draw lingering glimmer at its frozen Y while it fades out
+        const linger = glimmerLingers[i];
+        if (linger) {
+          const lingerAlpha = (linger.timer / p.lingerFrames) * 0.6;
+          ctx.fillStyle = dna && Math.random() < 0.5
+            ? `rgba(180,220,255,${lingerAlpha})`
+            : `rgba(255,255,255,${lingerAlpha})`;
+          ctx.fillText(linger.ch, x, linger.y);
+          linger.timer--;
+          if (linger.timer <= 0) {
+            glimmerLingers[i] = null;
+          }
+        }
+
+        // Freeze glitch: column stalls for a few frames before advancing
+        if (freezeTimers[i] > 0) {
+          freezeTimers[i]--;
+        } else if (Math.random() < p.freezeChance) {
+          freezeTimers[i] = 2 + Math.floor(Math.random() * 4);
+        } else {
+          drops[i] = y + p.dropStep;
+        }
+
+        if (y > h && Math.random() > 0.975) {
+          drops[i] = 0;
+          charTimers[i] = 0;
+          freezeTimers[i] = 0;
+          glimmerLingers[i] = null;
+          columnChars[i] = activeChars[Math.floor(Math.random() * charsLen)];
+          morphStates[i] = null;
+        }
       }
-      raf = requestAnimationFrame(render);
     };
 
     const onVisibility = () => {
       if (document.hidden) {
         running = false;
         cancelAnimationFrame(raf);
-      } else if (!running) {
+      } else if (!running && !disposed) {
         running = true;
-        last = 0;
+        lastFrameTime = performance.now();
         raf = requestAnimationFrame(render);
       }
     };
@@ -157,21 +275,40 @@ export function MatrixRain() {
     resize();
     window.addEventListener("resize", resize);
     document.addEventListener("visibilitychange", onVisibility);
+    lastFrameTime = performance.now();
     raf = requestAnimationFrame(render);
 
     return () => {
+      disposed = true;
       running = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       document.removeEventListener("visibilitychange", onVisibility);
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // @ts-ignore
+        ctx = null;
+      }
     };
-  }, [resolvedTheme]);
+  }, [enabled]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-0"
-    />
+    <>
+      {enabled && (
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-0"
+        />
+      )}
+      <button
+        onClick={toggle}
+        aria-label={enabled ? "Disable matrix rain" : "Enable matrix rain"}
+        title={enabled ? "Disable matrix rain" : "Enable matrix rain"}
+        className="fixed bottom-4 right-4 z-50 rounded-full border border-border bg-surface/80 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-dim backdrop-blur-sm transition hover:border-lavender hover:text-lavender"
+      >
+        {enabled ? "Rain: ON" : "Rain: OFF"}
+      </button>
+    </>
   );
 }

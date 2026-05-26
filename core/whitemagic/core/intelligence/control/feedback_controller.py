@@ -31,6 +31,9 @@ class FeedbackController:
         self._session_manager = SessionManager()
         self._reasoner = MultiSpectralReasoner()
         self._is_active = False
+        self._pattern_counts: dict[str, int] = {}
+        self._pattern_threshold = 5
+        self._gain = 1.0
 
     def start(self) -> None:
         """Start the feedback loop."""
@@ -98,9 +101,21 @@ class FeedbackController:
 
     def _on_pattern(self, event: ResonanceEvent) -> None:
         """Handle repeated patterns.
-        Action: Updates temporary metrics.
+        Action: Track pattern frequency and adjust feedback gain.
         """
-        raise NotImplementedError("FeedbackController._on_pattern is not yet implemented")
+        pattern = event.data.get("pattern", "unknown")
+        frequency = event.data.get("frequency", 1)
+
+        # Update pattern tracking metrics
+        if pattern not in self._pattern_counts:
+            self._pattern_counts[pattern] = 0
+        self._pattern_counts[pattern] += 1
+
+        # If pattern is recurring frequently, increase feedback gain
+        if frequency > self._pattern_threshold:
+            self._gain = min(1.0, self._gain * 1.1)
+            logger.debug("Pattern '%s' recurring (freq=%d) — gain increased to %.2f",
+                        pattern, frequency, self._gain)
 
     def _on_insight(self, event: ResonanceEvent) -> None:
         """Handle sudden insights (Flash).
@@ -124,8 +139,30 @@ class FeedbackController:
 
     def _on_state_change(self, event: ResonanceEvent) -> None:
         """Monitor system state for stability.
+        Action: Log state transitions and detect instability patterns.
         """
-        raise NotImplementedError("FeedbackController._on_state_change is not yet implemented")
+        state = event.data.get("state", "unknown")
+        stability = event.data.get("stability", 1.0)
+
+        # Log state transition
+        logger.debug("System state changed: %s (stability=%.2f)", state, stability)
+
+        # If stability drops below threshold, reduce feedback gain
+        if stability < 0.3:
+            self._gain = max(0.1, self._gain * 0.9)
+            logger.warning("System instability detected (stability=%.2f) — gain reduced to %.2f",
+                          stability, self._gain)
+
+        # Update session with state change
+        session = self._session_manager.get_active_session()
+        if session:
+            if "state_history" not in session.context:
+                session.context["state_history"] = []
+            session.context["state_history"].append({
+                "state": state,
+                "stability": stability,
+                "timestamp": datetime.now().isoformat(),
+            })
 
 _controller = None
 

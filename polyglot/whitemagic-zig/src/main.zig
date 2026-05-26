@@ -35,6 +35,7 @@ pub const search = struct {
     pub const simd_similarity = @import("search/simd_similarity.zig");
     pub const batch_search = @import("search/batch_search.zig");
     pub const tokenizer = @import("search/tokenizer.zig");
+    pub const hnsw_index = @import("search/hnsw_index.zig");
 };
 
 // --- Re-exporting from submodules to ensure FFI symbols are visible ---
@@ -193,4 +194,5 @@ comptime {
     _ = search.simd_similarity;
     _ = search.batch_search;
     _ = search.tokenizer;
+    _ = search.hnsw_index;
 }

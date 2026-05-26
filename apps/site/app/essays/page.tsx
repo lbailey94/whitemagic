@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { SphereViewToggle } from "@/components/SphereViewToggle";
 import { SemanticSearch } from "@/components/SemanticSearch";
 import { WanderTrail } from "@/components/WanderTrail";
@@ -78,6 +79,13 @@ export default function EssaysIndex() {
         <SphereViewToggle />
 
         <div className="mt-4 flex gap-4">
+          <Link
+            href="/sphere"
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            Open Full Sphere View
+            <ArrowRight className="h-4 w-4" />
+          </Link>
           <Link
             href="/library"
             className="font-mono text-sm text-lavender hover:underline"

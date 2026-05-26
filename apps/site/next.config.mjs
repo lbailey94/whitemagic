@@ -1,4 +1,138 @@
 import createMDX from "@next/mdx";
+import withPWAInit from "@ducanh2912/next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+  sw: "sw.js",
+  buildExcludes: ["app-build-manifest.json"],
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  swcMinify: true,
+  workboxOptions: {
+    disableDevLogs: true,
+    navigateFallback: "",
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "google-fonts-cache",
+          expiration: {
+            maxEntries: 10,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "gstatic-fonts-cache",
+          expiration: {
+            maxEntries: 10,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
+        urlPattern: /\/api\/.*/i,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "api-cache",
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          networkTimeoutSeconds: 10,
+        },
+      },
+      {
+        urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "static-images",
+          expiration: {
+            maxEntries: 100,
+            maxAgeSeconds: 60 * 60 * 24 * 30,
+          },
+        },
+      },
+      // WASM modules — cache permanently
+      {
+        urlPattern: /\/wasm\/.*\.(?:wasm|js)$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "wasm-modules",
+          expiration: {
+            maxEntries: 10,
+            maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      // ONNX models — cache permanently
+      {
+        urlPattern: /\/models\/.*\.(?:onnx|bin)$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "onnx-models",
+          expiration: {
+            maxEntries: 5,
+            maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      // SQLite WASM (sql.js)
+      {
+        urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/sql\.js@.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "sqljs-wasm",
+          expiration: {
+            maxEntries: 5,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      // ONNX Runtime Web WASM files
+      {
+        urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/onnxruntime-web@.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "onnxruntime-wasm",
+          expiration: {
+            maxEntries: 10,
+            maxAgeSeconds: 60 * 60 * 24 * 365,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+    ],
+  },
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -30,10 +164,20 @@ const nextConfig = {
         source: "/.well-known/agent",
         destination: "/api/well-known/agent",
       },
+      // WhiteMagic Core API proxy
+      {
+        source: "/api/wm/:path*",
+        destination: "http://127.0.0.1:8770/:path*",
+      },
+      // WebSocket sync proxy
+      {
+        source: "/sync",
+        destination: "http://127.0.0.1:8770/sync",
+      },
     ];
   },
 };
 
 const withMDX = createMDX({});
 
-export default withMDX(nextConfig);
+export default withPWA(withMDX(nextConfig));

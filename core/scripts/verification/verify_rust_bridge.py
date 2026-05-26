@@ -1,9 +1,10 @@
 import sys
+import os
 
 # Add the editable install location if needed, though venv should handle it
 try:
     import whitemagic_rs
-    print("✅ Successfully imported whitemagic_rs")
+    print(f"✅ Successfully imported whitemagic_rs")
 except ImportError as e:
     print(f"❌ Failed to import whitemagic_rs: {e}")
     sys.exit(1)

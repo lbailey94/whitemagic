@@ -1,8 +1,10 @@
 """Zig SIMD Cosine Similarity — Python Bridge.
-=============================================
+=============================================================
 Loads the compiled Zig shared library and exposes SIMD-accelerated
 cosine similarity for embedding vectors. Falls back to pure Python
 when the Zig library is not available.
+
+Uses the universal numpy bridge for zero-copy FFI.
 
 Usage:
     from whitemagic.core.acceleration.simd_cosine import cosine_similarity, batch_cosine
@@ -15,10 +17,15 @@ import ctypes
 import logging
 import math
 import os
+import struct
 import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+
+import numpy as np
+
+from whitemagic.core.acceleration.polyglot_numpy_bridge import to_ptr, to_flat_ptr, get_array_pool
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +33,27 @@ _lib = None
 _lib_lock = threading.Lock()
 _HAS_ZIG = False
 
+# TopKResult structure for wm_vector_top_k
+class TopKResult(ctypes.Structure):
+    _fields_ = [("index", ctypes.c_uint32), ("score", ctypes.c_float)]
+
+# Pre-allocated buffer pool to avoid repeated allocations
+_buffer_pool: dict[int, Any] = {}  # size -> ctypes array
+_pool_lock = threading.Lock()
+
+
+def _get_buffer(size: int) -> Any:
+    """Get or create a pre-allocated float buffer."""
+    with _pool_lock:
+        if size not in _buffer_pool:
+            _buffer_pool[size] = (ctypes.c_float * size)()
+        return _buffer_pool[size]
+
 
 def _find_zig_lib() -> str | None:
     """Locate the compiled Zig shared library."""
-    base = Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-zig"
+    # From core/whitemagic/core/acceleration/ go up to core/, then to polyglot/
+    base = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "whitemagic-zig"
     candidates = [
         os.environ.get("WM_ZIG_LIB", ""),
         # Shared lib (dynamic) — primary target
@@ -82,6 +106,18 @@ def _load_lib() -> Any:
             lib.wm_simd_lane_width.argtypes = []
             lib.wm_simd_lane_width.restype = ctypes.c_size_t
 
+            # wm_vector_top_k(query_ptr, vectors_ptr, dim, n_vectors, k, results_ptr) -> usize
+            # TopKResult = struct { index: u32, score: f32 } = 8 bytes
+            lib.wm_vector_top_k.argtypes = [
+                ctypes.POINTER(ctypes.c_float),
+                ctypes.POINTER(ctypes.c_float),
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.POINTER(TopKResult),
+            ]
+            lib.wm_vector_top_k.restype = ctypes.c_size_t
+
             _lib = lib
             _HAS_ZIG = True
             lane = lib.wm_simd_lane_width()
@@ -113,6 +149,19 @@ def _to_c_array(vec: Sequence[float]) -> Any:
     return c_arr
 
 
+def _to_c_array_fast(vec: Sequence[float]) -> Any:
+    """Fast conversion using pre-allocated buffer + struct.unpack.
+
+    For 384-d vectors, this is ~3x faster than element-by-element assignment.
+    """
+    n = len(vec)
+    buf = _get_buffer(n)
+    # struct.pack is implemented in C, much faster than Python loop
+    packed = struct.pack(f'{n}f', *vec)
+    ctypes.memmove(buf, packed, n * 4)
+    return buf
+
+
 # ---------------------------------------------------------------------------
 # Pure Python fallback
 # ---------------------------------------------------------------------------
@@ -134,12 +183,20 @@ def _py_cosine(a: Sequence[float], b: Sequence[float]) -> float:
 def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
     """Compute cosine similarity between two vectors.
     Uses Zig SIMD if available, Python fallback otherwise.
+
+    Accepts numpy arrays for zero-copy FFI.
     """
     if len(a) != len(b) or len(a) == 0:
         return 0.0
 
     lib = _load_lib()
     if lib is not None:
+        # Zero-copy path for numpy arrays
+        if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
+            ca = to_ptr(a)
+            cb = to_ptr(b)
+            return float(lib.wm_simd_cosine(ca, cb, len(a)))
+        # Fallback for Python sequences
         ca = _to_c_array(a)
         cb = _to_c_array(b)
         return float(lib.wm_simd_cosine(ca, cb, len(a)))
@@ -150,7 +207,22 @@ def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
 def batch_cosine(query: Sequence[float], vectors: list[Sequence[float]]) -> list[float]:
     """Compute cosine similarity between query and a batch of vectors.
     Uses Zig SIMD batch operation if available.
+
+    Accepts numpy arrays for zero-copy FFI.
     """
+    # Zero-copy path for numpy arrays
+    if isinstance(vectors, np.ndarray) and isinstance(query, np.ndarray):
+        dim = len(query)
+        n = len(vectors)
+        lib = _load_lib()
+        if lib is not None:
+            cq = to_ptr(query)
+            flat, _ = to_flat_ptr(vectors)
+            scores = (ctypes.c_float * n)()
+            lib.wm_simd_batch_cosine(cq, flat, dim, n, scores)
+            # Zero-copy result extraction via numpy frombuffer
+            return np.ctypeslib.as_array(scores).tolist()
+
     if not vectors or not query:
         return []
 
@@ -159,18 +231,55 @@ def batch_cosine(query: Sequence[float], vectors: list[Sequence[float]]) -> list
 
     lib = _load_lib()
     if lib is not None:
-        cq = _to_c_array(query)
-        # Flatten vectors into contiguous array
-        flat = (ctypes.c_float * (n * dim))()
-        for i, vec in enumerate(vectors):
-            for j, v in enumerate(vec[:dim]):
-                flat[i * dim + j] = v
+        # Use numpy for zero-copy flattening when available
+        cq = np.asarray(query, dtype=np.float32)
+        cq_ptr = to_ptr(cq)
+        # Flatten all vectors into contiguous array in one operation
+        flat_np = np.asarray(vectors, dtype=np.float32).ravel()
+        flat_ptr = to_ptr(flat_np)
         scores = (ctypes.c_float * n)()
-        lib.wm_simd_batch_cosine(cq, flat, dim, n, scores)
-        return [float(scores[i]) for i in range(n)]
+        lib.wm_simd_batch_cosine(cq_ptr, flat_ptr, dim, n, scores)
+        # Zero-copy result extraction via numpy frombuffer
+        return np.ctypeslib.as_array(scores).tolist()
 
     # Python fallback
     return [_py_cosine(query, v) for v in vectors]
+
+
+def top_k_cosine(query: Sequence[float], vectors: list[Sequence[float]], k: int = 10) -> list[tuple[int, float]]:
+    """Find top-K most similar vectors to query using Zig SIMD.
+
+    Returns list of (index, score) tuples sorted by descending similarity.
+    Uses wm_vector_top_k for in-Zig top-K selection, avoiding full score array transfer.
+    """
+    if k <= 0:
+        return []
+
+    dim = len(query)
+    n = len(vectors)
+    if dim == 0 or n == 0:
+        return []
+
+    actual_k = min(k, n)
+
+    lib = _load_lib()
+    if lib is not None:
+        # Zero-copy path
+        cq = np.asarray(query, dtype=np.float32)
+        cq_ptr = to_ptr(cq)
+        flat_np = np.asarray(vectors, dtype=np.float32).ravel()
+        flat_ptr = to_ptr(flat_np)
+
+        results = (TopKResult * actual_k)()
+        found = lib.wm_vector_top_k(cq_ptr, flat_ptr, dim, n, actual_k, results)
+
+        return [(int(results[i].index), float(results[i].score)) for i in range(found)]
+
+    # Python fallback: compute all scores, sort, take top-K
+    scores = [_py_cosine(query, v) for v in vectors]
+    indexed = list(enumerate(scores))
+    indexed.sort(key=lambda x: x[1], reverse=True)
+    return indexed[:actual_k]
 
 
 def simd_status() -> dict[str, Any]:

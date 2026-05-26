@@ -40,14 +40,14 @@ const PROJECTS: Project[] = [
     name: "agent-guardrails",
     tagline: "Runtime governance middleware for AI agents",
     description:
-      "A focused extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI) with deterministic, sub-millisecond policy evaluation.",
+      "A planned extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI) with deterministic, sub-millisecond policy evaluation. Not yet extracted; track progress in the main repo.",
     stats: [
       { label: "Target size", value: "~2K lines" },
       { label: "OWASP Top 10", value: "10/10" },
       { label: "Language", value: "Python" },
     ],
     status: "Planned",
-    href: "https://github.com/whitemagic-ai",
+    href: "https://github.com/whitemagic-ai/whitemagic",
     license: "MIT",
   },
 ];

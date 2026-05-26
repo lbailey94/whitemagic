@@ -50,6 +50,14 @@ _LAZY_MODULES: dict[str, str] = {
     "integration": "whitemagic.integration",
     "edge": "whitemagic.edge",
     "autonomous": "whitemagic.autonomous",
+    # Recovered from v17
+    "parallel": "whitemagic.parallel",
+    "plugins": "whitemagic.plugins",
+    "cache": "whitemagic.cache",
+    "auth": "whitemagic.auth",
+    "benchmarks": "whitemagic.benchmarks",
+    "search": "whitemagic.search",
+    "mesh": "whitemagic.mesh",
 }
 
 
@@ -92,5 +100,7 @@ __all__ = [
     'integration',
     'edge', 'autonomous',
     'utils',
-    'bootstrap'
+    'bootstrap',
+    # Recovered from v17
+    'parallel', 'plugins', 'cache', 'auth', 'benchmarks', 'search', 'mesh',
 ]

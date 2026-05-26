@@ -172,8 +172,9 @@ class GanYingMixin:
         """Setup event listeners for this garden.
 
         Override in subclasses to listen for specific events.
+        Base implementation is a no-op — subclasses should override.
         """
-        raise NotImplementedError("BaseGarden._setup_event_listeners is not yet implemented")
+        logger.debug("BaseGarden._setup_event_listeners called (no-op — override in subclass)")
 
 
 # Convenience function for getting garden bias

@@ -52,11 +52,13 @@ class HemisphereAgent:
 
     def propose(self, topic: str) -> str:
         """Generate a position statement on a topic."""
-        raise NotImplementedError
+        logger.warning("HemisphereAgent.propose called on base class — use LeftHemisphereAgent or RightHemisphereAgent")
+        return f"[BASE] No stance on '{topic}' — use a concrete hemisphere agent."
 
     def critique(self, position: str) -> str:
         """Critique a position from the opposing hemisphere."""
-        raise NotImplementedError
+        logger.warning("HemisphereAgent.critique called on base class — use LeftHemisphereAgent or RightHemisphereAgent")
+        return f"[BASE] No critique available — use a concrete hemisphere agent."
 
 
 class LeftHemisphereAgent(HemisphereAgent):

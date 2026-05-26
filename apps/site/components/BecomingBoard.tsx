@@ -135,7 +135,7 @@ export function BecomingBoard() {
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm border border-border" /> Placeholder
         </span>
-        <span className="ml-auto">Click a lit cell to read. 64 chapters. 8 sections. One conversation.</span>
+        <span className="ml-auto">1 of 64 chapters published. The board fills in over time.</span>
       </div>
     </div>
   );

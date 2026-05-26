@@ -7,9 +7,8 @@ import sys
 import os
 sys.path.append(os.getcwd())
 
-from whitemagic.oracle.quantum_iching import QuantumIChing
-# from whitemagic.core.symbolic import SymbolicReasoning, ConceptType # Missing in modern build
-# from whitemagic.core.gardens.synthesis_enhanced import EnhancedGardenSynthesis # Missing in modern build
+from newmagic.core.oracle.quantum_iching import QuantumIChing
+from newmagic.core.symbolic import SymbolicReasoning, ConceptType
 
 def verify_iching():
     print("\n🔮 Testing QuantumIChing...")
@@ -17,19 +16,58 @@ def verify_iching():
     oracle.consult("Verify me")
     stats = oracle.get_statistics()
     
-    assert "total_consultations" in stats
-    assert stats["total_consultations"] > 0
+    assert "metrics" in stats
+    assert "consultation_time" in stats["metrics"]
     print("✅ QuantumIChing OK")
 
 def verify_symbolic():
-    print("\n☯️ Testing SymbolicReasoning (SKIPPED - Legacy)...")
-    return
+    print("\n☯️ Testing SymbolicReasoning...")
+    engine = SymbolicReasoning(use_chinese=True)
+    
+    # Add a concept
+    engine.add_concept("dao", "The Way", "道", ConceptType.PRINCIPLE)
+    
+    # Query it (should trigger stats)
+    result = engine.query_concept("dao")
+    print(f"   Query Result: {result}")
+    
+    stats = engine.get_statistics()
+    print("   Stats:", stats)
+    
+    # Assertions
+    assert "metrics" in stats, "Missing metrics"
+    assert "query_latency" in stats["metrics"], "Missing query_latency"
+    assert "total_queries" in stats["metrics"], "Missing total_queries"
+    assert stats["metrics"]["total_queries"]["count"] == 1
+    assert "specific" in stats, "Missing specific stats"
+    assert "token_savings" in stats["specific"], "Missing token_savings in specific"
+    
+    print("✅ SymbolicReasoning OK")
+
+from newmagic.core.gardens.synthesis_enhanced import EnhancedGardenSynthesis
 
 def verify_synthesis():
-    print("\n🌸 Testing EnhancedGardenSynthesis (SKIPPED - Legacy)...")
-    return
+    print("\n🌸 Testing EnhancedGardenSynthesis...")
+    synth = EnhancedGardenSynthesis()
+    
+    # Run a synthesis
+    result = synth.synthesize_gardens(["joy", "love"], {"intention": True})
+    print(f"   Harmony: {result['harmony_score']:.2f}")
+    
+    stats = synth.get_statistics()
+    print("   Stats keys:", list(stats.keys()))
+    
+    # Assertions
+    assert "metrics" in stats
+    assert "synthesis_time" in stats["metrics"]
+    assert "syntheses" in stats["metrics"]
+    assert stats["metrics"]["syntheses"]["count"] == 1
+    assert "specific" in stats
+    assert "average_harmony" in stats["specific"]
+    
+    print("✅ EnhancedGardenSynthesis OK")
 
-from whitemagic.utils.fileio import file_lock, atomic_write
+from newmagic.core.lib.io.locking import file_lock, atomic_write
 import time
 import threading
 
@@ -61,7 +99,7 @@ def verify_locking():
     if os.path.exists(test_file):
         os.remove(test_file)
 
-from whitemagic.logging_config import setup_logging, get_logger
+from newmagic.core.lib.logging import setup_logging, get_logger
 
 def verify_logging_sys():
     print("\n📝 Testing Logging System...")
@@ -72,8 +110,8 @@ def verify_logging_sys():
     assert logger.level == 0  # Level is delegated, root sets effective level
     print("   ✅ Logger Initialization OK")
 
-from whitemagic.core.ganas.eastern_quadrant import RootGana
-from whitemagic.core.ganas.base import GanaCall
+from newmagic.core.core.ganas.eastern_quadrant import RootGana
+from newmagic.core.core.ganas.base import GanaCall
 
 async def verify_transmutation():
     print("\n⚔️ Testing Phase 4: The Transmutation (RootGana x Rust)...")
@@ -86,13 +124,18 @@ async def verify_transmutation():
         resonance_hints=None
     )
     
-    result = await root.invoke(call)
-    output = result.output
-    print(f"   Search Results Found: {output.get('results_count', 0)}")
-    print(f"   Engine Used: {output.get('engine', 'unknown')}")
+    result = await root._execute_core(call, "")
+    print(f"   Search Results Found: {result['results_count']}")
+    print(f"   Engine Used: {result['engine']}")
     
-    # RootGana in modern build might return different structure
-    # assert output.get('results_count', 0) > 0, "No search results found"
+    assert result['results_count'] > 0, "No search results found"
+    # Even if Rust fails and falls back to Python, we want it to work.
+    # But ideally it uses rust_parallel.
+    if result['engine'] == 'rust_parallel':
+        print("   ✅ Rust Acceleration Active")
+    else:
+        print("   ⚠️ Rust Acceleration MISSING (Used Python Fallback)")
+    
     print("✅ RootGana Transmutation OK")
 
 from whitemagic.core.ganas.western_quadrant import NetGana
@@ -108,18 +151,16 @@ async def verify_net_transmutation():
         resonance_hints=None
     )
     
-    result = await net.invoke(call)
-    output = result.output
-    print(f"   Net Status: {output.get('status', 'unknown')}")
+    result = await net._execute_core(call, "")
+    print(f"   Net Status: {result['status']}")
     
-    if 'internal_net' in output:
-        print(f"   Files Scanned: {output['internal_net']['files_scanned']}")
-        print(f"   Concepts Found: {output['internal_net']['concepts_extracted']}")
-        print(f"   Engine: {output['internal_net']['engine']}")
+    if 'internal_net' in result:
+        print(f"   Files Scanned: {result['internal_net']['files_scanned']}")
+        print(f"   Concepts Found: {result['internal_net']['concepts_extracted']}")
+        print(f"   Engine: {result['internal_net']['engine']}")
         
-        assert output['internal_net']['files_scanned'] > 0
-        # Engines might vary based on environment (Rust vs Python fallback)
-        assert output['internal_net']['engine'] in ['rust_v6', 'python_fallback']
+        assert result['internal_net']['files_scanned'] > 0
+        assert result['internal_net']['engine'] == 'rust_v6'
     else:
         print("   ⚠️ Heaven's Net integration MISSING or failed")
     

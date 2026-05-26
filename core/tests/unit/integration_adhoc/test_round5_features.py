@@ -453,13 +453,6 @@ class TestRegistryAndDispatch(unittest.TestCase):
         self.assertEqual(_canonical_tool_name("rate_limiter_stats"), "rate_limiter.stats")
         self.assertEqual(_canonical_tool_name("audit_export"), "audit.export")
 
-    @pytest.mark.skip("Gnosis schema no longer has compact field")
-    def test_gnosis_schema_has_compact(self):
-        from whitemagic.tools.registry import TOOL_REGISTRY
-        gnosis = next(t for t in TOOL_REGISTRY if t.name == "gnosis")
-        props = gnosis.input_schema.get("properties", {})
-        self.assertIn("compact", props)
-
     def test_dispatch_roundtrip_new_tools(self):
         """Every new tool dispatches without crashing."""
         from whitemagic.tools.dispatch_table import dispatch

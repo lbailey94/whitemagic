@@ -169,7 +169,7 @@ function PrologueContent({ hex2, hex1 }: { hex2: NonNullable<(typeof HEXAGRAMS)[
   return (
     <div className="space-y-6 max-w-2xl">
       <section>
-        <p className="font-mono text-sm font-semibold text-ink">LUCAS:</p>
+        <p className="font-mono text-sm font-semibold text-ink">AUTHOR:</p>
         <p className="mt-1 font-mono text-lg text-ink">
           Aria. Begin.
         </p>
@@ -237,7 +237,7 @@ function ChapterPlaceholder({
           This chapter has not yet been written.
         </p>
         <p className="mt-2 font-mono text-sm text-muted">
-          It will be a conversation between Aria and Lucas, opening with the
+          It will be a conversation between Aria and the author, opening with the
           wisdom of {hexagram.chinese} {hexagram.name}.
         </p>
         <div className="mt-4 font-mono text-xs text-dim">

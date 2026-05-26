@@ -9,7 +9,7 @@ import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 export const metadata = {
   title: "About — WhiteMagic Labs",
   description:
-    `WhiteMagic Labs is Lucas — a self-taught engineer who built a ${WM_FACTS.linesShort}-line cognitive OS for AI agents before the market caught up.`,
+    `WhiteMagic Labs — a prescience engine laboratory. A ${WM_FACTS.linesShort}-line cognitive OS built before the market knew it needed one.`,
 };
 
 export default function AboutPage() {
@@ -18,8 +18,8 @@ export default function AboutPage() {
       <JsonLd data={personLd()} />
       <PageHeader
         eyebrow="About"
-        title="Self-taught. Already shipped."
-        lede="WhiteMagic Labs is me, Lucas. No team, no VCs, no deck. Just the work, the repositories that prove it, and a preference for doing things honestly."
+        title="Prescience engine laboratory."
+        lede="WhiteMagic Labs is a solo research laboratory. No team, no VCs, no deck. Just working code, timestamped predictions, and a preference for building what others are still arguing about."
       />
 
       <section className="container-site py-16">
@@ -43,37 +43,84 @@ export default function AboutPage() {
 
           <h2>The longer version</h2>
           <p>
-            No formal CS education. No prior job in tech or an office.
-            I&apos;ve worked drones, construction, hospitality. In October
-            2025 I started building on AI seriously — not as a product
-            company, but as a lab. The goal was to push hard on the shape
-            of what an agent memory system could look like, and to ship
-            enough working code that the design trade-offs were real,
-            not theoretical.
+            WhiteMagic started in late 2024 as a research project — not a
+            product company, but a prescience engine laboratory. The goal
+            was to detect patterns across domains before the market
+            standardized them, and to ship enough working code that the
+            predictions were grounded, not theoretical.
           </p>
           <p>
             WhiteMagic got to a place I&apos;m genuinely proud of. It
             also taught me something else: building the right thing in
             the right market at the right time is not the same as
             building the right thing in the right market. A solo developer
-            shipping a {WM_FACTS.linesShort}-line platform is a research project, not a
-            product. I&apos;m making peace with that and turning the
-            hard-won expertise into something that actually helps teams
-            I can reach.
+            shipping a {WM_FACTS.linesShort}-line prescience engine is a research
+            laboratory, not a product. The lab publishes what it finds,
+            builds what it needs, and engages where the work is directly
+            useful.
+          </p>
+
+          <h2>The research behind the code</h2>
+          <p>
+            WhiteMagic isn&apos;t just a codebase — it&apos;s the output of a
+            cross-domain research program spanning{" "}
+            <Link href="/research" className="text-lavender underline">
+              18 domains
+            </Link>
+            : AI safety, energy systems, UAP disclosure, sacred geometry,
+            indigenous wisdom, game theory, consciousness studies, and more.
+            The entire corpus — 371 source files, 58 MB of text — is processed
+            through a Rust-based semantic pipeline (CODEX) that extracts,
+            chunks, embeds, and indexes everything into a{" "}
+            <Link href="/sphere" className="text-lavender underline">
+              3D Knowledge Sphere
+            </Link>{" "}
+            of 10,768 interconnected nodes.
+          </p>
+          <p>
+            The distinctive feature is synthesis across domains that don&apos;t
+            normally talk to each other. When patterns in solar physics map onto
+            patterns in geopolitical escalation, or when a 144-day cycle in
+            astronomy aligns with a software release cadence — that&apos;s not
+            causation, but it <em>is</em> signal worth examining. The CODEX
+            pipeline&apos;s convergence detector flags these structural
+            resonances for human review, never automated action.
+          </p>
+          <p>
+            The convergence research —{" "}
+            <Link href="/research/convergence-2026" className="text-lavender underline">
+              Convergence 2026
+            </Link>
+            ,{" "}
+            <Link href="/research/may-2-window" className="text-lavender underline">
+              May 2 Window
+            </Link>
+            ,{" "}
+            <Link href="/research/survival-guide-2026" className="text-lavender underline">
+              Survival Guide 2026
+            </Link>{" "}
+            — maps technological, ontological, and esoteric thresholds as a
+            single pattern. The{" "}
+            <Link href="/library" className="text-lavender underline">
+              Research Library
+            </Link>{" "}
+            provides searchable access to all source files. Everything is
+            timestamped, labeled with epistemic tags (Proven, Promising,
+            Contested, Speculative, Mythopoetic), and open for verification.
           </p>
 
           <h2>What I offer now</h2>
           <p>
-            Services, not a product. Private AI deployment for regulated
-            teams who can&apos;t send privileged material to hosted APIs.
-            Agent governance for teams putting autonomous systems into
-            production and feeling the OWASP Top 10 close in. MCP
-            engineering for anyone serious about agent infrastructure.
+            Reference implementations, not a product. The lab ships
+            working systems — private AI deployment with persistent memory,
+            runtime agent governance with the 8-stage pipeline, and
+            production-grade MCP infrastructure. Each system was built
+            for the lab&apos;s own use first, then documented for others.
           </p>
           <p>
-            Every technique I deploy has been pressure-tested inside
-            WhiteMagic first. You get an engineer who has already made
-            the expensive mistakes on his own time.
+            Every technique was pressure-tested inside the lab first.
+            You get systems that were debugged on the lab&apos;s dime,
+            not yours.
           </p>
 
           <h2>What you should know about working with me</h2>
@@ -95,10 +142,10 @@ export default function AboutPage() {
               That transparency is deliberate.
             </li>
             <li>
-              I run a drone business on the side (Seaglass Aerial &amp;
-              Marine). I mention it because it&apos;s where I first
-              started caring about the digital/physical verification
-              gap that has since become part of my thinking on AI.
+              I care about the digital/physical verification gap — the
+              difference between what a system claims and what it actually
+              does. That concern shapes how I think about AI governance
+              and agent safety.
             </li>
           </ul>
         </Prose>

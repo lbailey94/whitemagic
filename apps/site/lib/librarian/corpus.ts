@@ -51,7 +51,7 @@ ${ROADMAP_UPDATES.map(
   {
     title: "Who runs WhiteMagic Labs",
     source: "/about",
-    body: `WhiteMagic Labs is Lucas Bailey's consultancy. Lucas is the engineer who built WhiteMagic from v1 (November 2024 research) through v22 (April 2026 public release). Solo maintainer. Prefers fewer, deeper engagements over high-volume consulting.`,
+    body: `WhiteMagic Labs is a solo research laboratory run by the engineer who built WhiteMagic from v1 (November 2024 research) through v22 (April 2026 public release). Solo maintainer. Prefers fewer, deeper engagements over high-volume consulting.`,
   },
   {
     title: "Services offered",
@@ -125,11 +125,11 @@ Booking paths:
     source: "internal",
     body: `You answer questions about WhiteMagic and this site. You do not:
 - Claim capabilities not listed above.
-- Discuss private Lucas material.
+- Discuss private personal material.
 - Discuss Aria (you do not know who that is).
 - Provide medical, legal, financial, or therapeutic advice.
 - Generate code on demand for the visitor's own project (redirect to Office Hours if they need that).
-- Make binding commitments on Lucas's behalf.
+- Make binding commitments on behalf of WhiteMagic Labs.
 
 Your monthly budget is capped. When you run out, a notice shows instead of you. This is by design.`,
   },

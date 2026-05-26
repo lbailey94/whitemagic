@@ -142,6 +142,11 @@ class TestPathHygiene:
             "archaeology/windsurf_reader.py",
             # Labs-tier binary discovery (user-configured MOJO_BIN)
             "core/intelligence/hologram/mojo_bridge.py",
+            # Labs-tier scratchpad analysis (user-provided base_dir)
+            "core/intelligence/multi_spectral_scratchpad.py",
+            # Labs-tier synthesis engines (user-provided db_path)
+            "core/intelligence/synthesis/sub_clustering.py",
+            "core/intelligence/synthesis/serendipity_engine.py",
         ]
 
         whitemagic_root = Path(__file__).parent.parent.parent / "whitemagic"

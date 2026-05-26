@@ -59,7 +59,7 @@ export function ContactForm() {
         </div>
         <p className="text-sm text-muted">
           Reference:{" "}
-          <span className="font-mono text-xs">{status.reference}</span>. Lucas
+          <span className="font-mono text-xs">{status.reference}</span>. I
           will reply within two business days. If you&apos;d like to book a
           slot in the meantime, see{" "}
           <a href="/pricing" className="text-lavender underline">
@@ -148,7 +148,7 @@ export function ContactForm() {
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           className="w-full rounded-lg border border-border bg-surface-alt px-3 py-2 text-sm text-ink outline-none transition focus:border-lavender"
-          placeholder="Short description of the problem or the question. Regulated industry, team size, current stack, constraints — whatever helps Lucas respond usefully."
+          placeholder="Short description of the problem or the question. Regulated industry, team size, current stack, constraints — whatever helps me respond usefully."
         />
         <p className="mt-1 font-mono text-[10px] text-muted">
           {summary.length}/2000

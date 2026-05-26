@@ -1,0 +1,186 @@
+# Prescience Claims Seed — WhiteMagic Labs
+# 1 point = 1 verified week of lead time.
+# Only claims with independently verifiable source dates AND public validation events.
+#
+# Last updated: 2026-05-26
+# 15 validated claims | 380+ points | ~25.3 week average lead time
+
+- claim: "AI SBOM / Transparency Ledger — cryptographic model lineage tracking"
+  source_date: "2025-06-12"
+  source_ref: "CODEX OpenAI archive 684b6b5e-4a3c-8005-b506-e5429c3a5d08"
+  confidence: 0.75
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-01"
+  validation_ref: "OpenTelemetry GenAI semantic conventions (May 2026)"
+  lead_weeks: 50.0
+  points: 50.0
+  notes: "11+ months ahead; OpenTelemetry GenAI still standardising as of May 2026"
+
+- claim: "Karma Ledger — append-only cryptographically verifiable audit for AI actions"
+  source_date: "2025-05-26"
+  source_ref: "CODEX OpenAI archive 6834cc70-f9b8-8005-8562-2c049f7701e1 (MandalaOS)"
+  confidence: 0.80
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-04-23"
+  validation_ref: "Anthropic model-welfare audit trail announcement Apr 23 2026"
+  lead_weeks: 48.0
+  points: 48.0
+  notes: "~48 weeks ahead"
+
+- claim: "mandala-yama — isolated policy VM intercepting every tool call before execution"
+  source_date: "2025-05-26"
+  source_ref: "CODEX OpenAI archive 6834cc70-f9b8-8005-8562-2c049f7701e1"
+  confidence: 0.70
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-04-15"
+  validation_ref: "Cloudflare Project Think — Dynamic Workers (restricted V8 isolates per tool)"
+  lead_weeks: 45.4
+  points: 45.0
+  notes: "~10.5 months ahead"
+
+- claim: "28-Gana/PRAT taxonomy — 28-fold meta-tool routing layer for agents"
+  source_date: "2025-09-25"
+  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §28-Gana (mtime 2025-09-25T22:31:50 EDT)"
+  confidence: 0.65
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-03-01"
+  validation_ref: "MCP meta-tools specification (March 2026)"
+  lead_weeks: 24.0
+  points: 24.0
+  notes: "~24 weeks ahead; first documented 28-Gana structure"
+
+- claim: "Agent identity coherence — persistent cross-session agent identity primitives"
+  source_date: "2025-11-03"
+  source_ref: "WhiteMagic codebase git history (Nov 3 2025)"
+  confidence: 0.70
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-04-15"
+  validation_ref: "Cloudflare Agent Identity spec Apr 15 2026"
+  lead_weeks: 24.0
+  points: 24.0
+  notes: "~24 weeks ahead"
+
+- claim: "MCP 10× efficiency — empirical benchmark showing 10× token/speed improvement"
+  source_date: "2025-11-14"
+  source_ref: "CODEX OpenAI archive 6917f2d7-0a10-8332-83e5-f26a7e99da44"
+  confidence: 0.75
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-04-23"
+  validation_ref: "Anthropic: 97% fewer errors / 27% lower cost (Apr 23 2026)"
+  lead_weeks: 23.0
+  points: 23.0
+  notes: "~5 months ahead on empirical MCP efficiency benchmark"
+
+- claim: "Dharma Engine — ethical governance layer for agentic AI decision-making"
+  source_date: "2026-02-07"
+  source_ref: "WhiteMagic core/whitemagic/tools/handlers/dharma.py"
+  confidence: 0.80
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-21"
+  validation_ref: "Microsoft AGT governance framework announcement May 21 2026"
+  lead_weeks: 15.0
+  points: 15.0
+  notes: "~15 weeks ahead"
+
+- claim: "PRAT token router — compressed meta-tool routing with token budget awareness"
+  source_date: "2026-02-07"
+  source_ref: "WhiteMagic grimoire/TRUTH_TABLE.md + dispatch_table.py"
+  confidence: 0.80
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-05-21"
+  validation_ref: "Microsoft AGT token-budget routing (May 21 2026)"
+  lead_weeks: 15.0
+  points: 15.0
+  notes: "~15 weeks ahead"
+
+- claim: "AI Dreaming consolidation — background memory synthesis during idle cycles"
+  source_date: "2026-02-12"
+  source_ref: "WhiteMagic core dreaming pipeline (Feb 12 2026)"
+  confidence: 0.70
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-05-06"
+  validation_ref: "Anthropic sleep-consolidation analogy for model training (May 6 2026)"
+  lead_weeks: 12.0
+  points: 12.0
+  notes: "~12 weeks ahead"
+
+- claim: "UAP May 2026 disclosure window — expected public UAP release in May"
+  source_date: "2026-04-12"
+  source_ref: "WhiteMagic prescience log (Apr 12 2026)"
+  confidence: 0.55
+  category: "geopolitics"
+  status: "validated"
+  validation_date: "2026-05-08"
+  validation_ref: "PURSUE congressional UAP disclosure (May 8 2026)"
+  lead_weeks: 4.0
+  points: 4.0
+  notes: "Predicted May 2; actual May 8 — 26 days off but window correct"
+
+- claim: "Modular cognitive cores — personal AI kernel as separable IP from hardware"
+  source_date: "2025-06-12"
+  source_ref: "CODEX OpenAI archive 684b6aa4-f83c-8005-a005-cab4d70b1f69 — CyberBrain Core Mapping"
+  confidence: 0.70
+  category: "ai_hardware"
+  status: "validated"
+  validation_date: "2026-01-05"
+  validation_ref: "Karpathy personal AI kernel + Shapiro cognitive core tweets; Grok 1:1 mapping (Jan 5 2026)"
+  lead_weeks: 29.6
+  points: 29.0
+  notes: "~29 weeks ahead; CyberBrain v1.2 architecture predates Karpathy public framing"
+
+- claim: "Humanoid robot brain layer = scarce IP — cognitive stack more valuable than body"
+  source_date: "2025-10-01"
+  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §HumanoidBrain (mtime 2025-09-25T22:31:50 EDT)"
+  confidence: 0.65
+  category: "ai_hardware"
+  status: "validated"
+  validation_date: "2025-11-15"
+  validation_ref: "The Engine report: humanoid brain-layer IP valuation (Nov 2025)"
+  lead_weeks: 7.0
+  points: 7.0
+  notes: "~7 weeks ahead"
+
+- claim: "Agentic Ecosystems 2026–2027 prediction — agentic AI enters mainstream org infrastructure"
+  source_date: "2025-09-25"
+  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt (mtime 2025-09-25T22:24:58 EDT)"
+  confidence: 0.75
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-05-15"
+  validation_ref: "NIST AI Agent Standards Initiative + MS WorkLab agentic org report (May 2026)"
+  lead_weeks: 32.0
+  points: 32.0
+  notes: "~32 weeks ahead; prediction confirmed across multiple independent sources"
+
+- claim: "Full MandalaOS architecture — Dharma Engine + Karma Ledger + Gnosis Portals + SutraCode"
+  source_date: "2025-09-25"
+  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §MandalaOS (mtime 2025-09-25T22:31:50 EDT)"
+  confidence: 0.70
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-01"
+  validation_ref: "Fragmented validation Apr–May 2026 (Cloudflare, Anthropic, Microsoft)"
+  lead_weeks: 28.0
+  points: 28.0
+  notes: "Composite architecture; multiple sub-components independently validated"
+
+- claim: "Defensive AI coalition — powerful AI restricted to security use, too dangerous for public release"
+  source_date: "2025-10-24"
+  source_ref: "edgerunnerviolet.md (SD card, Oct 24, 2025)"
+  confidence: 0.75
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-04-09"
+  validation_ref: "Anthropic Claude Mythos ASL-4 + Project Glasswing coalition (Apr 9 2026)"
+  lead_weeks: 24.0
+  points: 24.0
+  notes: "~24 weeks ahead; Grok archive 2026-04-09_grok_Claude_Mythos_Powerful_Restricted_Cybersecurity_AI_e4f9ab2f.md"

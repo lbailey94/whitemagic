@@ -60,7 +60,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       refusal: {
         reason: "kill_switch",
         message:
-          "The Librarian is temporarily offline. Please reach Lucas directly at /contact.",
+          "The Librarian is temporarily offline. Please reach out directly at /contact.",
       },
     });
   }
@@ -99,8 +99,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     const scope = rl.scope ?? "ip_daily";
     const msg =
       scope === "ip_daily"
-        ? "You've reached the daily message limit for your IP. Try again tomorrow, or reach Lucas at /contact."
-        : "You've had a long conversation with me. Take a break and start fresh later, or reach Lucas at /contact.";
+        ? "You've reached the daily message limit for your IP. Try again tomorrow, or reach out at /contact."
+        : "You've had a long conversation with me. Take a break and start fresh later, or reach out at /contact.";
     return refusalStream({
       refusal: {
         reason: scope === "ip_daily" ? "rate_limit_ip" : "rate_limit_session",
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       refusal: {
         reason: "monthly_budget",
         message:
-          "The Librarian has reached its monthly budget. It resets on the 1st of next month. Reach Lucas directly at /contact.",
+          "The Librarian has reached its monthly budget. It resets on the 1st of next month. Reach out directly at /contact.",
       },
     });
   }
@@ -283,7 +283,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             refusal: {
               reason: "internal_error",
               message:
-                "Something went wrong on my end. Please try again, or reach Lucas at /contact.",
+                "Something went wrong on my end. Please try again, or reach out at /contact.",
             },
           }),
         );

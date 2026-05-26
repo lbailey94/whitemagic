@@ -38,6 +38,7 @@
 //!   --- Reserved ---
 //!   [1792..4096] future expansion
 
+use libc;
 use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -443,4 +444,22 @@ mod tests {
         let c2 = increment_counter(0);
         assert_eq!(c2, c1 + 1);
     }
+}
+
+/// Register all StateBoard pyfunctions into the given PyModule.
+/// Called from lib.rs pymodule init.
+#[cfg(feature = "python")]
+pub fn register_state_board(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> pyo3::PyResult<()> {
+    use pyo3::wrap_pyfunction;
+    m.add_function(wrap_pyfunction!(board_write_harmony, m)?)?;
+    m.add_function(wrap_pyfunction!(board_read_harmony, m)?)?;
+    m.add_function(wrap_pyfunction!(board_write_resonance, m)?)?;
+    m.add_function(wrap_pyfunction!(board_read_state, m)?)?;
+    m.add_function(wrap_pyfunction!(board_write_breaker, m)?)?;
+    m.add_function(wrap_pyfunction!(board_read_breaker, m)?)?;
+    m.add_function(wrap_pyfunction!(board_increment_counter, m)?)?;
+    m.add_function(wrap_pyfunction!(board_set_active_engines, m)?)?;
+    m.add_function(wrap_pyfunction!(board_get_path, m)?)?;
+    m.add_function(wrap_pyfunction!(board_reset, m)?)?;
+    Ok(())
 }

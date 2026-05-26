@@ -104,6 +104,58 @@ foreign export ccall c_free_hexagram :: Ptr Hexagram -> IO ()
 c_free_hexagram :: Ptr Hexagram -> IO ()
 c_free_hexagram = free
 
+-- | Batch create hexagrams from N*6 line values.
+-- linesPtr points to N*6 CInts (6 per hexagram).
+-- outPtrs points to space for N Ptr Hexagram.
+-- Returns the number of hexagrams created.
+foreign export ccall c_create_hexagrams_batch :: Ptr CInt -> CInt -> Ptr (Ptr Hexagram) -> IO CInt
+c_create_hexagrams_batch :: Ptr CInt -> CInt -> Ptr (Ptr Hexagram) -> IO CInt
+c_create_hexagrams_batch linesPtr n outPtrs = do
+    let numHex = fromIntegral n
+        makeHex i = do
+            let base = i * 6
+            l1 <- peekElemOff linesPtr (base + 0)
+            l2 <- peekElemOff linesPtr (base + 1)
+            l3 <- peekElemOff linesPtr (base + 2)
+            l4 <- peekElemOff linesPtr (base + 3)
+            l5 <- peekElemOff linesPtr (base + 4)
+            l6 <- peekElemOff linesPtr (base + 5)
+            let hex = hexagram 
+                    (intToLine l1) (intToLine l2) (intToLine l3)
+                    (intToLine l4) (intToLine l5) (intToLine l6)
+            hexPtr <- malloc
+            poke hexPtr hex
+            pokeElemOff outPtrs i hexPtr
+    mapM_ makeHex [0..numHex-1]
+    return n
+  where
+    intToLine :: CInt -> Line
+    intToLine 0 = Yin
+    intToLine _ = Yang
+
+-- | Batch get hexagram numbers from N hexagram pointers.
+-- hexPtrs points to N Ptr Hexagram.
+-- outNums points to space for N CInts.
+foreign export ccall c_hexagrams_to_numbers_batch :: Ptr (Ptr Hexagram) -> CInt -> Ptr CInt -> IO ()
+c_hexagrams_to_numbers_batch :: Ptr (Ptr Hexagram) -> CInt -> Ptr CInt -> IO ()
+c_hexagrams_to_numbers_batch hexPtrs n outNums = do
+    let numHex = fromIntegral n
+        getNum i = do
+            hexPtr <- peekElemOff hexPtrs i
+            hex <- peek hexPtr
+            pokeElemOff outNums i (fromIntegral $ toNumber hex)
+    mapM_ getNum [0..numHex-1]
+
+-- | Batch free hexagrams from N hexagram pointers.
+foreign export ccall c_free_hexagrams_batch :: Ptr (Ptr Hexagram) -> CInt -> IO ()
+c_free_hexagrams_batch :: Ptr (Ptr Hexagram) -> CInt -> IO ()
+c_free_hexagrams_batch hexPtrs n = do
+    let numHex = fromIntegral n
+        freeHex i = do
+            hexPtr <- peekElemOff hexPtrs i
+            free hexPtr
+    mapM_ freeHex [0..numHex-1]
+
 -- Helper to peek array from C
 peekArray :: Storable a => Int -> Ptr a -> IO [a]
 peekArray n ptr = mapM (peekElemOff ptr) [0..n-1]

@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import { FeatureGrid } from "@/components/FeatureGrid";
+import { ComparisonTable } from "@/components/ComparisonTable";
 import { Coins, ShieldCheck, Scale, ArrowRight } from "lucide-react";
 import { getCapability } from "@/lib/data/platform";
 import { FIELD_MAP_UPDATED, FIELD_SIGNALS } from "@/lib/field-map";
+import {
+  GOVERNANCE_FEATURES,
+  COMPARISON_ROWS,
+  PIPELINE_STAGES,
+} from "@/lib/data/governance";
 
 export const metadata = {
   title: "Agent Economy — WhiteMagic Labs",
@@ -245,6 +252,42 @@ export default function EconomyPage() {
           not payments-first.
         </p>
 
+        {/* Governance — fused from /governance */}
+        <div id="governance" className="mt-16 scroll-mt-20">
+          <div className="mb-6 flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-lavender" />
+            <div>
+              <p className="font-mono text-xs uppercase tracking-widest text-lavender">
+                Runtime layer
+              </p>
+              <h2 className="font-head text-2xl font-semibold text-ink">
+                Governance is the product.
+              </h2>
+            </div>
+          </div>
+          <p className="mb-6 max-w-prose text-muted">
+            Every tool call passes through authentication → authorization →
+            rate limiting → circuit breaker → policy evaluation → karma check
+            → execution → audit. No tool call bypasses governance.
+          </p>
+        </div>
+        <FeatureGrid items={GOVERNANCE_FEATURES} />
+        <ComparisonTable
+          rows={COMPARISON_ROWS}
+          leftLabel="WhiteMagic"
+          rightLabel="Microsoft AGT"
+        />
+        <div className="container-site mx-auto max-w-3xl">
+          <h3 className="mb-3 font-head text-xl font-semibold text-ink">
+            8-Stage Dispatch Pipeline
+          </h3>
+          <ol className="list-decimal space-y-2 pl-5 text-muted">
+            {PIPELINE_STAGES.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+        </div>
+
         {/* What we're not building */}
         <h2 className="mb-4 mt-16 font-head text-2xl font-semibold text-ink">
           What we are not building
@@ -329,7 +372,7 @@ export default function EconomyPage() {
             className="group rounded-2xl border border-border bg-surface p-6 transition hover:border-lavender hover:bg-lavender-bg"
           >
             <h3 className="mb-1 font-head text-lg font-semibold text-ink">
-              Talk to Lucas
+              Get in touch
             </h3>
             <p className="mb-4 text-sm text-muted">
               Integrating x402 or XRPL into an agent deployment, evaluating

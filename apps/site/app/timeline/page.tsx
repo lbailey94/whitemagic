@@ -2,6 +2,9 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { TimelineHorizontal } from "@/components/TimelineHorizontal";
+import { ClaimsList } from "@/components/ClaimsList";
+import { PendingList } from "@/components/PendingList";
+import { PrescienceScore } from "@/components/PrescienceScore";
 import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
 
 export const metadata = {
@@ -89,6 +92,13 @@ export default function TimelinePage() {
 
       <TimelineHorizontal />
 
+      <div id="prescience" />
+      <PrescienceScore />
+      <ClaimsList />
+
+      <div id="pending" />
+      <PendingList />
+
       <section className="border-y border-border-light bg-surface-alt py-16">
         <div className="container-site mx-auto max-w-3xl">
           <p className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
@@ -125,19 +135,18 @@ export default function TimelinePage() {
             What this means for you.
           </h2>
           <p className="mb-8 text-lg text-muted">
-            When I show up to an engagement, the patterns I deploy aren&apos;t
-            speculation — they&apos;re the same ones I was shipping while the
-            rest of the industry was still writing position papers. You get a
-            consultant who has already walked the design trade-offs on his own
-            time, on his own dime.
+            The patterns in this lab&apos;s codebase aren&apos;t
+            speculation — they were shipped while the rest of the industry
+            was still writing position papers. Foresight is a byproduct of
+            building, not a separate activity.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link href="/contact" className="btn-primary">
-              Book a discovery call
+              Start a conversation
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/services" className="btn-ghost">
-              See the services
+              See the lab output
             </Link>
           </div>
         </div>

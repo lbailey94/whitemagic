@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-
-set -euo pipefail
 # sync_to_public.sh — One-way sync from whitemagicdev → whitemagicpublic
 #
 # Syncs SOURCE CODE, tests, and configs. Does NOT sync docs (they have
@@ -71,7 +69,6 @@ COMMON_EXCLUDES=(
     --exclude='*.db-wal'
     --exclude='*.so'
     --exclude='*.dylib'
-    --exclude='_unsafe_maintenance/'
 )
 
 echo ""

@@ -1,67 +1,115 @@
-import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { emitUnlock, subscribeDnaChange } from "@/store/neoStore";
 import { AnimatedTriquetra } from "./AnimatedTriquetra";
-import { WM_FACTS } from "@/lib/facts";
+import { NEOCodeInput } from "./NEOCodeInput";
+import { MatrixRainControls } from "./MatrixRainControls";
+import { GlimmerTracker } from "./GlimmerTracker";
+import { TriquetraColorControls } from "./TriquetraColorControls";
+import { GodSphere } from "./GodSphere";
+import { LightningControls } from "./LightningControls";
 
-export function Hero() {
+function BreathingSilhouette({ className }: { className?: string }) {
   return (
-    <section className="relative overflow-hidden border-b border-border-light">
-      <div className="container-site grid items-center gap-10 py-20 md:grid-cols-[1.1fr_0.9fr] md:py-28">
-        <div>
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
-            <ShieldCheck className="h-3.5 w-3.5 text-lavender" />
-            Open-source governance infrastructure
-          </div>
-          <h1 className="mb-6 font-head text-4xl font-semibold leading-[1.05] tracking-tight text-ink md:text-6xl">
-            Governance infrastructure<br />
-            for <span className="text-lavender">agentic AI</span>.
-          </h1>
-          <p className="mb-8 max-w-prose text-lg leading-relaxed text-muted">
-            WhiteMagic Labs publishes research, tools, and reference
-            implementations for memory, tool-use governance, and side-effect
-            audit. Consulting is available where the work is directly useful.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/contact" className="btn-primary">
-              Start a conversation
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/research" className="btn-ghost">
-              Read the research
-            </Link>
-          </div>
-
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border-light pt-8">
-            <Stat label="Lines of OSS shipped" value={WM_FACTS.linesShort} />
-            <Stat label="Tests passing" value={WM_FACTS.testsPassing} />
-            <Stat label="MCP tools built" value={WM_FACTS.callableTools} />
-          </dl>
-        </div>
-
-        <div className="relative aspect-square w-full max-w-[480px] justify-self-center overflow-hidden rounded-2xl border border-border bg-surface-alt">
-          <div className="absolute inset-0 bg-gradient-to-br from-lavender-bg via-surface-alt to-surface" />
-          {/* Animated triquetra — the mark of WhiteMagic Labs. */}
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            <AnimatedTriquetra className="h-full w-full opacity-90" />
-          </div>
-          <div className="absolute inset-x-0 bottom-0 p-6 text-center">
-            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
-              WhiteMagic Labs · Agent Governance
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <svg
+      viewBox="0 0 200 200"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className={`triquetra-breathing text-lavender ${className || ""}`}
+    >
+      <g className="triquetra-spin">
+        <circle cx="100" cy="76.9" r="40" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.3" />
+        <circle cx="80" cy="111.55" r="40" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.3" />
+        <circle cx="120" cy="111.55" r="40" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.3" />
+        <circle cx="100" cy="100" r="2.5" fill="currentColor" opacity="0.15" />
+      </g>
+    </svg>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+export function Hero() {
+  const [phase, setPhase] = useState<"breathing" | "spawned">("breathing");
+  const [triKey, setTriKey] = useState(0);
+  const [colorMode, setColorMode] = useState<"rainbow" | "fixed">("rainbow");
+  const [rainbowSpeed, setRainbowSpeed] = useState(8);
+  const [sat, setSat] = useState(85);
+  const [lit, setLit] = useState(75);
+  const [fixedHue, setFixedHue] = useState(270);
+  const [, setDnaTick] = useState(0);
+
+  // Atmospheric breathing: 2.4s of pulsing silhouette, then spawn
+  useEffect(() => {
+    const t = setTimeout(() => setPhase("spawned"), 2400);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Re-render triquetra when DNA state or colors change
+  useEffect(() => {
+    const unsub = subscribeDnaChange(() => setDnaTick((n) => n + 1));
+    return unsub;
+  }, []);
+
+  const fixedColor =
+    colorMode === "fixed" ? `hsl(${fixedHue}, ${sat}%, ${lit}%)` : undefined;
+
+  const handleEpicenter = () => {
+    emitUnlock("all");
+  };
+
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wider text-dim">{label}</dt>
-      <dd className="mt-1 font-head text-2xl font-semibold text-ink">
-        {value}
-      </dd>
-    </div>
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden border-b border-border-light">
+      {/* Triquetra stage — breathing or spawned */}
+      <div className="relative">
+        {phase === "breathing" ? (
+          <BreathingSilhouette className="h-[70vh] w-[70vh] max-w-[640px]" />
+        ) : (
+          <div
+            onClick={() => setTriKey((k) => k + 1)}
+            className="cursor-pointer transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            title="Click to replay"
+          >
+            <AnimatedTriquetra
+              key={triKey}
+              rainbow={colorMode === "rainbow"}
+              rainbowSpeed={rainbowSpeed}
+              fixedColor={fixedColor}
+              className="h-[70vh] w-[70vh] max-w-[640px] opacity-90"
+            />
+          </div>
+        )}
+
+        {/* GOD Knowledge Sphere overlay */}
+        <GodSphere size={640} />
+
+        {/* Epicenter click zone — invisible, triggers GOD */}
+        <button
+          onClick={handleEpicenter}
+          className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-transparent"
+          aria-label="Activate GOD mode"
+          title="The still point"
+        />
+      </div>
+
+      {/* Controls beneath */}
+      <div className="z-10 flex flex-col items-center px-4 pb-12">
+        <NEOCodeInput />
+        <TriquetraColorControls
+          mode={colorMode}
+          onModeChange={setColorMode}
+          rainbowSpeed={rainbowSpeed}
+          onRainbowSpeedChange={setRainbowSpeed}
+          sat={sat}
+          onSatChange={setSat}
+          lit={lit}
+          onLitChange={setLit}
+          fixedHue={fixedHue}
+          onFixedHueChange={setFixedHue}
+        />
+        <MatrixRainControls />
+        <LightningControls />
+        <GlimmerTracker />
+      </div>
+    </section>
   );
 }

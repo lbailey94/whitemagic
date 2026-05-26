@@ -187,6 +187,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     query: q,
+    backend: "TF-IDF keyword",
     total_results: results.length,
     cluster_matches: clusterResults.length,
     results,

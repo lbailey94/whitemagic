@@ -1,0 +1,5 @@
+ignore-project: False
+shared: True
+
+program-options
+  ghc-options: -fPIC -shared

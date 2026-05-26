@@ -1,8 +1,12 @@
 // Active modules
 pub mod continuous_daemon;
 pub mod massive_deployer;
+pub mod orchestration_engine;
+pub mod predictive_engine;
 pub mod reasoning_engine;
 pub mod recursive_intelligence;
+pub mod state_board;
+pub mod state_machine;
 pub mod synthesis_engine;
 pub mod tokio_clones;
 
@@ -27,14 +31,10 @@ pub mod tokio_clones;
 // pub mod lieutenant;
 // pub mod load_balancer;
 // pub mod middleware_pipeline;
-// pub mod orchestration_engine;
 // pub mod parallel_executor;
 // pub mod performance_monitor;
-// pub mod predictive_engine;
 // pub mod resource_manager;
 // pub mod shared_state;
-// pub mod state_board;
-// pub mod state_machine;
 // pub mod synthesis;
 // pub mod system_coordinator;
 // pub mod task_scheduler;

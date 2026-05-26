@@ -46,8 +46,8 @@ export function personLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Person",
-    "@id": `${SITE_URL}/about#lucas`,
-    name: "Lucas",
+    "@id": `${SITE_URL}/about#founder`,
+    name: "WhiteMagic Labs Founder",
     jobTitle: "Founder, Principal Engineer",
     worksFor: { "@id": `${SITE_URL}/#org` },
     url: `${SITE_URL}/about`,

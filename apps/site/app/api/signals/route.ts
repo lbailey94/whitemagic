@@ -128,10 +128,10 @@ const WATCHLIST = [
     check_frequency_hours: 72,
   },
   {
-    name: "Lucas Research Inbox",
-    url: "internal://lucas/research",
+    name: "Research Inbox",
+    url: "internal://research/feeds",
     category: "Internal",
-    focus: "Personal research feeds, newsletters",
+    focus: "Research feeds, newsletters",
     check_frequency_hours: 72,
   },
   {

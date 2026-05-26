@@ -11,7 +11,7 @@ import {
 export const metadata = {
   title: "Research & Publications — WhiteMagic Labs",
   description:
-    "Open-source research on agent governance, runtime audit, and cognitive architectures. arXiv preprints, benchmark plans, and reproducible experiments.",
+    "Cross-domain research spanning AI governance, convergence analysis, cognitive architectures, and agentic safety. 18 domains, 371 source files, one epistemic standard.",
 };
 
 interface Publication {
@@ -36,7 +36,7 @@ interface Benchmark {
 const PUBLICATIONS: Publication[] = [
   {
     title: "Karma Ledger: A Runtime Audit Substrate for Declared-vs-Actual Side Effects in Agent Tool Use",
-    authors: "Lucas Bailey",
+    authors: "WhiteMagic Labs",
     venue: "arXiv cs.AI",
     year: "2026",
     status: "in-prep",
@@ -71,11 +71,70 @@ export default function ResearchPage() {
     <>
       <PageHeader
         eyebrow="Research"
-        title="Open-source science for agent safety"
-        lede="Reproducible benchmarks, preprints, and evaluation protocols. Everything is MIT-licensed and designed for community replication."
+        title="Cross-domain research for the agentic era"
+        lede="18 research domains, 371 source files, one epistemic standard — from agent governance to convergence analysis."
       />
 
       <section className="container-site py-16">
+        {/* Research Overview */}
+        <div className="mb-16 rounded-2xl border border-border bg-surface-alt p-6 md:p-8">
+          <h2 className="mb-4 font-head text-2xl font-semibold text-ink">
+            The Nature of This Work
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="leading-relaxed text-muted">
+                WhiteMagic Labs operates at the intersection of{" "}
+                <strong className="text-fg">agent governance</strong>,{" "}
+                <strong className="text-fg">cross-domain synthesis</strong>, and{" "}
+                <strong className="text-fg">predictive convergence analysis</strong>.
+                The research corpus spans 18 domains — from AI safety and energy
+                systems to indigenous wisdom and sacred geometry — processed
+                through a Rust-based semantic pipeline (CODEX) that extracts,
+                chunks, embeds, and indexes the entire body of work.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted">
+                The distinctive feature is <strong className="text-fg">synthesis
+                across domains that don&apos;t normally talk to each other</strong>.
+                When a solar physicist, a geopolitical analyst, and an AI
+                researcher all point to the same window for unrelated reasons —
+                that&apos;s signal. The CODEX pipeline&apos;s convergence detector
+                flags these structural resonances for human review.
+              </p>
+            </div>
+            <div>
+              <p className="leading-relaxed text-muted">
+                On the engineering side, WhiteMagic ships working code: a
+                cognitive OS with 479 callable tools, 28 Gana meta-tools,
+                persistent holographic memory, and an 8-stage governance
+                pipeline — all MIT-licensed with 2,243 passing tests. Every
+                technique deployed for clients has been pressure-tested inside
+                that codebase first.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted">
+                The convergence research (Convergence 2026, May 2 Window,
+                Survival Guide) maps technological, ontological, and esoteric
+                thresholds as a single pattern — not as separate domains. The{" "}
+                <Link href="/sphere" className="text-lavender hover:underline">
+                  3D Knowledge Sphere
+                </Link>{" "}
+                visualizes all 10,768 semantic nodes from this corpus, and the{" "}
+                <Link href="/library" className="text-lavender hover:underline">
+                  Research Library
+                </Link>{" "}
+                provides searchable access to all 371 source files.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatBlock label="Research Domains" value="18" />
+            <StatBlock label="Source Files" value="371" />
+            <StatBlock label="Semantic Nodes" value="10.8K" />
+            <StatBlock label="Test Suite" value="2,243" />
+          </div>
+        </div>
+
         {/* Active Research */}
         <div className="mb-16">
           <div className="mb-8 flex items-center gap-3">
@@ -132,6 +191,72 @@ export default function ResearchPage() {
                 <FileText className="mr-2 h-4 w-4" />
                 arXiv preprint in preparation
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Convergence Research */}
+        <div className="mb-16">
+          <div className="mb-8 flex items-center gap-3">
+            <FileText className="h-5 w-5 text-lavender" />
+            <h2 className="font-head text-2xl font-semibold text-ink">
+              Convergence Research
+            </h2>
+          </div>
+
+          <p className="mb-6 max-w-prose text-muted">
+            Cross-domain analysis mapping technological, ontological, and
+            esoteric thresholds. These documents synthesize signals from 18
+            research domains into actionable frameworks. See also the{" "}
+            <Link href="/library" className="text-lavender hover:underline">
+              CODEX Research Library
+            </Link>{" "}
+            for the full source corpus.
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <ResearchCard
+              title="Convergence 2026"
+              tag="The Great Crossroads"
+              description="AGI cognitive shift, Fusion energy reset, UAP ontological shock, and the September 23 celestial alignment — mapped as a single phase shift of civilization."
+              href="/research/convergence-2026"
+              tags={["AGI", "Fusion", "UAP", "Sept 23"]}
+            />
+            <ResearchCard
+              title="May 2 Window"
+              tag="The 144-Day Countdown"
+              description="Vesta opposition, Contact Modalities XPO, and the precise 144-day mathematical bridge to September 23 — the ignition phase before the revelation."
+              href="/research/may-2-window"
+              tags={["Vesta", "144 days", "Contact XPO"]}
+            />
+            <ResearchCard
+              title="Survival Guide 2026"
+              tag="Practical Resonance"
+              description="Mesh networking, micro-generation, skill sovereignty, and the Unix 1,777,777,777 sovereignty moment — autonomy over fear."
+              href="/research/survival-guide-2026"
+              tags={["Mesh", "Solar", "SDR", "Seeds"]}
+            />
+          </div>
+
+          <div className="mt-6 rounded-xl border border-border bg-surface p-5">
+            <h3 className="mb-3 font-head text-base font-semibold text-ink">
+              18 Research Domains
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "Astro", "Earth", "Energy & Physics", "FIR & Society",
+                "Genetics", "History", "Indigenous Wisdom", "Lost Civ",
+                "Magic & the Occult", "Magisters", "Neuromancy", "Philosophy",
+                "Prophecies", "Psi", "Sacred Geometry", "Sages & Alchemy",
+                "Space", "Spirituality & Healing",
+              ].map((domain) => (
+                <span
+                  key={domain}
+                  className="rounded-full bg-surface-alt px-3 py-1 text-xs text-muted"
+                >
+                  {domain}
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -459,5 +584,55 @@ function BenchmarkStatus({ status }: { status: Benchmark["status"] }) {
     >
       {labels[status]}
     </span>
+  );
+}
+
+function ResearchCard({
+  title,
+  tag,
+  description,
+  href,
+  tags,
+}: {
+  title: string;
+  tag: string;
+  description: string;
+  href: string;
+  tags: string[];
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col rounded-xl border border-border bg-surface p-5 transition hover:border-lavender hover:bg-lavender-bg"
+    >
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-lavender">
+        {tag}
+      </p>
+      <h3 className="mb-2 font-head text-lg font-semibold text-ink transition group-hover:text-lavender-dark">
+        {title}
+      </h3>
+      <p className="mb-3 flex-1 text-sm leading-relaxed text-muted">
+        {description}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {tags.map((t) => (
+          <span
+            key={t}
+            className="rounded bg-surface-alt px-1.5 py-0.5 font-mono text-[10px] text-dim"
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
+function StatBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4 text-center">
+      <div className="font-head text-2xl font-semibold text-ink">{value}</div>
+      <div className="text-xs uppercase tracking-wider text-dim">{label}</div>
+    </div>
   );
 }

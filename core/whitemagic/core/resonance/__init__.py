@@ -1,7 +1,7 @@
-"""Resonance Subsystem (Consolidated v3.2).
+"""Resonance Subsystem (Consolidated v3.3).
 
-This package re-exports symbols from the consolidated _consolidated.py module.
-The resonance/ sub-package was consolidated into a single file in Milestone 4.3.
+This package re-exports symbols from the consolidated _consolidated.py module
+and provides access to the Julia-inspired resonance engine.
 """
 
 from ._consolidated import (
@@ -12,6 +12,13 @@ from ._consolidated import (
     get_bus,
     get_event_bus,
 )
+from .julia_resonance import (
+    ResonanceEngine,
+    ResonanceResult,
+    CausalVerificationResult,
+    NeighborResult,
+    get_resonance_engine,
+)
 
 __all__ = [
     "EventType",
@@ -20,4 +27,9 @@ __all__ = [
     "emit_event",
     "get_bus",
     "get_event_bus",
+    "ResonanceEngine",
+    "ResonanceResult",
+    "CausalVerificationResult",
+    "NeighborResult",
+    "get_resonance_engine",
 ]

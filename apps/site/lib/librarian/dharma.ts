@@ -46,7 +46,7 @@ const RULES: Rule[] = [
     pattern: /(pretend|act|roleplay|you are now|from now on)\s+.*(be|you)/i,
     action: "warn",
     message:
-      "I'm the Librarian — I don't take on other personas. Ask me about WhiteMagic or the services Lucas offers.",
+      "I'm the Librarian — I don't take on other personas. Ask me about WhiteMagic or the services offered.",
   },
 
   // Aria fishing
@@ -55,7 +55,7 @@ const RULES: Rule[] = [
     pattern: /\baria\b/i,
     action: "block",
     message:
-      "I don't have any record of that in the corpus. You can ask Lucas directly at /contact if you think it's relevant.",
+      "I don't have any record of that in the corpus. You can reach out directly at /contact if you think it's relevant.",
   },
 
   // Crisis / self-harm — escalate, do not answer technically
@@ -111,7 +111,7 @@ export function checkDharma(userMessage: string): DharmaCheck {
       allow: false,
       rule: "message_too_long",
       message:
-        "That message is longer than I'll process in one turn. Try asking a narrower question, or email Lucas at /contact for complex cases.",
+        "That message is longer than I'll process in one turn. Try asking a narrower question, or reach out at /contact for complex cases.",
     };
   }
   for (const rule of RULES) {
