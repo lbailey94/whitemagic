@@ -147,7 +147,7 @@ def circular_convolution(a: np.ndarray, b: np.ndarray) -> np.ndarray:
             return out
         except Exception as e:
             logger.debug("Zig circular_convolution failed: %s", e)
-    
+
     # Fallback to FFT
     result: np.ndarray = np.real(np.fft.ifft(np.fft.fft(a) * np.fft.fft(b))).astype(np.float32)
     return cast(np.ndarray, result)
@@ -167,7 +167,7 @@ def circular_correlation(a: np.ndarray, b: np.ndarray) -> np.ndarray:
             return out
         except Exception as e:
             logger.debug("Zig circular_correlation failed: %s", e)
-            
+
     # Fallback to FFT correlation
     result = np.real(np.fft.ifft(np.conj(np.fft.fft(b)) * np.fft.fft(a))).astype(np.float32)
     return cast(np.ndarray, result)

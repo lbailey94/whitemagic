@@ -125,7 +125,7 @@ class SharedMemoryBridge:
             shm = self._shm
             if shm is None or shm.buf is None:
                 return False
-                
+
             header_bytes = struct.pack("<II", memory_id, 1)
             vector_bytes = struct.pack(f"<{EMBEDDING_DIM}f", *vector)
             shm.buf[offset:offset + 8] = header_bytes

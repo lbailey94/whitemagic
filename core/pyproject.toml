@@ -374,12 +374,14 @@ norecursedirs = [
     "tests/archive_v4.5.0_reorg",
     "tests/legacy",
     "node_modules",
-    ".git"
+    ".git",
+    ".hypothesis"
 ]
 asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::pytest.PytestConfigWarning",
+    "ignore::ResourceWarning:anyio.streams.memory",
 ]
 markers = [
     "security: marks tests as security-related",

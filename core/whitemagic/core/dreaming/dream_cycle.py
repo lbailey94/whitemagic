@@ -852,7 +852,7 @@ class DreamCycle:
         """
         result: dict[str, Any] = {"harmony_score": 0.0, "adjustments": 0}
         try:
-            from whitemagic.core.resonance.harmony_vector import get_harmony_vector
+            from whitemagic.harmony.vector import get_harmony_vector
 
             hv = get_harmony_vector()
             current_balance = hv.get_balance() if hasattr(hv, 'get_balance') else 0.5

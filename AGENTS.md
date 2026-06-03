@@ -15,7 +15,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
-- Current local audit baseline: 2,243 passing tests, 0 failures, 67 skipped (as of 2026-05-20)
+- Current local audit baseline: 2,379 passing tests, 0 failures, 67 skipped (as of 2026-06-03)
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -251,7 +251,7 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 
 Before declaring any task complete:
 
-- [ ] `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q` → release baseline 2,216 passed; current audit baseline 2,243 passed, 67 skipped, 0 failed
+- [ ] `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q` → release baseline 2,216 passed; current audit baseline 2,379 passed, 67 skipped, 0 failed
 - [ ] `python scripts/check_doc_drift.py` → All checks pass
 - [ ] `python scripts/check_versions.py` → Version consistent
 - [ ] `git status` → Only intended files modified

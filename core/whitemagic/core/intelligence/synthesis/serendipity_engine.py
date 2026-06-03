@@ -100,26 +100,26 @@ class SerendipityEngine:
         try:
             from whitemagic.core.intelligence.quantum_engine import QuantumEngine
             from whitemagic.core.memory.unified import get_unified_memory
-            
+
             engine = QuantumEngine()
             um = get_unified_memory()
-            
+
             # 1. Get seed memories from context or random core
             seeds = []
             if context:
                 seeds = um.search(context, limit=3)
             if not seeds:
                 seeds = um.list_recent(limit=3)
-            
+
             if not seeds:
                 return self._surface_random(count)
-                
+
             # 2. Build local adjacency graph for walk
             local_graph = {}
             all_node_ids = set()
             for seed in seeds:
                 all_node_ids.add(seed.id)
-                
+
             # Expand one hop to build graph
             for node_id in list(all_node_ids):
                 mem = um.recall(node_id)
@@ -127,15 +127,15 @@ class SerendipityEngine:
                     neighbors = list(mem.associations.keys())
                     local_graph[node_id] = neighbors
                     all_node_ids.update(neighbors)
-            
+
             # 3. Perform superposition walks from each seed
             walk_results = []
             for seed in seeds:
                 walk_results.append(engine.superposition_walk(local_graph, seed.id, hops=2))
-                
+
             # 4. Interference fusion of results
             fused_probs = engine.interference_fusion(walk_results)
-            
+
             # 5. Map back to SurfacedMemory objects
             sorted_mids = sorted(fused_probs.items(), key=lambda x: x[1], reverse=True)
             surfaced: List[SurfacedMemory] = []

@@ -682,7 +682,7 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **484 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped (as of 2026-05-05)
-- **Current local audit baseline:** 2,243 tests passing, 0 failures, 67 skipped (as of 2026-05-20)
+- **Current local audit baseline:** 2,379 tests passing, 0 failures, 67 skipped (as of 2026-06-03)
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 
 ---

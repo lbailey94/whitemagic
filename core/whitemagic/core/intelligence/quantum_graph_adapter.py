@@ -29,12 +29,12 @@ class QuantumWalkConfig:
 
 class QuantumGraphAdapter:
     """Adapter that enhances classical graph walking with quantum-inspired algorithms."""
-    
+
     def __init__(self, classical_walker: Optional[GraphWalker] = None):
         self._classical = classical_walker or GraphWalker()
         self._quantum = QuantumGraphEngine(walker_sigma=2.0)
         self._config = QuantumWalkConfig()
-        
+
     def quantum_enhanced_walk(
         self,
         seed_ids: List[str],
@@ -53,7 +53,7 @@ class QuantumGraphAdapter:
         4. Return fused results
         """
         start_time = time.perf_counter()
-        
+
         # Phase 1: Classical expansion (proven, stable)
         classical_result = self._classical.walk(
             seed_ids=seed_ids,
@@ -61,14 +61,14 @@ class QuantumGraphAdapter:
             top_k=top_k * 2,
             query_embedding=query_embedding,
         )
-        
+
         if not classical_result.paths:
             return classical_result
-            
+
         # Phase 2: Convert to quantum state
         quantum_nodes = []
         discovered_ids = classical_result.discovered_ids()
-        
+
         for path in classical_result.paths:
             for node_id in path.nodes:
                 if node_id not in seed_ids:
@@ -80,18 +80,18 @@ class QuantumGraphAdapter:
                         phase=0.0,
                         metadata={"source_path": path.to_dict()}
                     ))
-        
+
         # Phase 3: Grover amplification if oracle available
         if self._config.use_grover and oracle_func:
             def node_oracle(node: QuantumNode) -> bool:
                 return oracle_func(node.id)
-            
+
             amplified = self._quantum.grover_amplification(
                 quantum_nodes, node_oracle, self._config.grover_iterations
             )
         else:
             amplified = quantum_nodes
-            
+
         # Phase 4: Superposition walk (parallel exploration)
         if self._config.use_superposition and get_neighbors_func:
             superposition_result = self._quantum.walk_superposition(
@@ -101,7 +101,7 @@ class QuantumGraphAdapter:
             final_nodes = self._quantum.interference_fusion(amplified, superposition_result)
         else:
             final_nodes = amplified
-            
+
         # Convert back to classical WalkResult
         result = WalkResult(
             seed_ids=seed_ids,
@@ -111,10 +111,10 @@ class QuantumGraphAdapter:
             paths=classical_result.paths[:top_k],
             duration_ms=(time.perf_counter() - start_time) * 1000
         )
-        
+
         logger.info(f"⚛️ Quantum-enhanced walk: {len(final_nodes)} nodes in superposition")
         return result
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get combined statistics from classical and quantum engines."""
         return {

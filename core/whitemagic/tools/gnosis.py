@@ -407,13 +407,15 @@ def _votes_portal() -> dict[str, Any]:
 
 
 def _temporal_portal() -> dict[str, Any]:
-    from whitemagic.core.resonance.temporal_scheduler import get_temporal_scheduler
-    scheduler = get_temporal_scheduler()
-    stats = scheduler.get_stats()
-    return {
-        "running": scheduler.is_running,
-        "lanes": stats,
-    }
+    try:
+        from whitemagic.core.resonance import get_bus
+        bus = get_bus()
+        return {
+            "running": True,
+            "listeners": len(getattr(bus, "_listeners", {})),
+        }
+    except Exception as exc:
+        return {"running": False, "error": str(exc)}
 
 
 def _agents_portal() -> dict[str, Any]:

@@ -189,13 +189,13 @@ def _check_reflective() -> list[GateResult]:
     except Exception as exc:
         results.append(GateResult("salience_arbiter", False, f"SalienceArbiter failed: {exc}"))
 
-    # Temporal scheduler
+    # Unified resonance bus (replaces temporal_scheduler)
     try:
-        from whitemagic.core.resonance.temporal_scheduler import get_temporal_scheduler
-        get_temporal_scheduler()
-        results.append(GateResult("temporal_scheduler", True, "TemporalScheduler operational"))
+        from whitemagic.core.resonance import get_bus
+        bus = get_bus()
+        results.append(GateResult("resonance_bus", True, f"GanYingBus ready ({len(bus._listeners)} listeners)"))
     except Exception as exc:
-        results.append(GateResult("temporal_scheduler", False, f"TemporalScheduler failed: {exc}"))
+        results.append(GateResult("resonance_bus", False, f"GanYingBus failed: {exc}"))
 
     return results
 

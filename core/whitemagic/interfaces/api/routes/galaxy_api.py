@@ -20,6 +20,19 @@ except ImportError:  # pragma: no cover - optional dependency
     Request = None  # type: ignore[misc,assignment]
     router = None  # type: ignore[assignment]
 
+
+class _GalaxyAPIError(Exception):
+    """Fallback exception when FastAPI is not installed."""
+
+    def __init__(self, status_code: int, detail: str) -> None:
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"{status_code}: {detail}")
+
+
+if HTTPException is None:
+    HTTPException = _GalaxyAPIError  # type: ignore[misc,assignment]
+
 # Demo galaxy nodes (matches InteractiveGalaxySphere local mode)
 _DEMO_NODES: list[dict[str, Any]] = [
     {"id": "1", "label": "Memory Core", "x": 0.2, "y": 0.1, "z": 0.3, "w": 0.5, "v": 0.2, "color": "#fbbf24", "size": 3, "zone": "core", "importance": 0.9, "distance": 0.3, "access_count": 150},

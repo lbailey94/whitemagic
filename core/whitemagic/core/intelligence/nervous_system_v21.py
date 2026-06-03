@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class UnifiedNervousSystemV21:
     """Complete V21 nervous system with event bus coordination."""
-    
+
     def __init__(self):
         self.is_active = False
         self.event_bus: Optional[BiologicalEventBus] = None
@@ -32,14 +32,14 @@ class UnifiedNervousSystemV21:
             "subsystem_errors": {},
             "last_pulse": 0
         }
-        
+
         # Initialize all 7 subsystems
         self.subsystems = self._initialize_subsystems()
-        
+
     def _initialize_subsystems(self) -> Dict[str, Any]:
         """Initialize all 7 biological subsystems."""
         subsystems = {}
-        
+
         # 1. Immune System
         try:
             from whitemagic.core.intelligence.immune.dna import ImmuneRegulator
@@ -48,7 +48,7 @@ class UnifiedNervousSystemV21:
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning(f"⚠️ Immune System unavailable: {e}")
             subsystems["immune"] = None
-            
+
         # 2. Evolution System
         try:
             from whitemagic.core.evolution.continuous_evolution import (
@@ -59,7 +59,7 @@ class UnifiedNervousSystemV21:
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning(f"⚠️ Evolution System unavailable: {e}")
             subsystems["evolution"] = None
-            
+
         # 3. Dream System
         try:
             from whitemagic.core.dreaming.dream_cycle import DreamCycle
@@ -68,7 +68,7 @@ class UnifiedNervousSystemV21:
         except ImportError as e:
             logger.warning(f"⚠️ Dream System unavailable: {e}")
             subsystems["dreams"] = None
-            
+
         # 4. Memory Metabolism
         try:
             from whitemagic.core.intelligence.hologram.consolidation import (
@@ -79,7 +79,7 @@ class UnifiedNervousSystemV21:
         except ImportError as e:
             logger.warning(f"⚠️ Memory Metabolism unavailable: {e}")
             subsystems["metabolism"] = None
-            
+
         # 5. Consciousness
         try:
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
@@ -90,7 +90,7 @@ class UnifiedNervousSystemV21:
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning(f"⚠️ Consciousness unavailable: {e}")
             subsystems["consciousness"] = None
-            
+
         # 6. Resonance
         try:
             from whitemagic.core.intelligence.agentic.resonance_amp import (
@@ -101,7 +101,7 @@ class UnifiedNervousSystemV21:
         except ImportError as e:
             logger.warning(f"⚠️ Resonance unavailable: {e}")
             subsystems["resonance"] = None
-            
+
         # 7. Emergence
         try:
             from whitemagic.core.intelligence.agentic.emergence_engine import (
@@ -112,22 +112,22 @@ class UnifiedNervousSystemV21:
         except ImportError as e:
             logger.warning(f"⚠️ Emergence unavailable: {e}")
             subsystems["emergence"] = None
-            
+
         return subsystems
-        
+
     async def start(self) -> None:
         """Start the complete nervous system with event bus."""
         if self.is_active:
             return
-            
+
         # Start event bus
         self.event_bus = await get_event_bus()
-        
+
         # Wire the 3 key integrations (Victory Conditions 2-4)
         await connect_dream_to_immune()
         await connect_metabolism_to_evolution()
         await connect_resonance_to_emergence()
-        
+
         # Start subsystems that need activation
         for name, subsystem in self.subsystems.items():
             if subsystem and hasattr(subsystem, 'start'):
@@ -140,17 +140,17 @@ class UnifiedNervousSystemV21:
                 except Exception as e:
                     self._stats["subsystem_errors"][name] = str(e)
                     logger.error(f"❌ Failed to start {name}: {e}")
-                    
+
         self.is_active = True
         logger.info("🧠 Unified Nervous System V21 fully operational")
-        
+
     async def stop(self) -> None:
         """Stop the nervous system gracefully."""
         if not self.is_active:
             return
-            
+
         self.is_active = False
-        
+
         # Stop subsystems
         for name, subsystem in self.subsystems.items():
             if subsystem and hasattr(subsystem, 'stop'):
@@ -162,25 +162,25 @@ class UnifiedNervousSystemV21:
                     logger.info(f"⏹️ {name} subsystem stopped")
                 except Exception as e:
                     logger.error(f"❌ Failed to stop {name}: {e}")
-                    
+
         # Stop event bus
         if self.event_bus:
             await self.event_bus.stop()
-            
+
         logger.info("🧠 Unified Nervous System V21 stopped")
-        
+
     async def pulse(self, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Complete pulse with cross-system coordination."""
         if not self.is_active:
             return {"status": "inactive"}
-            
+
         self._stats["pulses"] += 1
         self._stats["last_pulse"] = time.time()
         pulse_start = time.time()
-        
+
         # Coordinate subsystem pulses
         subsystem_results = {}
-        
+
         # 1. Dream System Pulse - publishes events
         if self.subsystems.get("dreams") is not None:
             try:
@@ -191,7 +191,7 @@ class UnifiedNervousSystemV21:
             except Exception as e:
                 self._stats["subsystem_errors"]["dreams"] = str(e)
                 logger.error(f"Dream pulse failed: {e}")
-                
+
         # 2. Memory Metabolism Pulse - publishes decay events
         if self.subsystems.get("metabolism") is not None:
             try:
@@ -202,7 +202,7 @@ class UnifiedNervousSystemV21:
             except Exception as e:
                 self._stats["subsystem_errors"]["metabolism"] = str(e)
                 logger.error(f"Metabolism pulse failed: {e}")
-                
+
         # 3. Resonance Pulse - publishes harmony events
         if self.subsystems.get("resonance") is not None:
             try:
@@ -213,14 +213,14 @@ class UnifiedNervousSystemV21:
             except Exception as e:
                 self._stats["subsystem_errors"]["resonance"] = str(e)
                 logger.error(f"Resonance pulse failed: {e}")
-                
+
         # Get event bus stats
         event_stats = {}
         if self.event_bus:
             event_stats = self.event_bus.get_stats()
-            
+
         pulse_duration = time.time() - pulse_start
-        
+
         return {
             "status": "ok",
             "pulses": self._stats["pulses"],
@@ -231,11 +231,11 @@ class UnifiedNervousSystemV21:
             "errors": self._stats["errors"],
             "subsystem_errors": self._stats["subsystem_errors"]
         }
-        
+
     async def _dream_pulse(self) -> Dict[str, Any]:
         """Run dream cycle and publish events."""
         dreams = self.subsystems["dreams"]
-        
+
         # Run a dream phase
         if dreams and hasattr(dreams, 'run_phase'):
             # In V21, dreams is a DreamCycle instance from whitemagic.core.intelligence.dream_cycle
@@ -246,7 +246,7 @@ class UnifiedNervousSystemV21:
                 if hasattr(dreams, '_run_phase'):
                     await dreams._run_phase()
                     return {"status": "ok", "phase": "rotated"}
-                
+
                 # Fallback to a simulated result if method not found but object exists
                 return {"status": "simulated", "message": "Dream cycle heartbeat active"}
             except Exception as e:
@@ -254,15 +254,15 @@ class UnifiedNervousSystemV21:
                 return {"status": "error", "error": str(e)}
         else:
             return {"status": "no_phase_method"}
-            
+
     async def _metabolism_pulse(self) -> Dict[str, Any]:
         """Check memory decay and publish events."""
         metabolism = self.subsystems["metabolism"]
-        
+
         # Calculate decay rate
         if hasattr(metabolism, 'calculate_decay_rate'):
             decay_rate = metabolism.calculate_decay_rate()
-            
+
             # Publish memory decay if significant
             if decay_rate > 0.1 and self.event_bus:
                 await self.event_bus.publish(
@@ -271,19 +271,19 @@ class UnifiedNervousSystemV21:
                     "metabolism_system",
                     priority=2
                 )
-                
+
             return {"decay_rate": decay_rate}
         else:
             return {"status": "no_decay_calculation"}
-            
+
     async def _resonance_pulse(self) -> Dict[str, Any]:
         """Check resonance and publish harmony events."""
         resonance = self.subsystems["resonance"]
-        
+
         # Get current harmony level
         if hasattr(resonance, 'get_harmony_level'):
             harmony_level = resonance.get_harmony_level()
-            
+
             # Publish resonance shift if significant
             if abs(harmony_level - 0.5) > 0.1 and self.event_bus:
                 await self.event_bus.publish(
@@ -292,7 +292,7 @@ class UnifiedNervousSystemV21:
                     "resonance_system",
                     priority=2
                 )
-                
+
             return {"harmony_level": harmony_level}
         else:
             return {"status": "no_harmony_calculation"}
