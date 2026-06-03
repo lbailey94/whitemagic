@@ -110,19 +110,19 @@ impl EdgeEngine {
         engine.add_rule(EdgeRule::new(
             "version",
             "version|what version",
-            "WhiteMagic version 21.0.0",
+            "WhiteMagic version 22.2.0",
             1.0,
         ));
         engine.add_rule(EdgeRule::new(
             "gardens",
             "garden|how many garden",
-            "WhiteMagic has 17 gardens: joy, love, beauty, truth, wisdom, mystery, play, wonder, connection, sangha, practice, presence, voice, dharma, courage, gratitude, patience",
+            "WhiteMagic has 28 gardens: courage, stillness, healing, sanctuary, love, wisdom, grief, humor, voice, sangha, beauty, adventure, joy, awe, gratitude, creation, presence, play, practice, reverence, dharma, patience, connection, mystery, protection, transformation, truth, metal",
             1.0
         ));
         engine.add_rule(EdgeRule::new(
             "tests",
             "test|how many test",
-            "WhiteMagic has 1,955 passing tests",
+            "WhiteMagic has 2,325 passing tests",
             0.95,
         ));
         engine.add_rule(EdgeRule::new(
@@ -335,8 +335,15 @@ pub fn wasm_ready() -> bool {
 /// Get WASM version
 #[wasm_bindgen]
 pub fn wasm_version() -> String {
-    "21.0.0".to_string()
+    "22.2.0".to_string()
 }
+
+// ── Re-exports from whitemagic-math (holographic 5D encoding) ───────────
+// These are compiled into the same WASM binary via the wasm feature flag.
+
+pub use whitemagic_math::holographic_encoder_5d::holographic_encode_single;
+pub use whitemagic_math::holographic_encoder_5d::holographic_encode_batch;
+pub use whitemagic_math::holographic_encoder_5d::Coordinate5D;
 
 #[cfg(test)]
 mod tests {
@@ -346,7 +353,7 @@ mod tests {
     fn test_basic_inference() {
         let mut engine = EdgeEngine::new();
         let result = engine.infer("What version?");
-        assert!(result.answer.contains("21.0.0"));
+        assert!(result.answer.contains("22.2.0"));
         assert!(!result.needs_cloud);
     }
 
@@ -406,5 +413,18 @@ mod tests {
         assert!(result.contains("0"));
         assert!(result.contains("2"));
         assert!(!result.contains("1"));
+    }
+
+    #[test]
+    fn test_holographic_encode() {
+        let mem = r#"{"id":"test-1","content":"algorithm and function","importance":0.8,"access_count":5,"age_days":30.0,"galactic_distance":0.2,"garden":"courage","tags":["rust","wasm"]}"#;
+        let result = holographic_encode_single(mem);
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.contains("\"x\""));
+        assert!(json.contains("\"y\""));
+        assert!(json.contains("\"z\""));
+        assert!(json.contains("\"w\""));
+        assert!(json.contains("\"v\""));
     }
 }

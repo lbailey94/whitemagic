@@ -6,7 +6,6 @@ import math
 import sqlite3
 from pathlib import Path
 
-
 import pytest
 
 from whitemagic.forecasting.brier import (
@@ -18,7 +17,6 @@ from whitemagic.forecasting.brier import (
     resolution,
 )
 from whitemagic.forecasting.temporal_db import TemporalForecastDB
-
 
 # ---------------------------------------------------------------------------
 # brier.py tests
@@ -188,9 +186,9 @@ class TestTemporalForecastDB:
         preds = tmp_db.all_predictions()
         assert preds[0]["status"] == "falsified"
 
-    def test_seed_validated_claims_inserts_15(self, tmp_db: TemporalForecastDB):
+    def test_seed_validated_claims_inserts_all(self, tmp_db: TemporalForecastDB):
         inserted = tmp_db.seed_validated_claims()
-        assert inserted == 15
+        assert inserted == 24  # 15 validated + 9 pending
 
     def test_seed_is_idempotent(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
@@ -200,17 +198,17 @@ class TestTemporalForecastDB:
     def test_summary_after_seed(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        assert s["total"] == 15
-        assert s["validated"] == 15
-        assert s["pending"] == 0
+        assert s["total"] == 24
+        assert s["validated"] == 21
+        assert s["pending"] == 2
         assert s["falsified"] == 0
-        assert s["total_points"] > 370  # known: 380+
+        assert s["total_points"] > 510  # known: 522+
         assert s["avg_lead_weeks"] > 20
 
     def test_summary_brier_score_after_seed(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        # All 15 are validated (outcome=1); all have confidence > 0.5
+        # All validated claims have outcome=1; all have confidence > 0.5
         # So BS should be < 0.25 (better than uninformed baseline)
         assert s["brier_score"] is not None
         assert s["brier_score"] < 0.25
@@ -234,10 +232,10 @@ class TestTemporalForecastDB:
         tmp_db.seed_validated_claims()
         all_preds = tmp_db.all_predictions()
         assert isinstance(all_preds, list)
-        assert len(all_preds) == 15
+        assert len(all_preds) == 24
 
     def test_total_points_matches_known_score(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        # Known from 2026-05-26 audit: 380+ points
-        assert s["total_points"] >= 370
+        # Known from 2026-05-29 validation burst: 522+ points
+        assert s["total_points"] >= 520

@@ -31,6 +31,7 @@ from pathlib import Path
 import click
 
 from whitemagic.forecasting.temporal_db import TemporalForecastDB
+from whitemagic.forecasting import tzpf
 
 
 def _db() -> TemporalForecastDB:
@@ -161,6 +162,46 @@ def json_dump(output: str | None) -> None:
         click.echo(f"Wrote {len(payload)} characters to {output}")
     else:
         click.echo(payload)
+
+
+@cli.command()
+@click.option("--actions-taken", type=int, default=None, help="Known count of actions taken on predictions.")
+def tzpf_cmd(actions_taken: int | None) -> None:
+    """Print Transition-Zone Prescience Framework (TZPF) scorecard."""
+    db = _db()
+    claims = db.export_claims()
+    scorecard = tzpf.compute_tzpf(claims, actions_taken=actions_taken)
+
+    click.echo("Transition-Zone Prescience Framework (TZPF)")
+    click.echo("=" * 50)
+    click.echo(f"  Claims total:      {scorecard['claims_total']}")
+    click.echo(f"  Validated:         {scorecard['claims_validated']}")
+    click.echo()
+
+    comp = scorecard["composite"]
+    click.echo("Composite Metrics")
+    click.echo("-" * 30)
+    click.echo(f"  Directional Foresight (DFI):   {comp['directional_prescience']:.0f}")
+    tar = comp.get("timeline_calibration")
+    click.echo(f"  Temporal Acceleration (TAR):   {tar:.2f}" if tar else "  Temporal Acceleration (TAR):   N/A")
+    click.echo(f"  Hyperstition (HC):             {comp['hyperstitional_potency']:.2f}")
+    sg = comp.get("confidence_shyness")
+    click.echo(f"  Shyness Gap (BCI):             {sg:+.3f}" if sg is not None else "  Shyness Gap (BCI):             N/A")
+    click.echo(f"  Partial Validation (PVS):      {comp['validation_completeness']:.2f}")
+    click.echo(f"  Narrative Resonance (NRS):     {comp['narrative_resonance']:.1f}")
+    click.echo(f"  Positioning (PI):              {comp['action_orientation']:.2f}  [{scorecard['metrics']['pi']['status']}]")
+    click.echo()
+
+    click.echo("DFI by Category")
+    click.echo("-" * 30)
+    for cat, data in scorecard["metrics"]["dfi"]["by_category"].items():
+        click.echo(f"  {cat:<20} raw={data['raw_points']:>6.0f}  w={data['weighted']:>7.0f}")
+
+    if comp["action_orientation"] is not None and comp["action_orientation"] < 0.5:
+        click.echo()
+        click.echo("⚠  LOW POSITIONING INDEX")
+        click.echo("   Actions taken / Actions implied is below 0.5.")
+        click.echo("   Consider filing the LLC, submitting grants, or publishing.")
 
 
 if __name__ == "__main__":

@@ -62,6 +62,25 @@ def handle_swarm_resolve(**kwargs: Any) -> dict[str, Any]:
     return cast("dict[str, Any]", get_swarm().resolve(topic, strategy=strat))
 
 
+def handle_swarm_assign_house(**kwargs: Any) -> dict[str, Any]:
+    """Assign an agent to a tricameral house."""
+    from whitemagic.agents.swarm import get_swarm
+    agent_id = kwargs.get("agent_id", "")
+    house = kwargs.get("house", "")
+    if not agent_id or not house:
+        return {"status": "error", "error": "agent_id and house are required"}
+    return cast("dict[str, Any]", get_swarm().assign_house(agent_id, house))
+
+
+def handle_swarm_prune(**kwargs: Any) -> dict[str, Any]:
+    """Prune stale plans and votes (Proof-of-Utility)."""
+    from whitemagic.agents.swarm import get_swarm
+    max_age = kwargs.get("max_age_seconds")
+    if max_age is not None:
+        max_age = float(max_age)
+    return cast("dict[str, Any]", get_swarm().prune_stale(max_age_seconds=max_age))
+
+
 def handle_swarm_plan(**kwargs: Any) -> dict[str, Any]:
     """Get a specific swarm plan by ID."""
     from whitemagic.agents.swarm import get_swarm

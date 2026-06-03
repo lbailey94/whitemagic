@@ -5,9 +5,12 @@ centralized reset mechanism for test isolation. Replaces manual conftest
 tracking of singleton module-level variables.
 """
 import functools
+import logging
 import threading
 from collections.abc import Callable
 from typing import Any, TypeVar
+
+logger = logging.getLogger(__name__)
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -86,8 +89,10 @@ def reset_all_singletons() -> None:
             if wrapper_fn is not None and hasattr(wrapper_fn, "_instance"):
                 try:
                     delattr(wrapper_fn, "_instance")
-                except Exception:
-                    pass
+                except AttributeError:
+                    pass  # Attribute already absent — harmless
+                except Exception as e:
+                    logger.debug(f"Unexpected error clearing singleton {wrapper_fn}: {e}")
 
             # 2. Clear the module-level variable
             if module_name and var_name:

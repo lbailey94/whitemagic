@@ -1,8 +1,10 @@
+> **⚠️ ARCHIVED / SUPERCEDED** — Findings merged into `docs/message_board/STRATEGIC_ROADMAP_V23.md` (Quality Gates, 2026-06-03). See `docs/message_board/ROADMAP_CONSOLIDATION_2026-06-03.md` for merge history.
+
 # WhiteMagic Code Quality Review & Improvement Plan
 
-**Original Date**: 2026-04-15  
-**Updated**: 2026-04-15 (post-execution)  
-**Version**: 22.0.0  
+**Original Date**: 2026-04-15
+**Updated**: 2026-04-15 (post-execution)
+**Version**: 22.0.0
 **Reviewer**: Internal AI-assisted audit
 
 ---

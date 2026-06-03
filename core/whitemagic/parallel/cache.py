@@ -7,8 +7,11 @@ Supports TTL, pattern-based invalidation, and distributed coordination.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -85,8 +88,8 @@ class DistributedCache:
                 value = self._redis_client.get(cache_key)
                 if value:
                     return json.loads(value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Redis cache get failed for {cache_key}: {e}")
 
         # Fallback to in-memory
         entry = self._cache.get(cache_key)
@@ -115,8 +118,8 @@ class DistributedCache:
             try:
                 self._redis_client.setex(cache_key, ttl, json.dumps(value))
                 return True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Redis cache set failed for {cache_key}: {e}")
 
         # Fallback to in-memory
         if len(self._cache) >= self.max_size:
@@ -133,8 +136,8 @@ class DistributedCache:
         if self._redis_client:
             try:
                 self._redis_client.delete(cache_key)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Redis cache delete failed for {cache_key}: {e}")
 
         self._cache.pop(cache_key, None)
         return True
@@ -156,8 +159,8 @@ class DistributedCache:
                     keys = self._redis_client.keys(self._make_key(pattern))
                     if keys:
                         return self._redis_client.delete(*keys)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Redis pattern clear failed for {pattern}: {e}")
 
             # In-memory pattern clear
             to_delete = [k for k in self._cache.keys() if pattern in k]
@@ -169,8 +172,8 @@ class DistributedCache:
         if self._redis_client:
             try:
                 self._redis_client.flushdb()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Redis flushdb failed: {e}")
 
         count = len(self._cache)
         self._cache.clear()

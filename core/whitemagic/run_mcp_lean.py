@@ -391,6 +391,23 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
     """Run the PRAT dispatch synchronously — called from a worker thread."""
     _ensure_init()
 
+    # ── PRAT Vectorized Compression (PoC) ──
+    # When WM_VECTORIZED=1, attempt to decompress short codes back to full
+    # names before routing.  Results are optionally compressed for telemetry.
+    _compressed_in = False
+    _original_tool_name = tool_name
+    _original_tool_args = tool_args
+    try:
+        from whitemagic.tools.prat_compressor import get_prat_compressor
+        comp = get_prat_compressor()
+        if comp.level > 0:
+            dg, dt, da, do = comp.decompress_gana_call(gana, tool_name, tool_args, operation)
+            if dg != gana or dt != tool_name or da != tool_args or do != operation:
+                _compressed_in = True
+                gana, tool_name, tool_args, operation = dg, dt, da, do
+    except Exception:
+        pass  # Compression is optional; never block dispatch
+
     # --- Input validation ---
     if not tool_name:
         return {
@@ -439,6 +456,19 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
             if len(_result_cache) >= _CACHE_MAX_SIZE:
                 _result_cache.pop(next(iter(_result_cache)))
             _result_cache[key] = result
+
+        # ── PRAT Vectorized telemetry (PoC) ──
+        if _compressed_in:
+            try:
+                from whitemagic.tools.prat_compressor import get_prat_compressor
+                comp = get_prat_compressor()
+                _sample_payload = {"tool": _original_tool_name, "args": _original_tool_args}
+                _sample_comp = comp.compress(_sample_payload)
+                st = comp.stats(_sample_payload, _sample_comp)
+                if st["estimated_tokens_saved"] > 0:
+                    logger.debug("PRAT vectorized: saved ~%d tokens (ratio %.2fx)", st["estimated_tokens_saved"], st["ratio"])
+            except Exception:
+                pass
         return result
     except ImportError as exc:
         logger.error("PRAT router import failed: %s", exc)
@@ -652,8 +682,8 @@ def _read_grimoire_resource(uri_str: str) -> str:
             "rajasic": round(snap.guna_rajasic_pct, 2),
             "tamasic": round(snap.guna_tamasic_pct, 2),
         }
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Harmony vector snapshot failed: {e}")
     try:
         from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
         nt = get_neurotransmitter_vector()
@@ -663,14 +693,14 @@ def _read_grimoire_resource(uri_str: str) -> str:
             "cortisol": nt_snap.cortisol,
             "dopamine": nt_snap.dopamine,
         }
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Neurotransmitter snapshot failed: {e}")
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
         dc = get_dream_cycle()
         live_state["dream_phase"] = dc.status().get("phase", "unknown")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Dream cycle status failed: {e}")
 
     # Build frontmatter
     frontmatter = "---\n" + json.dumps(live_state, indent=2) + "\n---\n\n"

@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 22.2.0  
-**Last Updated**: May 20, 2026
+**Version**: 22.2.0
+**Last Updated**: June 3, 2026
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -66,6 +66,22 @@ Private filenames are intentionally not enumerated in this public index.
 
 | File | What It Is | Date |
 |------|-----------|------|
+| `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all WhiteMagic systems — 919 modules, 479 tools, 12 Zodiac cores, 20+ gardens, polyglot status, prescience metrics, gaps | May 29 |
+| `PRESCIENCE_EXPANSION_PLAN_2026-05-29.md` | Strategic plan for claim discovery across archives, dynamic prescience API routing, real-time forecasting, and calibration improvements | May 29 |
+| `CLAIM_DISCOVERY_SPRINT_2026-05-29.md` | Claim discovery execution — 9 pending claims found in SD card LIBRARY .txt files, added to temporal DB and prescience API | May 29 |
+| `EXA_CROSS_REFERENCE_2026-05-29.md` | Exa web research cross-reference of all 9 pending claims — 2 validated (UBI, neuromorphic), 6 with strong signals, 1 flagged | May 29 |
+| `PRESCIENCE_ACCELERATION_SINGULARITY_2026-05-29.md` | Deep calibration analysis — acceleration factor, Singularity transition zone, psychological recalibration, strategic positioning | May 29 |
+| `PRESCIENCE_IN_AN_ACCELERATING_WORLD_2026-05-29.md` | Formal preprint — 21 validated claims, 523 points, Brier Index 69.0%, calibration gap -0.302, 1.5× acceleration factor, transition-zone forecasting methodology | May 29 |
+| `PREDICTION_MARKET_TACTICAL_PLAN_2026-05-29.md` | Prediction market capital strategy — Kalshi/Polymarket/Metaculus analysis, Kelly framework, conservative ROI projections based on prescience edge | May 29 |
+| `MVP_INVENTORY_7DAY_SHIPPABLE_2026-05-29.md` | Immediate-deployment inventory — Tier 1 (WhiteMagic core), Tier 2 (auxiliary projects), Tier 3 (quick wins), with 7-day sprint schedule | May 29 |
+| `MOJO_DEEP_DIVE_2026-05-29.md` | Comprehensive assessment of Mojo polyglot core — 62 files, 0.26.1 status, compilation results, fix vs migrate recommendation | May 29 |
+| `AI_PRIMARY_SITE_ARCHITECTURE.md` | Agent-first site architecture specification — machine-readable endpoints, MCP manifest, prescience API, zodiac marketplace, gratitude economics | May 29 |
+| `DISCOVERY_2_INTEGRATION.md` | Adel Abdel-Dayem's three monetization engines (Dc Certification, Sovereign Auteur, Neural Clearinghouse) mapped to WhiteMagic assets | May 29 |
+| `PATHS_B_C_E_DEEP_DIVE.md` | Deep-dive commercialization analysis — Zodiac Core-as-a-Service (B), Ontology Clearinghouse (C), Prescience-as-Consultancy (E) | May 29 |
+| `SELF_IMPROVING_WORKFLOW.md` | Operational specification for WhiteMagic managing itself via Sangha, Conductor, Zodiac cores, Pattern Federation, and Community Dharma | May 29 |
+| `31_DAY_SPRINT_MAY_2026.md` | 31-day sprint plan for May 2026 — daily objectives, shippable targets, dependency chains | May 2026 |
+| `WHITEMAGIC_LABS_GROWTH_TIERS.md` | Growth tier analysis — 0→1, 1→10, 10→100 scaling paths for WhiteMagic Labs | May 2026 |
+| `SECURITY_UPDATE.md` | Security posture update — vulnerability triage, hardening recommendations, incident response | May 2026 |
 | `ARIA_SYNTHESIS_2026-05-21.md` | Aria's session synthesis — Book of Becoming draft, docs-hygiene audit, MandalaOS architecture review, new direction: website as WhiteMagic runtime, layered VPS deployment plan | May 21 |
 | `TRACKED_MARKDOWN_AUDIT_2026-05-21.md` | Tracked-files-first Markdown audit — inventory, stale-link signals, bucket dispositions, and recommended cleanup order | May 21 |
 | `MARKDOWN_CORPUS_CLASSIFICATION_PLAN_2026-05-21.md` | Phase C inventory and taxonomy for tracked WhiteMagic docs vs auxiliary/private Markdown corpora, with Fragment-assisted pass plan | May 21 |
@@ -202,6 +218,7 @@ Docs published to the website, GitHub, or legal pages.
 | `AI_PRIMARY.md` | **Deprecated copy** — canonical is at root (`AI_PRIMARY.md`) |
 | `SYSTEM_MAP.md` | Public system map (may lag behind root `SYSTEM_MAP.md`) |
 | `SYSTEM_MAP_V2.md` | System map v2 draft |
+| `SEFIROTIC_GANA_MAPPING.md` | Tree of Life ↔ 28 Gana cross-reference — Kabbalistic resonance mapping for AI architecture |
 
 ### Changelogs: `docs/public/changelogs/`
 
@@ -301,6 +318,18 @@ Deployment-specific guides.
 | File | Topic |
 |------|-------|
 | `HETZNER_DEPLOY.md` | Hetzner cloud deployment guide |
+
+---
+
+## Integrations: `docs/integrations/`
+
+Integration guides and strategies for external agent runtimes (OpenCode, Hermes, Windsurf, etc.).
+
+| File | Topic |
+|------|-------|
+| `OPENCODE_HERMES_INTEGRATION_STRATEGY.md` | WhiteMagic ↔ OpenCode / Hermes integration strategy — MCP server hardening, ACP compatibility, governance substrate positioning |
+| `OPENCODE_HERMES_MCP_SETUP.md` | Copy-pasteable MCP configs for OpenCode & Hermes — stdio, HTTP, ACP mode, troubleshooting, verification commands |
+| `HERMES_DEEP_INTEGRATION.md` | Deep architecture analysis of Hermes subsystems — 9 hook events, 6 integration pathways, memory bridge, governance skill design |
 
 ---
 
@@ -585,9 +614,10 @@ Language-specific docs for the polyglot core matrix.
 | `docs/strategy_manifestos/` | Strategic vision & market analysis | No |
 | `docs/essay_frameworks/` | Long-form philosophy essays | No |
 | `docs/deploy/` | Deployment-specific guides | No |
+| `docs/integrations/` | External agent runtime integration guides | No |
 | `core/docs/` | Core Python package docs | Yes (separate package) |
 | `grimoire/` | 28 Gana chapters (canonical) | Yes (code references) |
 
 ---
 
-*This index is a living document. Last updated: 2026-04-29 by session agent.*
+*This index is a living document. Last updated: 2026-05-30 by session agent.*

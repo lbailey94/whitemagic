@@ -247,8 +247,8 @@ class SurpriseGate:
                     "nearest_memory_id": verdict.nearest_memory_id,
                 },
             ))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Resonance event emission failed: {e}")
 
     def get_stats(self) -> dict[str, Any]:
         with self._lock:

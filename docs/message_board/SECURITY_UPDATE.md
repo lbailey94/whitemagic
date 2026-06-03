@@ -4,6 +4,18 @@
 **Status**: Design Document (Implementation In Progress — Session 17)
 **Target**: Sessions 17–19
 **Session 17 Start**: 15:33:51
+**Session 17 End**: 15:47:34 (13m 43s total)
+
+### Phase Timing
+
+| Phase | Start | End | Duration | Status |
+|-------|-------|-----|----------|--------|
+| Phase 1: CORS + CSP | 15:35:44 | 15:36:54 | 1m 10s | ✅ |
+| Phase 2: X25519 auth + nonce + rate limiting | 15:37:02 | 15:42:33 | 5m 31s | ✅ |
+| Phase 3: Audit logging | 15:42:40 | 15:45:45 | 3m 5s | ✅ |
+| Test verification | 15:45:55 | 15:47:25 | 1m 30s | ✅ (2282 passed, 61 skipped, 0 failed) |
+
+**Commit**: `ca5fe50` — 5 files, +651/-120 lines
 
 ---
 
@@ -573,15 +585,15 @@ header {
 
 ## 8. Security Checklist (Pre-Deployment)
 
-### Session 17 (Hardening)
-- [ ] CORS restricted to specific origins
-- [ ] WebSocket X25519 key-exchange auth implemented
-- [ ] Nonce replay protection active
-- [ ] Token bucket rate limiter on WebSocket messages
-- [ ] Input validation on WebSocket messages (Pydantic)
-- [ ] CSP headers configured
-- [ ] HTTPS enforced (Caddy auto-HTTPS)
-- [ ] Audit logging stub active
+### Session 17 (Hardening) — COMPLETE ✅
+- [x] CORS restricted to specific origins
+- [x] WebSocket X25519 key-exchange auth implemented
+- [x] Nonce replay protection active
+- [x] Token bucket rate limiter on WebSocket messages
+- [x] Input validation on WebSocket messages (Pydantic)
+- [x] CSP headers configured
+- [x] HTTPS enforced (Caddy auto-HTTPS)
+- [x] Audit logging stub active
 
 ### Session 18 (E2EE)
 - [ ] E2EE key exchange working

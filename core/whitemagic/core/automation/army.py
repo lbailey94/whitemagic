@@ -6,7 +6,9 @@ and Codebase Census bottlenecks.
 
 import asyncio
 import logging
+import time
 from pathlib import Path
+from typing import Any
 
 from whitemagic.core.acceleration.polyglot_accelerator import get_accelerator
 from whitemagic.core.intelligence.self_model import get_self_model
@@ -21,10 +23,12 @@ class AutonomousArmyManager:
     def __init__(self):
         self.self_model = get_self_model()
         self.accelerator = get_accelerator()
-        self.active_deployments = []
+        self.active_deployments: list[dict[str, Any]] = []
         self._running = False
         self._census_path = PROJECT_ROOT / "scripts" / "codebase_census.py"
         self._deploy_script = PROJECT_ROOT / "scripts" / "deploy_grand_army.py"
+        self._prune_threshold_seconds: float = 3600.0  # 1 hour default
+        self._deployment_utility: dict[str, float] = {}  # deployment_id -> utility score
 
     async def start_patrol(self, interval_seconds: int = 300):
         """Start a background patrol loop to monitor system health and trigger deployments."""
@@ -36,6 +40,8 @@ class AutonomousArmyManager:
                 await self.run_census()
                 # Plan & Deploy
                 await self.evaluate_and_deploy()
+                # Ritual of Pruning: clean stale deployments
+                self.prune_stale_deployments()
             except Exception as e:
                 logger.error(f"Error in army patrol: {e}")
             await asyncio.sleep(interval_seconds)
@@ -100,7 +106,8 @@ class AutonomousArmyManager:
                 "pid": process.pid,
                 "army": army_type,
                 "objective": objective,
-                "start_time": asyncio.get_event_loop().time()
+                "start_time": asyncio.get_event_loop().time(),
+                "utility_score": 1.0,  # Initial utility
             })
 
             logger.info(f"✅ Deployment {deployment_id} launched.")
@@ -109,6 +116,48 @@ class AutonomousArmyManager:
         except Exception as e:
             logger.error(f"Failed to deploy army: {e}")
             return None
+
+    def prune_stale_deployments(self, max_age_seconds: float | None = None) -> dict[str, Any]:
+        """Proof-of-Utility pruning — terminate deployments older than threshold or with low utility.
+
+        Emits Gan Ying events so the Karma Ledger records why something was pruned.
+        """
+        threshold = max_age_seconds or self._prune_threshold_seconds
+        now = time.time()
+        pruned = []
+        kept = []
+
+        for dep in self.active_deployments:
+            age = now - dep.get("start_time", now)
+            utility = dep.get("utility_score", 0.0)
+            # Prune if too old OR utility dropped below threshold
+            if age > threshold or utility < 0.2:
+                pruned.append(dep)
+            else:
+                kept.append(dep)
+
+        self.active_deployments = kept
+
+        # Emit Gan Ying event for audit trail
+        if pruned:
+            try:
+                from whitemagic.tools.unified_api import _emit_gan_ying
+                _emit_gan_ying("ARMY_PRUNING", {
+                    "pruned_count": len(pruned),
+                    "kept_count": len(kept),
+                    "threshold_seconds": threshold,
+                    "pruned_ids": [d["id"] for d in pruned],
+                    "reason": "Proof-of-Utility: deployment exceeded max_age or utility fell below 0.2",
+                })
+            except Exception as e:
+                logger.debug(f"Gan Ying emit failed for army pruning: {e}")
+
+        return {
+            "status": "success",
+            "pruned": len(pruned),
+            "kept": len(kept),
+            "threshold_seconds": threshold,
+        }
 
 _manager = None
 

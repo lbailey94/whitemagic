@@ -25,8 +25,8 @@ def compute_simhash(text: str, bits: int = 64) -> int:
             lsh = _RustLSH(bits)
             res = lsh.hash_text(text)
             return int(res)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Rust SimHash failed, falling back to Python: {e}")
     return int(_py_simhash(text, bits))
 
 def find_near_duplicates(texts: list[str], threshold: int = 3) -> list[tuple[int, int]]:

@@ -225,7 +225,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
         economy = get_token_economy()
         try:
             budget_status = economy.get_budget_status()
-            return {"status": "success", **budget_status}
+            return {"status": "success", "budget": budget_status}
         except Exception as budget_err:
             logger.error(f"Error getting budget status: {budget_err}")
             return {
@@ -237,7 +237,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
             }
     except Exception as e:
         logger.error(f"Token economy initialization failed: {e}")
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error_code": "degraded", "error": str(e), "note": "Token economy subsystem unavailable"}
 
 
 # --- Grimoire ---
@@ -311,17 +311,14 @@ def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
     if operation == "status":
         return {"status": "success", "engine_stats": engine.get_stats()}
     if not engine.enabled:
-        return {"status": "error", "message": "Hologram engine not enabled (Rust backend missing)"}
+        return {"status": "error", "error_code": "degraded", "error": "Hologram engine not enabled (Rust backend missing)"}
     if operation == "snapshot":
-        spatial_index = getattr(engine, "spatial_index", None)
-        if spatial_index is None:
-            return {"status": "error", "message": "Spatial index not available"}
         try:
-            snapshot = spatial_index.get_snapshot()
-            points = [{"id": pid, "vector": list(vec)} for pid, vec in snapshot]
-            return {"status": "success", "count": len(points), "points": points}
+            stats = engine.memory_index.get_stats()
+            size = stats.get("size", 0)
+            return {"status": "success", "count": size, "stats": stats}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return {"status": "error", "error_code": "degraded", "error": str(e)}
     elif operation == "query":
         x = kwargs.get("x", 0.0)
         y = kwargs.get("y", 0.0)
@@ -332,7 +329,7 @@ def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
         results = engine.query_by_vector(vector, limit=limit)
         formatted = [{"id": pid, "distance": dist} for pid, dist in results]
         return {"status": "success", "query": vector, "results": formatted}
-    return {"status": "error", "message": f"Unknown operation: {operation}"}
+    return {"status": "error", "error_code": "invalid_params", "error": f"Unknown operation: {operation}"}
 
 
 # --- Memory aliases ---

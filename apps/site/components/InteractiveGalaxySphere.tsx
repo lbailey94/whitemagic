@@ -354,7 +354,12 @@ export function InteractiveGalaxySphere({
   const [edgeSource, setEdgeSource] = useState<string | null>(null);
   const [customEdges, setCustomEdges] = useState<GalaxyEdge[]>([]);
   const [relatedNodes, setRelatedNodes] = useState<Array<{ node: GalaxyNode; score: number }>>([]);
-  const [mode, setMode] = useState<"navigate" | "connect">("navigate");
+  const [mode, setMode] = useState<"navigate" | "connect" | "create">("navigate");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [userCreatedNodes, setUserCreatedNodes] = useState<GalaxyNode[]>([]);
+  const [createLabel, setCreateLabel] = useState<string>("");
+  const [createContent, setCreateContent] = useState<string>("");
+  const [createZone, setCreateZone] = useState<string>("active");
 
   const fetchData = useCallback(async () => {
     try {
@@ -436,10 +441,28 @@ export function InteractiveGalaxySphere({
     return [...data.edges, ...customEdges];
   }, [data, customEdges]);
 
-  const displayData = useMemo(() => {
+  const mergedData = useMemo(() => {
     if (!data) return null;
-    return { ...data, edges: allEdges };
-  }, [data, allEdges]);
+    const allNodes = [...data.nodes, ...userCreatedNodes];
+    return { ...data, nodes: allNodes, edges: allEdges, total: allNodes.length };
+  }, [data, allEdges, userCreatedNodes]);
+
+  const displayData = useMemo(() => {
+    if (!mergedData) return null;
+    const q = searchQuery.toLowerCase().trim();
+    const nodes = q
+      ? mergedData.nodes.filter(
+          (n) =>
+            n.label.toLowerCase().includes(q) ||
+            (n.content && n.content.toLowerCase().includes(q))
+        )
+      : mergedData.nodes;
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    const edges = mergedData.edges.filter(
+      (e) => nodeIds.has(e.source) && nodeIds.has(e.target)
+    );
+    return { ...mergedData, nodes, edges };
+  }, [mergedData, searchQuery]);
 
   return (
     <div className="flex flex-col h-full" style={{ height }}>
@@ -469,7 +492,20 @@ export function InteractiveGalaxySphere({
             >
               Connect
             </button>
+            <button
+              onClick={() => { setMode("create"); setSelectedNode(null); setEdgeSource(null); }}
+              className={`px-2 py-1 text-xs transition-colors ${mode === "create" ? "bg-green-600 text-white" : "text-gray-400 hover:text-white"}`}
+            >
+              Create
+            </button>
           </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search nodes..."
+            className="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 w-32 focus:w-48 transition-all focus:outline-none focus:border-purple-500"
+          />
           <select
             value={zoneFilter}
             onChange={(e) => setZoneFilter(e.target.value)}
@@ -550,6 +586,78 @@ export function InteractiveGalaxySphere({
             <button
               onClick={() => setSelectedNode(null)}
               className="text-gray-500 hover:text-white text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Memory creation panel */}
+      {mode === "create" && (
+        <div className="p-3 border-t border-green-500/20 bg-black/30">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 space-y-2">
+              <p className="text-sm font-medium text-green-400">Create New Memory</p>
+              <input
+                type="text"
+                value={createLabel}
+                onChange={(e) => setCreateLabel(e.target.value)}
+                placeholder="Memory label..."
+                className="w-full text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-green-500"
+              />
+              <textarea
+                value={createContent}
+                onChange={(e) => setCreateContent(e.target.value)}
+                placeholder="Content (optional)..."
+                rows={2}
+                className="w-full text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-green-500 resize-none"
+              />
+              <div className="flex items-center gap-2">
+                <select
+                  value={createZone}
+                  onChange={(e) => setCreateZone(e.target.value)}
+                  className="text-xs bg-gray-800 text-gray-300 border border-gray-700 rounded px-2 py-1"
+                >
+                  <option value="core">Core</option>
+                  <option value="active">Active</option>
+                  <option value="architecture">Architecture</option>
+                  <option value="research">Research</option>
+                  <option value="outer_rim">Outer Rim</option>
+                </select>
+                <button
+                  onClick={() => {
+                    if (!createLabel.trim()) return;
+                    const newNode: GalaxyNode = {
+                      id: `user-${Date.now()}`,
+                      label: createLabel.trim(),
+                      content: createContent.trim() || undefined,
+                      x: (Math.random() - 0.5) * 1.6,
+                      y: (Math.random() - 0.5) * 1.6,
+                      z: (Math.random() - 0.5) * 1.6,
+                      w: 0.5,
+                      v: 0.5,
+                      color: ZONE_COLORS[createZone],
+                      size: 2,
+                      zone: createZone,
+                      importance: 0.6,
+                      distance: 0.6,
+                      access_count: 0,
+                    };
+                    setUserCreatedNodes(prev => [...prev, newNode]);
+                    setCreateLabel("");
+                    setCreateContent("");
+                  }}
+                  disabled={!createLabel.trim()}
+                  className="px-3 py-1 text-xs bg-green-600/80 hover:bg-green-600 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add Memory
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setMode("navigate")}
+              className="text-gray-500 hover:text-white text-xs ml-2"
             >
               ✕
             </button>

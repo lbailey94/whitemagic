@@ -360,3 +360,72 @@ class TestCallToolIntegration:
         result = call_tool("vote.list")
         assert result["status"] == "success"
         assert result["tool"] == "vote.list"
+
+
+# ---------------------------------------------------------------------------
+# Karma Ledger Write-Path (karma_record)
+# ---------------------------------------------------------------------------
+
+class TestKarmaRecord:
+    """Test karma_record handler and its dispatch integration."""
+
+    def test_karma_record_creates_entry(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+        import whitemagic.config.paths as paths_mod
+        monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
+
+        from whitemagic.tools.handlers.dharma import handle_karma_record
+        result = handle_karma_record(
+            tool="test:write_file",
+            declared_safety="WRITE",
+            actual_writes=1,
+            success=True,
+            ops_class="",
+        )
+        assert result["status"] == "success"
+        assert "entry" in result
+        entry = result["entry"]
+        assert entry["tool"] == "test:write_file"
+        assert entry["declared_safety"] == "WRITE"
+        assert entry["actual_writes"] == 1
+        assert entry["success"] is True
+        assert entry["mismatch"] is False  # honest write
+        assert entry["debt_delta"] == 0.0
+
+    def test_karma_record_detects_mismatch(self, tmp_path, monkeypatch):
+        """Declared READ but actual_writes > 0 → debt."""
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+        import whitemagic.config.paths as paths_mod
+        monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
+
+        from whitemagic.tools.handlers.dharma import handle_karma_record
+        result = handle_karma_record(
+            tool="test:read_file",
+            declared_safety="READ",
+            actual_writes=1,
+            success=True,
+            ops_class="",
+        )
+        entry = result["entry"]
+        assert entry["mismatch"] is True
+        assert entry["debt_delta"] == 1.0
+
+    def test_karma_record_via_call_tool(self, tmp_path, monkeypatch):
+        """Verify dispatch table routing for karma_record."""
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+        import whitemagic.config.paths as paths_mod
+        monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
+
+        from whitemagic.tools.unified_api import call_tool
+        result = call_tool(
+            "karma_record",
+            tool="hermes:terminal",
+            declared_safety="DELETE",
+            actual_writes=0,
+            success=False,
+        )
+        assert result["status"] == "success"
+        assert result["tool"] == "karma_record"
+        assert "envelope_version" in result
+        entry = result["details"]["entry"]
+        assert entry["tool"] == "hermes:terminal"

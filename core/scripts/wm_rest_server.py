@@ -225,6 +225,13 @@ class SyncSession:
         self.session_key = session_key  # 32-byte HKDF-derived key
         self.rate_limiter = TokenBucket()
         self.connected_at = time.time()
+        # Presence state
+        self.presence_status: str = "active"
+        self.presence_since: float = time.time()
+        self.current_view: str | None = None
+        self.editing_node: str | None = None
+        self.cursor_band: tuple[int, int, int] | None = None  # Quantized to galactic band
+        self.incognito: bool = False
 
 
 class SyncMessage(BaseModel):
@@ -269,6 +276,45 @@ class SyncManager:
         if user_id in self.sessions and self.sessions[user_id]:
             return self.sessions[user_id][0].rate_limiter
         return None
+
+    def get_presence_list(self, exclude_user: str | None = None) -> list[dict]:
+        """Get presence info for all visible users."""
+        result = []
+        for uid, sessions in self.sessions.items():
+            if uid == exclude_user:
+                continue
+            # Use first session for presence (users may have multiple tabs)
+            session = sessions[0]
+            if session.incognito:
+                continue
+            # Coarse status: active if heartbeat < 30s, idle if < 5min, else away
+            elapsed = time.time() - session.presence_since
+            if session.presence_status == "active" and elapsed < 30:
+                status = "active"
+            elif elapsed < 300:
+                status = "idle"
+            else:
+                status = "away"
+            entry: dict[str, Any] = {
+                "user_id": uid,
+                "status": status,
+                "status_since": session.presence_since,
+            }
+            if session.current_view:
+                entry["current_view"] = session.current_view
+            if session.cursor_band:
+                entry["cursor_band"] = list(session.cursor_band)
+            result.append(entry)
+        return result
+
+    async def broadcast_presence(self, exclude_user: str | None = None):
+        """Broadcast presence list to all connected users."""
+        presence_list = self.get_presence_list(exclude_user)
+        await self.broadcast({
+            "type": "presence_update",
+            "users": presence_list,
+            "timestamp": datetime.now().isoformat(),
+        }, exclude_user=exclude_user)
 
     async def broadcast(self, message: dict, exclude_user: str | None = None):
         """Broadcast message to all connected users."""
@@ -336,6 +382,54 @@ def _derive_session_key(shared_secret: bytes) -> bytes:
         info=b"whitemagic-sync-v1",
     )
     return hkdf.derive(shared_secret)
+
+
+# ── E2EE: AES-GCM Encryption Helpers ─────────────────────────────────────
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+
+def e2ee_encrypt(plaintext: bytes, key: bytes, associated_data: bytes | None = None) -> dict:
+    """Encrypt plaintext with AES-256-GCM.
+
+    Args:
+        plaintext: Data to encrypt
+        key: 32-byte AES key
+        associated_data: Optional AAD (authenticated but not encrypted)
+
+    Returns:
+        dict with nonce (base64) and ciphertext (base64)
+    """
+    aesgcm = AESGCM(key)
+    nonce = secrets.token_bytes(12)  # 96-bit nonce for GCM
+    ct = aesgcm.encrypt(nonce, plaintext, associated_data)
+    return {
+        "nonce": _b64encode(nonce),
+        "ciphertext": _b64encode(ct),
+    }
+
+
+def e2ee_decrypt(nonce_b64: str, ciphertext_b64: str, key: bytes, associated_data: bytes | None = None) -> bytes:
+    """Decrypt AES-256-GCM ciphertext.
+
+    Raises cryptography.exceptions.InvalidTag if authentication fails.
+    """
+    aesgcm = AESGCM(key)
+    nonce = _b64decode(nonce_b64)
+    ciphertext = _b64decode(ciphertext_b64)
+    return aesgcm.decrypt(nonce, ciphertext, associated_data)
+
+
+def e2ee_encrypt_json(obj: dict, key: bytes) -> dict:
+    """Encrypt a JSON-serializable object."""
+    plaintext = json.dumps(obj, separators=(",", ":")).encode("utf-8")
+    return e2ee_encrypt(plaintext, key)
+
+
+def e2ee_decrypt_json(nonce_b64: str, ciphertext_b64: str, key: bytes) -> dict:
+    """Decrypt and parse a JSON object."""
+    plaintext = e2ee_decrypt(nonce_b64, ciphertext_b64, key)
+    return json.loads(plaintext.decode("utf-8"))
 
 
 # ── Audit Logger ─────────────────────────────────────────────────────────
@@ -1066,6 +1160,15 @@ async def sync_websocket(ws: WebSocket):
         sync_manager.add_session(user_id, ws, session_key)
         audit_logger.log("auth_success", user_id=user_id, details={"method": "x25519"})
 
+        # Send initial presence list to new user
+        await ws.send_json({
+            "type": "presence_list",
+            "users": sync_manager.get_presence_list(exclude_user=user_id),
+            "timestamp": datetime.now().isoformat(),
+        })
+        # Notify others about new user
+        await sync_manager.broadcast_presence(exclude_user=user_id)
+
         # ── Phase 2: Message Loop ─────────────────────────────────────
         while True:
             data = await ws.receive_json()
@@ -1096,11 +1199,43 @@ async def sync_websocket(ws: WebSocket):
             # Handle heartbeat
             if msg.type == "heartbeat":
                 sync_manager.merge_vector_clock(user_id, msg.vectorClock)
+                # Refresh presence status on heartbeat
+                if user_id in sync_manager.sessions and sync_manager.sessions[user_id]:
+                    session = sync_manager.sessions[user_id][0]
+                    session.presence_since = time.time()
                 await ws.send_json({
                     "type": "heartbeat",
                     "userId": "server",
                     "timestamp": datetime.now().isoformat(),
                     "vectorClock": sync_manager.vector_clocks.get(user_id, {}),
+                })
+                continue
+
+            # Handle presence update
+            if msg.type == "presence_update":
+                if user_id in sync_manager.sessions and sync_manager.sessions[user_id]:
+                    session = sync_manager.sessions[user_id][0]
+                    payload = msg.payload or {}
+                    if "status" in payload:
+                        session.presence_status = payload["status"]
+                        session.presence_since = time.time()
+                    if "current_view" in payload:
+                        session.current_view = payload["current_view"]
+                    if "editing_node" in payload:
+                        session.editing_node = payload["editing_node"]
+                    if "cursor_band" in payload:
+                        band = payload["cursor_band"]
+                        if isinstance(band, list) and len(band) == 3:
+                            session.cursor_band = (int(band[0]), int(band[1]), int(band[2]))
+                    if "incognito" in payload:
+                        session.incognito = payload["incognito"]
+                # Broadcast updated presence to everyone
+                await sync_manager.broadcast_presence(exclude_user=user_id)
+                # Send back full presence list to sender
+                await ws.send_json({
+                    "type": "presence_list",
+                    "users": sync_manager.get_presence_list(exclude_user=user_id),
+                    "timestamp": datetime.now().isoformat(),
                 })
                 continue
 

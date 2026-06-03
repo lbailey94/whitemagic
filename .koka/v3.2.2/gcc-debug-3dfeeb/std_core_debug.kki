@@ -1,0 +1,88 @@
+// Core debugging functions.
+module interface std/core/debug
+ 
+//------------------------------
+//#kki: import declarations
+ 
+import std/core/types = std/core/types = "";
+import std/core/unsafe = std/core/unsafe = "";
+import std/core/hnd = std/core/hnd = "";
+import std/core/string = std/core/string = "";
+import std/core/console = std/core/console = "";
+ 
+//------------------------------
+//#kki: external imports
+ 
+ 
+//------------------------------
+//#kki: fixity declarations
+ 
+ 
+//------------------------------
+//#kki: local imported aliases
+ 
+// Stateful functions can manipulate heap `:h` using allocations, reads and writes.
+local alias std/core/types/st[139,1,139,47]<(h :: H)> :: H -> E = <(std/core/types/read :: H -> X)<(h :: H)>,(std/core/types/write :: H -> X)<(h :: H)>,(std/core/types/alloc :: H -> X)<(h :: H)>> = 1;
+ 
+//------------------------------
+//#kki: type declarations
+ 
+ 
+//------------------------------
+//#kki: declarations
+ 
+// Compilation constant that is replaced with the current file's module name
+pub val file/kk-module[26,9,26,22] : std/core/types/string;
+// Compilation constant that is replaced with the current line number
+pub val file/kk-line[29,9,29,20] : std/core/types/string;
+// Compilation constant that is replaced with the current file name
+pub val file/kk-file[32,9,32,20] : std/core/types/string;
+pub fip fun file/kk-file-line[34,13,34,29] : (?kk-file : std/core/types/string, ?kk-line : std/core/types/string) -> std/core/types/string;
+fip fun xtrace[41,12,41,17] : (message : std/core/types/string) -> ();
+fip fun xtrace-any[46,12,46,21] : forall<a> (message : std/core/types/string, x : a) -> ();
+val trace-enabled[51,5,51,17] : (std/core/types/ref :: (H, V) -> V)<(std/core/types/global :: H),std/core/types/bool>;
+// Trace a message used for debug purposes.
+// The behavior is system dependent. On a browser and node it uses
+// `console.log`  by default.
+// Disabled if `notrace` is called.
+pub fip fun trace[57,13,57,17] : (message : std/core/types/string) -> ();
+pub fip fun trace-info[61,13,61,22] : (message : std/core/types/string, ?kk-file-line : std/core/types/string) -> ();
+// monadic lift
+fun @mlift-trace-show@10013[1,0,1,0] : forall<(_e :: E),(e1 :: E)> (?kk-file-line : std/core/types/string, @y-x10009 : std/core/types/string) -> (e1 :: E) ();
+pub fip fun trace-show[64,13,64,22] : forall<a,(e :: E)> (x : a, ?show : (a) -> (e :: E) std/core/types/string, ?kk-file-line : std/core/types/string) -> (e :: E) ();
+pub fip fun trace-any[67,13,67,21] : forall<a> (message : std/core/types/string, x : a) -> ();
+// Disable tracing completely.
+pub fun notrace[72,18,72,24] : () -> <(std/core/types/st :: H -> E)<(std/core/types/global :: H)>> ();
+fun unsafe-abort[76,17,76,28] : forall<a> (msg : std/core/types/string) -> a;
+pub fip fun impossible[80,22,80,31] : forall<a> (message : (std/core/types/@optional :: V -> V)<std/core/types/string>, ?kk-file-line : std/core/types/string) -> a;
+pub fip fun assert[83,13,83,18] : (message : std/core/types/string, condition : std/core/types/bool, ?kk-file-line : std/core/types/string) -> ();
+// Explicitly trigger a breakpoint
+pub fip fun breakpoint[88,16,88,25] : () -> <(std/core/types/ndet :: X)> ();
+ 
+//------------------------------
+//#kki: external declarations
+ 
+ 
+//------------------------------
+//#kki: inline definitions
+ 
+//.inline-section
+inline val file/kk-module // inline size: 0
+  = "";
+inline val file/kk-line // inline size: 0
+  = "";
+inline val file/kk-file // inline size: 0
+  = "";
+fip fun file/kk-file-line // inline size: 3
+  = fn(@implicit/kk-file: std/core/types/string, @implicit/kk-line: std/core/types/string){
+    std/core/types/(++)(@implicit/kk-file, (std/core/types/(++)("(", (std/core/types/(++)(@implicit/kk-line, ")")))));
+  };
+fip fun assert // inline size: 4
+  = fn(message: std/core/types/string, condition: std/core/types/bool, @implicit/kk-file-line: std/core/types/string){
+    match (condition) {
+      ((std/core/types/True() : std/core/types/bool ) as @pat: std/core/types/bool)
+         -> std/core/types/Unit;
+      ((@skip std/core/types/False() : std/core/types/bool ) as @pat@0: std/core/types/bool)
+         -> std/core/debug/unsafe-abort<()>((std/core/types/(++)(@implicit/kk-file-line, (std/core/types/(++)(": assertion failed: ", message)))));
+    };
+  };

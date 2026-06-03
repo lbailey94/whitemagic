@@ -105,30 +105,38 @@ def _validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
     # Signature verification (P0 security fix)
     signature = manifest.get("signature")
     if signature:
-        # If signature is provided, verify it
-        # For now, log a warning if signature verification fails
-        # Full implementation would use actual cryptographic verification
-        try:
-            import hmac
+        # If signature is provided, verify it using HMAC with a secret key.
+        # If no secret is configured (vault locked, env unset), we reject
+        # signed manifests outright rather than verifying with a public sentinel.
+        key = _get_forge_signing_key()
+        if key == b"\x00" * 32:
+            errors.append(
+                f"{path}: manifest is signed but no WM_VAULT_PASSPHRASE or vault key is set — "
+                "cannot verify signature. Unset the signature field to load unsigned."
+            )
+        else:
+            try:
+                import hmac
 
-            expected_sig = _compute_manifest_signature(manifest)
-            if not hmac.compare_digest(signature, expected_sig):
-                errors.append(f"{path}: signature verification failed - manifest may be tampered")
-        except (ImportError, AttributeError):
-            # hmac should always be available, but fail gracefully
-            logger.warning("Forge: signature verification unavailable for %s", path)
+                expected_sig = _compute_manifest_signature(manifest, key)
+                if not hmac.compare_digest(signature, expected_sig):
+                    errors.append(f"{path}: signature verification failed - manifest may be tampered")
+            except (ImportError, AttributeError):
+                logger.warning("Forge: signature verification unavailable for %s", path)
 
     return errors
 
 
-def _compute_manifest_signature(manifest: dict[str, Any]) -> str:
+def _compute_manifest_signature(manifest: dict[str, Any], key: bytes | None = None) -> str:
     """Compute an HMAC-SHA256 signature for a manifest.
 
     Uses a secret key derived from the WhiteMagic vault so that only holders
     of the vault passphrase can produce valid signatures.
 
-    Falls back to a clearly-marked placeholder if the vault is unavailable,
-    which will *never* match a real signature (so the manifest will be rejected).
+    If ``key`` is not provided, retrieves one from the vault/env.  If no key
+    is available the function still returns a deterministic value (using the
+    zero sentinel) so that callers can detect the no-key situation *before*
+    relying on the signature.
     """
     import hashlib
     import hmac
@@ -140,8 +148,9 @@ def _compute_manifest_signature(manifest: dict[str, Any]) -> str:
     manifest_str = json.dumps(manifest_copy, sort_keys=True, separators=(",", ":"))
     manifest_bytes = manifest_str.encode()
 
-    # Retrieve signing key from vault or env
-    key = _get_forge_signing_key()
+    # Retrieve signing key from vault or env if not provided
+    if key is None:
+        key = _get_forge_signing_key()
     return hmac.new(key, manifest_bytes, hashlib.sha256).hexdigest()
 
 

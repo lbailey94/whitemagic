@@ -104,4 +104,10 @@ DISPATCH_AGENTS: dict[str, Callable[..., dict[str, Any]]] = {
     "marketplace.my_listings": LazyHandler("marketplace", "handle_marketplace_my_listings"),
     "marketplace.remove": LazyHandler("marketplace", "handle_marketplace_remove"),
     "marketplace.status": LazyHandler("marketplace", "handle_marketplace_status"),
+
+    # --- God-Kit / CodeGenome ---
+    "codegenome.generate": LazyHandler("codegenome", "handle_codegenome_generate"),
+    "codegenome.list": LazyHandler("codegenome", "handle_codegenome_list"),
+    "codegenome.fork": LazyHandler("codegenome", "handle_codegenome_fork"),
+    "codegenome.status": LazyHandler("codegenome", "handle_codegenome_status"),
 }

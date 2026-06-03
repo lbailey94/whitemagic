@@ -44,8 +44,9 @@ CREATE TABLE IF NOT EXISTS predictions (
     claim           TEXT NOT NULL,
     source_date     TEXT NOT NULL,
     source_ref      TEXT NOT NULL DEFAULT '',
-    confidence      REAL NOT NULL DEFAULT 0.7,
-    category        TEXT NOT NULL DEFAULT 'general',
+    confidence           REAL NOT NULL DEFAULT 0.7,
+    behavioral_confidence REAL,
+    category             TEXT NOT NULL DEFAULT 'general',
     status          TEXT NOT NULL DEFAULT 'pending',
     validation_date TEXT,
     validation_ref  TEXT,
@@ -133,10 +134,10 @@ class TemporalForecastDB:
                 conn.execute(
                     """
                     INSERT INTO predictions
-                      (id, claim, source_date, source_ref, confidence, category,
+                      (id, claim, source_date, source_ref, confidence, behavioral_confidence, category,
                        status, validation_date, validation_ref, lead_weeks,
                        points, notes, created_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (
                         str(uuid.uuid4()),
@@ -144,6 +145,7 @@ class TemporalForecastDB:
                         claim["source_date"],
                         claim["source_ref"],
                         claim["confidence"],
+                        claim.get("behavioral_confidence"),
                         claim["category"],
                         claim["status"],
                         claim.get("validation_date"),

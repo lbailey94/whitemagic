@@ -671,8 +671,8 @@ class AdaptiveToolPortal:
                         # Best effort for unknown types
                         try:
                             cleaned_results.append(item.__dict__)
-                        except Exception:
-                            pass
+                        except AttributeError:
+                            pass  # Item has no __dict__ — skip silently
             return cleaned_results
         except Exception as e:
             logger.warning(f"Semantic search failed: {e}")

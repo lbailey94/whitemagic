@@ -42,6 +42,7 @@ class SanghaGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
+        GanYingMixin.__init__(self)
         self.community_members: list[Any] = []
         self.collective_insights: list[dict[str, Any]] = []
         init_listeners(self)

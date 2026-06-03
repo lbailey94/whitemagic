@@ -40,6 +40,7 @@ class ConsensusStrategy(str, Enum):
     UNANIMOUS = "unanimous"
     FIRST_WINS = "first_wins"
     WEIGHTED = "weighted"
+    TRICAMERAL = "tricameral"
 
 
 @dataclass
@@ -92,6 +93,7 @@ class Vote:
     value: Any
     confidence: float = 1.0
     timestamp: float = 0.0
+    house: str | None = None  # For TRICAMERAL: "older_brothers" | "younger_brothers" | "firekeeper"
 
 
 class AgentSwarm:
@@ -102,6 +104,8 @@ class AgentSwarm:
         self._plans: dict[str, SwarmPlan] = {}
         self._votes: dict[str, list[Vote]] = {}  # topic_id -> votes
         self._max_plans = 100
+        self._agent_houses: dict[str, str] = {}  # agent_id -> house assignment
+        self._prune_threshold_seconds: float = 3600.0  # 1 hour default
 
     def decompose(self, goal: str, hints: list[str] | None = None) -> SwarmPlan:
         """Decompose a goal into subtasks.
@@ -199,8 +203,8 @@ class AgentSwarm:
                                 "capabilities": list(agent.get("capabilities", [])),
                             }
                         )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Agent listing failed: {e}")
 
         assignments = []
         for task in plan.subtasks:
@@ -303,6 +307,9 @@ class AgentSwarm:
             return {"status": "success", "result": weighted_winner,
                     "strategy": strategy.value, "weight": weighted[weighted_winner]}
 
+        if strategy == ConsensusStrategy.TRICAMERAL:
+            return self._resolve_tricameral(topic_id, votes)
+
         # MAJORITY (default)
         counts: dict[str, int] = {}
         for v in votes:
@@ -311,6 +318,206 @@ class AgentSwarm:
         majority_winner = max(counts, key=lambda k: counts[k])
         return {"status": "success", "result": majority_winner,
                 "strategy": strategy.value, "count": counts[majority_winner], "total": len(votes)}
+
+    def _resolve_tricameral(self, topic_id: str, votes: list[Vote]) -> dict[str, Any]:
+        """Tricameral consensus — Iroquois-inspired two-house review + Sutra Firekeeper.
+
+        Older Brothers (Pragmatists): Review for security, profitability, viability.
+        Younger Brothers (Ethicists): Audit for ethics, cost, long-term consequences.
+        Firekeeper (Sutra Kernel): Executes only if both houses agree.
+
+        Blends MandalaOS Dharma Engine (ethical audit) and Sutra Kernel (dharma gating).
+        """
+        # Auto-assign houses if not already set
+        for v in votes:
+            if not v.house:
+                v.house = self._agent_houses.get(v.agent_id, "older_brothers")
+
+        older_votes = [v for v in votes if v.house == "older_brothers"]
+        younger_votes = [v for v in votes if v.house == "younger_brothers"]
+        firekeeper_votes = [v for v in votes if v.house == "firekeeper"]
+
+        if not older_votes or not younger_votes:
+            return {
+                "status": "error",
+                "error": "TRICAMERAL requires at least one Older Brothers and one Younger Brothers vote",
+                "older_count": len(older_votes),
+                "younger_count": len(younger_votes),
+            }
+
+        # Phase 1: Older Brothers resolve by weighted majority
+        older_weighted: dict[str, float] = {}
+        for v in older_votes:
+            key = str(v.value)
+            older_weighted[key] = older_weighted.get(key, 0) + v.confidence
+        older_winner = max(older_weighted, key=lambda k: older_weighted[k])
+        older_score = older_weighted[older_winner]
+
+        # Phase 2: Younger Brothers audit via Dharma Engine
+        # Evaluate the winning proposal for ethical alignment
+        dharma_ok = True
+        dharma_score = 1.0
+        dharma_reason = "No Dharma concerns."
+        try:
+            from whitemagic.dharma.rules import get_rules_engine
+            engine = get_rules_engine()
+            decision = engine.evaluate({
+                "tool": "swarm_consensus",
+                "description": f"Tricameral consensus on topic {topic_id}: value {older_winner}",
+                "safety": "READ",
+            })
+            dharma_score = decision.score
+            dharma_ok = decision.action.value != "block"
+            dharma_reason = decision.explain
+        except Exception as e:
+            logger.debug(f"Dharma engine evaluation failed for tricameral: {e}")
+
+        # Phase 3: Younger Brothers resolve their own weighted preference
+        younger_weighted: dict[str, float] = {}
+        for v in younger_votes:
+            key = str(v.value)
+            younger_weighted[key] = younger_weighted.get(key, 0) + v.confidence
+        younger_winner = max(younger_weighted, key=lambda k: younger_weighted[k])
+        younger_score = younger_weighted[younger_winner]
+
+        # Phase 4: Firekeeper (Sutra Kernel) — both houses must agree on the same value
+        # If they disagree, the Firekeeper blocks and requests reconciliation
+        firekeeper_verdict = "proceed"
+        firekeeper_reason = "Both houses agree."
+        if older_winner != younger_winner:
+            firekeeper_verdict = "block"
+            firekeeper_reason = (
+                f"House disagreement: Older Brothers chose '{older_winner}' "
+                f"(score {older_score:.2f}), Younger Brothers chose '{younger_winner}' "
+                f"(score {younger_score:.2f}). Reconciliation required."
+            )
+        elif not dharma_ok:
+            firekeeper_verdict = "block"
+            firekeeper_reason = f"Dharma audit failed: {dharma_reason}"
+        else:
+            # Optional: Sutra Kernel deep evaluation
+            try:
+                from whitemagic.core.bridge.sutra_bridge import get_sutra_kernel
+                sutra = get_sutra_kernel()
+                verdict = sutra.evaluate_action(
+                    action_type="swarm_consensus",
+                    intent_score=min(older_score, younger_score),
+                    karma_debt=0.0,
+                )
+                if verdict.startswith("Panic") or verdict.startswith("Intervene"):
+                    firekeeper_verdict = "block"
+                    firekeeper_reason = f"Sutra Kernel intervention: {verdict}"
+            except Exception as e:
+                logger.debug(f"Sutra Kernel evaluation failed for tricameral: {e}")
+
+        # Firekeeper override check
+        if firekeeper_votes:
+            fk_values = [str(v.value) for v in firekeeper_votes]
+            if all(v == "block" for v in fk_values):
+                firekeeper_verdict = "block"
+                firekeeper_reason = "Firekeeper explicitly blocked."
+            elif all(v == "proceed" for v in fk_values):
+                firekeeper_verdict = "proceed"
+                firekeeper_reason = "Firekeeper explicitly approved."
+
+        result = {
+            "status": "success" if firekeeper_verdict == "proceed" else "blocked",
+            "result": older_winner if firekeeper_verdict == "proceed" else None,
+            "strategy": "tricameral",
+            "older_winner": older_winner,
+            "older_score": older_score,
+            "younger_winner": younger_winner,
+            "younger_score": younger_score,
+            "dharma_score": dharma_score,
+            "dharma_reason": dharma_reason,
+            "firekeeper_verdict": firekeeper_verdict,
+            "firekeeper_reason": firekeeper_reason,
+            "older_count": len(older_votes),
+            "younger_count": len(younger_votes),
+            "firekeeper_count": len(firekeeper_votes),
+        }
+
+        # Emit Gan Ying event for audit trail
+        try:
+            from whitemagic.tools.unified_api import _emit_gan_ying
+            _emit_gan_ying("TRICAMERAL_CONSENSUS", {
+                "topic_id": topic_id,
+                "result": result["status"],
+                "older_winner": older_winner,
+                "younger_winner": younger_winner,
+                "firekeeper_verdict": firekeeper_verdict,
+            })
+        except Exception as e:
+            logger.debug(f"Gan Ying emit failed for tricameral: {e}")
+
+        return result
+
+    def assign_house(self, agent_id: str, house: str) -> dict[str, Any]:
+        """Assign an agent to a tricameral house.
+
+        Houses:
+          - older_brothers: pragmatic review (security, viability)
+          - younger_brothers: ethical audit (dharma, cost, consequences)
+          - firekeeper: final arbiter (optional override)
+        """
+        valid_houses = {"older_brothers", "younger_brothers", "firekeeper"}
+        if house not in valid_houses:
+            return {"status": "error", "error": f"Invalid house. Choose from {valid_houses}"}
+        with self._lock:
+            self._agent_houses[agent_id] = house
+        return {"status": "success", "agent_id": agent_id, "house": house}
+
+    def prune_stale(self, max_age_seconds: float | None = None) -> dict[str, Any]:
+        """Proof-of-Utility pruning — archive plans and votes older than threshold.
+
+        Emits Gan Ying events so the Karma Ledger records why something was pruned.
+        """
+        threshold = max_age_seconds or self._prune_threshold_seconds
+        now = time.time()
+        pruned_plans = 0
+        pruned_votes = 0
+        archived_plan_ids: list[str] = []
+
+        with self._lock:
+            # Prune stale plans
+            stale_plans = [
+                pid for pid, plan in self._plans.items()
+                if plan.completed_at and (now - plan.completed_at) > threshold
+            ]
+            for pid in stale_plans:
+                del self._plans[pid]
+                pruned_plans += 1
+                archived_plan_ids.append(pid)
+
+            # Prune stale vote topics
+            stale_topics = [
+                tid for tid, vote_list in self._votes.items()
+                if vote_list and (now - max(v.timestamp for v in vote_list)) > threshold
+            ]
+            for tid in stale_topics:
+                del self._votes[tid]
+                pruned_votes += 1
+
+        # Emit Gan Ying events for audit trail
+        if pruned_plans or pruned_votes:
+            try:
+                from whitemagic.tools.unified_api import _emit_gan_ying
+                _emit_gan_ying("RITUAL_OF_PRUNING", {
+                    "pruned_plans": pruned_plans,
+                    "pruned_vote_topics": pruned_votes,
+                    "archived_plan_ids": archived_plan_ids,
+                    "threshold_seconds": threshold,
+                    "reason": "Proof-of-Utility: entities exceeded max_age without contributing",
+                })
+            except Exception as e:
+                logger.debug(f"Gan Ying emit failed for pruning: {e}")
+
+        return {
+            "status": "success",
+            "pruned_plans": pruned_plans,
+            "pruned_vote_topics": pruned_votes,
+            "threshold_seconds": threshold,
+        }
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
         with self._lock:

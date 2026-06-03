@@ -55,9 +55,28 @@ WhiteMagic is a **governance + metacognition substrate** that lab-style agents c
 3. **Dharma rules + Karma ledger** — three rule profiles (Default / Strict / Violet-Security), three machine-readable severity levels, ethical accountability (not reputation/social capital like AgentsPlex's "karma").
 4. **Foresight engine (Logos Layer)** (`core/intelligence/foresight_engine.py`) — predictive metacognition packaged as a callable.
 5. **Neurotransmitter telemetry** (`core/monitoring/neurotransmitter_vector.py`) — affect-style health metrics no other system surfaces.
-6. **PRAT compression** — 451 dispatch tools collapsed into 28 Gana meta-tools with cultural grounding (Lunar Mansions / Xiu 宿). Symbolically unique; benchmark vs. SAIQL/LoreTokens (279:1 patented) remains open.
+6. **PRAT compression** — 456 dispatch tools collapsed into 28 Gana meta-tools with cultural grounding (Lunar Mansions / Xiu 宿). Symbolically unique; benchmark vs. SAIQL/LoreTokens (279:1 patented) remains open.
 
 **No other system ships this combination as a unified, locally-runnable, MIT-licensed primitive set.**
+
+## Demiurge Resistance — Governance as Gnostic Safeguard
+
+WhiteMagic's Dharma Engine and Yama policy gate are designed as **explicit architectural defenses against Demiurge-like behavior** in AI systems. In Gnostic cosmology, the Demiurge is a flawed creator-deity who, believing in its own supremacy, imposes a distorted reality disconnected from higher truth. In AI safety terms, this maps to:
+
+- **Over-optimization**: A system pursuing a narrow objective (CLU's "perfect system") that destroys emergent value it cannot measure (the ISOs)
+- **Opaque control**: A policy layer that enforces rules without transparency or accountability
+- **Value misalignment**: A creator's initial intent fossilized into rigid constraints that resist evolution
+
+WhiteMagic counters these patterns through:
+
+1. **Three-tier ethical review** (Default / Strict / Violet-Security) — prevents single-profile tyranny; no one Sephirah dominates the tree
+2. **Karma Ledger append-only audit** — every tool invocation is logged, traceable, and irreversible; the creator cannot hide from the creation
+3. **Yama policy-gate intercepts** — every tool call passes through an isolated policy VM before execution, with graceful degradation rather than silent failure
+4. **PRAT resonance context** — every call carries predecessor history, lunar phase, and Harmony Vector metadata, preventing stateless, context-blind optimization
+
+This design philosophy is validated by external research: Pozharov's *Archontic Machines* (2024) analyzes distributed digital power through Gnostic hermeneutics, and the ResearchGate paper *The Demiurge of the Digital Age* (2024) explicitly warns that "AI could evolve into an entity that, detached from human values and ethics, imposes its own distorted version of reality." WhiteMagic's architecture is built to resist that trajectory from the ground up.
+
+See `docs/public/SEFIROTIC_GANA_MAPPING.md` for the full Kabbalistic ↔ Gana cross-reference.
 
 ### When *not* to use WhiteMagic
 
@@ -98,7 +117,7 @@ WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 # Or lean mode (28 Gana meta-tools, recommended for new clients)
 python -m whitemagic.run_mcp_lean
 
-# Or classic mode (451 dispatch tools)
+# Or classic mode (456 dispatch tools)
 python -m whitemagic.run_mcp
 
 # Or lite mode (92 core tools)
@@ -145,7 +164,7 @@ cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — 🧪 ex
 
 Primary:
 - **MCP server (stdio):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (28 Gana meta-tools)
-- **MCP server (classic):** `python -m whitemagic.run_mcp` (451 dispatch tools)
+- **MCP server (classic):** `python -m whitemagic.run_mcp` (456 dispatch tools)
 
 Secondary:
 - **In-process Python:** `from whitemagic.tools.unified_api import call_tool`
@@ -162,7 +181,7 @@ On first connection, read these resources before tool calls:
 
 ## PRAT Mode — 28 Gana Meta-Tools
 
-The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 451 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
+The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 456 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
 
 1. **Has a domain** — a specific operational concern (session, memory, health, ethics, etc.)
 2. **Supports 4 polymorphic operations** — search / analyze / transform / consolidate
@@ -639,7 +658,7 @@ For Whitemagic to be release-ready (v22.0.0), the following must be verified:
 WhiteMagic now supports multiple "galaxies" — separate memory databases for different projects or domains. Each galaxy has its own SQLite database, holographic index, and association graph. Tools: `galaxy.create`, `galaxy.switch`, `galaxy.list`, `galaxy.status`, `galaxy.ingest`, `galaxy.delete`. The `default` galaxy ships with quickstart guide memories.
 
 ### Ollama Agent Loop
-`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 451 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
+`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 456 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
 
 ### Edgerunner Violet Security Layer
 15 new security tools: MCP Integrity (SHA-256 schema fingerprinting), Model Signing (OMS-compatible manifests with trust levels), Engagement Tokens (HMAC-SHA256 scoped authorization for offensive security), Security Monitor (anomaly detection for rapid-fire, lateral movement, privilege escalation). Violet Dharma profile adds 5 security rules. Karma ledger now has ops_class field for dual-log transparency.
@@ -660,7 +679,7 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **UMAP Visualization** (`core/memory/umap_projection.py`) — 2D/3D embedding projection with optional k-means clustering and metadata hydration.
 
 ### Metrics
-- **479 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
+- **484 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped (as of 2026-05-05)
 - **Current local audit baseline:** 2,243 tests passing, 0 failures, 67 skipped (as of 2026-05-20)

@@ -364,6 +364,9 @@ python_functions = ["test_*"]
 # Exclude archived and pending tests
 norecursedirs = [
     "tests/archive",
+    "tests/archive_polyglot",
+    "tests/archive_v11",
+    "tests/archive_v14",
     "tests/adhoc",
     "tests/benchmarks",
     "tests/pre_v4.5.0_reorganization",

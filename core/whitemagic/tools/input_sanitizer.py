@@ -66,10 +66,28 @@ _SHELL_INJECTION_PATTERNS: list[re.Pattern] = [
 
 # Tools exempt from content scanning (their args are expected to contain code/text)
 _CONTENT_SCAN_EXEMPT: set = {
-    "create_memory", "update_memory",  # Memory content can be anything
-    "scratchpad_create", "scratchpad_update",
-    "reasoning.bicameral",  # Query text is free-form
+    # Memory & narrative (arbitrary user/system content)
+    "create_memory",
+    "update_memory",
+    "scratchpad_create",
+    "scratchpad_update",
     "thought_clone",
+    # Governance & ethics (action descriptions may contain paths/commands)
+    "evaluate_ethics",
+    "check_boundaries",
+    "get_dharma_guidance",
+    "karma_record",
+    "karma_report",
+    # Introspection & reasoning (free-form queries)
+    "gnosis",
+    "reasoning.bicameral",
+    "corpus_callosum.debate",
+    # Web & research (search queries may contain shell-like syntax)
+    "web_search",
+    "web_fetch",
+    "research_topic",
+    # Prompt & template (renders arbitrary content)
+    "prompt.render",
 }
 
 

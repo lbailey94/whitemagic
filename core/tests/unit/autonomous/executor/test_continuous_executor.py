@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-# Skip this test module - async executor tests need coroutine fixes
-pytest.skip("Continuous executor tests need async/await fixes", allow_module_level=True)
-
-import pytest
+# NOTE: async executor tests were previously skipped; attempting to fix
+# pytest.skip("Continuous executor tests need async/await fixes", allow_module_level=True)
 from unittest.mock import AsyncMock, patch, MagicMock
 from whitemagic.autonomous.executor.continuous_executor import (
     ContinuousExecutor, ExecutorConfig, Objective, ExecutionResult
@@ -23,7 +21,7 @@ def executor(mock_config):
         # Mock what we need without importing
         with patch("whitemagic.autonomous.executor.continuous_executor.ContinuousExecutor.log"):
             ex = ContinuousExecutor(mock_config)
-            
+
             # Setup AsyncMocks on generator since it is awaited in self_direct
             ex.generator = MagicMock()
             class MockScan:
@@ -33,7 +31,7 @@ def executor(mock_config):
                 opportunities = []
             class MockGuidance:
                 primary_recommendation = "test"
-                
+
             ex.generator.scan_codebase = AsyncMock(return_value=MockScan())
             ex.generator.research_possibilities = AsyncMock(return_value=MockResearch())
             ex.generator.consult_grimoire = AsyncMock(return_value=MockGuidance())
@@ -70,11 +68,11 @@ def test_should_stop(executor):
 @pytest.mark.asyncio
 async def test_execute_objective_success(executor):
     obj = Objective(description="Test obj", id="obj1")
-    
+
     # Add a mock action to make execution succeed
     from whitemagic.autonomous.executor.continuous_executor import ShellCommandAction
     mock_action = ShellCommandAction(command="echo 'test'")
-    
+
     with patch.object(executor, 'parse_objective', return_value=[mock_action]):
         with patch.object(executor, 'run_command', new_callable=AsyncMock) as mock_run:
             with patch.object(executor.assessor, 'assess', new_callable=AsyncMock) as mock_assess:
@@ -84,9 +82,9 @@ async def test_execute_objective_success(executor):
                 mock_assess.return_value = Assessment(complete=True)
                 mock_run.return_value = "test output"
                 result = await executor.execute_objective(obj)
-            
+
             assert result.success is True
-            assert result.objective_id == "obj1" 
+            assert result.objective_id == "obj1"
 
 @pytest.mark.asyncio
 async def test_run_continuous_empty_queue(executor):
@@ -104,19 +102,19 @@ async def test_run_continuous_empty_queue(executor):
 async def test_run_continuous_batch_execution(executor):
     """Test the batch execution path of the continuous loop."""
     executor.limits.get_status.return_value = {}
-    
+
     # We want to loop once, run a batch of objectives, then stop
     obj1 = Objective(description="Test 1", id="obj1")
     obj2 = Objective(description="Test 2", id="obj2")
     executor.objectives = [obj1, obj2]
-    
+
     with patch.object(executor, 'execute_batch_async', new_callable=AsyncMock) as mock_batch:
         # Mock actual execute_next loop content
         with patch.object(executor, 'execute_next', new_callable=AsyncMock) as mock_exec_next:
             executor.limits.should_stop.side_effect = [(False, None), (True, "Stop for test")]
             await executor.run_continuous()
             mock_exec_next.assert_called()
-        
+
         # Actually call execute_batch_async to test it
         await executor.execute_batch_async([obj1, obj2])
         mock_batch.assert_called_once()
@@ -127,27 +125,27 @@ async def test_execute_batch_async(executor):
     """Test batch execution of multiple objectives concurrently."""
     obj1 = Objective(description="Obj 1", id="obj1")
     obj2 = Objective(description="Obj 2", id="obj2")
-    
+
     with patch.object(executor, 'execute_objective', new_callable=AsyncMock) as mock_exec:
         # Mock successful execution for both
         res1 = ExecutionResult(objective_id="obj1", success=True)
         res2 = ExecutionResult(objective_id="obj2", success=True)
-        
+
         # AsyncMock side_effect with multiple returns works per call
         mock_exec.side_effect = [res1, res2]
-        
+
         # We need to mock limits.should_stop so it doesn't break out of the batch loop early
         executor.limits.should_stop.return_value = (False, None)
-        
+
         await executor.execute_batch_async([obj1, obj2])
-        
+
         assert mock_exec.call_count == 2
 
 @pytest.mark.asyncio
 async def test_self_direct(executor):
     """Test the self-generation of objectives."""
     await executor.self_direct()
-    
+
     assert len(executor.objectives) == 1
     assert executor.objectives[0].id == "gen1"
     assert executor.strategy == {"focus": "testing", "goal": "Test everything"}
@@ -165,7 +163,7 @@ async def test_checkpoint(executor):
                 executor.governor = MagicMock()
                 executor.assessor = MagicMock()
                 executor.generator = MagicMock()
-                
+
                 await executor.checkpoint()
                 mock_file.assert_called_once()
                 pass

@@ -156,23 +156,32 @@ impl PyConstellationDetector {
         if members.is_empty() {
             return Vec::new();
         }
-        
-        let first = self.points.get(&members[0]).unwrap();
+
+        let first = match self.points.get(&members[0]) {
+            Some(p) => p,
+            None => return Vec::new(),
+        };
         let dim = first.len();
         let mut centroid = vec![0.0; dim];
-        
+        let mut found = 0usize;
+
         for member in members {
             if let Some(coords) = self.points.get(member) {
+                found += 1;
                 for (i, &val) in coords.iter().enumerate() {
                     centroid[i] += val;
                 }
             }
         }
-        
-        for val in &mut centroid {
-            *val /= members.len() as f64;
+
+        if found == 0 {
+            return Vec::new();
         }
-        
+        let count = found as f64;
+        for val in &mut centroid {
+            *val /= count;
+        }
+
         centroid
     }
 

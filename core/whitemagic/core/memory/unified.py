@@ -19,6 +19,7 @@ if 'whitemagic.core.intelligence.agentic.emergence_engine' not in sys.modules:
     sys.modules['whitemagic.core.intelligence.agentic.emergence_engine'] = MagicMock()
 
 import os
+import sqlite3
 import hashlib
 from whitemagic.config.paths import DB_PATH, MEMORY_DIR
 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
@@ -173,8 +174,8 @@ class UnifiedMemory:
                     self.backend.store(existing, content_hash=content_hash)
                     logger.debug(f"Content hash dedup: reinforced {existing_id} instead of creating duplicate")
                     return existing
-        except Exception:
-            pass  # Dedup check failed — proceed normally
+        except (sqlite3.Error, AttributeError, TypeError) as _e:
+            logger.debug(f"Dedup check failed: {_e}")  # Proceed normally
 
         # v14.0: Surprise-gated ingestion
         surprise_verdict = None
@@ -202,16 +203,16 @@ class UnifiedMemory:
                                 self.backend.store(existing)
                                 logger.debug(f"Surprise gate: reinforced {target_id} instead of creating duplicate")
                                 return existing
-                        except Exception:
-                            pass  # Fall through to normal create
+                        except (sqlite3.Error, AttributeError, TypeError) as _e:
+                            logger.debug(f"Surprise gate reinforcement failed: {_e}")  # Fall through
 
                 elif surprise_verdict.action == SurpriseAction.CREATE_BOOSTED:
                     importance = min(1.0, importance + 0.15)
                     metadata["surprise_boosted"] = True
                     metadata["surprise_score"] = round(surprise_verdict.surprise_score, 3)
 
-            except Exception:
-                pass  # Surprise gate unavailable — proceed normally
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Surprise gate unavailable: {_e}")  # Proceed normally
 
         # Generate ID
         content_str = str(content)[:1000]
@@ -249,10 +250,10 @@ class UnifiedMemory:
                     if embedding:
                         try:
                             engine.cache_embedding(memory.id, embedding)
-                        except Exception as e:
-                            logger.debug(f"Embedding cache failed for {memory.id}: {e}")  # Embedding unavailable — skip silently
-            except Exception:
-                pass  # Embedding unavailable — skip silently
+                        except (sqlite3.Error, AttributeError, TypeError) as _e:
+                            logger.debug(f"Embedding cache failed for {memory.id}: {_e}")  # Skip silently
+            except (ImportError, ModuleNotFoundError) as _e:
+                logger.debug(f"Embedding engine unavailable: {_e}")  # Skip silently
 
         # v15.2: Auto-extract entities and relations into knowledge graph
         # v16: Use LightNER for fast pattern-based extraction, fall back to LLM
@@ -275,10 +276,10 @@ class UnifiedMemory:
                         )
                         extractor = get_entity_extractor()
                         extractor.extract_and_store(memory.id, content_for_extraction)
-                    except Exception as e:
-                        logger.debug(f"Entity extraction failed for {memory.id}: {e}")  # LLM extraction unavailable
-            except Exception:
-                pass  # Entity extraction unavailable — skip silently
+                    except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                        logger.debug(f"Entity LLM extraction failed for {memory.id}: {_e}")
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Entity extraction unavailable: {_e}")  # Skip silently
 
         return memory
 
@@ -293,8 +294,8 @@ class UnifiedMemory:
                 memory.galactic_distance = new_distance
                 try:
                     self.backend.update_galactic_distance(memory_id, new_distance)
-                except Exception as e:
-                    logger.debug(f"Galactic distance update failed for {memory_id}: {e}")  # Don't fail recall if distance update fails
+                except (sqlite3.Error, AttributeError, TypeError) as _e:
+                    logger.debug(f"Galactic distance update failed for {memory_id}: {_e}")  # Don't fail recall
         return memory
 
     def search(self, query: str | None = None, tags: set[str] | None = None,
@@ -312,8 +313,8 @@ class UnifiedMemory:
                 )
                 detector = get_constellation_detector()
                 detector.annotate_memories(results, backend=self.backend)
-            except Exception:
-                pass
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Constellation annotation failed: {_e}")
 
         # Emit search event for Gan Ying integration
         event_type = _get_gan_ying_event_type()
@@ -332,8 +333,8 @@ class UnifiedMemory:
                         "timestamp": datetime.now().isoformat(),
                     },
                 )
-            except Exception:
-                pass  # Don't fail search if event emission fails
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Gan Ying event emission failed: {_e}")  # Don't fail search
 
         return cast(list[Memory], results)
 
@@ -385,12 +386,12 @@ class UnifiedMemory:
                                         "timestamp": datetime.now().isoformat(),
                                     },
                                 )
-                            except Exception:
-                                pass
+                            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                                logger.debug(f"Gan Ying pattern detection failed: {_e}")
 
                         return results
-                except Exception as e:
-                    logger.info(f"⚠️ Rust batch search failed: {e}, falling back to FTS")
+                except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                    logger.info(f"⚠️ Rust batch search failed: {_e}, falling back to FTS")
 
             # Fallback to single-pair similarity if batch is not available but fast_similarity is
             elif rs and hasattr(rs, "fast_similarity"):
@@ -406,8 +407,8 @@ class UnifiedMemory:
                     scored_results.sort(key=lambda x: x.metadata.get("similarity_score", 0.0), reverse=True)
                     results = scored_results[:limit]
                     return results
-                except Exception as e:
-                    logger.info(f"⚠️ Rust fast_similarity failed: {e}, falling back to FTS")
+                except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                    logger.info(f"⚠️ Rust fast_similarity failed: {_e}, falling back to FTS")
 
         # Fallback to standard FTS search with optional Rust pipeline re-ranking
         results = self.search(query=query, memory_type=memory_type, limit=limit * 3)
@@ -423,14 +424,14 @@ class UnifiedMemory:
                         c = self.backend.get_coords(mem.id)
                         if c:
                             coords = list(c)
-                    except Exception:
-                        pass
+                    except (sqlite3.Error, AttributeError, TypeError) as _e:
+                        logger.debug(f"Coords lookup failed: {_e}")
                     age_days = 0.0
                     if mem.created_at:
                         try:
                             age_days = max(0.0, (datetime.now() - mem.created_at).total_seconds() / 86400.0)
-                        except Exception:
-                            pass
+                        except (TypeError, AttributeError) as _e:
+                            logger.debug(f"Age calculation failed: {_e}")
                     candidates.append({  # type: ignore[arg-type]
                         "id": mem.id,
                         "score": mem.metadata.get("similarity_score", 0.5),
@@ -464,8 +465,8 @@ class UnifiedMemory:
                             reranked.append(mem)
                     if reranked:
                         return reranked[:limit]
-            except Exception:
-                pass
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Retrieval pipeline failed: {_e}")
 
         return results[:limit]
 
@@ -528,8 +529,8 @@ class UnifiedMemory:
                             if mid in mem_map:
                                 lexical_results.append(mem_map[mid])
                                 all_memories[mid] = mem_map[mid]
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+            logger.debug(f"BM25 search failed: {_e}")
 
         if not lexical_results:
             lexical_results = self.backend.search(
@@ -560,8 +561,8 @@ class UnifiedMemory:
                                 recalled.metadata["storage_tier"] = "cold"
                             all_memories[mid] = recalled
                     semantic_results.append(hit)
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+            logger.debug(f"Semantic search failed: {_e}")
 
         for rank, hit in enumerate(semantic_results):
             mid = hit["memory_id"]
@@ -583,8 +584,8 @@ class UnifiedMemory:
                             all_memories[mid] = recalled
                     spatial_results.append(mid)
                     rrf_scores[mid] += spatial_weight / (rrf_k + rank + 1)
-            except Exception:
-                pass
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Holographic query failed: {_e}")
 
         # --- Fuse and rank ---
         if not rrf_scores:
@@ -602,8 +603,8 @@ class UnifiedMemory:
                 closest = engine.closest_constellation(query, max_results=1)
                 if closest and closest[0]["similarity"] >= 0.25:
                     query_constellation_name = closest[0]["name"]
-        except Exception:
-            pass
+        except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+            logger.debug(f"Constellation lookup failed: {_e}")
 
         if query_constellation_name:
             for mid in rrf_scores:
@@ -627,8 +628,8 @@ class UnifiedMemory:
                             )
                             # Different constellation → small diversity bonus
                             rrf_scores[mid] += diversity_bonus * (1.0 - strongest_confidence)
-                except Exception:
-                    pass
+                except (sqlite3.Error, AttributeError, TypeError) as _e:
+                    logger.debug(f"Constellation membership failed: {_e}")
 
         ranked_ids = sorted(rrf_scores.keys(), key=lambda mid: rrf_scores[mid], reverse=True)
         results = []
@@ -657,8 +658,8 @@ class UnifiedMemory:
                 )
                 detector = get_constellation_detector()
                 detector.annotate_memories(results, backend=self.backend)
-            except Exception:
-                pass
+            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                logger.debug(f"Constellation annotation failed: {_e}")
 
         return results
 
@@ -753,8 +754,8 @@ class UnifiedMemory:
                     sol_id = refiner.refine_memory(mem)
                     if sol_id:
                         logger.info(f"✨ Memory {mem.id} refined into spark {sol_id}.")
-                except Exception:
-                    pass
+                except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+                    logger.debug(f"Refining fire failed: {_e}")
 
             # 3. Rotate to galactic edge (NEVER delete)
             self.backend.archive_to_edge(mem.id, galactic_distance=0.95)
@@ -810,8 +811,8 @@ class UnifiedMemory:
                     "tags": sorted(m.tags) if m.tags else [],
                 })
             return arrow_encode_memories(_json.dumps(docs))
-        except Exception as e:
-            logger.debug(f"Arrow export failed: {e}")
+        except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+            logger.debug(f"Arrow export failed: {_e}")
             return None
 
     def arrow_import(self, ipc_bytes: bytes) -> int:
@@ -861,8 +862,8 @@ class UnifiedMemory:
                 count += 1
             logger.info(f"Arrow IPC import: {count} memories imported")
             return count
-        except Exception as e:
-            logger.debug(f"Arrow import failed: {e}")
+        except (ImportError, ModuleNotFoundError, AttributeError, ValueError) as _e:
+            logger.debug(f"Arrow import failed: {_e}")
             return 0
 
     def save(self, memory_type: MemoryType | None = None) -> None:

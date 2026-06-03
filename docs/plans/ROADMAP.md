@@ -1,3 +1,5 @@
+> **⚠️ SUPERCEDED** — Site track moved to `apps/site/PHASE_ROADMAP.md`; platform track moved to `docs/message_board/STRATEGIC_ROADMAP_V23.md`. See `docs/message_board/ROADMAP_CONSOLIDATION_2026-06-03.md` for merge history.
+
 # Roadmap — WhiteMagic Labs + Platform
 
 **Created**: 2026-04-19

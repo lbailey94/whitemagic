@@ -113,6 +113,7 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Additional PSR classes
     m.add_class::<embeddings::vector_search::PyVectorIndex>()?;
+    m.add_class::<math::spatial_index_5d::SpatialIndex5D>()?;
     m.add_class::<pipeline::reasoning_engine::PyReasoningEngine>()?;
     m.add_class::<pipeline::reasoning_engine::Fact>()?;
     m.add_class::<pipeline::reasoning_engine::Rule>()?;
@@ -314,6 +315,7 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 #[cfg(feature = "wasm")]
 pub use wasm::*;
 
+#[cfg(feature = "python")]
 pub mod monte_carlo;
 
 // Zig FFI module for polyglot bridge support (Python only)

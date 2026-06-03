@@ -192,8 +192,8 @@ class GalaxyManager:
                 stats = um.backend.get_stats()
                 d["memory_count"] = stats.get("total_memories", 0)
                 info.memory_count = d["memory_count"]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Galaxy stats lookup failed for {name}: {e}")
             result.append(d)
         return result
 

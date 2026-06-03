@@ -37,6 +37,7 @@ DISPATCH_SECURITY: dict[str, Callable[..., dict[str, Any]]] = {
     "get_ethical_score": LazyHandler("dharma", "handle_get_ethical_score"),
     "get_dharma_guidance": LazyHandler("dharma", "handle_get_dharma_guidance"),
     "karma_report": LazyHandler("dharma", "handle_karma_report"),
+    "karma_record": LazyHandler("dharma", "handle_karma_record"),
     "karmic_trace": LazyHandler("dharma", "handle_karmic_trace"),
     "karma.verify_chain": LazyHandler("dharma", "handle_karma_verify_chain"),
     "karma.anchor": LazyHandler("dharma", "handle_karma_anchor"),

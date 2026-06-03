@@ -617,6 +617,15 @@ TOOL_TO_GANA: dict[str, str] = {
     "galactic.stats":              "gana_abundance",
     # Guideline Evolution → Star (governance)
     "guideline.evolve":            "gana_star",
+
+    # ── v22: CodeGenome / God-Kit (Chariot — Code Archaeology & Generation) ──
+    "codegenome.generate":         "gana_chariot",
+    "codegenome.list":             "gana_chariot",
+    "codegenome.fork":             "gana_chariot",
+    "codegenome.status":           "gana_chariot",
+
+    # ── v22: Karma Record (Hairy Head — Detail & Debug) ──
+    "karma_record":                "gana_hairy_head",
 }
 
 # Reverse: Gana → list of nested tools

@@ -11,10 +11,13 @@ Usage:
         ...
 """
 
+import logging
 import re
 from typing import Any
 
 from whitemagic.utils.rust_helper import is_rust_available
+
+logger = logging.getLogger(__name__)
 
 
 class FastRegexPattern:
@@ -30,8 +33,8 @@ class FastRegexPattern:
                 import whitemagic_rs as rs
                 if hasattr(rs, "Regex"):
                     self._rust_pattern = rs.Regex(pattern)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Rust regex init failed for {pattern!r}: {e}")
 
     def search(self, text: str) -> re.Match | None:
         """Search for pattern in text."""
@@ -40,8 +43,8 @@ class FastRegexPattern:
                 m = self._rust_pattern.search(text)
                 if m:
                     return re.Match(m)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Rust regex search failed for {self.pattern!r}: {e}")
         return self._py_pattern.search(text)
 
     def match(self, text: str) -> re.Match | None:
@@ -53,8 +56,8 @@ class FastRegexPattern:
         if self._rust_pattern is not None:
             try:
                 return self._rust_pattern.findall(text)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Rust regex findall failed for {self.pattern!r}: {e}")
         return self._py_pattern.findall(text)
 
     def finditer(self, text: str):

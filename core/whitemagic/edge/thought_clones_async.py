@@ -8,6 +8,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from typing import Any
 
 from ..core.async_layer import batch_process, gather_with_concurrency
@@ -43,6 +44,18 @@ class AsyncThoughtPath:
     duration_ms: float = field(default=0)
     metadata: dict[str, Any] = field(default_factory=dict)
 
+class CloneTier(str, Enum):
+    """Ancient Chinese military-inspired capability/cost tiers.
+
+    Xianfeng (先锋): Vanguard — fast, cheap, lightweight front-line probes.
+    Wei Wuzu (魏武卒): Martial Troops — professional heavy infantry, main force.
+    Huben (虎贲): Tiger Runners — king's personal elite guard, held in reserve.
+    """
+    XIANFENG = "xianfeng"
+    WEI_WUZU = "wei_wuzu"
+    HUBEN = "huben"
+
+
 @dataclass
 class CloneConfig:
     """Configuration for clone army."""
@@ -52,6 +65,7 @@ class CloneConfig:
     timeout_seconds: float = 30.0
     min_confidence: float = 0.5
     diversity_factor: int = 8  # Number of base strategies to cycle through
+    default_tier: CloneTier = CloneTier.XIANFENG  # Default tier for tiered exploration
 
 class AsyncThoughtCloneArmy:
     """Deploy thousands of async thought clones for parallel exploration.
@@ -74,6 +88,118 @@ class AsyncThoughtCloneArmy:
             "avg_confidence": 0.0,
             "deployment_time_ms": 0,
         }
+
+    async def parallel_explore_tiered(
+        self,
+        prompt: str,
+        num_clones: int | None = None,
+        *,
+        use_tokio: bool = True,
+        tier: CloneTier | None = None,
+    ) -> AsyncThoughtPath:
+        """Tiered exploration — Ancient Chinese three-tier model for cost-aware clone deployment.
+
+        Xianfeng (先锋) (default): Vanguard — fast, cheap clones for initial reconnaissance.
+        Wei Wuzu (魏武卒): Martial Troops — mid-tier clones for complex logic and refinement.
+        Huben (虎贲): Tiger Runners — heavy models held in reserve for critical moments.
+
+        The tier affects strategy generation and simulated confidence baselines.
+        """
+        active_tier = tier or self.config.default_tier
+
+        # Tier-aware strategy generation
+        if active_tier == CloneTier.XIANFENG:
+            # Fast, diverse, lightweight strategies
+            base_strategies = [
+                "quick_analytical", "surface_scan", "pattern_match",
+                "heuristic_guess", "fast_filter", "shallow_search",
+            ]
+            confidence_floor = 0.3
+            cost_estimate = "low"
+        elif active_tier == CloneTier.WEI_WUZU:
+            # Balanced depth and speed
+            base_strategies = [
+                "analytical", "systematic", "pragmatic", "creative",
+                "skeptical", "deep_dive", "cross_reference",
+            ]
+            confidence_floor = 0.5
+            cost_estimate = "medium"
+        else:  # HUBEN
+            # Maximum reasoning, used sparingly
+            base_strategies = [
+                "deep_analytical", "first_principles", "comprehensive_review",
+                "adversarial_stress_test", "formal_verification", "meta_synthesis",
+            ]
+            confidence_floor = 0.7
+            cost_estimate = "high"
+
+        start_time = datetime.now()
+        clones_to_deploy = min(num_clones or self.config.max_clones, self.config.max_clones)
+
+        # Generate tier-aware strategies
+        strategies = self._generate_strategies(clones_to_deploy, base_pool=base_strategies)
+
+        # Launch clones
+        async def safe_clone(strategy: str, clone_id: int) -> Any:
+            try:
+                return await self._clone_think(prompt, strategy, clone_id, tier_hint=active_tier.value)
+            except Exception as e:
+                logger.error(f"Clone {clone_id} failed: {e}")
+                return None
+
+        tasks = [safe_clone(strategy, i) for i, strategy in enumerate(strategies)]
+        paths = await gather_with_concurrency(
+            *tasks,
+            max_concurrent=self.config.max_concurrent_api_calls,
+        )
+
+        valid_paths = [p for p in paths if isinstance(p, AsyncThoughtPath) and p.confidence >= confidence_floor]
+        failed_paths = len(paths) - len(valid_paths)
+
+        # Update stats
+        async with self._stats_lock:
+            deployment_time = (datetime.now() - start_time).total_seconds() * 1000
+            prev_success = self._stats["successful_paths"]
+            prev_conf_sum = self._stats["avg_confidence"] * prev_success
+            new_conf_sum = sum(p.confidence for p in valid_paths)
+            total_success = prev_success + len(valid_paths)
+
+            self._stats.update({
+                "total_clones_deployed": self._stats["total_clones_deployed"] + len(paths),
+                "successful_paths": total_success,
+                "failed_paths": self._stats["failed_paths"] + failed_paths,
+                "deployment_time_ms": self._stats["deployment_time_ms"] + deployment_time,
+                "total_tokens": self._stats["total_tokens"] + sum(p.tokens for p in valid_paths),
+                "avg_confidence": (prev_conf_sum + new_conf_sum) / max(1, total_success),
+            })
+
+        if valid_paths:
+            best_path = max(valid_paths, key=lambda p: p.confidence)
+            logger.info(
+                f"Tiered best path [{active_tier.value}]: {best_path.strategy} "
+                f"(confidence: {best_path.confidence:.2f}, cost: {cost_estimate})"
+            )
+            return best_path
+
+        # Fallback: if no valid paths and we're not at Huben, escalate
+        if active_tier != CloneTier.HUBEN:
+            next_tier = CloneTier.WEI_WUZU if active_tier == CloneTier.XIANFENG else CloneTier.HUBEN
+            logger.warning(
+                f"No valid paths at {active_tier.value} tier. Escalating to {next_tier.value}."
+            )
+            return await self.parallel_explore_tiered(
+                prompt, num_clones=num_clones, use_tokio=use_tokio, tier=next_tier
+            )
+
+        logger.warning("No valid paths found at HUBEN tier, returning fallback")
+        return AsyncThoughtPath(
+            strategy="fallback",
+            content=f"No valid strategies found for: {prompt}",
+            confidence=0.0,
+            tokens=0,
+            clone_id=-1,
+            metadata={"tier": active_tier.value, "cost_estimate": cost_estimate},
+        )
 
     async def parallel_explore(
         self, prompt: str, num_clones: int | None = None, *, use_tokio: bool = True,
@@ -203,6 +329,7 @@ class AsyncThoughtCloneArmy:
         prompt: str,
         strategy: str,
         clone_id: int,
+        tier_hint: str = "xianfeng",
     ) -> AsyncThoughtPath:
         """Single clone's thought process.
 
@@ -220,10 +347,15 @@ class AsyncThoughtCloneArmy:
                 content = self._generate_content(prompt, strategy, clone_id)
 
                 # Calculate confidence based on strategy and random factors
-                confidence = self._calculate_confidence(strategy)
+                confidence = self._calculate_confidence(strategy, tier_hint=tier_hint)
 
-                # Calculate tokens (rough estimate)
-                tokens = len(content.split()) * random.randint(3, 7)
+                # Calculate tokens (rough estimate, tiered)
+                if tier_hint == "xianfeng":
+                    tokens = len(content.split()) * random.randint(2, 4)
+                elif tier_hint == "wei_wuzu":
+                    tokens = len(content.split()) * random.randint(3, 6)
+                else:  # huben
+                    tokens = len(content.split()) * random.randint(5, 9)
 
                 duration = (datetime.now() - start_time).total_seconds() * 1000
 
@@ -254,9 +386,14 @@ class AsyncThoughtCloneArmy:
                     clone_id=clone_id,
                 )
 
-    def _generate_strategies(self, count: int) -> list[str]:
-        """Generate diverse strategies for clones."""
-        base_strategies = [
+    def _generate_strategies(self, count: int, base_pool: list[str] | None = None) -> list[str]:
+        """Generate diverse strategies for clones.
+
+        Args:
+            count: Number of strategies to generate
+            base_pool: Optional override for the base strategy pool (used by tiered mode)
+        """
+        base_strategies = base_pool or [
             "analytical", "creative", "systematic", "intuitive",
             "skeptical", "optimistic", "pragmatic", "theoretical",
             "experimental", "minimalist", "comprehensive", "focused",
@@ -306,8 +443,8 @@ class AsyncThoughtCloneArmy:
 
         return template + " " + " ".join(random.sample(insights, 2))
 
-    def _calculate_confidence(self, strategy: str) -> float:
-        """Calculate confidence based on strategy and random factors."""
+    def _calculate_confidence(self, strategy: str, tier_hint: str = "hastati") -> float:
+        """Calculate confidence based on strategy, tier, and random factors."""
         # Base confidence by strategy type
         base_confidence = {
             "analytical": 0.85,
@@ -323,9 +460,6 @@ class AsyncThoughtCloneArmy:
         strategy_type = strategy.split("_")[-1]
         base = base_confidence.get(strategy_type, 0.75)
 
-        # Add random variation
-        variation = random.gauss(0, 0.1)
-
         # Apply modifier effects
         if "deep_" in strategy:
             base += 0.05
@@ -334,8 +468,130 @@ class AsyncThoughtCloneArmy:
         elif "critical_" in strategy:
             base += 0.03
 
+        # Tier-based confidence floor adjustment
+        tier_bonus = {"xianfeng": -0.05, "wei_wuzu": 0.0, "huben": 0.08}
+        base += tier_bonus.get(tier_hint, 0.0)
+
+        # Add random variation (huben have tighter variance = more reliable)
+        variance = {"xianfeng": 0.15, "wei_wuzu": 0.10, "huben": 0.05}
+        variation = random.gauss(0, variance.get(tier_hint, 0.1))
+
         # Clamp to valid range
         return max(0.0, min(1.0, base + variation))
+
+    async def vibe_code_explore(
+        self,
+        prompt: str,
+        num_clones: int | None = None,
+        *,
+        use_tokio: bool = True,
+    ) -> AsyncThoughtPath:
+        """God-Kit tiered code generation using GeneseedVault.
+
+        Three-phase deployment:
+        Phase 1 (Xianfeng): Fast vibe parsing → template match
+        Phase 2 (Wei Wuzu): Template refinement → fork & customize
+        Phase 3 (Huben): Production validation → comprehensive output
+        """
+        from whitemagic.codegenome.vault import get_geneseed_vault
+        vault = get_geneseed_vault()
+
+        # Phase 1: Xianfeng — fast intent extraction
+        xianfeng_result = await self.parallel_explore_tiered(
+            f"Parse vibe prompt into code template query: {prompt}",
+            num_clones=num_clones or 100,
+            use_tokio=use_tokio,
+            tier=CloneTier.XIANFENG,
+        )
+
+        if xianfeng_result.confidence < 0.3:
+            logger.warning("Vibe parsing failed at Xianfeng tier, escalating")
+            return await self.parallel_explore_tiered(
+                prompt, num_clones=num_clones, use_tokio=use_tokio, tier=CloneTier.WEI_WUZU,
+            )
+
+        # Extract template info from Xianfeng result
+        vault_result = vault.vibe_render(prompt)
+        if vault_result.get("status") != "success":
+            logger.warning("Vault render failed: %s", vault_result.get("error_code"))
+            return xianfeng_result
+
+        template_name = vault_result["template_name"]
+        base_tier = vault_result["tier"]
+        variables = vault_result.get("variables", {})
+        base_code = vault_result["code"]
+
+        # Phase 2: Wei Wuzu — template refinement
+        wei_wuzu_prompt = (
+            f"Refine this {template_name} code with variables {variables}:\n"
+            f"{base_code}\n\n"
+            f"Add proper typing, docstrings, and edge-case handling."
+        )
+        wei_wuzu_result = await self.parallel_explore_tiered(
+            wei_wuzu_prompt,
+            num_clones=num_clones or 50 if num_clones else 50,
+            use_tokio=use_tokio,
+            tier=CloneTier.WEI_WUZU,
+        )
+
+        if wei_wuzu_result.confidence < 0.5:
+            # Return what we have from vault with Xianfeng metadata
+            return AsyncThoughtPath(
+                strategy=f"vibe_code_{template_name}_xianfeng_only",
+                content=base_code,
+                confidence=xianfeng_result.confidence,
+                tokens=len(base_code.split()),
+                clone_id=-1,
+                metadata={
+                    "tier": base_tier,
+                    "template": template_name,
+                    "variables": variables,
+                    "phases_completed": 1,
+                },
+            )
+
+        refined_code = wei_wuzu_result.content
+
+        # Phase 3: Huben — production validation
+        huben_prompt = (
+            f"Validate and harden this {template_name} for production:\n"
+            f"{refined_code}\n\n"
+            f"Ensure: error handling, logging, type safety, and Dharma compliance."
+        )
+        huben_result = await self.parallel_explore_tiered(
+            huben_prompt,
+            num_clones=num_clones or 20 if num_clones else 20,
+            use_tokio=use_tokio,
+            tier=CloneTier.HUBEN,
+        )
+
+        if huben_result.confidence >= 0.7:
+            final_code = huben_result.content
+            final_confidence = huben_result.confidence
+            final_tier = "huben"
+            phases = 3
+        else:
+            final_code = refined_code
+            final_confidence = wei_wuzu_result.confidence
+            final_tier = "wei_wuzu"
+            phases = 2
+
+        return AsyncThoughtPath(
+            strategy=f"vibe_code_{template_name}_{final_tier}",
+            content=final_code,
+            confidence=final_confidence,
+            tokens=len(final_code.split()),
+            clone_id=-1,
+            metadata={
+                "tier": final_tier,
+                "template": template_name,
+                "variables": variables,
+                "phases_completed": phases,
+                "xianfeng_confidence": xianfeng_result.confidence,
+                "wei_wuzu_confidence": wei_wuzu_result.confidence,
+                "huben_confidence": huben_result.confidence if phases == 3 else 0.0,
+            },
+        )
 
     def get_stats(self) -> dict[str, Any]:
         """Get deployment statistics."""
@@ -517,6 +773,32 @@ async def diverse_explore(
         results.append(result)
 
     return results
+
+
+async def god_kit_generate(
+    prompt: str,
+    num_clones: int | None = None,
+) -> dict[str, Any]:
+    """Standalone God-Kit code generation entry point.
+
+    Args:
+        prompt: Natural language code request (e.g., "I need a FastAPI endpoint for items")
+        num_clones: Clones per tier (default: 100/50/20 for Xianfeng/Wei Wuzu/Huben)
+
+    Returns:
+        Dict with generated code, metadata, and tier progression
+    """
+    army = AsyncThoughtCloneArmy()
+    path = await army.vibe_code_explore(prompt, num_clones=num_clones)
+
+    return {
+        "status": "success" if path.confidence > 0.0 else "error",
+        "code": path.content,
+        "confidence": path.confidence,
+        "strategy": path.strategy,
+        "tokens": path.tokens,
+        "metadata": path.metadata,
+    }
 
 
 async def benchmark_performance(max_clones: int = 16000) -> dict[str, float]:

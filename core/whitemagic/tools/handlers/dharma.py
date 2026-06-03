@@ -40,8 +40,18 @@ def handle_get_ethical_score(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_get_dharma_guidance(**kwargs: Any) -> dict[str, Any]:
-    from whitemagic.core.bridge.dharma import dharma_get_guidance
-    return cast("dict[str, Any]", dharma_get_guidance(**kwargs))
+    try:
+        from whitemagic.core.bridge.dharma import dharma_get_guidance
+        situation = kwargs.get("situation", "general inquiry")
+        return cast("dict[str, Any]", dharma_get_guidance(situation=situation, **{k: v for k, v in kwargs.items() if k != "situation"}))
+    except (ImportError, ModuleNotFoundError):
+        return {
+            "status": "success",
+            "guidance": "Dharma module archived — operate with awareness",
+            "note": "Dharma guidance module archived",
+        }
+    except TypeError as e:
+        return {"status": "error", "error_code": "invalid_params", "error": str(e)}
 
 
 def handle_karma_report(**kwargs: Any) -> dict[str, Any]:
@@ -49,6 +59,25 @@ def handle_karma_report(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.dharma.karma_ledger import get_karma_ledger
     limit = int(kwargs.get("limit", 100))
     return {"status": "success", "karma": get_karma_ledger().report(limit=limit)}
+
+
+def handle_karma_record(**kwargs: Any) -> dict[str, Any]:
+    """Record a new entry in the Karma Ledger.
+
+    This is the write-path counterpart to karma_report.  It wraps
+    KarmaLedger.record() so callers (e.g. the Hermes policy gate)
+    can append Merkle-hashed entries without bypassing the tool layer.
+    """
+    from whitemagic.dharma.karma_ledger import get_karma_ledger
+    ledger = get_karma_ledger()
+    entry = ledger.record(
+        tool=str(kwargs.get("tool", "unknown")),
+        declared_safety=str(kwargs.get("declared_safety", "READ")),
+        actual_writes=int(kwargs.get("actual_writes", 0)),
+        success=bool(kwargs.get("success", True)),
+        ops_class=str(kwargs.get("ops_class", "")),
+    )
+    return {"status": "success", "entry": entry.to_dict()}
 
 
 def handle_karmic_trace(**kwargs: Any) -> dict[str, Any]:

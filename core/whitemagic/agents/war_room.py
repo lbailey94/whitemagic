@@ -704,8 +704,8 @@ class WarRoom:
             if snap.energy < 0.4:
                 result["energy_override"] = "water"
                 result["recommendation"] = "Low energy detected. Favor reflection over action."
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Harmony vector read failed: {e}")
 
         return result
 

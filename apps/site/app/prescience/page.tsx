@@ -3,11 +3,16 @@ import { PrescienceScore } from "@/components/PrescienceScore";
 import { ClaimsList } from "@/components/ClaimsList";
 import { PendingList } from "@/components/PendingList";
 import { BrierScoreSection } from "@/components/BrierScoreSection";
+import {
+  PRESCIENCE_METHODLOGY_NOTE,
+  STATED_BRIER_INDEX,
+  BEHAVIORAL_BRIER_INDEX,
+} from "@/lib/data/prescience";
 
 export const metadata = {
   title: "Prescience Audit — WhiteMagic Labs",
   description:
-    "15 validated claims. 380+ prescience points. Brier Index 70.9%. A complete, independently verifiable forecasting track record with source evidence.",
+    `15 validated claims. 380+ prescience points. Stated Brier Index ${STATED_BRIER_INDEX}%; behavioral recalibration ${BEHAVIORAL_BRIER_INDEX}%. A complete, independently verifiable forecasting track record with source evidence.`,
 };
 
 export default function PresciencePage() {
@@ -79,6 +84,14 @@ export default function PresciencePage() {
               probability and binary outcome. Brier Index = (1 − √BS) × 100% rescales this to an intuitive
               0–100% metric used by ForecastBench. A calibrated forecaster with a mix of hits and misses will
               produce a more informative decomposition than a 100% hit rate.
+            </p>
+            <p>
+              <strong className="text-ink">Behavioral recalibration.</strong> A May 2026 archive deep dive
+              analyzed 317 conversations for explicit probability language. The predictor rarely stated
+              probabilities; instead, designs were presented as measurements or completed architectures.
+              Post-hoc behavioral confidence estimates are systematically higher (stated Brier Index
+              {STATED_BRIER_INDEX}% vs. behavioral {BEHAVIORAL_BRIER_INDEX}%). Both scores are published for
+              transparency.
             </p>
             <p>
               <strong className="text-ink">Cross-domain synthesis.</strong> The structural advantage is not

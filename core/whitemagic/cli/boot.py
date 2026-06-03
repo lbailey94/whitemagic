@@ -1,4 +1,7 @@
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 # Import Rich for beautiful CLI output
 try:
@@ -155,8 +158,10 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
             if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() in {"1", "true", "yes", "on"}:
                 infer_fallback_group.add_command(infer_local_query)
                 infer_fallback_group.add_command(infer_local_status)
-        except Exception:
-            pass
+        except ImportError:
+            pass  # Optional local inference commands not available
+        except Exception as e:
+            logger.debug(f"Unexpected error loading local inference commands: {e}")
     else:
         try:
             if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() in {"1", "true", "yes", "on"}:
@@ -166,8 +171,10 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
                 )
                 main_group.commands["infer"].add_command(infer_local_query)
                 main_group.commands["infer"].add_command(infer_local_status)
-        except Exception:
-            pass
+        except ImportError:
+            pass  # Optional local inference commands not available
+        except Exception as e:
+            logger.debug(f"Unexpected error loading local inference commands: {e}")
 
     # 4. Hardware
     try:

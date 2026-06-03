@@ -285,8 +285,8 @@ def mw_circuit_breaker(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
                 breaker.record_success()
             elif status_val == "error":
                 breaker.record_failure()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Circuit breaker status recording failed: %s", exc)
 
     return result
 

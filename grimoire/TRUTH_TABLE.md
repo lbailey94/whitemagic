@@ -58,7 +58,7 @@ If any document, registry, or code file disagrees with this table, **this table 
 
 | Ch | Gana (Chinese) | Garden | Element | Real Tools (Dispatch Table) | Notes |
 |----|---------------|--------|---------|---------------------------|-------|
-| 15 | **Straddling Legs** (奎 Kui) | `awe` | Metal | `evaluate_ethics`, `check_boundaries`, `verify_consent`, `harmony_vector`, `get_dharma_guidance` | Ethical balance, equilibrium |
+| 15 | **Straddling Legs** (奎 Kui) | `awe` | Metal | `evaluate_ethics`, `check_boundaries`, `verify_consent`, `harmony_vector`, `get_dharma_guidance`, `karma_record`, `karma_report` | Ethical balance, equilibrium |
 | 16 | **Mound** (婁 Lou) | `gratitude` | Earth | `view_hologram`, `track_metric`, `get_metrics_summary`, `record_yin_yang_activity`, `cache.flush` | Accumulation, caching, harvest |
 | 17 | **Stomach** (胃 Wei) | `creation` | Earth | `pipeline`, `task.distribute`, `task.status`, `task.route_smart`, `task.complete` | Digestion, resource management |
 | 18 | **Hairy Head** (昴 Mao) | `presence` | Metal | `salience.spotlight`, `anomaly`, `otel`, `karma_report`, `karmic_trace`, `dharma_rules` | Detail, debug, salience |

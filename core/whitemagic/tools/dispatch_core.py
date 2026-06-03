@@ -30,7 +30,7 @@ WRITE_TOOLS: set[str] = {
     "garden_activate", "garden_update", "garden_delete",
     "garden_list_files", "garden_list_functions",
     # Dharma/Karma mutations
-    "karma.anchor", "set_dharma_profile",
+    "karma_record", "karma.anchor", "set_dharma_profile",
     # Configuration mutations
     "sandbox.set_limits", "sangha_lock",
 }

@@ -60,7 +60,7 @@ class TestMiscHandlers(unittest.TestCase):
             mock_eng_fn.return_value = mock_eng
             result = handle_view_hologram(operation="nonexistent")
             self.assertEqual(result["status"], "error")
-            self.assertIn("nonexistent", result["message"])
+            self.assertIn("nonexistent", result["error"])
 
     @patch('whitemagic.core.intelligence.hologram.engine.get_hologram_engine')
     def test_view_hologram_status(self, mock_eng_fn):

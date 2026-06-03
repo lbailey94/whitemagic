@@ -300,8 +300,8 @@ class RetentionEngine:
             try:
                 from whitemagic.core.memory.unified import get_unified_memory
                 backend = get_unified_memory().backend
-            except Exception:
-                pass
+            except ImportError as e:
+                logger.debug(f"Unified memory unavailable for persistence: {e}")
 
         report = SweepReport()
         for mem in memories:

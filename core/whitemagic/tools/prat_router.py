@@ -31,6 +31,10 @@ from whitemagic.tools.prat_mappings import (
     get_tools_for_gana,
     try_koka_handler,
 )
+from whitemagic.tools.vectorized import (
+    VectorizedDispatcher,
+    is_vectorized_mode,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +157,10 @@ def route_prat_call(gana_name: str, tool: str | None = None,
 
     If `tool` is specified, delegates to call_tool(tool, **args).
     Otherwise, falls back to the Gana's native polymorphic operation.
+
+    When ``WM_VECTORIZED=1``, ``tool`` may be a compact glyph string that
+    is transparently decoded before dispatch.  The public response still
+    carries English; an optional ``_vectorized`` field holds the glyph form.
     """
     from whitemagic.tools.prat_resonance import (
         _GANA_META,
@@ -160,6 +168,19 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         record_resonance,
     )
     from whitemagic.tools.unified_api import call_tool
+
+    # ── Vectorized mode: decode glyph tool names ──
+    _vd: VectorizedDispatcher | None = None
+    _vectorized_meta: dict[str, Any] | None = None
+    if is_vectorized_mode() and tool:
+        _vd = VectorizedDispatcher()
+        decoded_tool, decoded_args = _vd.decode(tool)
+        if decoded_tool != tool or decoded_args:
+            # Only switch if decode actually changed something
+            tool = decoded_tool
+            if decoded_args:
+                args = {**(args or {}), **decoded_args}
+            _vectorized_meta = {"tool_glyph": tool}
 
     # ── Step 1: Build resonance context before execution ──
     quiet_internal_benchmark = _is_quiet_internal_benchmark(kwargs, args)
@@ -199,7 +220,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
             if _garden_instance and hasattr(_garden_instance, "get_status"):
                 resonance_ctx["garden"] = garden_name
                 resonance_ctx["garden_status"] = _garden_instance.get_status()
-    except (ImportError, AttributeError, IndexError, KeyError) as exc:
+    except (ImportError, AttributeError, IndexError, KeyError, ValueError) as exc:
         logger.debug("Garden lookup for %s: %s", gana_name, exc)
 
     if tool:
@@ -338,6 +359,10 @@ def route_prat_call(gana_name: str, tool: str | None = None,
                 get_prefetcher().on_call_complete(gana_name)
         except (ImportError, ModuleNotFoundError):
             pass
+
+        # ── Vectorized mode: attach glyph metadata ──
+        if _vectorized_meta and isinstance(result, dict):
+            result["_vectorized"] = _vectorized_meta
 
         return result
 

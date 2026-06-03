@@ -152,8 +152,8 @@ class EmbeddingDaemon:
                     snapshots = list(model_path.iterdir())
                     if snapshots:
                         return str(snapshots[0])
-        except Exception:
-            pass
+        except OSError as e:
+            logger.debug(f"Model path resolution failed: {e}")
         return None
 
     def _get_db(self) -> sqlite3.Connection | None:
@@ -370,7 +370,8 @@ class EmbeddingDaemon:
                         (mid, packed, MODEL_NAME)
                     )
                     embedded += 1
-                except Exception:
+                except (sqlite3.Error, struct.error) as e:
+                    logger.debug(f"Embedding insert failed for {mid}: {e}")
                     failed += 1
 
             db.commit()
@@ -410,8 +411,8 @@ class EmbeddingDaemon:
 
         except ImportError:
             pass  # prometheus_client not installed
-        except Exception:
-            pass  # Metrics recording failed, non-critical
+        except Exception as e:
+            logger.debug(f"Metrics recording failed: {e}")
 
     def get_stats(self) -> dict:
         """Get daemon statistics."""

@@ -332,8 +332,8 @@ class MemoryConsolidator:
                 um.backend.archive_to_edge(duplicate.id, galactic_distance=0.95)
                 resolved_ids.add(duplicate.id)
                 result["duplicates_resolved"] += 1
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Duplicate resolution failed for {duplicate.id}: {e}")
 
         result["duration_ms"] = round((time.perf_counter() - start) * 1000, 1)
 

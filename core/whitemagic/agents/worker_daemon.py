@@ -185,8 +185,8 @@ class WorkerDaemon:
                 "result": result,
                 "completed_at": task["completed_at"],
             }, indent=2, default=str), encoding="utf-8")
-        except Exception:
-            pass
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Failed to write result for {task_id}: {e}")
 
         if result.get("success"):
             self._tasks_completed += 1
@@ -299,8 +299,8 @@ class WorkerDaemon:
                 workload=self._tasks_completed + self._tasks_failed,
                 current_task=None,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Heartbeat failed for {self.worker_name}: {e}")
 
     def _deregister(self) -> None:
         """Deregister from agent registry."""

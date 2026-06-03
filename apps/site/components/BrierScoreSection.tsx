@@ -3,7 +3,8 @@
 import { Target, TrendingUp, AlertTriangle } from "lucide-react";
 
 const BENCH_ROW = [
-  { name: "WhiteMagic Labs", bs: "0.0845", bi: "70.9%", bss: "0.662", highlight: true },
+  { name: "WhiteMagic Labs (stated)", bs: "0.0845", bi: "70.9%", bss: "0.662", highlight: true },
+  { name: "WhiteMagic Labs (behavioral)", bs: "0.0507", bi: "77.5%", bss: "0.797", highlight: true },
   { name: "ForecastBench superforecasters", bs: "0.086", bi: "70.6%", bss: "—", highlight: false },
   { name: "Grok 4.20 (Preview)", bs: "0.102", bi: "68.0%", bss: "—", highlight: false },
   { name: "GPT-5 / o3 ensemble", bs: "~0.110", bi: "~66.8%", bss: "—", highlight: false },
@@ -41,8 +42,8 @@ export function BrierScoreSection() {
           <div className="rounded-2xl border border-border bg-surface-alt p-5">
             <TrendingUp className="mb-3 h-5 w-5 text-lavender" />
             <p className="font-head text-3xl font-bold text-ink">70.9%</p>
-            <p className="mt-0.5 text-sm font-medium text-fg">Brier Index</p>
-            <p className="mt-1 text-xs text-dim">Superforecasters ≈ 70.6%. 50% = coin flip.</p>
+            <p className="mt-0.5 text-sm font-medium text-fg">Brier Index (stated)</p>
+            <p className="mt-1 text-xs text-dim">Behavioral recalibration ≈ 77.5%. Superforecasters ≈ 70.6%.</p>
           </div>
           <div className="rounded-2xl border border-border bg-surface-alt p-5">
             <AlertTriangle className="mb-3 h-5 w-5 text-amber-400" />
@@ -55,7 +56,7 @@ export function BrierScoreSection() {
         {/* Benchmark table */}
         <div>
           <h3 className="mb-4 font-head text-lg font-semibold text-ink">
-            Benchmark comparison — ForecastBench leaderboard (Mar 2026)
+            Benchmark comparison — stated & behavioral scores (May 2026)
           </h3>
           <div className="overflow-hidden rounded-2xl border border-border">
             <table className="w-full text-sm">

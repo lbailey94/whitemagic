@@ -107,6 +107,45 @@ class EmbeddingEngine:
         self._cold_vec_cache_lock = threading.Lock()
         self._cold_vec_cache_count: int = 0
 
+    def close(self) -> None:
+        """Close SQLite connections and release resources."""
+        if self._db_conn is not None:
+            try:
+                self._db_conn.close()
+            except Exception:
+                pass
+            self._db_conn = None
+        if self._cold_db_conn is not None:
+            try:
+                self._cold_db_conn.close()
+            except Exception:
+                pass
+            self._cold_db_conn = None
+        self._invalidate_vec_cache()
+        self._invalidate_cold_vec_cache()
+
+    def __del__(self) -> None:
+        """Destructor fallback to ensure connections are closed."""
+        self.close()
+
+    def __enter__(self) -> "EmbeddingEngine":
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Context manager exit — always close connections."""
+        self.close()
+
+    def _invalidate_cold_vec_cache(self) -> None:
+        """Invalidate the in-memory cold vector cache and cold HNSW index."""
+        with self._cold_vec_cache_lock:
+            self._cold_vec_cache_ids = None
+            self._cold_vec_cache_vecs = None
+            self._cold_vec_cache_count = 0
+            self._cold_hnsw_index = None
+            self._cold_hnsw_ids = None
+            self._cold_hnsw_count = 0
+
     def available(self, include_cache: bool = False) -> bool:
         """Check if embedding backend is available.
 

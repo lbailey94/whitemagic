@@ -511,8 +511,8 @@ class GrandUnifiedCycle:
                 elem_state = self._wu_xing_engine.elements.get(element.value)
                 if elem_state:
                     return elem_state.energy
-            except Exception:
-                pass
+            except (AttributeError, KeyError):
+                pass  # Wu Xing element state unavailable — return default
         return 0.5
 
     def _get_generating_element(self, element: WuXingElement) -> WuXingElement:

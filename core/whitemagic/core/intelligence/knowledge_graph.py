@@ -85,6 +85,13 @@ class KnowledgeGraph:
     def query_entity(self, name: str) -> dict[str, Any]:
         return {"entity": name, "connections": []}
 
+    def status(self) -> dict[str, Any]:
+        return {
+            "initialized": getattr(self, "_initialized", False),
+            "stats": getattr(self, "_stats", {}),
+            "version": "1.0",
+        }
+
 # --- SINGLETONS & COMPATIBILITY ---
 
 def get_knowledge_graph() -> KnowledgeGraph:

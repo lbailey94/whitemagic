@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from whitemagic.tools.tool_types import ToolDefinition
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
@@ -73,7 +74,7 @@ class McpIntegrity:
             self._storage_dir.mkdir(parents=True, exist_ok=True)
             self._load_baseline()
 
-    def _fingerprint_tool(self, tool: Any) -> ToolFingerprint:
+    def _fingerprint_tool(self, tool: ToolDefinition) -> ToolFingerprint:
         """Compute fingerprint for a single ToolDefinition."""
         schema_hash = _sha256(_canonical_json(tool.input_schema or {}))
         desc_hash = _sha256(str(tool.description or ""))

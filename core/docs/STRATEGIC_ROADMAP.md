@@ -1,3 +1,5 @@
+> **⚠️ SUPERCEDED** — Platform roadmap moved to `docs/message_board/STRATEGIC_ROADMAP_V23.md` (2026-05-26, updated 2026-06-03). See `docs/message_board/ROADMAP_CONSOLIDATION_2026-06-03.md` for merge history.
+
 # WhiteMagic Strategic Roadmap
 
 **Version**: 22.0.0 | **Last Updated**: April 2026

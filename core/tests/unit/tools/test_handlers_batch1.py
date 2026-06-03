@@ -446,6 +446,45 @@ class TestSwarmHandlers(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["plan_id"], "p1")
 
+    def test_swarm_assign_house_missing_fields(self):
+        from whitemagic.tools.handlers.swarm import handle_swarm_assign_house
+        result = handle_swarm_assign_house()
+        self.assertEqual(result["status"], "error")
+
+    @patch('whitemagic.agents.swarm.get_swarm')
+    def test_swarm_assign_house_success(self, mock_swarm_fn):
+        mock_swarm = MagicMock()
+        mock_swarm.assign_house.return_value = {"status": "success", "agent_id": "a1", "house": "older_brothers"}
+        mock_swarm_fn.return_value = mock_swarm
+
+        from whitemagic.tools.handlers.swarm import handle_swarm_assign_house
+        result = handle_swarm_assign_house(agent_id="a1", house="older_brothers")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["house"], "older_brothers")
+
+    def test_swarm_prune_no_args(self):
+        from whitemagic.tools.handlers.swarm import handle_swarm_prune
+        result = handle_swarm_prune()
+        self.assertEqual(result["status"], "success")
+        self.assertIn("pruned_plans", result)
+
+    @patch('whitemagic.agents.swarm.get_swarm')
+    def test_swarm_resolve_tricameral(self, mock_swarm_fn):
+        mock_swarm = MagicMock()
+        mock_swarm.resolve.return_value = {
+            "status": "blocked",
+            "strategy": "tricameral",
+            "older_winner": "yes",
+            "younger_winner": "no",
+            "firekeeper_verdict": "block",
+        }
+        mock_swarm_fn.return_value = mock_swarm
+
+        from whitemagic.tools.handlers.swarm import handle_swarm_resolve
+        result = handle_swarm_resolve(topic_id="t1", strategy="tricameral")
+        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(result["strategy"], "tricameral")
+
 
 if __name__ == "__main__":
     unittest.main()

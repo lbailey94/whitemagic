@@ -27,7 +27,7 @@ wm recall "hello" --limit 5
 # MCP server — PRAT mode (recommended: 28 Gana meta-tools)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
-# MCP server — classic mode (451 dispatch tools)
+# MCP server — classic mode (456 dispatch tools)
 python -m whitemagic.run_mcp
 
 # MCP server — lean mode (28 Gana meta-tools, recommended for new clients)

@@ -43,12 +43,19 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from scipy.integrate import solve_ivp
-from scipy.spatial import cKDTree
+
+try:
+    from scipy.integrate import solve_ivp
+    from scipy.spatial import cKDTree
+    _HAS_SCIPY = True
+except ImportError:
+    solve_ivp = None  # type: ignore[assignment]
+    cKDTree = None  # type: ignore[assignment,misc]
+    _HAS_SCIPY = False
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +129,7 @@ class ResonanceEngine:
     def __init__(self, db_path: str | None = None):
         self._db_path = db_path
         self._lock = threading.Lock()
-        self._tree: cKDTree | None = None
+        self._tree: Any = None
         self._coord_map: dict[str, tuple[float, ...]] = {}
         self._memory_ids: list[str] = []
 
@@ -136,6 +143,9 @@ class ResonanceEngine:
 
     def _build_tree(self) -> None:
         """Build KD-tree from holographic coordinates."""
+        if not _HAS_SCIPY:
+            logger.warning("scipy not available; KD-tree disabled")
+            return
         conn = self._get_conn()
         try:
             rows = conn.execute(
@@ -207,6 +217,16 @@ class ResonanceEngine:
         # Initial state: displacement=0, velocity=impulse
         u0 = [0.0, impulse]
         t_span = (0.0, 50.0)
+
+        if not _HAS_SCIPY:
+            return ResonanceResult(
+                memory_id=memory_id,
+                impulse_magnitude=0.0,
+                total_resonance=0.0,
+                half_life=0.0,
+                peak_amplitude=0.0,
+                status="SCIPY_UNAVAILABLE",
+            )
 
         # Solve ODE
         sol = solve_ivp(
@@ -345,6 +365,13 @@ class ResonanceEngine:
         for i in range(num_nodes):
             if not has_parent[i]:
                 u0[num_nodes + i] = 1.0  # Give it a 'kick'
+
+        if not _HAS_SCIPY:
+            return CausalVerificationResult(
+                node_scores={node: 0.0 for node in nodes},
+                total_energy=0.0,
+                status="SCIPY_UNAVAILABLE",
+            )
 
         # Solve ODE
         t_span = (0.0, 20.0)

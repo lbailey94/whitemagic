@@ -214,6 +214,11 @@ docs/README.md
 
 # === Polyglot Haskell build ===
 polyglot/whitemagic-hs/dist-newstyle/
+polyglot/whitemagic-hs/src/*.hi
+polyglot/whitemagic-hs/src/*.o
+polyglot/whitemagic-hs/src/*_stub.h
+polyglot/whitemagic-hs/wm_hs_bridge.c
+polyglot/whitemagic-hs/wm_hs_bridge.o
 
 # === External projects (not part of WhiteMagic core) ===
 whitemagic-app/

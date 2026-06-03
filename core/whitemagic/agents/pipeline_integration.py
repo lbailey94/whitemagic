@@ -13,6 +13,7 @@ Provides concrete implementations of the 7 pipeline phases for campaign executio
 This bridges the abstract pipeline to concrete WhiteMagic operations.
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,8 @@ from whitemagic.agents.tactical_pipeline import (
     StrategySimulation,
     TacticalPipeline,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PipelineIntegration:
@@ -197,8 +200,8 @@ class PipelineIntegration:
         for f in files:
             try:
                 import_count += f.read_text(encoding="utf-8").count("import ")
-            except Exception:
-                pass
+            except (OSError, UnicodeDecodeError) as e:
+                logger.debug(f"Skipping unreadable file {f}: {e}")
         elapsed = time.perf_counter() - start
         return {
             "type": "baseline_measurement",

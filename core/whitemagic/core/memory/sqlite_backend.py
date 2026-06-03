@@ -293,8 +293,8 @@ class SQLiteBackend:
         if row["metadata"]:
             try:
                 metadata = _json_loads(row["metadata"])
-            except Exception:
-                pass
+            except (ValueError, TypeError):
+                pass  # Corrupt or null metadata — use empty dict
         return Memory(
             id=row["id"],
             content=row["content"] or "",
