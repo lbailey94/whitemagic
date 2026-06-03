@@ -10,8 +10,12 @@ import time
 from typing import Any, Dict, Optional
 
 from .biological_event_bus import (
-    BiologicalEventBus, EventType, get_event_bus,
-    connect_dream_to_immune, connect_metabolism_to_evolution, connect_resonance_to_emergence
+    BiologicalEventBus,
+    EventType,
+    connect_dream_to_immune,
+    connect_metabolism_to_evolution,
+    connect_resonance_to_emergence,
+    get_event_bus,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,7 +51,9 @@ class UnifiedNervousSystemV21:
             
         # 2. Evolution System
         try:
-            from whitemagic.core.evolution.continuous_evolution import ContinuousEvolutionEngine
+            from whitemagic.core.evolution.continuous_evolution import (
+                ContinuousEvolutionEngine,
+            )
             subsystems["evolution"] = ContinuousEvolutionEngine()
             logger.info("🧬 Evolution System initialized")
         except (ImportError, ModuleNotFoundError) as e:
@@ -65,7 +71,9 @@ class UnifiedNervousSystemV21:
             
         # 4. Memory Metabolism
         try:
-            from whitemagic.core.intelligence.hologram.consolidation import HolographicConsolidator
+            from whitemagic.core.intelligence.hologram.consolidation import (
+                HolographicConsolidator,
+            )
             subsystems["metabolism"] = HolographicConsolidator()
             logger.info("🔄 Memory Metabolism initialized")
         except ImportError as e:
@@ -74,7 +82,9 @@ class UnifiedNervousSystemV21:
             
         # 5. Consciousness
         try:
-            from whitemagic.core.intelligence.agentic.coherence_persistence import CoherencePersistence
+            from whitemagic.core.intelligence.agentic.coherence_persistence import (
+                CoherencePersistence,
+            )
             subsystems["consciousness"] = CoherencePersistence()
             logger.info("🌟 Consciousness initialized")
         except (ImportError, ModuleNotFoundError) as e:
@@ -83,7 +93,9 @@ class UnifiedNervousSystemV21:
             
         # 6. Resonance
         try:
-            from whitemagic.core.intelligence.agentic.resonance_amp import ResonanceAmplifier
+            from whitemagic.core.intelligence.agentic.resonance_amp import (
+                ResonanceAmplifier,
+            )
             subsystems["resonance"] = ResonanceAmplifier()
             logger.info("🎵 Resonance initialized")
         except ImportError as e:
@@ -92,7 +104,9 @@ class UnifiedNervousSystemV21:
             
         # 7. Emergence
         try:
-            from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+            from whitemagic.core.intelligence.agentic.emergence_engine import (
+                EmergenceEngine,
+            )
             subsystems["emergence"] = EmergenceEngine()
             logger.info("✨ Emergence initialized")
         except ImportError as e:

@@ -133,8 +133,8 @@ def sangha_chat_send(content: str, channel: str = "general", sender_id: str = "s
 def garden_sangha_workspace_info(**kwargs: Any) -> dict[str, Any]:
     """Return a lightweight Sangha workspace summary."""
     try:
-        from whitemagic.gardens.sangha.resources import get_resources
         from whitemagic.gardens.sangha.chat import get_chat
+        from whitemagic.gardens.sangha.resources import get_resources
 
         resources = get_resources()
         chat = get_chat()

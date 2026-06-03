@@ -604,7 +604,6 @@ class AdaptiveToolPortal:
         # Try Rust-accelerated search first
         try:
             import whitemagic_rs
-
             from whitemagic.config.paths import MEMORY_DIR
 
             # Search memory directories using Rust parallel_grep

@@ -6,8 +6,10 @@ simulations. Part of v22 Intelligence Matrix.
 """
 
 import math
+from typing import Any, Callable, Dict, List
+
 import numpy as np
-from typing import List, Dict, Any, Callable
+
 
 class QuantumEngine:
     """Simulates quantum algorithms for graph and search optimization."""

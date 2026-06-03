@@ -10,13 +10,14 @@ This creates true recursive evolution.
 """
 
 import json
-import time
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 import sqlite3
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from whitemagic.config.paths import AUTODIDACTIC_DIR
+
 
 @dataclass
 class PatternApplication:

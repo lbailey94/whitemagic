@@ -221,7 +221,9 @@ _GANA_CACHE: dict[str, tuple[str, list[str]]] | None = None
 # classic MCP surfaces draw from the same canonical 28-Gana contract.
 _GANA_TOOLS: dict[str, list[str]] = {}
 try:
-    from whitemagic.tools.tool_surface import get_gana_nested_tools as _get_gana_nested_tools
+    from whitemagic.tools.tool_surface import (
+        get_gana_nested_tools as _get_gana_nested_tools,
+    )
 
     _GANA_TOOLS = _get_gana_nested_tools()
 except ImportError:
@@ -354,6 +356,8 @@ async def list_tools() -> list[types.Tool]:
     """Return the 28 Gana meta-tools with per-Gana tool enums, icons, and execution modes."""
     from whitemagic.tools.tool_surface import (
         GANA_NAMES as _GANA_NAMES,
+    )
+    from whitemagic.tools.tool_surface import (
         GANA_SHORT_DESC as _GANA_SHORT_DESC,
     )
 
@@ -685,7 +689,9 @@ def _read_grimoire_resource(uri_str: str) -> str:
     except Exception as e:
         logger.debug(f"Harmony vector snapshot failed: {e}")
     try:
-        from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
+        from whitemagic.core.monitoring.neurotransmitter_vector import (
+            get_neurotransmitter_vector,
+        )
         nt = get_neurotransmitter_vector()
         nt_snap = nt.snapshot()
         live_state["neurotransmitters"] = {

@@ -11,17 +11,17 @@ Runs the recursive evolution cycle automatically:
 This is the self-improving loop that runs continuously.
 """
 
-import time
 import json
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-from datetime import datetime
 import logging
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from whitemagic.config.paths import MEMORY_DIR
 
-from .autodidactic_loop import AutodidacticLoop
 from .adaptive_integration import AdaptiveIntegration
+from .autodidactic_loop import AutodidacticLoop
 from .meta_learning import MetaLearningEngine
 
 logger = logging.getLogger(__name__)

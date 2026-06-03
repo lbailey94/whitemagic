@@ -30,7 +30,7 @@ def get_system_time(**kwargs: Any) -> dict[str, Any]:
 
 def _emit_resonance_event(event_type: str, data: dict[str, Any], source: str = "mcp_api_bridge", **kwargs: Any) -> None:
     try:
-        from whitemagic.core.resonance.gan_ying import get_bus, ResonanceEvent
+        from whitemagic.core.resonance.gan_ying import ResonanceEvent, get_bus
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         bus = get_bus()
         if event_type in EventType.__members__:

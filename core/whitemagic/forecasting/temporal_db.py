@@ -299,9 +299,15 @@ class TemporalForecastDB:
         outcomes = [1 if r["status"] == "validated" else 0 for r in closed]
 
         from whitemagic.forecasting.brier import (
-            brier_score as _bs,
-            brier_skill_score as _bss,
             brier_index as _bi,
+        )
+        from whitemagic.forecasting.brier import (
+            brier_score as _bs,
+        )
+        from whitemagic.forecasting.brier import (
+            brier_skill_score as _bss,
+        )
+        from whitemagic.forecasting.brier import (
             calibration_gap as _cg,
         )
 

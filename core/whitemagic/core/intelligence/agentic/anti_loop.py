@@ -14,10 +14,10 @@ v4.3.0 Enhancement: Circuit Breaker Pattern
 - Auto-opens circuit to prevent runaway loops
 - Gradual recovery with half-open state
 """
-from typing import Any
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any
 
 
 class CircuitState(Enum):

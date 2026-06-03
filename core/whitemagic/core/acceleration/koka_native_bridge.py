@@ -22,7 +22,8 @@ import time
 from pathlib import Path
 from typing import Any, cast
 
-from whitemagic.utils.fast_json import dumps_str as _json_dumps, loads as _json_loads
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 

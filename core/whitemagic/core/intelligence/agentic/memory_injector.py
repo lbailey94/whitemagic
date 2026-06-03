@@ -136,7 +136,9 @@ class MemoryInjector:
 
         # Try neural search if available
         try:
-            from whitemagic.core.memory.neural.engine import get_neural_memory  # type: ignore[import-not-found]
+            from whitemagic.core.memory.neural.engine import (
+                get_neural_memory,  # type: ignore[import-not-found]
+            )
             neural = get_neural_memory()
             results = neural.search(query, limit=limit)
             return [r.content[:200] for r in results]

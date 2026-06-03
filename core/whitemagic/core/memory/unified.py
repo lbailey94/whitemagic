@@ -3,12 +3,12 @@ Consolidates all memory implementations into one coherent system using SQLite ba
 """
 
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
-
-import sys
 from unittest.mock import MagicMock
+
 if 'whitemagic.core.memory.neural_system' not in sys.modules:
     sys.modules['whitemagic.core.memory.neural_system'] = MagicMock()
 if 'whitemagic.core.memory.constellation_algorithms' not in sys.modules:
@@ -18,9 +18,10 @@ if 'whitemagic.core.acceleration.event_ring_bridge' not in sys.modules:
 if 'whitemagic.core.intelligence.agentic.emergence_engine' not in sys.modules:
     sys.modules['whitemagic.core.intelligence.agentic.emergence_engine'] = MagicMock()
 
+import hashlib
 import os
 import sqlite3
-import hashlib
+
 from whitemagic.config.paths import DB_PATH, MEMORY_DIR
 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
 

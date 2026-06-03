@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Coroutine
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar, cast
 
 T = TypeVar("T")
@@ -33,7 +33,9 @@ def research_topic(**kwargs: Any) -> dict[str, Any]:
     max_sources = int(kwargs.get("max_sources", 4))
     max_chars_per_source = int(kwargs.get("max_chars_per_source", 15_000))
 
-    from whitemagic.gardens.browser.web_research import research_topic as _research_topic
+    from whitemagic.gardens.browser.web_research import (
+        research_topic as _research_topic,
+    )
 
     async def _research() -> dict[str, Any]:
         report = await _research_topic(

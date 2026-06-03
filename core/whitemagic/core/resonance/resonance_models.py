@@ -35,7 +35,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # 1. Memory Decay Model
 # ---------------------------------------------------------------------------

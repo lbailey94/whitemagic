@@ -203,7 +203,9 @@ class CorpusCallosumBus:
         if round_number == 1:
             # Use the existing bicameral reasoner
             try:
-                from whitemagic.core.intelligence.bicameral import get_bicameral_reasoner
+                from whitemagic.core.intelligence.bicameral import (
+                    get_bicameral_reasoner,
+                )
                 get_bicameral_reasoner()
                 # Note: reasoner.reason is async, but we call it synchronously here
                 # because the handler wrapper will manage async if needed.

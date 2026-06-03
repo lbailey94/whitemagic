@@ -6,12 +6,12 @@ Predicts next tools based on discovered event patterns.
 Uses lightweight transformer trained on event sequences.
 """
 
+import json
 import logging
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
-import json
 
 logger = logging.getLogger(__name__)
 

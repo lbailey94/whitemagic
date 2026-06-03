@@ -4,10 +4,11 @@ This module implements Option A of the V21.1 optimization plan, using quantum-in
 algorithms to accelerate graph operations.
 """
 
-import math
 import logging
-from typing import List, Dict, Any, Callable
+import math
 from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List
+
 import numpy as np
 
 logger = logging.getLogger(__name__)

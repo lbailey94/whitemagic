@@ -13,7 +13,9 @@ class ZodiacConsultant:
     def _load_cores(self) -> dict:
         """Load from gardens/connection/zodiac_cores if available."""
         try:
-            from whitemagic.gardens.connection.zodiac_cores import ALL_CORES  # type: ignore[attr-defined]
+            from whitemagic.gardens.connection.zodiac_cores import (
+                ALL_CORES,  # type: ignore[attr-defined]
+            )
             return {
                 core.name.lower(): {
                     "domain": core.domain,

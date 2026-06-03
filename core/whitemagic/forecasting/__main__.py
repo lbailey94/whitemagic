@@ -30,8 +30,8 @@ from pathlib import Path
 
 import click
 
-from whitemagic.forecasting.temporal_db import TemporalForecastDB
 from whitemagic.forecasting import tzpf
+from whitemagic.forecasting.temporal_db import TemporalForecastDB
 
 
 def _db() -> TemporalForecastDB:

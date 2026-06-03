@@ -73,7 +73,9 @@ class KaizenEngine:
         """Lazy-load the SolutionLibrary."""
         if self._solution_lib is None:
             try:
-                from whitemagic.core.intelligence.synthesis.solution_library import get_solution_library
+                from whitemagic.core.intelligence.synthesis.solution_library import (
+                    get_solution_library,
+                )
                 self._solution_lib = get_solution_library()
             except Exception:
                 self._solution_lib = None
@@ -592,13 +594,19 @@ class KaizenEngine:
             if proposal.auto_fixable and proposal.fix_action:
                 try:
                     if "title_generator" in proposal.fix_action:
-                        from whitemagic.core.intelligence.synthesis.title_generator import get_title_generator
+                        from whitemagic.core.intelligence.synthesis.title_generator import (
+                            get_title_generator,
+                        )
                         get_title_generator().fix_all()
                     elif "tag_normalizer" in proposal.fix_action:
-                        from whitemagic.core.intelligence.synthesis.tag_normalizer import get_tag_normalizer
+                        from whitemagic.core.intelligence.synthesis.tag_normalizer import (
+                            get_tag_normalizer,
+                        )
                         get_tag_normalizer().auto_tag_untagged()
                     elif "sub_clustering" in proposal.fix_action:
-                        from whitemagic.core.intelligence.synthesis.sub_clustering import get_sub_clustering_engine
+                        from whitemagic.core.intelligence.synthesis.sub_clustering import (
+                            get_sub_clustering_engine,
+                        )
                         get_sub_clustering_engine().subdivide_large_clusters()
                     results["applied"] += 1
                 except Exception:

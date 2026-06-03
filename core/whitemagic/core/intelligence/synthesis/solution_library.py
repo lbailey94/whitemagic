@@ -6,14 +6,14 @@ Bridges the gap between raw pattern extraction and actionable code.
 
 import logging
 import sqlite3
-
-from whitemagic.utils.fast_json import dumps_str as _json_dumps, loads as _json_loads
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from whitemagic.core.memory.holographic import get_holographic_memory
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,9 @@ class SolutionLibrary:
 
         # 1. Check AI Contract (Alignment)
         try:
-            from whitemagic.ai_contract import AIContract  # type: ignore[import-not-found]
+            from whitemagic.ai_contract import (
+                AIContract,  # type: ignore[import-not-found]
+            )
             contract = AIContract(capabilities=[sol.pattern_type, f"solution_{sol.id}"])
             if not contract.validate_action(f"apply_{sol.id}"):
                 logger.warning(f"Solution apply blocked by AI Contract: {sol.id}")

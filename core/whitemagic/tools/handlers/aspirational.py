@@ -8,7 +8,10 @@ def handle_navigate_grimoire(**kwargs: Any) -> dict[str, Any]:
     if not query:
         return {"status": "error", "error_code": "invalid_params", "message": "query is required"}
 
-    from whitemagic.core.intelligence.garden_gana_registry import calculate_resonance, get_by_garden
+    from whitemagic.core.intelligence.garden_gana_registry import (
+        calculate_resonance,
+        get_by_garden,
+    )
 
     resonance = calculate_resonance(query)
     if not resonance:
@@ -85,10 +88,11 @@ def handle_consult_wisdom_council(**kwargs: Any) -> dict[str, Any]:
 
     # Simulate perspectives from the 28 Ganas
     perspectives = []
-    from whitemagic.core.intelligence.garden_gana_registry import GARDEN_GANA_REGISTRY
-
     # Select 3-5 relevant Ganas based on query resonance
-    from whitemagic.core.intelligence.garden_gana_registry import calculate_resonance
+    from whitemagic.core.intelligence.garden_gana_registry import (
+        GARDEN_GANA_REGISTRY,
+        calculate_resonance,
+    )
     resonance = calculate_resonance(query)
     top_gardens = list(resonance.keys())[:5]
 

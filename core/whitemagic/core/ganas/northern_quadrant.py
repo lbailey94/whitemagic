@@ -40,7 +40,9 @@ Authority comes from knowing the source.
         # Intelligence Briefing (v14+)
         if call.task in ["intelligence_briefing", "briefing", "generate_briefing"]:
             try:
-                from whitemagic.core.intelligence.insight_pipeline import get_insight_pipeline
+                from whitemagic.core.intelligence.insight_pipeline import (
+                    get_insight_pipeline,
+                )
                 pipeline = get_insight_pipeline()
                 briefing = pipeline.generate_briefing(
                     serendipity_count=call.state_vector.get("serendipity_count", 3),
@@ -65,7 +67,9 @@ Authority comes from knowing the source.
         # Prediction generation (v14+ CoreAccessLayer)
         if call.task in ["predict", "generate_predictions"]:
             try:
-                from whitemagic.core.intelligence.synthesis.predictive_engine import get_predictive_engine
+                from whitemagic.core.intelligence.synthesis.predictive_engine import (
+                    get_predictive_engine,
+                )
                 engine = get_predictive_engine()
                 report = engine.predict()
                 return {
@@ -333,7 +337,9 @@ Usefulness comes from what is not there.
         # Emergence scanning (v14+) — in the stillness, patterns emerge
         if call.task in ["scan_emergence", "emergence", "scan_for_patterns"]:
             try:
-                from whitemagic.core.intelligence.agentic.emergence_engine import get_emergence_engine
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    get_emergence_engine,
+                )
                 engine = get_emergence_engine()
                 insights = engine.scan_for_emergence()
                 past = engine.get_insights(limit=5)
@@ -583,7 +589,9 @@ At the wall between known and unknown, new patterns emerge.
         # Emergence Engine operations (v14+)
         if call.task in ["scan_emergence", "emergence_status", "get_insights", "proactive_scan"]:
             try:
-                from whitemagic.core.intelligence.agentic.emergence_engine import get_emergence_engine
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    get_emergence_engine,
+                )
                 engine = get_emergence_engine()
 
                 if call.task in ["scan_emergence", "proactive_scan"]:

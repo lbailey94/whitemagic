@@ -145,8 +145,8 @@ async def get_visualization_data() -> dict[str, Any]:
 async def get_gana_activity() -> dict[str, list[dict[str, Any]]]:
     """Get activity stats for all 28 Ganas from live PRAT resonance and vitality data."""
     try:
-        from whitemagic.tools.prat_resonance import get_resonance_state
         from whitemagic.tools.gana_vitality import get_vitality_monitor
+        from whitemagic.tools.prat_resonance import get_resonance_state
 
         ganas = get_all_ganas()
         resonance = get_resonance_state()

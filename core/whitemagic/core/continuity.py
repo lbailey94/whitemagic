@@ -23,6 +23,7 @@ except ImportError:
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fileio import atomic_write, file_lock
 
+
 def get_seen_registry():
     """Return a simple file-backed seen registry."""
     class _SeenRegistry:

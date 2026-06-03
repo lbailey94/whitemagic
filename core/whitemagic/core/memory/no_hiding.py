@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any
 
 from whitemagic.core.gan_ying import get_bus  # type: ignore[import-not-found]
-
 from whitemagic.core.memory.unified import get_unified_memory
 
 logger = logging.getLogger(__name__)

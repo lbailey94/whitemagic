@@ -116,14 +116,13 @@ from whitemagic.core.bridge.system import (
     system_initialize_all,
 )
 from whitemagic.core.bridge.voice import manage_voice_patterns
+from whitemagic.core.bridge.web_research import research_topic
 from whitemagic.core.bridge.wisdom import (
     consult_art_of_war,
     consult_full_council,
     consult_iching,
     synthesize_wisdom,
 )
-from whitemagic.core.bridge.web_research import research_topic
-
 
 # Import all domain modules
 from whitemagic.core.bridge.zodiac import (

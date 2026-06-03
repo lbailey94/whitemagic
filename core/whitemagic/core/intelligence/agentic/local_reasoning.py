@@ -15,12 +15,12 @@ Token Savings:
 - Result: 90%+ token reduction for many operations
 """
 
-from typing import Any
 import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

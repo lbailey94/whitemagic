@@ -1173,8 +1173,8 @@ def lifecycle_dream_trigger() -> dict[str, Any]:
     retention sweeps, galactic rotation, and decay drift.
     """
     try:
-        from whitemagic.core.memory.lifecycle import run_sweep
         from whitemagic.core.memory.galactic_map import GalacticMap
+        from whitemagic.core.memory.lifecycle import run_sweep
 
         sweep_result = run_sweep()
 

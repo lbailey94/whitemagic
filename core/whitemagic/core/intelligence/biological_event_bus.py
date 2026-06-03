@@ -8,10 +8,10 @@ Rust-accelerated dispatch and circuit breaker protection.
 import asyncio
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
-from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 

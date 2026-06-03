@@ -20,8 +20,8 @@ from whitemagic.gardens.practice import PracticeGarden, get_practice_garden
 from whitemagic.gardens.practice.zodiac import (  # noqa: F401
     ZodiacCore,
     ZodiacCouncil,
-    consult_council,
     consult_core,
+    consult_council,
     get_zodiac_council,
 )
 

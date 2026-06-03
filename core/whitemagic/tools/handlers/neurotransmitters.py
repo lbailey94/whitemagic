@@ -4,7 +4,9 @@ from typing import Any
 
 def handle_neurotransmitter_status(**kwargs: Any) -> dict[str, Any]:
     """Get the current neurotransmitter vector snapshot."""
-    from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
+    from whitemagic.core.monitoring.neurotransmitter_vector import (
+        get_neurotransmitter_vector,
+    )
 
     nt = get_neurotransmitter_vector()
     snap = nt.snapshot()
@@ -13,7 +15,9 @@ def handle_neurotransmitter_status(**kwargs: Any) -> dict[str, Any]:
 
 def handle_neurotransmitter_report(**kwargs: Any) -> dict[str, Any]:
     """Get a detailed neurotransmitter report with history and trends."""
-    from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
+    from whitemagic.core.monitoring.neurotransmitter_vector import (
+        get_neurotransmitter_vector,
+    )
 
     nt = get_neurotransmitter_vector()
     snap = nt.snapshot()

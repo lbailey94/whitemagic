@@ -154,7 +154,9 @@ class PolyglotAccelerator:
         # Try Zig batch operation
         if self._zig_available:
             try:
-                from whitemagic.core.acceleration.simd_cosine import batch_cosine as zig_batch
+                from whitemagic.core.acceleration.simd_cosine import (
+                    batch_cosine as zig_batch,
+                )
                 result = zig_batch(query, vectors)
                 self.zig_calls += 1
                 self.total_time_ms += (time.time() - start) * 1000

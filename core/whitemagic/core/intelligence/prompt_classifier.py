@@ -8,6 +8,7 @@ Used by the Auto-Prompting Supervisor to identify the "70%" of routine work.
 
 from typing import Tuple
 
+
 class PromptClassifier:
     """Classifies prompts into SOP categories."""
 

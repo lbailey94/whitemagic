@@ -25,7 +25,9 @@ class HaskellBridge:
             haskell_dir = str(_HASKELL_DIR)
             if haskell_dir not in sys.path:
                 sys.path.insert(0, haskell_dir)
-            from haskell_bridge import HaskellDivination  # type: ignore[import-not-found]
+            from haskell_bridge import (
+                HaskellDivination,  # type: ignore[import-not-found]
+            )
 
             self._divination = HaskellDivination()
             self._available = True

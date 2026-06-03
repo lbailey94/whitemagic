@@ -7,15 +7,16 @@ Manages the complete cycle: pattern → application → measurement → learning
 import json
 import time
 import uuid
-from pathlib import Path
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from whitemagic.core.evolution.autodidactic_loop import (
     AutodidacticLoop,
     PatternApplication,
     PatternOutcome,
 )
+
 
 @dataclass
 class DiscoveredPattern:

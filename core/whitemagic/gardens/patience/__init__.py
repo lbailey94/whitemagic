@@ -1,5 +1,7 @@
 from typing import Any
+
 from whitemagic.gardens.base_garden import BaseGarden
+
 
 class PatienceGarden(BaseGarden):
     def get_name(self) -> str:

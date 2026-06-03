@@ -16,8 +16,15 @@ from typing import Any
 import numpy as np
 
 from ..core import MemoryManager  # type: ignore[attr-defined]
-from ..embeddings import EmbeddingConfig, EmbeddingProvider, get_embedding_provider  # type: ignore[import-not-found]
-from ..embeddings.storage import EmbeddingCache, FileBasedEmbeddingCache  # type: ignore[import-not-found]
+from ..embeddings import (  # type: ignore[import-not-found]
+    EmbeddingConfig,
+    EmbeddingProvider,
+    get_embedding_provider,
+)
+from ..embeddings.storage import (  # type: ignore[import-not-found]
+    EmbeddingCache,
+    FileBasedEmbeddingCache,
+)
 
 logger = logging.getLogger(__name__)
 

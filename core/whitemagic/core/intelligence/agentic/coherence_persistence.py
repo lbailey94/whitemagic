@@ -11,7 +11,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from whitemagic.utils.fast_json import dumps_str as _json_dumps, loads as _json_loads
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import loads as _json_loads
 from whitemagic.utils.fileio import atomic_write, file_lock
 
 logger = logging.getLogger(__name__)

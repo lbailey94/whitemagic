@@ -327,9 +327,9 @@ Cast your net wide, catch what matters.
         if "swarm_capture" in call.task or "broadcast_signal" in call.task:
             try:
                 # We interface with the Go Mesh via Redis (Nervous System)
-                from whitemagic.utils.fast_json import dumps_str as _json_dumps_net
-
                 import redis
+
+                from whitemagic.utils.fast_json import dumps_str as _json_dumps_net
 
                 # Assume localhost redis for now as Nervous System hub
                 r = redis.Redis(host="localhost", port=6379, db=0)

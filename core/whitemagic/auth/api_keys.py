@@ -1,14 +1,16 @@
-import secrets
 import hashlib
 import json
 import logging
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, List
 from pathlib import Path
+from typing import Dict, List, Optional
+
 from pydantic import BaseModel
 
 from whitemagic.config.paths import WM_ROOT
+
 logger = logging.getLogger(__name__)
 
 class APIKeyMetadata(BaseModel):

@@ -342,6 +342,8 @@ class GalacticMap:
         try:
             from whitemagic.optimization.rust_accelerators import (
                 rust_v131_available,
+            )
+            from whitemagic.optimization.rust_accelerators import (
                 sqlite_decay_drift as rust_decay_drift,
             )
             if rust_v131_available():
@@ -425,6 +427,8 @@ class GalacticMap:
             try:
                 from whitemagic.optimization.rust_accelerators import (
                     rust_v131_available,
+                )
+                from whitemagic.optimization.rust_accelerators import (
                     sqlite_zone_stats as rust_zone_stats,
                 )
                 if rust_v131_available():

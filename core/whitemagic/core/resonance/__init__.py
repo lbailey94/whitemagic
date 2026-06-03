@@ -13,10 +13,10 @@ from ._consolidated import (
     get_event_bus,
 )
 from .julia_resonance import (
-    ResonanceEngine,
-    ResonanceResult,
     CausalVerificationResult,
     NeighborResult,
+    ResonanceEngine,
+    ResonanceResult,
     get_resonance_engine,
 )
 

@@ -114,7 +114,9 @@ class ContinuousExecutor:
 
         # Load Unified Nervous System
         try:
-            from whitemagic.core.intelligence.nervous_system import get_nervous_system_sync
+            from whitemagic.core.intelligence.nervous_system import (
+                get_nervous_system_sync,
+            )
             self.nervous_system = get_nervous_system_sync()
             if self.nervous_system and not self.nervous_system.is_active:
                 self.nervous_system.start()

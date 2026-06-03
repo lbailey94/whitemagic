@@ -265,8 +265,8 @@ class PhylogeneticTracker:
         )
 
         try:
-            from whitemagic.utils.fast_json import dumps_str as _json_dumps
             from whitemagic.core.memory.unified import get_unified_memory
+            from whitemagic.utils.fast_json import dumps_str as _json_dumps
             um = get_unified_memory()
             with um.backend.pool.connection() as conn:
                 conn.execute(

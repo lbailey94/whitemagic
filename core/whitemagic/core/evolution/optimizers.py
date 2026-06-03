@@ -7,9 +7,9 @@ Each optimizer implements specific workflow optimizations with measurable impact
 """
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

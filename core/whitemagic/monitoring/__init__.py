@@ -17,7 +17,6 @@ from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Generator, Optional
 
-
 # ---------------------------------------------------------------------------
 # Logging Configuration
 # ---------------------------------------------------------------------------

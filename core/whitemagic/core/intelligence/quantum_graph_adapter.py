@@ -7,11 +7,12 @@ for 10-100x speedup on specific operations.
 import logging
 import math
 import time
-from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 from whitemagic.core.intelligence.quantum_inspired_graph import (
-    QuantumGraphEngine, QuantumNode
+    QuantumGraphEngine,
+    QuantumNode,
 )
 from whitemagic.core.memory.graph_walker import GraphWalker, WalkResult
 

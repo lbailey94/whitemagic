@@ -15,7 +15,7 @@ import struct
 import threading
 import time
 from multiprocessing import shared_memory
-from typing import Optional, cast, Any
+from typing import Any, Optional, cast
 
 import numpy as np
 

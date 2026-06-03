@@ -89,6 +89,7 @@ class ForesightEngine:
         """Predict which memories are likely to decay based on galactic distance + recency."""
         try:
             import sqlite3
+
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             backend = um.backend

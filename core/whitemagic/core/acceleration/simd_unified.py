@@ -13,7 +13,7 @@ All operations route through Rust accelerators with Python fallback.
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, List, Tuple
+from typing import Any, List, Tuple, cast
 
 logger = logging.getLogger(__name__)
 

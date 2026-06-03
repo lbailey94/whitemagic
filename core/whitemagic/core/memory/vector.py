@@ -38,7 +38,9 @@ class EmbeddingEngine:
     def _get_engine(self):
         if self._engine is None:
             try:
-                from whitemagic.core.memory.embeddings import EmbeddingEngine as RealEngine
+                from whitemagic.core.memory.embeddings import (
+                    EmbeddingEngine as RealEngine,
+                )
                 self._engine = RealEngine()
             except Exception as e:
                 logger.warning(f"Real EmbeddingEngine unavailable: {e}")
@@ -88,7 +90,9 @@ class VectorSearch:
     def _get_search(self):
         if self._search is None:
             try:
-                from whitemagic.core.memory.vector_search import VectorSearch as RealSearch
+                from whitemagic.core.memory.vector_search import (
+                    VectorSearch as RealSearch,
+                )
                 self._search = RealSearch()
             except Exception as e:
                 logger.warning(f"Real VectorSearch unavailable: {e}")

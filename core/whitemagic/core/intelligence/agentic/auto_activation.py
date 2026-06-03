@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from whitemagic.utils.fast_json import loads as _json_loads
-from typing import Any
 
 
 class AutoActivation:

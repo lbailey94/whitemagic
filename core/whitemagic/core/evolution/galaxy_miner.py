@@ -425,7 +425,7 @@ def get_galaxy_miner(galaxy_paths: Optional[List[str]] = None) -> GalaxyPatternM
     global _galaxy_miner
     if _galaxy_miner is None:
         if galaxy_paths is None:
-            from whitemagic.config.paths import WM_ROOT, PROJECT_ROOT
+            from whitemagic.config.paths import PROJECT_ROOT, WM_ROOT
             galaxy_paths = [
                 str(WM_ROOT / "memory/whitemagic.db"),
                 str(WM_ROOT / "memory/whitemagic_cold.db"),

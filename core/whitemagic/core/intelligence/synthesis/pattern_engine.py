@@ -23,7 +23,9 @@ class PatternEngine:
     def _get_unified(self):
         if self._unified is None:
             try:
-                from whitemagic.core.intelligence.synthesis.unified_patterns import UnifiedPatternAPI
+                from whitemagic.core.intelligence.synthesis.unified_patterns import (
+                    UnifiedPatternAPI,
+                )
                 self._unified = UnifiedPatternAPI()
             except Exception as e:
                 logger.debug(f"UnifiedPatternAPI unavailable: {e}")
@@ -33,7 +35,9 @@ class PatternEngine:
     def _get_holographic(self):
         if self._holographic is None:
             try:
-                from whitemagic.core.intelligence.hologram.patterns import HolographicPatternEngine
+                from whitemagic.core.intelligence.hologram.patterns import (
+                    HolographicPatternEngine,
+                )
                 self._holographic = HolographicPatternEngine()
             except Exception as e:
                 logger.debug(f"HolographicPatternEngine unavailable: {e}")

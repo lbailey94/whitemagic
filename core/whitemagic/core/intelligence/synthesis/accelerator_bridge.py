@@ -2,12 +2,11 @@ import json
 import logging
 import sqlite3
 from pathlib import Path
-
-from whitemagic.utils.fast_json import loads as _json_loads
 from typing import Any
 
 from whitemagic.core.intelligence.confidence import ConfidenceLearner
 from whitemagic.core.intelligence.synthesis.solution_library import SolutionLibrary
+from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger(__name__)
 

@@ -119,6 +119,8 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<pipeline::reasoning_engine::Rule>()?;
     m.add_class::<memory::emergence_detector::PyEmergenceDetector>()?;
     m.add_class::<graph::community_detector::PyCommunityDetector>()?;
+    m.add_class::<graph::constellation_detector::Constellation>()?;
+    m.add_class::<graph::constellation_detector::PyConstellationDetector>()?;
 
     // Memory consolidation pyfunctions
     m.add_function(wrap_pyfunction!(memory::memory_consolidation::consolidate_memories, m)?)?;

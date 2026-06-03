@@ -322,7 +322,6 @@ class CoreAccessLayer:
             if self._conn_injected:
                 raise RuntimeError("injected conn — use Python path")
             import whitemagic_rs
-
             from whitemagic.config.paths import DB_PATH
             walk_nodes = whitemagic_rs.association_walk(
                 str(DB_PATH), seed_ids, depth, min_strength, max_nodes,

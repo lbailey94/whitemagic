@@ -10,7 +10,9 @@ import os
 
 try:
     from skyfield.api import load  # type: ignore[import-not-found]
-    from skyfield.framelib import ecliptic_frame as eclipsic_j2000  # type: ignore[import-not-found]
+    from skyfield.framelib import (
+        ecliptic_frame as eclipsic_j2000,  # type: ignore[import-not-found]
+    )
     SKYFIELD_AVAILABLE = True
 except ImportError:
     SKYFIELD_AVAILABLE = False

@@ -29,7 +29,11 @@ from typing import Any
 
 import numpy as np
 
-from whitemagic.core.acceleration.polyglot_numpy_bridge import to_ptr, to_flat_ptr, get_array_pool
+from whitemagic.core.acceleration.polyglot_numpy_bridge import (
+    get_array_pool,
+    to_flat_ptr,
+    to_ptr,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,11 @@
 
-import subprocess
-import os
 import logging
+import os
+import subprocess
+from typing import Any, Dict, Optional
 
-from whitemagic.utils.fast_json import dumps_str as _json_dumps, loads as _json_loads
-from typing import Dict, Any, Optional
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import loads as _json_loads
 
 logger = logging.getLogger("julia_bridge")
 

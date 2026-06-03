@@ -7,10 +7,10 @@ about its own learning process.
 
 import json
 import sqlite3
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 from whitemagic.config.paths import MEMORY_DIR
 

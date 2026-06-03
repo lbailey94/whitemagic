@@ -62,13 +62,16 @@ def _memory_type_to_zone(mem_type: str | None) -> str:
     return "active"
 
 
-def _build_nodes_from_galaxy(limit: int = 500) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Query the active galaxy for real memory nodes and edges."""
+def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Query a galaxy for real memory nodes and edges.
+
+    Args:
+        limit: Maximum nodes to return.
+        galaxy_name: Optional galaxy to query; uses active galaxy if None.
+    """
     try:
-        gm = get_galaxy_manager()
-        active = gm.get_active()
-        um = gm._get_memory(active.name)
-    except Exception:
+        _, um = _resolve_galaxy(galaxy_name)
+    except HTTPException:
         return [], []
 
     memories: list[Any] = []
@@ -144,14 +147,45 @@ def _require_api_key(x_api_key: str | None) -> str | None:
     if not require:
         return None  # open
     if not x_api_key:
-        raise Exception("401: X-API-Key header required")
-    # TODO: hash lookup against DB
+        raise HTTPException(status_code=401, detail="X-API-Key header required")
     if x_api_key.startswith("wm_") and len(x_api_key) >= 20:
         return x_api_key
-    raise Exception("403: Invalid API key")
+    raise HTTPException(status_code=403, detail="Invalid API key")
+
+
+def _resolve_galaxy(x_galaxy_name: str | None) -> tuple[Any, Any]:
+    """Resolve galaxy from header or active default.
+
+    Returns (galaxy_info, unified_memory) or raises HTTPException.
+    """
+    gm = get_galaxy_manager()
+    if x_galaxy_name:
+        info = gm.get_galaxy(x_galaxy_name)
+        if not info:
+            raise HTTPException(status_code=404, detail=f"Galaxy '{x_galaxy_name}' not found")
+        try:
+            um = gm._get_memory(x_galaxy_name)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Galaxy unavailable: {exc}") from exc
+        return info, um
+    return gm.get_active(), gm._get_memory(gm.get_active().name)
 
 
 if router is not None:
+    @router.get("/")
+    async def list_galaxies(
+        request: Request,
+        x_api_key: str | None = Header(None, alias="X-API-Key"),
+    ) -> dict[str, Any]:
+        """List all available galaxies."""
+        _require_api_key(x_api_key)
+        gm = get_galaxy_manager()
+        return {
+            "active": gm._active_galaxy,
+            "galaxies": gm.list_galaxies(),
+            "total": len(gm._galaxies),
+        }
+
     @router.get("/nodes")
     async def get_galaxy_nodes(
         request: Request,
@@ -159,11 +193,16 @@ if router is not None:
         zone: str | None = None,
         include_content: bool = False,
         x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
-        """Return holographic galaxy nodes for 3D visualization."""
+        """Return holographic galaxy nodes for 3D visualization.
+
+        Supports per-user galaxy isolation via X-Galaxy-Name header.
+        If omitted, returns the globally active galaxy.
+        """
         _require_api_key(x_api_key)
 
-        nodes, edges = _build_nodes_from_galaxy(limit=limit)
+        nodes, edges = _build_nodes_from_galaxy(limit=limit, galaxy_name=x_galaxy_name)
 
         # Fallback to demo data if galaxy is empty
         if not nodes:
@@ -197,16 +236,15 @@ if router is not None:
         zone: str = Body("active"),
         importance: float = Body(0.5),
         x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
-        """Create a new memory node in the active galaxy."""
+        """Create a new memory node in the specified galaxy (or active)."""
         _require_api_key(x_api_key)
 
         try:
-            gm = get_galaxy_manager()
-            active = gm.get_active()
-            um = gm._get_memory(active.name)
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Galaxy unavailable: {exc}") from exc
+            active, um = _resolve_galaxy(x_galaxy_name)
+        except HTTPException:
+            raise
 
         try:
             from whitemagic.core.memory.unified_types import MemoryType

@@ -12,7 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from whitemagic.core.memory.core import MemoryManager, SQLiteBackend as SimpleBackend
+from whitemagic.core.memory.core import MemoryManager
+from whitemagic.core.memory.core import SQLiteBackend as SimpleBackend
 from whitemagic.core.memory.db_manager import get_db_pool
 from whitemagic.core.memory.sqlite_schema import SQLiteSchemaManager
 from whitemagic.core.memory.unified_types import Memory, MemoryType

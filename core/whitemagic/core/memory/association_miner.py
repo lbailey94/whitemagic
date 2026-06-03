@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import Set
 
-
 _STOP_WORDS = {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
     "have", "has", "had", "do", "does", "did", "will", "would", "could",

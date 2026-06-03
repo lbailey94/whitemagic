@@ -1,6 +1,7 @@
 # Thought Galaxy Creation, Scoring, and Recall System
 from typing import List
 
+
 class CognitiveEpisode:
     def __init__(self, id: str, embeddings: List[float], tags: List[str]):
         self.id = id

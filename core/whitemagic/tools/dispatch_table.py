@@ -1,4 +1,5 @@
 from typing import cast
+
 """dispatch_table.py — Tool router: assembles domain slices into one table.
 
 The DISPATCH_TABLE dict is composed from per-domain slice modules:
