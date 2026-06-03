@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -563,20 +564,35 @@ class GalaxyManager:
         base_tags.add(f"galaxy:{galaxy_name}")
         base_tags.add("ingested")
 
-        for f in files:
+        # ── Phase 1: Parallel file reading ─────────────────────────────
+        def _read_file(f: Path) -> tuple[Path, str | None]:
             try:
-                content = f.read_text(encoding="utf-8", errors="replace")
-                if len(content.strip()) < 10:
-                    skipped += 1
-                    continue
+                return f, f.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                return f, None
 
-                # Truncate very large files
-                if len(content) > 50_000:
-                    content = content[:50_000] + "\n\n[... truncated ...]"
+        file_contents: list[tuple[Path, str | None]] = []
+        with ThreadPoolExecutor(max_workers=min(16, len(files) or 1)) as executor:
+            file_contents = list(executor.map(_read_file, files))
 
-                file_tags = base_tags | {f"source:{f.suffix.lstrip('.')}"}
-                relative = str(f.relative_to(source)) if f.is_relative_to(source) else f.name
+        # ── Phase 2: Sequential DB store (SQLite prefers single-writer) ─
+        for f, content in file_contents:
+            if content is None:
+                errors += 1
+                continue
 
+            if len(content.strip()) < 10:
+                skipped += 1
+                continue
+
+            # Truncate very large files
+            if len(content) > 50_000:
+                content = content[:50_000] + "\n\n[... truncated ...]"
+
+            file_tags = base_tags | {f"source:{f.suffix.lstrip('.')}"}
+            relative = str(f.relative_to(source)) if f.is_relative_to(source) else f.name
+
+            try:
                 um.store(
                     content=content,
                     title=relative,
