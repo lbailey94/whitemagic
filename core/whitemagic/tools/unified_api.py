@@ -274,7 +274,7 @@ def _dispatch_lightweight_tool(tool_name: str, **kwargs: Any) -> Any:
         manifests = discover_extensions(ext_dir)
         loaded_names: list[str] = []
         try:
-            from whitemagic.tools.prat_router import TOOL_TO_GANA
+            from whitemagic.tools.prat_mappings import TOOL_TO_GANA
             loaded_names = [
                 name for name in TOOL_TO_GANA
                 if name.startswith("ext.") or name.startswith("custom.")
@@ -501,7 +501,9 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
         except Exception as e:
             logger.debug(f"Failed to add harmony snapshot to metrics: {e}")
         try:
-            from whitemagic.core.monitoring.neurotransmitter_vector import get_neurotransmitter_vector
+            from whitemagic.core.monitoring.neurotransmitter_vector import (
+                get_neurotransmitter_vector,
+            )
             nt = get_neurotransmitter_vector()
             nt.record_tool_call(
                 success=(telemetry_status == "success"),
@@ -522,7 +524,9 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
         # Jaynes Voice Audit: verify claim after ledger record
         try:
             if _voice_audit_claim_id:
-                from whitemagic.core.governance.voice_audit import get_voice_audit_scanner
+                from whitemagic.core.governance.voice_audit import (
+                    get_voice_audit_scanner,
+                )
                 get_voice_audit_scanner().verify_claim(tool=canonical)
         except Exception as e:
             logger.debug(f"VoiceAudit claim verification failed: {e}")

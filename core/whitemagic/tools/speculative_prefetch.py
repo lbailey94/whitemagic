@@ -160,7 +160,7 @@ def _get_gana_tools() -> dict[str, list[str]]:
     if _GANA_TOOLS is not None:
         return _GANA_TOOLS
     try:
-        from whitemagic.tools.prat_router import TOOL_TO_GANA
+        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
         gana_tools: dict[str, list[str]] = defaultdict(list)
         for tool, gana in TOOL_TO_GANA.items():
             gana_tools[gana].append(tool)

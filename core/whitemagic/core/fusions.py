@@ -46,7 +46,7 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.knowledge_graph import get_knowledge_graph
-        from whitemagic.tools.prat_router import TOOL_TO_GANA
+        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
 
         kg = get_knowledge_graph()
         relations = kg.query_entity(current_tool)
