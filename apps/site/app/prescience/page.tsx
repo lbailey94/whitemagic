@@ -12,7 +12,7 @@ import {
 export const metadata = {
   title: "Prescience Audit — WhiteMagic Labs",
   description:
-    `15 validated claims. 380+ prescience points. Stated Brier Index ${STATED_BRIER_INDEX}%; behavioral recalibration ${BEHAVIORAL_BRIER_INDEX}%. A complete, independently verifiable forecasting track record with source evidence.`,
+    `17 validated claims. 420+ prescience points. Stated Brier Index ${STATED_BRIER_INDEX}%; behavioral recalibration ${BEHAVIORAL_BRIER_INDEX}%. A complete, independently verifiable forecasting track record with source evidence.`,
 };
 
 export default function PresciencePage() {
@@ -35,7 +35,7 @@ export default function PresciencePage() {
         <div className="mx-auto max-w-3xl space-y-6">
           <div>
             <p className="mb-2 font-mono text-xs uppercase tracking-widest text-lavender">
-              Validated claims · 15
+              Validated claims · 17
             </p>
             <h2 className="font-head text-2xl font-semibold tracking-tight text-ink md:text-3xl">
               The audit trail.
@@ -106,16 +106,16 @@ export default function PresciencePage() {
             <p className="mb-1 font-mono text-xs uppercase tracking-widest text-amber-400">Honest misses</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                <strong>UAP May window:</strong> Predicted May 2; actual PURSUE release May 8. Direction
-                correct, date off by 6 days. Scored 4 pts (window validated) with note.
+                <strong>Memory-as-a-service monetization:</strong> Expected memory to be a standalone product. Reality: governance infrastructure was the urgent need; memory was absorbed as a first-party feature by Anthropic, Microsoft, and OpenAI by mid-2026.
               </li>
               <li>
-                <strong>Agent identity coherence:</strong> Shipped Nov 2025; no single public validation
-                event as of May 2026. Held as pending (0 pts) despite clear emergent behavior.
+                <strong>Agent economy payments-first:</strong> Expected micropayments and agent-to-agent transactions to crystallize before governance. Reality: governance and observability arrived first. Payments (x402, A2A) are still emerging.
               </li>
               <li>
-                <strong>Bicameral reasoning / voice audit:</strong> Shipped Feb 2026; no industry equivalent
-                announced as of May 2026. Held as pending. May validate later or may remain unique.
+                <strong>Governance as a defensible solo-developer moat:</strong> Expected governance-first positioning to be unique. Reality: Microsoft AGT, Chitragupta, Sgraal, Aevum, Ardur, and DingDawg all shipped governance layers by May 2026. The category went from empty to crowded in 3 months.
+              </li>
+              <li>
+                <strong>UAP May window:</strong> Predicted May 2; actual PURSUE release May 8. Direction correct, date off by 6 days. Scored 4 pts (window validated) with note.
               </li>
             </ul>
           </div>

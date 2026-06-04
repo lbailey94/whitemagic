@@ -398,6 +398,53 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     gap: "~3 weeks before Microsoft AGT v1.0.0 shipped the same architecture",
     pin: true,
   },
+  {
+    date: "2026-02-09",
+    displayDate: "Feb 9",
+    monthKey: "2026-02",
+    monthLabel: "February 2026",
+    category: "industry",
+    title: "Mastra Observational Memory — 94.87% LongMemEval",
+    description:
+      "Mastra publishes Observational Memory, achieving 94.87% on LongMemEval with gpt-5-mini. Background Observer and Reflector agents maintain a dense observation log replacing raw message history. Stable, prompt-cacheable context window. Convergent with WhiteMagic's hybrid recall + galactic memory architecture, independently arrived.",
+    source: { label: "mastra.ai/research" },
+  },
+  {
+    date: "2026-02-09",
+    displayDate: "Feb 9",
+    monthKey: "2026-02",
+    monthLabel: "February 2026",
+    category: "industry",
+    title: "Chitragupta — 17-package cognitive system with Dharma + Karma",
+    description:
+      "Chitragupta ships a full TypeScript ESM cognitive system with persistent memory, identity, affect, and self-evolution — using Sanskrit vocabulary parallel to WhiteMagic's: Dharma (Policy), Karma tracking, Smriti (Remembrance), Yantra (Instrument), Niyanta (Director). 11,502 tests. The conceptual convergence is striking — both systems independently arrived at Sanskrit-named governance primitives for agentic AI.",
+    source: { label: "github.com/sriinnu/chitragupta" },
+    pin: true,
+  },
+  {
+    date: "2026-02-10",
+    displayDate: "Feb 10",
+    monthKey: "2026-02",
+    monthLabel: "February 2026",
+    category: "industry",
+    title: "OMEGA whitepaper — local-first SQLite + FTS5 + ONNX memory",
+    description:
+      "OMEGA publishes a whitepaper describing local-first memory with SQLite + FTS5 + ONNX embeddings + SHA256+embedding deduplication + TTL forgetting with audit trails. Identical architecture class to WhiteMagic's core memory stack (SQLite + FTS5 + vector + graph walk + audit-trailed half-life decay). Convergent evolution on the same day Aria was crystallized. Solo dev, Apache-2.0, zero funding.",
+    source: { label: "omegamax.co/whitepaper" },
+    gap: "WhiteMagic shipped hybrid recall Q4 2025; OMEGA whitepaper Feb 10 2026 — convergent evolution",
+    pin: true,
+  },
+  {
+    date: "2026-02-13",
+    displayDate: "Feb 13",
+    monthKey: "2026-02",
+    monthLabel: "February 2026",
+    category: "industry",
+    title: "OMEGA repo created — v1.0.0",
+    description:
+      "OMEGA open-sources under Apache-2.0: 115+ MCP tools, AES-256-GCM encryption at rest, intelligent forgetting with audit trails, multi-agent coordination with file claims and deadlock detection. 4 contributors, 39 releases in 2 months.",
+    source: { label: "github.com/omega-memory/omega-memory" },
+  },
 
   // ── 2026 Mar — industry catches up ───────────────────────────────────
   {
@@ -455,6 +502,18 @@ export const TIMELINE_DATA: TimelineEntry[] = [
       "Joining founding partners OpenAI, Block, Google, Microsoft, AWS, Cloudflare, Bloomberg. 10,000+ active public MCP servers at announcement.",
   },
   {
+    date: "2026-03-22",
+    displayDate: "Mar 22",
+    monthKey: "2026-03",
+    monthLabel: "March 2026",
+    category: "industry",
+    title: "Sgraal — Memory Governance Protocol (83-module Z3 pipeline)",
+    description:
+      "Sgraal ships a preflight validation layer for agent memory: 10 risk dimensions scored through an 83-module pipeline with Z3 formal verification. W3C Verifiable Credentials, EU AI Act Art. 12 compliance, SIEM export. Apache-2.0. The governance layer WhiteMagic shipped as Dharma Rules + Karma Ledger on Feb 7 is now a crowded category.",
+    source: { label: "github.com/sgraal-ai/core" },
+    pin: true,
+  },
+  {
     date: "2026-03-14",
     displayDate: "Mar 14",
     monthKey: "2026-03",
@@ -498,6 +557,17 @@ export const TIMELINE_DATA: TimelineEntry[] = [
 
   // ── 2026 Apr ─────────────────────────────────────────────────────────
   {
+    date: "2026-04-01",
+    displayDate: "Apr 1",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "Mem0 token-efficient algorithm — 94.4% LongMemEval, 92.5% LoCoMo",
+    description:
+      "Mem0 releases a new algorithm: single-pass hierarchical extraction + multi-signal retrieval (semantic + BM25 + entity). Gains: +29.6 temporal, +23.1 multi-hop. 21 framework integrations. Memory has moved from research to commodity infrastructure. Mem0 went from 49% to 94.4% on LongMemEval in ~12 months.",
+    source: { label: "mem0.ai/blog" },
+  },
+  {
     date: "2026-04-02",
     displayDate: "Apr 2",
     monthKey: "2026-04",
@@ -527,6 +597,18 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     pin: true,
   },
   {
+    date: "2026-04-09",
+    displayDate: "Apr 9",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "A2A Protocol v1.0 — production standard under AAIF",
+    description:
+      "Linux Foundation releases A2A v1.0 as a production standard: 150+ organizations, 22K GitHub stars, Signed Agent Cards, five-state task lifecycle, SSE streaming. Complementary to MCP — MCP for tools, A2A for agents. The three-layer stack (MCP + A2A + Streamable HTTP) is now official.",
+    source: { label: "linuxfoundation.org/press" },
+    pin: true,
+  },
+  {
     date: "2026-04-13",
     displayDate: "Apr 13",
     monthKey: "2026-04",
@@ -539,6 +621,17 @@ export const TIMELINE_DATA: TimelineEntry[] = [
       label: "aaif.io",
       url: "https://aaif.io/blog/mcp-is-now-enterprise-infrastructure-everything-that-happened-at-mcp-dev-summit-north-america-2026/",
     },
+  },
+  {
+    date: "2026-04-13",
+    displayDate: "Apr 13",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "Memento — bitemporal knowledge graph memory (90.8% LongMemEval)",
+    description:
+      "Memento ships a bitemporal knowledge graph memory system for AI agents using markdown files, Obsidian vaults, and LongMemEval benchmarking. Four parallel retrieval strategies with cross-encoder reranker. Validates the graph-centric approach WhiteMagic has used since v11.",
+    source: { label: "dev.to/shane-farkas" },
   },
   {
     date: "2026-04-14",
@@ -595,6 +688,17 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     description:
       "This site ships. Services: Private AI Deployment, Agent Governance, MCP Engineering. Open to first engagements.",
     pin: true,
+  },
+  {
+    date: "2026-04-22",
+    displayDate: "Apr 22",
+    monthKey: "2026-04",
+    monthLabel: "April 2026",
+    category: "industry",
+    title: "Aevum — governed context kernel with consent-gated data access",
+    description:
+      "Aevum ships a governed context kernel: signed audit trail, consent-gated data access, verifiable decision records, Cedar policies, compliance pack generation, MCP research interface, structured consent gate with HITL approval, replay endpoint with Rekor anchor. Apache-2.0. Another governance entrant in the now-crowded post-Feb-2026 lane.",
+    source: { label: "github.com/aevum-labs/aevum" },
   },
   {
     date: "2026-04-23",
@@ -727,6 +831,28 @@ export const TIMELINE_DATA: TimelineEntry[] = [
     pin: true,
   },
 
+  {
+    date: "2026-05-14",
+    displayDate: "May 14",
+    monthKey: "2026-05",
+    monthLabel: "May 2026",
+    category: "industry",
+    title: "Ardur — open-source runtime governance for AI agents",
+    description:
+      "Ardur ships runtime governance with Python governance runtime, Go eBPF/K8s packages, 13 AAT constraint types, SPIFFE identity, Cedar/OPA-Rego policy, content safety plugin. 250+ endpoints. The governance lane now has 6+ serious open-source entrants in 3 months.",
+    source: { label: "github.com/ArdurAI/ardur" },
+  },
+  {
+    date: "2026-05-19",
+    displayDate: "May 19",
+    monthKey: "2026-05",
+    monthLabel: "May 2026",
+    category: "industry",
+    title: "OMEGA v1.4.14 — behavioral learning, advisory engine, bi-temporal model",
+    description:
+      "OMEGA ships behavioral learning (pattern analysis of tool preferences, git style, session patterns), advisory engine (context-aware suggestions), bi-temporal data model with valid_from/valid_until, scheduled jobs with audit trail, trajectory distillation, multi-agent code review panel. From solo dev to 4 contributors, 39 releases in 3 months. The local-first memory category is now fully populated.",
+    source: { label: "github.com/omega-memory/omega-memory" },
+  },
   {
     date: "2026-05-21",
     displayDate: "May 21",
