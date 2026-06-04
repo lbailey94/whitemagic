@@ -427,7 +427,7 @@ Design rule:
 | Gnosis portal | `whitemagic/tools/gnosis.py` |
 | 28 Gana reference | `core/docs/28_GANA_ARMY_MAPPING.md` + `grimoire/TRUTH_TABLE.md` |
 | Nexus API | `whitemagic/interfaces/nexus_api.py` (port 8765) |
-| Site app | `apps/site/` (Next.js + React + TypeScript) |
+| Site app | `~/Desktop/whitemagic-site/` (Next.js + React + TypeScript, extracted from monorepo) |
 
 ## Eval Harness
 

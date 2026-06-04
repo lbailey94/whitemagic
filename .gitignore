@@ -225,6 +225,7 @@ whitemagic-app/
 whitemagic-aux/
 WhiteMagic-Grants/
 /auxiliary projects/
+apps/site/
 test_zig
 
 # === Temporary ===
