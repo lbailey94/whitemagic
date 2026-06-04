@@ -1,0 +1,56 @@
+[package]
+name = "whitemagic-rust"
+version = "21.0.0"
+edition = "2021"
+autobins = false
+
+[lib]
+name = "whitemagic_rust"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["python", "arrow", "iceoryx2"]
+iceoryx2 = ["dep:iceoryx2"]
+python = ["pyo3", "numpy", "pyo3-build-config", "tokio"]
+arrow = ["dep:arrow"]
+wasm = ["wasm-bindgen", "js-sys", "web-sys", "console_error_panic_hook", "getrandom/js"]
+zig = []  # Zig FFI bridge (optional, requires whitemagic-zig library)
+
+[dependencies]
+iceoryx2 = { version = "0.8.1", optional = true }
+# Python bindings (optional)
+pyo3 = { version = "0.21", features = ["extension-module"], optional = true }
+numpy = { version = "0.21", optional = true }
+arrow = { version = "53.0", optional = true }
+
+# WASM bindings (optional)
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+
+# Core dependencies (always included)
+rayon = "1.8"
+ndarray = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+getrandom = { version = "0.2", optional = true }
+rusqlite = { version = "0.31", features = ["bundled"] }
+tokio = { version = "1.35", features = ["full"], optional = true }
+tracing = { version = "0.1", optional = true }
+metrics = { version = "0.22", optional = true }
+lazy_static = "1.4"
+sha2 = "0.10.9"
+reqwest = { version = "0.11", features = ["json"] }
+
+[build-dependencies]
+pyo3-build-config = { version = "0.21", optional = true }
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+

@@ -45,7 +45,7 @@ whitemagic/                  # Core library (this repo)
 │   │   ├── hermes/          # Telemetry/context hooks
 │   │   ├── interfaces/      # CLI, API, Dashboard
 │   │   └── config/          # Path resolution, settings
-│   ├── tests/               # 2,379 passing tests, 67 skipped
+│   ├── tests/               # current local audit baseline: 2,379 passed, 67 skipped
 │   └── docs/                # Package documentation
 ├── polyglot/                # Language accelerators (minus CODEX)
 │   ├── mojo/                # GPU/SIMD kernels

@@ -10,7 +10,7 @@
 | Language | Toolchain | Lines | Status | Artifacts |
 |----------|-----------|-------|--------|-----------|
 | **Rust** | rustc 1.93.0 | 46,983+3,505 | ✅ Production | `libwhitemagic_rs.so` (maturin wheel) + CODEX (7 crates, CLI + server) |
-| **Go** | go 1.22.2 | 1,923 | ✅ Production | Mesh daemon binary |
+| **Go** | go 1.25.8 | ~2,900 | ✅ Recovered (2026-06-04) | Mesh daemon + telemetry; restored from archive to `polyglot/whitemagic-go/` |
 | **Elixir** | Elixir 1.14.0 / OTP 25 | 19+lib | ✅ Builds | BEAM bytecode |
 | **Koka** | Koka 3.2.2 | 9,237 | ✅ Compiles | 45 native binaries from 4 core .kk files |
 | **Zig** | Zig 0.16.0 | 11,387 | ✅ Builds | `libwhitemagic.so` (12MB) + `libwhitemagic-zig.a` (10MB) |

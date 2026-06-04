@@ -237,3 +237,10 @@ wm
 polyglot/codex/
 polyglot/codex/00_source/
 .koka/
+
+# === Recovered polyglot build artifacts ===
+polyglot/whitemagic-go/whitemagic-go-mesh
+polyglot/whitemagic-rust-archive/target/
+polyglot/whitemagic-rust-archive/libwhitemagic_rs.so
+polyglot/whitemagic-rust-archive/wm-seed
+polyglot/whitemagic-rust-archive/pkg/
