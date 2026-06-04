@@ -26,6 +26,10 @@ User-facing and contributor documentation:
 
 Current-cycle plans, session handoffs, and active triage documents. See [INDEX.md](../INDEX.md) for the full inventory.
 
+### 🏗️ Architecture Manifest
+
+For the post-extraction repo map — what this repo is, what the sibling repos are, and how they relate — see [`ARCHITECTURE_MANIFEST_2026-06-04.md`](../ARCHITECTURE_MANIFEST_2026-06-04.md).
+
 ### 📦 Archive (`docs/archive/`)
 
 Superseded plans, completed audits, and historical reports. Preserved for provenance.

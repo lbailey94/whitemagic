@@ -37,26 +37,30 @@ Individual extras: `mcp`, `cli`, `api`, `embeddings`, `search`, `graph`, `db`, `
 ## Architecture
 
 ```
-whitemagic/
+whitemagic/                  # Core library (this repo)
 ├── core/                    # Python package (pip install whitemagic)
 │   ├── whitemagic/          # Main source
 │   │   ├── tools/           # 28 PRAT Gana tools
 │   │   ├── core/            # Memory, resonance, patterns, governance
-│   │   ├── rust/            # Rust bridge (SIMD, parallel search)
+│   │   ├── hermes/          # Telemetry/context hooks
 │   │   ├── interfaces/      # CLI, API, Dashboard
 │   │   └── config/          # Path resolution, settings
-│   ├── whitemagic-rust/     # Rust crate (PyO3 + WASM)
-│   ├── whitemagic-math/     # Shared math crate
-│   ├── haskell/             # Haskell divination module
-│   └── tests/               # v22.2.0 release baseline: 2,216 passing tests, 67 skipped
-├── polyglot/                # Language bridges
-│   ├── mojo/                # GPU/SIMD acceleration
+│   ├── tests/               # 2,379 passing tests, 67 skipped
+│   └── docs/                # Package documentation
+├── polyglot/                # Language accelerators (minus CODEX)
+│   ├── mojo/                # GPU/SIMD kernels
 │   ├── whitemagic-koka/     # Effect handler orchestration
 │   ├── whitemagic-zig/      # FFI bridge
 │   └── whitemagic-go/       # Concurrent services
-├── grimoire/                # 28 Gana chapter reference
-└── docs/                    # Documentation
+├── grimoire/                # Canonical 28 Gana chapters
+├── docs/                    # Project documentation
+└── whitemagic-app/          # Tauri desktop app (local-first UI)
+
+whitemagic-site/             # Public website (sibling repo)
+whitemagic-codex/            # Rust document pipeline (sibling repo)
 ```
+
+See [`ARCHITECTURE_MANIFEST_2026-06-04.md`](ARCHITECTURE_MANIFEST_2026-06-04.md) for the full post-extraction directory map and sibling repo relationships.
 
 ## Entry Points
 

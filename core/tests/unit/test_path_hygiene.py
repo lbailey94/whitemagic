@@ -147,6 +147,8 @@ class TestPathHygiene:
             # Labs-tier synthesis engines (user-provided db_path)
             "core/intelligence/synthesis/sub_clustering.py",
             "core/intelligence/synthesis/serendipity_engine.py",
+            # HuggingFace model cache discovery (legitimate third-party path resolution)
+            "core/memory/embedding_daemon.py",
         ]
 
         whitemagic_root = Path(__file__).parent.parent.parent / "whitemagic"

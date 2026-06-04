@@ -136,13 +136,18 @@ class EmbeddingDaemon:
             import os
             from pathlib import Path
             # Check common model locations (HF cache can be under WM_ROOT or home)
-            model_dirs = [
-                # Path expansion justified: External cache (HuggingFace)
-                # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-                Path(os.path.expanduser("~/.cache/huggingface/hub")),
+            hf_home = os.getenv("HF_HOME")
+            cache_home = os.getenv("XDG_CACHE_HOME")
+            model_dirs = []
+            if hf_home:
+                model_dirs.append(Path(hf_home) / "hub")
+            if cache_home:
+                model_dirs.append(Path(cache_home) / "huggingface" / "hub")
+            model_dirs.extend([
+                Path.home() / ".cache" / "huggingface" / "hub",
                 Path("/models"),
                 Path.cwd() / "models",
-            ]
+            ])
             model_name = "BAAI/bge-small-en-v1.5"
             for base in model_dirs:
                 # Look for the model in various locations (HuggingFace cache format)
