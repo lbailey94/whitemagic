@@ -47,6 +47,7 @@ These files live at the repository root. They are the **public face** of the pro
 | `AI_PRIMARY.md` | **AI agent onboarding** — primary instruction doc for AI collaborators | `run_mcp_lean.py`, `version_bump.py`, `generate_llms_txt.py` |
 | `AGENTS.md` | **AI agent operations** — coding conventions, testing protocol, change patterns | — |
 | `ARCHITECTURE_MANIFEST_2026-06-04.md` | **Post-extraction architecture clarity** — what this repo is, sibling repos, directory map | — |
+| `COMPETITIVE_POSITIONING_2026-06-04.md` | **Competitive analysis** — WhiteMagic vs Osabio, CogOS, Kumiho, MnemoCore, SARC, AI-CONSTITUTION | — |
 | `skill.md` | MCP skill definition for agent registries | `version_bump.py` |
 
 ---
