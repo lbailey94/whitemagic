@@ -11,8 +11,8 @@ import json
 import sys
 from pathlib import Path
 
-LIBRARY_ROOT = Path("polyglot/codex/00_source/LIBRARY")
-OUTPUT = Path("apps/site/public/library_manifest.json")
+LIBRARY_ROOT = Path("/home/lucas/Desktop/whitemagic-codex/00_source/LIBRARY")
+OUTPUT = Path("library_manifest.json")  # Copy to ~/Desktop/whitemagic-site/public/ if needed
 MAX_PREVIEW = 500
 
 CATEGORIES = {

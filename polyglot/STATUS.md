@@ -27,13 +27,13 @@
 | Haskell | 54 lines (scaffold) | 2,670 lines (13 modules) | `SD_CARD_WM/haskell/src/` |
 | Julia | 34 lines (scaffold) | 698 lines (2 modules) | `SD_CARD_WM/whitemagic-julia/src/` |
 | Zig | 11,387 (build failing) | 11,387 (builds) | Source migration to 0.16 API |
-| CODEX (Rust) | 0 (stub only) | 3,505 lines (7 crates) | SD Card `/CODEX/` → `polyglot/codex/` |
+| CODEX (Rust) | 0 (stub only) | 3,505 lines (7 crates) | SD Card `/CODEX/` → `polyglot/codex/` → `~/Desktop/whitemagic-codex/` (extracted 2026-06-04) |
 
 ---
 
 ## CODEX Pipeline (v0.2.0)
 
-Recovered from SD card on 2026-05-16. Full Rust workspace in `polyglot/codex/`:
+Recovered from SD card on 2026-05-16. Extracted to standalone project at `~/Desktop/whitemagic-codex/` on 2026-06-04. Full Rust workspace:
 
 | Crate | Purpose | LOC | Tests |
 |-------|---------|-----|-------|

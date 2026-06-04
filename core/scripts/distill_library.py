@@ -22,7 +22,7 @@ import re
 import sys
 from pathlib import Path
 
-LIBRARY_ROOT = Path("/home/lucas/Desktop/WHITEMAGIC/polyglot/codex/00_source/LIBRARY")
+LIBRARY_ROOT = Path("/home/lucas/Desktop/whitemagic-codex/00_source/LIBRARY")
 LIBRARY2_ROOT = Path("/home/lucas/Desktop/LIBRARY2")
 INDEX_OUTPUT = Path("scripts/library_concepts_index.json")
 
