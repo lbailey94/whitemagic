@@ -1,13 +1,13 @@
 export const WM_FACTS = {
   version: "22.2.0",
-  verifiedDate: "May 24, 2026",
+  verifiedDate: "June 03, 2026",
   linesShort: "178K",
   linesLong: "178,000",
-  callableTools: "479",
-  dispatchTools: "451",
+  callableTools: "484",
+  dispatchTools: "456",
   ganaTools: "28",
-  testsPassing: "2,243",
-  testsSkipped: "67",
+  testsPassing: "2379",
+  testsSkipped: "0",
   testsFailing: "0",
   languages: "7",
 } as const;
