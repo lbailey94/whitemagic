@@ -9,7 +9,7 @@ this module provides:
 
 Usage:
     from whitemagic.core.acceleration.parallel_rust import batch_cosine
-    
+
     # Auto-selects best strategy
     scores = batch_cosine(pairs)  # List of (a, b) vector pairs
 """

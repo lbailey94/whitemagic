@@ -6,7 +6,7 @@ import logging
 import sqlite3
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 
@@ -44,7 +44,7 @@ class CausalNet:
             synthesis_engine = getattr(rs, 'synthesis_engine', None)
             if synthesis_engine and hasattr(synthesis_engine, 'infer_dag_from_coords'):
                 # Build cluster_data dict for Rust
-                cluster_data: Dict[str, Any] = {}
+                cluster_data: dict[str, Any] = {}
                 conn = sqlite3.connect(str(self.db_path))
                 for key, mids in active_clusters.items():
                     placeholders = ",".join("?" for _ in mids)
@@ -66,12 +66,12 @@ class CausalNet:
                 )
                 if edges:
                     logger.info(f"Rust fast-path: {len(edges)} edges from {len(active_clusters)} clusters")
-                    return cast(Dict[str, List[str]], edges)
+                    return cast(dict[str, list[str]], edges)
         except Exception as e:
             logger.debug(f"Rust fast-path unavailable, using Python fallback: {e}")
 
         # Python fallback
-        cluster_data_py: Dict[str, Dict[str, Any]] = {}
+        cluster_data_py: dict[str, dict[str, Any]] = {}
         conn = sqlite3.connect(str(self.db_path))
 
         for key, mids in active_clusters.items():
@@ -89,7 +89,7 @@ class CausalNet:
         conn.close()
 
         # Build edges
-        edges_list: List[Tuple[str, str]] = []
+        edges_list: list[tuple[str, str]] = []
         keys = list(cluster_data_py.keys())
         for i in range(len(keys)):
             for j in range(len(keys)):
@@ -113,7 +113,7 @@ class CausalNet:
             edges_list, self.resonance_scores = self._verify_with_julia(nodes=[str(k) for k in cluster_data_py.keys()], edges=edges_list)
 
         # Convert list of tuples to dict for return type compatibility
-        result_dict: Dict[str, List[str]] = {}
+        result_dict: dict[str, list[str]] = {}
         for src, dst in edges_list:
             if src not in result_dict:
                 result_dict[src] = []

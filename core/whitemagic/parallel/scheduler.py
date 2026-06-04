@@ -211,7 +211,7 @@ class ParallelScheduler:
                     await self._execute_task(task)
                     self._running.discard(task_id)
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # No tasks available, check if done
                 if not self._running and self._ready_queue.empty():
                     break

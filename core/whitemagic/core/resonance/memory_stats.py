@@ -25,15 +25,11 @@ Usage:
 
 from __future__ import annotations
 
+import importlib.util
 import math
 from typing import Any
 
-# Try to import Rust backend for hot paths
-try:
-    import whitemagic_rs
-    HAS_RUST = True
-except ImportError:
-    HAS_RUST = False
+HAS_RUST = importlib.util.find_spec("whitemagic_rs") is not None
 
 
 class MemoryStatsAnalyzer:

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from whitemagic.core.dreaming.dream_artifacts import (
@@ -37,7 +37,7 @@ class ConsolidationReport:
     archived: list[str] = field(default_factory=list)
     skipped: int = 0
     errors: int = 0
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,13 +75,13 @@ class DreamConsolidator:
         """Run one consolidation pass over all dream artifacts."""
         report = ConsolidationReport()
         dreams_dir = _dreams_dir()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         import yaml
 
         for path in dreams_dir.glob("*.yaml"):
             try:
-                with open(path, "r", encoding="utf-8") as fp:
+                with open(path, encoding="utf-8") as fp:
                     data = yaml.safe_load(fp)
                 if not data:
                     continue

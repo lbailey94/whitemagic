@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingEngine:
     """Generates and manages vector embeddings for memories.
-    
+
     Delegates to the full EmbeddingEngine from embeddings.py.
     """
     def __init__(self):
@@ -81,7 +81,7 @@ class EmbeddingEngine:
 
 class VectorSearch:
     """Performs similarity search across embedded memories.
-    
+
     Delegates to the full VectorSearch from vector_search.py.
     """
     def __init__(self):
@@ -115,7 +115,7 @@ class VectorSearch:
 
 class HNSWIndex:
     """In-memory HNSW index for fast vector retrieval.
-    
+
     Delegates to the full HNSWIndex from hnsw_index.py.
     """
     def __init__(self, dim: int = 384):

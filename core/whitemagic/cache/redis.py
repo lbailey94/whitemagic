@@ -13,7 +13,7 @@ import json
 import pickle
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
 try:
     import redis
@@ -36,7 +36,7 @@ class CacheConfig:
     host: str = "localhost"
     port: int = 6379
     db: int = 0
-    password: Optional[str] = None
+    password: str | None = None
     ssl: bool = False
     ssl_cert_reqs: str = "required"
     connection_pool_max_connections: int = 50
@@ -54,9 +54,9 @@ class RedisCache:
 
     def __init__(self, config: CacheConfig):
         self.config = config
-        self._client: Optional[redis.Redis] = None
-        self._async_client: Optional[AsyncRedis] = None
-        self._connection_pool: Optional[redis.ConnectionPool] = None
+        self._client: redis.Redis | None = None
+        self._async_client: AsyncRedis | None = None
+        self._connection_pool: redis.ConnectionPool | None = None
         self._connected = False
 
         if REDIS_AVAILABLE:
@@ -178,7 +178,7 @@ class RedisCache:
             logger.error(f"Cache get error: {e}")
             return default
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set value in cache."""
         if not self._connected:
             return False
@@ -253,7 +253,7 @@ class RedisCache:
             logger.error(f"Cache TTL error: {e}")
             return -1
 
-    def clear(self, pattern: Optional[str] = None) -> int:
+    def clear(self, pattern: str | None = None) -> int:
         """Clear cache keys by pattern."""
         if not self._connected:
             return 0
@@ -296,7 +296,7 @@ class RedisCache:
             logger.error(f"Async cache get error: {e}")
             return default
 
-    async def aset(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def aset(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Async set value in cache."""
         if not self._async_client:
             return False
@@ -315,7 +315,7 @@ class RedisCache:
             return False
 
     # Cache decorators
-    def cache(self, ttl: Optional[int] = None, key_prefix: str = "") -> Callable:
+    def cache(self, ttl: int | None = None, key_prefix: str = "") -> Callable:
         """Decorator to cache function results."""
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
             @wraps(func)
@@ -340,10 +340,10 @@ class RedisCache:
 
 
 # Global cache instance
-_redis_cache: Optional[RedisCache] = None
+_redis_cache: RedisCache | None = None
 
 
-def get_redis_cache(config: Optional[CacheConfig] = None) -> RedisCache:
+def get_redis_cache(config: CacheConfig | None = None) -> RedisCache:
     """Get or create global Redis cache instance."""
     global _redis_cache
 

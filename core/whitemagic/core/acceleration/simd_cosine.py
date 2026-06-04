@@ -26,7 +26,6 @@ from typing import Any
 import numpy as np
 
 from whitemagic.core.acceleration.polyglot_numpy_bridge import (
-    get_array_pool,
     to_flat_ptr,
     to_ptr,
 )

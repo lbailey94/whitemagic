@@ -94,7 +94,7 @@ class KarmaTraceLogger:
 
         traces = []
         try:
-            with open(self.trace_file, "r", encoding="utf-8") as f:
+            with open(self.trace_file, encoding="utf-8") as f:
                 # For large files, we should read from the end.
                 # For now, a simple read of all lines is fine for v5.0.0-alpha.
                 lines = f.readlines()

@@ -20,7 +20,7 @@ import re
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -66,7 +66,7 @@ class DreamArtifact:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "DreamArtifact":
+    def from_dict(cls, data: dict[str, Any]) -> DreamArtifact:
         return cls(
             dream_id=data["dream_id"],
             created_at=datetime.fromisoformat(data["created_at"]),
@@ -170,7 +170,7 @@ class DreamArtifactWriter:
         dominant: str,
     ) -> DreamArtifact:
         """Write a dream artifact to disk."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         slug = _sanitize_filename(query or "dream")
         uid = uuid.uuid4().hex[:8]
         dream_id = f"dream_{now.strftime('%Y%m%d_%H%M%S')}_{uid}"
@@ -206,7 +206,7 @@ def list_dreams(status_filter: str | None = None) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for path in sorted(dreams_dir.glob("*.yaml"), reverse=True):
         try:
-            with open(path, "r", encoding="utf-8") as fp:
+            with open(path, encoding="utf-8") as fp:
                 data = yaml.safe_load(fp)
             if data and (status_filter is None or data.get("status") == status_filter):
                 data["_filename"] = path.name
@@ -222,7 +222,7 @@ def read_dream(dream_id: str) -> dict[str, Any] | None:
     for path in dreams_dir.glob("*.yaml"):
         if dream_id in path.name:
             try:
-                with open(path, "r", encoding="utf-8") as fp:
+                with open(path, encoding="utf-8") as fp:
                     data = yaml.safe_load(fp)
                 if data and data.get("dream_id") == dream_id:
                     data["_filename"] = path.name
@@ -238,7 +238,7 @@ def _update_dream_file(dream_id: str, **kwargs: Any) -> dict[str, Any] | None:
     for path in dreams_dir.glob("*.yaml"):
         if dream_id in path.name:
             try:
-                with open(path, "r", encoding="utf-8") as fp:
+                with open(path, encoding="utf-8") as fp:
                     data = yaml.safe_load(fp)
                 if not data or data.get("dream_id") != dream_id:
                     continue
@@ -260,7 +260,7 @@ def promote_dream(dream_id: str, memory_id: str | None = None) -> dict[str, Any]
         dream_id,
         status="promoted",
         promoted_to_memory_id=mem_id,
-        last_revisited=datetime.now(timezone.utc).isoformat(),
+        last_revisited=datetime.now(UTC).isoformat(),
     )
 
 
@@ -269,7 +269,7 @@ def expire_dream(dream_id: str) -> dict[str, Any] | None:
     return _update_dream_file(
         dream_id,
         status="expired",
-        last_revisited=datetime.now(timezone.utc).isoformat(),
+        last_revisited=datetime.now(UTC).isoformat(),
     )
 
 
@@ -278,7 +278,7 @@ def archive_dream(dream_id: str) -> dict[str, Any] | None:
     return _update_dream_file(
         dream_id,
         status="archived",
-        last_revisited=datetime.now(timezone.utc).isoformat(),
+        last_revisited=datetime.now(UTC).isoformat(),
     )
 
 
@@ -290,5 +290,5 @@ def revisit_dream(dream_id: str) -> dict[str, Any] | None:
     return _update_dream_file(
         dream_id,
         revisit_count=data.get("revisit_count", 0) + 1,
-        last_revisited=datetime.now(timezone.utc).isoformat(),
+        last_revisited=datetime.now(UTC).isoformat(),
     )

@@ -11,7 +11,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class EventType(Enum):
 class BiologicalEvent:
     """Single biological event with metadata."""
     event_type: EventType
-    data: Dict[str, Any]
+    data: dict[str, Any]
     source_subsystem: str
     timestamp: float
     priority: int = 1  # 1=low, 5=high
@@ -44,7 +44,7 @@ class BiologicalEventBus:
 
     def __init__(self):
         self.is_active = False
-        self._subscribers: Dict[EventType, List[Callable]] = {}
+        self._subscribers: dict[EventType, list[Callable]] = {}
         self._event_queue: asyncio.Queue = asyncio.Queue(maxsize=10000)
         self._stats = {
             "events_published": 0,
@@ -103,7 +103,7 @@ class BiologicalEventBus:
         self._subscribers[event_type].append(safe_handler)
         logger.debug(f"📡 {subsystem} subscribed to {event_type.value}")
 
-    async def publish(self, event_type: EventType, data: Dict[str, Any],
+    async def publish(self, event_type: EventType, data: dict[str, Any],
                       source: str, priority: int = 1) -> bool:
         """Publish an event to the bus."""
         if not self.is_active:
@@ -183,14 +183,14 @@ class BiologicalEventBus:
                 self._stats["events_processed"] += 1
                 self._stats["queue_depth"] = self._event_queue.qsize()
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # No events, continue
                 continue
             except Exception as e:
                 self._stats["errors"] += 1
                 logger.error(f"Event processing error: {e}")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get event bus statistics."""
         return {
             **self._stats,
@@ -200,7 +200,7 @@ class BiologicalEventBus:
         }
 
 # Global event bus instance
-_event_bus: Optional[BiologicalEventBus] = None
+_event_bus: BiologicalEventBus | None = None
 
 async def get_event_bus() -> BiologicalEventBus:
     """Get the global biological event bus."""

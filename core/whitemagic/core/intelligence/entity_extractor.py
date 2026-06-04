@@ -360,3 +360,25 @@ def get_entity_extractor(**kwargs: Any) -> EntityExtractor:
             if _extractor is None:
                 _extractor = EntityExtractor(**kwargs)
     return _extractor
+
+
+# ---------------------------------------------------------------------------
+# Register with UnifiedMemory hooks to break circular dependency
+# ---------------------------------------------------------------------------
+
+try:
+    from whitemagic.core.memory.unified import register_store_hook
+
+    def _entity_extraction_hook(memory: Any) -> None:
+        """Hook: run entity extraction when a memory is stored."""
+        try:
+            content = str(memory.content)[:4000]
+            if memory.title:
+                content = f"{memory.title}\n{content}"
+            get_entity_extractor().extract_and_store(memory.id, content)
+        except Exception:
+            pass
+
+    register_store_hook(_entity_extraction_hook)
+except ImportError:
+    pass

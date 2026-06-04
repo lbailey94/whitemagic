@@ -11,7 +11,7 @@ import logging
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +40,13 @@ class ToolRecommender:
         self.tool_history: deque = deque(maxlen=max_history)
 
         # Learned patterns: (tool1, tool2) -> count
-        self.bigram_counts: Dict[Tuple[str, str], int] = defaultdict(int)
+        self.bigram_counts: dict[tuple[str, str], int] = defaultdict(int)
 
         # Learned patterns: (tool1, tool2, tool3) -> count
-        self.trigram_counts: Dict[Tuple[str, str, str], int] = defaultdict(int)
+        self.trigram_counts: dict[tuple[str, str, str], int] = defaultdict(int)
 
         # Tool frequency
-        self.tool_frequency: Dict[str, int] = defaultdict(int)
+        self.tool_frequency: dict[str, int] = defaultdict(int)
 
         # Total sequences seen
         self.sequences_seen = 0
@@ -75,7 +75,7 @@ class ToolRecommender:
 
         self.sequences_seen += 1
 
-    def predict_next_tools(self, top_k: int = 5, min_confidence: float = 0.1) -> List[ToolPrediction]:
+    def predict_next_tools(self, top_k: int = 5, min_confidence: float = 0.1) -> list[ToolPrediction]:
         """
         Predict the most likely next tools.
 
@@ -89,7 +89,7 @@ class ToolRecommender:
         if len(self.tool_history) == 0:
             return []
 
-        predictions: Dict[str, ToolPrediction] = {}
+        predictions: dict[str, ToolPrediction] = {}
 
         # Use trigram model if we have enough history
         if len(self.tool_history) >= 2:
@@ -168,7 +168,7 @@ class ToolRecommender:
 
         return sorted_predictions[:top_k]
 
-    def get_tool_statistics(self) -> Dict[str, Any]:
+    def get_tool_statistics(self) -> dict[str, Any]:
         """Get statistics about learned patterns."""
         return {
             "sequences_seen": self.sequences_seen,
@@ -182,7 +182,7 @@ class ToolRecommender:
             )[:10],
         }
 
-    def train_from_patterns(self, patterns: List[Dict[str, Any]]):
+    def train_from_patterns(self, patterns: list[dict[str, Any]]):
         """
         Train the model from discovered patterns.
 
@@ -223,7 +223,7 @@ class ToolRecommender:
 
     def import_model(self, filepath: str):
         """Import a learned model from JSON."""
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             model_data = json.load(f)
 
         # Parse bigrams
@@ -253,16 +253,16 @@ class AutocastEnhancer:
     Integrates with existing tool discovery to provide intelligent suggestions.
     """
 
-    def __init__(self, recommender: Optional[ToolRecommender] = None):
+    def __init__(self, recommender: ToolRecommender | None = None):
         self.recommender = recommender or ToolRecommender()
-        self.prediction_cache: Dict[str, List[ToolPrediction]] = {}
+        self.prediction_cache: dict[str, list[ToolPrediction]] = {}
         self.cache_ttl_seconds = 60
 
     def get_smart_suggestions(
         self,
-        current_context: Dict[str, Any],
+        current_context: dict[str, Any],
         top_k: int = 3
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get smart tool suggestions based on context and ML predictions.
 
@@ -304,7 +304,7 @@ class AutocastEnhancer:
 
 
 # Global instance
-_recommender: Optional[ToolRecommender] = None
+_recommender: ToolRecommender | None = None
 
 
 def get_tool_recommender() -> ToolRecommender:
@@ -315,7 +315,7 @@ def get_tool_recommender() -> ToolRecommender:
     return _recommender
 
 
-def predict_next_tools(top_k: int = 5) -> List[ToolPrediction]:
+def predict_next_tools(top_k: int = 5) -> list[ToolPrediction]:
     """Convenience function to get predictions."""
     return get_tool_recommender().predict_next_tools(top_k=top_k)
 

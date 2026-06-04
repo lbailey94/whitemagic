@@ -24,15 +24,12 @@ from __future__ import annotations
 
 import ctypes
 import logging
-import time
 from typing import Any
 
 import numpy as np
 
 from whitemagic.core.acceleration.polyglot_numpy_bridge import (
     get_array_pool,
-    to_flat_ptr,
-    to_ptr,
 )
 
 logger = logging.getLogger(__name__)
@@ -70,14 +67,6 @@ class BatchCosine:
             a = np.ascontiguousarray(a)
         if not b.flags['C_CONTIGUOUS']:
             b = np.ascontiguousarray(b)
-
-        # Pre-allocate output
-        scores = self._pool.get(n, np.float32)
-
-        # Single FFI call for all pairs
-        a_ptr = to_ptr(a)
-        b_ptr = to_ptr(b)
-        scores_ptr = scores.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
 
         # Call Zig SIMD batch cosine for each pair
         # Note: Zig's batch_cosine compares one query against N vectors
@@ -122,7 +111,6 @@ class BatchGalacticScore:
         if self._rust is None:
             return np.zeros(len(coords), dtype=np.float32)
 
-        n = len(coords)
         if coords.shape[1] != 5:
             raise ValueError(f"Expected 5D coords, got {coords.shape[1]}D")
 

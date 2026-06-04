@@ -3,7 +3,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("haskell_bridge")
 
@@ -40,7 +40,7 @@ class HaskellBridge:
     def available(self) -> bool:
         return bool(self._available)
 
-    def cast_hexagram(self, lines: Optional[List[int]] = None) -> Dict[str, Any]:
+    def cast_hexagram(self, lines: list[int] | None = None) -> dict[str, Any]:
         """Cast a hexagram from 6 line values (0=Yin, 1=Yang).
 
         If lines is None, generates random lines.

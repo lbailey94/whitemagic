@@ -7,7 +7,7 @@ algorithms to accelerate graph operations.
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import numpy as np
 
@@ -19,7 +19,7 @@ class QuantumNode:
     id: str
     amplitude: float = 0.0
     phase: float = 0.0  # radians
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 class QuantumGraphEngine:
     """Quantum-inspired graph traversal and optimization engine."""
@@ -30,10 +30,10 @@ class QuantumGraphEngine:
 
     def grover_amplification(
         self,
-        nodes: List[QuantumNode],
+        nodes: list[QuantumNode],
         oracle: Callable[[QuantumNode], bool],
         iterations: int = 1
-    ) -> List[QuantumNode]:
+    ) -> list[QuantumNode]:
         """Apply Grover-inspired amplitude amplification to a set of nodes."""
         n = len(nodes)
         if n == 0:
@@ -63,9 +63,9 @@ class QuantumGraphEngine:
         self._stats["grover_walks"] += 1
         return nodes
 
-    def interference_fusion(self, state_a: List[QuantumNode], state_b: List[QuantumNode]) -> List[QuantumNode]:
+    def interference_fusion(self, state_a: list[QuantumNode], state_b: list[QuantumNode]) -> list[QuantumNode]:
         """Fuse two memory states using constructive/destructive interference."""
-        node_map: Dict[str, QuantumNode] = {}
+        node_map: dict[str, QuantumNode] = {}
 
         for node in state_a:
             node_map[node.id] = QuantumNode(
@@ -105,15 +105,15 @@ class QuantumGraphEngine:
 
     def walk_superposition(
         self,
-        seed_nodes: List[QuantumNode],
-        get_neighbors_func: Callable[[str], List[Dict[str, Any]]],
+        seed_nodes: list[QuantumNode],
+        get_neighbors_func: Callable[[str], list[dict[str, Any]]],
         hops: int = 2
-    ) -> List[QuantumNode]:
+    ) -> list[QuantumNode]:
         """Perform a walk where the frontier is in a 'superposition' of states."""
         current_state = seed_nodes
 
         for _ in range(hops):
-            next_state_map: Dict[str, QuantumNode] = {}
+            next_state_map: dict[str, QuantumNode] = {}
 
             for node in current_state:
                 neighbors = get_neighbors_func(node.id)

@@ -32,7 +32,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class MemoryCluster:
 
     cluster_id: str
     memory_ids: list[str]
-    shared_tags: Set[str]
+    shared_tags: set[str]
     avg_importance: float
     total_access_count: int
     avg_emotional_valence: float

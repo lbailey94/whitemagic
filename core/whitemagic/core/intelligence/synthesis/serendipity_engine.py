@@ -9,7 +9,7 @@ import random
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, List
+from typing import Any
 
 from whitemagic.utils.core import parse_datetime
 
@@ -138,7 +138,7 @@ class SerendipityEngine:
 
             # 5. Map back to SurfacedMemory objects
             sorted_mids = sorted(fused_probs.items(), key=lambda x: x[1], reverse=True)
-            surfaced: List[SurfacedMemory] = []
+            surfaced: list[SurfacedMemory] = []
             for mid, prob in sorted_mids:
                 if len(surfaced) >= count:
                     break

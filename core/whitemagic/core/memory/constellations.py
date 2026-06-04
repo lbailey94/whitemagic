@@ -984,3 +984,27 @@ def get_constellation_detector(
                 max_constellations=max_constellations,
             )
         return _detector_instance
+
+
+# ---------------------------------------------------------------------------
+# Register with UnifiedMemory hooks to break circular dependency
+# ---------------------------------------------------------------------------
+
+try:
+    from whitemagic.core.memory.unified import register_search_hook
+
+    def _constellation_annotation_hook(results: list) -> None:
+        """Hook: annotate search results with constellation context."""
+        if not results:
+            return
+        try:
+            detector = get_constellation_detector()
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            detector.annotate_memories(results, backend=um.backend)
+        except Exception:
+            pass
+
+    register_search_hook(_constellation_annotation_hook)
+except ImportError:
+    pass

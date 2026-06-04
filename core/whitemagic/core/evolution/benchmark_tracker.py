@@ -10,7 +10,7 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from whitemagic.config.paths import BENCHMARKS_DIR
 
@@ -25,7 +25,7 @@ class BenchmarkResult:
     ops_per_sec: float
     timestamp: str
     version: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 @dataclass
@@ -42,18 +42,18 @@ class BenchmarkComparison:
 class BenchmarkHistoryTracker:
     """Track and compare benchmark results over time."""
 
-    def __init__(self, history_file: Optional[Path] = None):
+    def __init__(self, history_file: Path | None = None):
         self.history_file = history_file or BENCHMARKS_DIR / "history.json"
         self.history_file.parent.mkdir(parents=True, exist_ok=True)
 
-        self.history: List[Dict[str, Any]] = []
+        self.history: list[dict[str, Any]] = []
         self.load_history()
 
     def load_history(self):
         """Load benchmark history from file."""
         if self.history_file.exists():
             try:
-                with open(self.history_file, 'r') as f:
+                with open(self.history_file) as f:
                     self.history = json.load(f)
                 logger.info(f"📊 Loaded {len(self.history)} historical benchmark runs")
             except Exception as e:
@@ -71,7 +71,7 @@ class BenchmarkHistoryTracker:
         except Exception as e:
             logger.error(f"Failed to save history: {e}")
 
-    def record_run(self, results: List[BenchmarkResult], version: str = "unknown"):
+    def record_run(self, results: list[BenchmarkResult], version: str = "unknown"):
         """Record a new benchmark run."""
         run_data = {
             "timestamp": datetime.now().isoformat(),
@@ -84,13 +84,13 @@ class BenchmarkHistoryTracker:
 
         logger.info(f"✅ Recorded benchmark run with {len(results)} results")
 
-    def get_latest_run(self) -> Optional[Dict[str, Any]]:
+    def get_latest_run(self) -> dict[str, Any] | None:
         """Get the most recent benchmark run."""
         if not self.history:
             return None
         return self.history[-1]
 
-    def get_baseline(self, benchmark_name: str, lookback: int = 10) -> Optional[float]:
+    def get_baseline(self, benchmark_name: str, lookback: int = 10) -> float | None:
         """
         Get baseline performance for a benchmark.
 
@@ -119,9 +119,9 @@ class BenchmarkHistoryTracker:
 
     def compare_with_baseline(
         self,
-        current_results: List[BenchmarkResult],
+        current_results: list[BenchmarkResult],
         regression_threshold: float = 5.0
-    ) -> List[BenchmarkComparison]:
+    ) -> list[BenchmarkComparison]:
         """
         Compare current results with historical baseline.
 
@@ -154,7 +154,7 @@ class BenchmarkHistoryTracker:
 
         return comparisons
 
-    def get_trend(self, benchmark_name: str, window: int = 10) -> Dict[str, Any]:
+    def get_trend(self, benchmark_name: str, window: int = 10) -> dict[str, Any]:
         """
         Get performance trend for a benchmark.
 
@@ -209,7 +209,7 @@ class BenchmarkHistoryTracker:
             "improvement_per_run": -slope,  # Negative slope = improvement
         }
 
-    def generate_report(self, current_results: List[BenchmarkResult]) -> str:
+    def generate_report(self, current_results: list[BenchmarkResult]) -> str:
         """Generate a comprehensive comparison report."""
         comparisons = self.compare_with_baseline(current_results)
 
@@ -270,7 +270,7 @@ class BenchmarkHistoryTracker:
 
 
 # Global instance
-_tracker: Optional[BenchmarkHistoryTracker] = None
+_tracker: BenchmarkHistoryTracker | None = None
 
 
 def get_benchmark_tracker() -> BenchmarkHistoryTracker:

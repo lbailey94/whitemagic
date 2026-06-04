@@ -8,7 +8,7 @@ Enables the system to apply adaptations automatically with safety monitoring.
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +35,13 @@ class AdaptiveSystem:
 
     def __init__(self):
         self.rules = AdaptationRule()
-        self.applied_adaptations: List[Dict[str, Any]] = []
-        self.pending_approvals: List[Dict[str, Any]] = []
-        self.rollback_history: List[Dict[str, Any]] = []
+        self.applied_adaptations: list[dict[str, Any]] = []
+        self.pending_approvals: list[dict[str, Any]] = []
+        self.rollback_history: list[dict[str, Any]] = []
 
         # Monitoring
-        self.coherence_history: List[float] = []
-        self.performance_history: List[float] = []
+        self.coherence_history: list[float] = []
+        self.performance_history: list[float] = []
 
         logger.info("🔄 Adaptive System initialized (DISABLED by default)")
 
@@ -62,7 +62,7 @@ class AdaptiveSystem:
         self.rules.enabled = False
         logger.info("🔒 Adaptive System DISABLED")
 
-    def should_apply_adaptation(self, adaptation: Dict[str, Any]) -> tuple[bool, str]:
+    def should_apply_adaptation(self, adaptation: dict[str, Any]) -> tuple[bool, str]:
         """
         Determine if an adaptation should be applied.
 
@@ -93,7 +93,7 @@ class AdaptiveSystem:
 
         return True, "All criteria met"
 
-    def propose_adaptation(self, adaptation: Dict[str, Any]) -> bool:
+    def propose_adaptation(self, adaptation: dict[str, Any]) -> bool:
         """
         Propose an adaptation for application.
 
@@ -117,7 +117,7 @@ class AdaptiveSystem:
 
             return False
 
-    def _apply_adaptation(self, adaptation: Dict[str, Any]) -> bool:
+    def _apply_adaptation(self, adaptation: dict[str, Any]) -> bool:
         """Apply an adaptation to the system."""
         try:
             adaptation_type = adaptation.get("type", "unknown")
@@ -157,13 +157,13 @@ class AdaptiveSystem:
             logger.error(f"❌ Error applying adaptation: {e}")
             return False
 
-    def _optimize_pathway(self, adaptation: Dict[str, Any]) -> bool:
+    def _optimize_pathway(self, adaptation: dict[str, Any]) -> bool:
         """Optimize a pathway (implementation placeholder)."""
         # In production, this would actually modify the system
         logger.info(f"  Optimizing pathway: {adaptation.get('pattern_id', 'unknown')}")
         return True
 
-    def _strengthen_pathway(self, adaptation: Dict[str, Any]) -> bool:
+    def _strengthen_pathway(self, adaptation: dict[str, Any]) -> bool:
         """Strengthen a pathway (implementation placeholder)."""
         # In production, this would actually modify the system
         logger.info(f"  Strengthening pathway: {adaptation.get('pattern_id', 'unknown')}")
@@ -223,7 +223,7 @@ class AdaptiveSystem:
         if len(self.performance_history) > max_history:
             self.performance_history = self.performance_history[-max_history:]
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current adaptive system status."""
         return {
             "enabled": self.rules.enabled,
@@ -242,7 +242,7 @@ class AdaptiveSystem:
 
 
 # Global instance
-_adaptive_system: Optional[AdaptiveSystem] = None
+_adaptive_system: AdaptiveSystem | None = None
 
 
 def get_adaptive_system() -> AdaptiveSystem:

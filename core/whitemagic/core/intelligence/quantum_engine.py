@@ -1,12 +1,12 @@
 """
 Quantum-Inspired Engine - Grover's Amplification and Superposition Walks.
 =======================================================================
-Provides O(√N) search and parallel path exploration using complex amplitude 
+Provides O(√N) search and parallel path exploration using complex amplitude
 simulations. Part of v22 Intelligence Matrix.
 """
 
 import math
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import numpy as np
 
@@ -18,10 +18,10 @@ class QuantumEngine:
         self.coherence_time = 1.0
         self.interference_threshold = 0.1
 
-    def grover_search(self, items: List[Any], oracle: Callable[[Any], bool], iterations: int | None = None) -> List[Any]:
+    def grover_search(self, items: list[Any], oracle: Callable[[Any], bool], iterations: int | None = None) -> list[Any]:
         """
         Grover's Amplification algorithm for O(√N) search.
-        
+
         Args:
             items: List of search candidates.
             oracle: Function returning True for the target item.
@@ -53,10 +53,10 @@ class QuantumEngine:
 
         return [items[i] for i in indices if probabilities[i] > (1.0 / N)]
 
-    def superposition_walk(self, graph: Dict[str, List[str]], start_node: str, hops: int = 2) -> Dict[str, float]:
+    def superposition_walk(self, graph: dict[str, list[str]], start_node: str, hops: int = 2) -> dict[str, float]:
         """
         Explores multiple graph paths simultaneously using amplitude distribution.
-        
+
         Args:
             graph: Adjacency list representation.
             start_node: Initial memory ID.
@@ -66,7 +66,7 @@ class QuantumEngine:
         state = {start_node: 1.0 + 0j}
 
         for _ in range(hops):
-            next_state: Dict[str, complex] = {}
+            next_state: dict[str, complex] = {}
             for node, amplitude in state.items():
                 neighbors = graph.get(node, [])
                 if not neighbors:
@@ -84,11 +84,11 @@ class QuantumEngine:
         # Collapse to probabilities
         return {node: abs(amp)**2 for node, amp in state.items()}
 
-    def interference_fusion(self, results: List[Dict[str, float]]) -> Dict[str, float]:
+    def interference_fusion(self, results: list[dict[str, float]]) -> dict[str, float]:
         """
         Fuses multiple search/walk results using constructive interference.
         """
-        fused: Dict[str, float] = {}
+        fused: dict[str, float] = {}
         for res in results:
             for node, prob in res.items():
                 # Weighted interference: stronger signals amplify exponentially

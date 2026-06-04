@@ -128,7 +128,7 @@ class EmbeddingEngine:
         """Destructor fallback to ensure connections are closed."""
         self.close()
 
-    def __enter__(self) -> "EmbeddingEngine":
+    def __enter__(self) -> EmbeddingEngine:
         """Context manager entry."""
         return self
 

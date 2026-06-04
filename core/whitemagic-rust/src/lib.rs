@@ -121,6 +121,8 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<graph::community_detector::PyCommunityDetector>()?;
     m.add_class::<graph::constellation_detector::Constellation>()?;
     m.add_class::<graph::constellation_detector::PyConstellationDetector>()?;
+    m.add_class::<graph::constellation_boost::ConstellationMember>()?;
+    m.add_class::<graph::constellation_boost::PyConstellationBoost>()?;
 
     // Memory consolidation pyfunctions
     m.add_function(wrap_pyfunction!(memory::memory_consolidation::consolidate_memories, m)?)?;
@@ -183,6 +185,8 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pipeline::tokio_clones::tokio_deploy_clones, m)?)?;
     m.add_function(wrap_pyfunction!(pipeline::tokio_clones::tokio_clone_bench, m)?)?;
     m.add_function(wrap_pyfunction!(pipeline::tokio_clones::tokio_clone_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(math::spatial_index_5d::batch_nearest_5d, m)?)?;
+    m.add_function(wrap_pyfunction!(math::spatial_index_5d::density_map_5d, m)?)?;
     // --- END RECONCILLATION ---
 
     // Register prat router functions

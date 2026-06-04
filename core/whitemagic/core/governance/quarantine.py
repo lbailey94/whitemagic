@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class QuarantineManager:
             entry = QuarantineEntry(
                 session_id=session_id,
                 reason=reason,
-                quarantined_at=datetime.now(timezone.utc),
+                quarantined_at=datetime.now(UTC),
                 source=source,
             )
             self._entries[session_id] = entry
@@ -124,7 +124,7 @@ class QuarantineManager:
             }
 
     def _prune_expired(self) -> None:
-        cutoff = datetime.now(timezone.utc) - self._auto_expire
+        cutoff = datetime.now(UTC) - self._auto_expire
         expired = [sid for sid, e in self._entries.items() if e.quarantined_at < cutoff]
         for sid in expired:
             del self._entries[sid]

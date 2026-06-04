@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Galactic Telepathy — Python Bridge to Go Mesh.
 
-Implements cross-instance memory synchronization by bridging the 
+Implements cross-instance memory synchronization by bridging the
 GalacticTelepathyEngine to the Go gossip/mesh layer.
 """
 

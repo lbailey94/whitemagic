@@ -8,14 +8,15 @@ Provides:
 - Alerting hooks
 """
 
+import importlib.util
 import logging
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, Generator
 
 # ---------------------------------------------------------------------------
 # Logging Configuration
@@ -88,7 +89,7 @@ class Metric:
     """A single metric data point."""
     name: str
     value: float
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     tags: dict[str, str] = field(default_factory=dict)
 
 
@@ -170,19 +171,19 @@ class MetricsRegistry:
         self.gauges: dict[str, Gauge] = {}
         self.histograms: dict[str, Histogram] = {}
 
-    def counter(self, name: str, tags: Optional[dict[str, str]] = None) -> Counter:
+    def counter(self, name: str, tags: dict[str, str] | None = None) -> Counter:
         """Get or create a counter."""
         if name not in self.counters:
             self.counters[name] = Counter(name=name, tags=tags or {})
         return self.counters[name]
 
-    def gauge(self, name: str, tags: Optional[dict[str, str]] = None) -> Gauge:
+    def gauge(self, name: str, tags: dict[str, str] | None = None) -> Gauge:
         """Get or create a gauge."""
         if name not in self.gauges:
             self.gauges[name] = Gauge(name=name, tags=tags or {})
         return self.gauges[name]
 
-    def histogram(self, name: str, tags: Optional[dict[str, str]] = None) -> Histogram:
+    def histogram(self, name: str, tags: dict[str, str] | None = None) -> Histogram:
         """Get or create a histogram."""
         if name not in self.histograms:
             self.histograms[name] = Histogram(name=name, tags=tags or {})
@@ -211,8 +212,8 @@ class Span:
     """A performance span (trace segment)."""
     name: str
     start_time: float
-    end_time: Optional[float] = None
-    duration_ms: Optional[float] = None
+    end_time: float | None = None
+    duration_ms: float | None = None
     tags: dict[str, Any] = field(default_factory=dict)
 
     def finish(self) -> None:
@@ -246,7 +247,7 @@ def trace(name: str, **tags) -> Generator[Span, None, None]:
         metrics.histogram(f"trace.{name}.duration_ms").observe(span.duration_ms or 0)
 
 
-def traced(name: Optional[str] = None, **tags) -> Callable:
+def traced(name: str | None = None, **tags) -> Callable:
     """Decorator to trace a function.
 
     Args:
@@ -286,7 +287,7 @@ class HealthCheckResult:
     status: HealthStatus
     message: str = ""
     duration_ms: float = 0.0
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 class HealthChecker:
@@ -368,19 +369,17 @@ def check_database() -> HealthCheckResult:
 @health_checker.register("rust_bridge")
 def check_rust_bridge() -> HealthCheckResult:
     """Check Rust bridge availability."""
-    try:
-        import whitemagic_rs
+    if importlib.util.find_spec("whitemagic_rs") is not None:
         return HealthCheckResult(
             name="rust_bridge",
             status=HealthStatus.HEALTHY,
             message="Rust bridge loaded"
         )
-    except ImportError:
-        return HealthCheckResult(
-            name="rust_bridge",
-            status=HealthStatus.DEGRADED,
-            message="Rust bridge not available (optional)"
-        )
+    return HealthCheckResult(
+        name="rust_bridge",
+        status=HealthStatus.DEGRADED,
+        message="Rust bridge not available (optional)"
+    )
 
 
 @health_checker.register("memory_size")
@@ -421,7 +420,7 @@ class Alert:
     severity: AlertSeverity
     title: str
     message: str
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     tags: dict[str, str] = field(default_factory=dict)
 
 
@@ -520,7 +519,7 @@ def get_system_status() -> dict[str, Any]:
 
     return {
         "status": overall_status.value,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "health_checks": {
             name: {
                 "status": result.status.value,
@@ -530,7 +529,7 @@ def get_system_status() -> dict[str, Any]:
             for name, result in health_results.items()
         },
         "metrics_count": len(metrics.collect()),
-        "recent_alerts": len([a for a in alert_manager.alerts if a.timestamp >= (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat()]),
+        "recent_alerts": len([a for a in alert_manager.alerts if a.timestamp >= (datetime.now(UTC) - timedelta(minutes=60)).isoformat()]),
     }
 
 

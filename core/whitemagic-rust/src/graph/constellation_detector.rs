@@ -1,6 +1,8 @@
 //! Constellation Detector - Constellation Formation (PSR-003)
 //! Target: 30× speedup for constellation detection
 
+use kdtree::distance::squared_euclidean;
+use kdtree::KdTree;
 use pyo3::prelude::*;
 use std::collections::{HashMap, HashSet};
 
@@ -60,12 +62,17 @@ impl PyConstellationDetector {
         let mut constellations = Vec::new();
         let mut constellation_id = 0;
         
+        let spatial_index = self.build_spatial_index();
+        
         for (point_id, coords) in &self.points {
             if visited.contains(point_id) {
                 continue;
             }
             
-            let cluster = self.find_cluster(point_id, coords, &mut visited);
+            let cluster = match &spatial_index {
+                Some((tree, ids)) => self.find_cluster_fast(point_id, coords, &mut visited, tree, ids),
+                None => self.find_cluster(point_id, coords, &mut visited),
+            };
             
             if cluster.len() >= self.min_members {
                 let centroid = self.calculate_centroid(&cluster);
@@ -124,6 +131,75 @@ impl PyConstellationDetector {
 }
 
 impl PyConstellationDetector {
+    fn build_spatial_index(&self) -> Option<(KdTree<f32, usize, [f32; 5]>, Vec<String>)> {
+        if self.points.is_empty() || !self.points.values().all(|c| c.len() == 5) {
+            return None;
+        }
+        
+        let ids: Vec<String> = self.points.keys().cloned().collect();
+        let mut tree = KdTree::new(5);
+        
+        for (idx, id) in ids.iter().enumerate() {
+            let coords = self.points.get(id).unwrap();
+            let arr: [f32; 5] = [
+                coords[0] as f32,
+                coords[1] as f32,
+                coords[2] as f32,
+                coords[3] as f32,
+                coords[4] as f32,
+            ];
+            if let Err(e) = tree.add(arr, idx) {
+                eprintln!("KD-tree add error: {:?}", e);
+                return None;
+            }
+        }
+        
+        Some((tree, ids))
+    }
+    
+    fn find_cluster_fast(
+        &self,
+        start_id: &str,
+        _start_coords: &[f64],
+        visited: &mut HashSet<String>,
+        tree: &KdTree<f32, usize, [f32; 5]>,
+        ids: &[String],
+    ) -> Vec<String> {
+        let mut cluster = Vec::new();
+        let mut stack = vec![start_id.to_string()];
+        let radius_sq = (self.max_radius as f32).powi(2);
+        
+        while let Some(point_id) = stack.pop() {
+            if visited.contains(&point_id) {
+                continue;
+            }
+            
+            visited.insert(point_id.clone());
+            cluster.push(point_id.clone());
+            
+            if let Some(coords) = self.points.get(&point_id) {
+                let query: [f32; 5] = [
+                    coords[0] as f32,
+                    coords[1] as f32,
+                    coords[2] as f32,
+                    coords[3] as f32,
+                    coords[4] as f32,
+                ];
+                
+                if let Ok(neighbors) = tree.within(&query, radius_sq, &squared_euclidean) {
+                    for (_dist, &idx) in neighbors {
+                        let neighbor_id = &ids[idx];
+                        if !visited.contains(neighbor_id) && !cluster.contains(neighbor_id) {
+                            stack.push(neighbor_id.clone());
+                        }
+                    }
+                }
+            }
+        }
+        
+        cluster
+    }
+
     fn find_cluster(&self, start_id: &str, _start_coords: &[f64], visited: &mut HashSet<String>) -> Vec<String> {
         let mut cluster = Vec::new();
         let mut stack = vec![start_id.to_string()];

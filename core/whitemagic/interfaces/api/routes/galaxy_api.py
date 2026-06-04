@@ -5,9 +5,15 @@ with holographic coordinates from the active galaxy.
 """
 
 import os
+import time
 from typing import Any
 
+from whitemagic.core.memory.constellation_algorithms import detect_kdtree
 from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
+# Simple TTL cache for constellation detection results
+_CONSTELLATION_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+_CONSTELLATION_CACHE_TTL: float = 60.0  # seconds
 
 try:
     from fastapi import APIRouter, Body, Header, HTTPException, Request
@@ -154,6 +160,136 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -
     return nodes, edges
 
 
+def _build_constellations_from_galaxy(
+    limit: int = 500,
+    galaxy_name: str | None = None,
+    min_members: int = 3,
+    max_radius: float = 0.5,
+) -> list[dict[str, Any]]:
+    """Detect constellations in a galaxy using the Rust KD-tree fast path.
+
+    Args:
+        limit: Maximum nodes to consider.
+        galaxy_name: Optional galaxy to query.
+        min_members: Minimum points per constellation.
+        max_radius: Spatial radius for cluster membership.
+    """
+    try:
+        _, um = _resolve_galaxy(galaxy_name)
+    except HTTPException:
+        return []
+
+    # Gather nodes with 5D coordinates
+    memories: list[Any] = []
+    try:
+        for page in um.backend.list_all_paginated(batch_size=500):
+            memories.extend(page)
+            if len(memories) >= limit:
+                break
+    except Exception:
+        pass
+
+    if not memories:
+        return []
+
+    coords_map: dict[str, tuple] = {}
+    try:
+        coords_map = um.backend.get_all_coords()
+    except Exception:
+        pass
+
+    # Build coordinate list with IDs
+    coords: list[tuple[float, ...]] = []
+    mem_ids: list[str] = []
+    mem_lookup: dict[str, Any] = {}
+
+    for mem in memories[:limit]:
+        coords_tuple = coords_map.get(mem.id)
+        if coords_tuple and len(coords_tuple) >= 3:
+            x = float(coords_tuple[0])
+            y = float(coords_tuple[1])
+            z = float(coords_tuple[2])
+            w = float(coords_tuple[3]) if len(coords_tuple) > 3 else 0.5
+            v = float(coords_tuple[4]) if len(coords_tuple) > 4 else 0.5
+            coords.append((x, y, z, w, v))
+            mem_ids.append(str(mem.id))
+            mem_lookup[str(mem.id)] = mem
+        else:
+            # Fallback: hash-based deterministic coordinates
+            h = hash(mem.id) & 0x7FFFFFFF
+            x = ((h % 1000) / 1000) * 2 - 1
+            y = (((h // 1000) % 1000) / 1000) * 2 - 1
+            z = (((h // 1000000) % 1000) / 1000) * 2 - 1
+            coords.append((x, y, z, 0.5, 0.5))
+            mem_ids.append(str(mem.id))
+            mem_lookup[str(mem.id)] = mem
+
+    if len(coords) < min_members:
+        return []
+
+    try:
+        groups, stabilities = detect_kdtree(
+            coords, ids=mem_ids, min_members=min_members, max_radius=max_radius
+        )
+    except Exception:
+        return []
+
+    constellations: list[dict[str, Any]] = []
+    for i, member_indices in enumerate(groups):
+        members = [mem_lookup[mem_ids[idx]] for idx in member_indices if mem_ids[idx] in mem_lookup]
+        if not members:
+            continue
+
+        # Compute centroid from coords
+        cx = sum(coords[idx][0] for idx in member_indices) / len(member_indices)
+        cy = sum(coords[idx][1] for idx in member_indices) / len(member_indices)
+        cz = sum(coords[idx][2] for idx in member_indices) / len(member_indices)
+        cw = sum(coords[idx][3] for idx in member_indices) / len(member_indices)
+        cv = sum(coords[idx][4] for idx in member_indices) / len(member_indices)
+
+        # Compute radius (max distance from centroid)
+        max_dist = 0.0
+        for idx in member_indices:
+            dx = coords[idx][0] - cx
+            dy = coords[idx][1] - cy
+            dz = coords[idx][2] - cz
+            dw = coords[idx][3] - cw
+            dv = coords[idx][4] - cv
+            dist = (dx * dx + dy * dy + dz * dz + dw * dw + dv * dv) ** 0.5
+            if dist > max_dist:
+                max_dist = dist
+
+        # Dominant tags
+        tag_counts: dict[str, int] = {}
+        for mem in members:
+            for tag in getattr(mem, "tags", []) or []:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        dominant_tags = sorted(tag_counts, key=lambda t: tag_counts[t], reverse=True)[:5]
+
+        # Dominant zone
+        zone_counts: dict[str, int] = {}
+        for mem in members:
+            zone = _memory_type_to_zone(
+                mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type)
+            )
+            zone_counts[zone] = zone_counts.get(zone, 0) + 1
+        dominant_zone = max(zone_counts, key=lambda z: zone_counts[z]) if zone_counts else "active"
+
+        constellations.append({
+            "id": f"constellation_{i}",
+            "name": f"Cluster {i + 1}",
+            "size": len(members),
+            "member_ids": [str(mem.id) for mem in members[:10]],
+            "centroid": {"x": round(cx, 4), "y": round(cy, 4), "z": round(cz, 4), "w": round(cw, 4), "v": round(cv, 4)},
+            "radius": round(max_dist, 4),
+            "stability": round(stabilities[i] if i < len(stabilities) else 0.5, 3),
+            "dominant_tags": dominant_tags,
+            "dominant_zone": dominant_zone,
+        })
+
+    return constellations
+
+
 def _require_api_key(x_api_key: str | None) -> str | None:
     """Validate API key if WM_GALAXY_REQUIRE_KEY is set."""
     require = os.environ.get("WM_GALAXY_REQUIRE_KEY", "").lower() in ("1", "true", "yes")
@@ -296,3 +432,77 @@ if router is not None:
             }
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Failed to create node: {exc}") from exc
+
+    @router.get("/constellations")
+    async def get_galaxy_constellations(
+        request: Request,
+        limit: int = 500,
+        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
+    ) -> dict[str, Any]:
+        """Return detected constellations from the galaxy (cached, auto-detect)."""
+        _require_api_key(x_api_key)
+
+        cache_key = f"{x_galaxy_name or 'active'}:{limit}"
+        now = time.time()
+
+        # Check TTL cache
+        cached = _CONSTELLATION_CACHE.get(cache_key)
+        if cached and (now - cached[0]) < _CONSTELLATION_CACHE_TTL:
+            return {
+                "constellations": cached[1],
+                "total": len(cached[1]),
+                "source": "cache",
+                "cached_at": cached[0],
+            }
+
+        constellations = _build_constellations_from_galaxy(
+            limit=limit, galaxy_name=x_galaxy_name
+        )
+
+        # Populate cache
+        _CONSTELLATION_CACHE[cache_key] = (now, constellations)
+
+        return {
+            "constellations": constellations,
+            "total": len(constellations),
+            "source": "galaxy_manager",
+        }
+
+    @router.post("/constellations/detect")
+    async def detect_galaxy_constellations(
+        request: Request,
+        min_members: int = Body(3),
+        max_radius: float = Body(0.5),
+        limit: int = Body(500),
+        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
+    ) -> dict[str, Any]:
+        """Trigger fresh constellation detection with tunable parameters.
+
+        Invalidates the read cache for this galaxy.
+        """
+        _require_api_key(x_api_key)
+
+        cache_key = f"{x_galaxy_name or 'active'}:{limit}"
+        _CONSTELLATION_CACHE.pop(cache_key, None)
+
+        t0 = time.time()
+        constellations = _build_constellations_from_galaxy(
+            limit=limit,
+            galaxy_name=x_galaxy_name,
+            min_members=min_members,
+            max_radius=max_radius,
+        )
+        elapsed = time.time() - t0
+
+        # Populate cache with fresh result
+        _CONSTELLATION_CACHE[cache_key] = (time.time(), constellations)
+
+        return {
+            "constellations": constellations,
+            "total": len(constellations),
+            "source": "galaxy_manager",
+            "elapsed_ms": round(elapsed * 1000, 2),
+            "params": {"min_members": min_members, "max_radius": max_radius, "limit": limit},
+        }

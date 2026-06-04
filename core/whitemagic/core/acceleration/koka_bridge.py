@@ -11,7 +11,7 @@ import subprocess
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, cast
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class KokaRuntime:
 
     def __init__(self, koka_dir: str = "./whitemagic-koka"):
         self.koka_dir = koka_dir
-        self.processes: Dict[str, KokaProcess] = {}
+        self.processes: dict[str, KokaProcess] = {}
 
     def start_unified_runtime(self) -> KokaProcess:
         """Start unified runtime v3."""
@@ -126,7 +126,7 @@ class KokaRuntime:
         self.processes["rust_bridge"] = koka_proc
         return koka_proc
 
-    def batch_write_embeddings(self, embeddings: List[List[float]], ids: List[int]) -> dict:
+    def batch_write_embeddings(self, embeddings: list[list[float]], ids: list[int]) -> dict:
         """Batch write embeddings via ring buffer."""
         if "ring_buffer" not in self.processes:
             self.start_ring_buffer()
@@ -148,7 +148,7 @@ class KokaRuntime:
             "event": event_type
         })
 
-    def cosine_similarity(self, a: List[float], b: List[float]) -> float:
+    def cosine_similarity(self, a: list[float], b: list[float]) -> float:
         """Compute cosine similarity via rust bridge."""
         if "rust_bridge" not in self.processes:
             self.start_rust_bridge()

@@ -1,12 +1,12 @@
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def dharma_evaluate_ethics(
-    action: Dict[str, Any],
-    context: Optional[Dict[str, Any]] = None,
+    action: dict[str, Any],
+    context: dict[str, Any] | None = None,
     **kwargs: Any
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Evaluate an action against ethical principles."""
     from whitemagic.dharma import get_dharma_system
 
@@ -22,7 +22,7 @@ def dharma_evaluate_ethics(
     }
 
 
-def dharma_check_boundaries(action: Dict[str, Any], strict_mode: bool = False, **kwargs: Any) -> Dict[str, Any]:
+def dharma_check_boundaries(action: dict[str, Any], strict_mode: bool = False, **kwargs: Any) -> dict[str, Any]:
     """Check if an action violates any ethical boundaries."""
     from whitemagic.dharma import get_dharma_system
 
@@ -46,7 +46,7 @@ def dharma_check_boundaries(action: Dict[str, Any], strict_mode: bool = False, *
     }
 
 
-def dharma_verify_consent(action: Dict[str, Any], consent_type: str = 'explicit', **kwargs: Any) -> Dict[str, Any]:
+def dharma_verify_consent(action: dict[str, Any], consent_type: str = 'explicit', **kwargs: Any) -> dict[str, Any]:
     """Verify if proper consent has been obtained for an action."""
     # Check if action involves consent-requiring operations
     consent_keywords = ['personal', 'private', 'user', 'data', 'modify', 'delete']
@@ -65,7 +65,7 @@ def dharma_verify_consent(action: Dict[str, Any], consent_type: str = 'explicit'
     }
 
 
-def dharma_get_guidance(situation: str, principles: Optional[List[str]] = None, **kwargs: Any) -> Dict[str, Any]:
+def dharma_get_guidance(situation: str, principles: list[str] | None = None, **kwargs: Any) -> dict[str, Any]:
     """Get ethical guidance for a situation."""
     from whitemagic.dharma import get_dharma_system
 
@@ -81,7 +81,7 @@ def dharma_get_guidance(situation: str, principles: Optional[List[str]] = None, 
     }
 
 
-def dharma_get_ethical_score(time_window_hours: int = 24, **kwargs: Any) -> Dict[str, Any]:
+def dharma_get_ethical_score(time_window_hours: int = 24, **kwargs: Any) -> dict[str, Any]:
     """Get overall ethical score based on recent system actions."""
     from whitemagic.dharma import get_dharma_system
 
@@ -100,7 +100,7 @@ def dharma_get_ethical_score(time_window_hours: int = 24, **kwargs: Any) -> Dict
     }
 
 
-def dharma_list_principles(level: Optional[str] = None, **kwargs: Any) -> Dict[str, Any]:
+def dharma_list_principles(level: str | None = None, **kwargs: Any) -> dict[str, Any]:
     """List all ethical principles with their descriptions and weights."""
     from whitemagic.dharma import get_dharma_system
 

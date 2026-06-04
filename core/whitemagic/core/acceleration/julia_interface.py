@@ -2,7 +2,7 @@
 import logging
 import os
 import subprocess
-from typing import Any, Dict, Optional
+from typing import Any
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
@@ -10,7 +10,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger("julia_bridge")
 
 class JuliaBridge:
-    def __init__(self, julia_bin_path: Optional[str] = None):
+    def __init__(self, julia_bin_path: str | None = None):
         if not julia_bin_path:
             # Auto-discover from system path
             import shutil
@@ -28,7 +28,7 @@ class JuliaBridge:
             return False
         return True
 
-    def calculate_resonance(self, magnitude: float = 1.0, damping: float = 0.1) -> Dict[str, Any]:
+    def calculate_resonance(self, magnitude: float = 1.0, damping: float = 0.1) -> dict[str, Any]:
         """
         Call the Gan Ying engine to calculate resonance physics.
         """

@@ -195,7 +195,7 @@ class ThreadingManager:
         # Execute all in parallel
         return await asyncio.gather(*coros, return_exceptions=True)
 
-    def __enter__(self) -> "ThreadingManager":
+    def __enter__(self) -> ThreadingManager:
         """Context manager entry."""
         self.start()
         return self

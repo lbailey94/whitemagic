@@ -7,7 +7,7 @@ and all 7 biological subsystems wired together.
 import asyncio
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .biological_event_bus import (
     BiologicalEventBus,
@@ -25,7 +25,7 @@ class UnifiedNervousSystemV21:
 
     def __init__(self):
         self.is_active = False
-        self.event_bus: Optional[BiologicalEventBus] = None
+        self.event_bus: BiologicalEventBus | None = None
         self._stats = {
             "pulses": 0,
             "errors": 0,
@@ -36,7 +36,7 @@ class UnifiedNervousSystemV21:
         # Initialize all 7 subsystems
         self.subsystems = self._initialize_subsystems()
 
-    def _initialize_subsystems(self) -> Dict[str, Any]:
+    def _initialize_subsystems(self) -> dict[str, Any]:
         """Initialize all 7 biological subsystems."""
         subsystems = {}
 
@@ -169,7 +169,7 @@ class UnifiedNervousSystemV21:
 
         logger.info("🧠 Unified Nervous System V21 stopped")
 
-    async def pulse(self, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def pulse(self, context: dict[str, Any] | None = None) -> dict[str, Any]:
         """Complete pulse with cross-system coordination."""
         if not self.is_active:
             return {"status": "inactive"}
@@ -232,7 +232,7 @@ class UnifiedNervousSystemV21:
             "subsystem_errors": self._stats["subsystem_errors"]
         }
 
-    async def _dream_pulse(self) -> Dict[str, Any]:
+    async def _dream_pulse(self) -> dict[str, Any]:
         """Run dream cycle and publish events."""
         dreams = self.subsystems["dreams"]
 
@@ -255,7 +255,7 @@ class UnifiedNervousSystemV21:
         else:
             return {"status": "no_phase_method"}
 
-    async def _metabolism_pulse(self) -> Dict[str, Any]:
+    async def _metabolism_pulse(self) -> dict[str, Any]:
         """Check memory decay and publish events."""
         metabolism = self.subsystems["metabolism"]
 
@@ -276,7 +276,7 @@ class UnifiedNervousSystemV21:
         else:
             return {"status": "no_decay_calculation"}
 
-    async def _resonance_pulse(self) -> Dict[str, Any]:
+    async def _resonance_pulse(self) -> dict[str, Any]:
         """Check resonance and publish harmony events."""
         resonance = self.subsystems["resonance"]
 
@@ -298,7 +298,7 @@ class UnifiedNervousSystemV21:
             return {"status": "no_harmony_calculation"}
 
 # Global V21 instance
-_unified_nervous_system_v21: Optional[UnifiedNervousSystemV21] = None
+_unified_nervous_system_v21: UnifiedNervousSystemV21 | None = None
 
 async def get_nervous_system_v21() -> UnifiedNervousSystemV21:
     """Get the global V21 nervous system instance."""

@@ -9,7 +9,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from whitemagic.core.evolution.autodidactic_loop import (
     AutodidacticLoop,
@@ -24,13 +24,13 @@ class DiscoveredPattern:
     pattern_id: str
     tag: str
     confidence: float
-    sources: List[str]
+    sources: list[str]
     source_count: int
     cv_score: float
     outcome_score: float
     frequency_score: float
     longevity_score: float
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 class AdaptiveIntegration:
     """Manages pattern integration with adaptive systems"""
@@ -39,16 +39,16 @@ class AdaptiveIntegration:
         self,
         auto_apply_threshold: float = 0.77,
         manual_review_threshold: float = 0.60,
-        autodidactic_loop: Optional[AutodidacticLoop] = None,
+        autodidactic_loop: AutodidacticLoop | None = None,
     ):
         self.auto_apply_threshold = auto_apply_threshold
         self.manual_review_threshold = manual_review_threshold
         self.autodidactic_loop = autodidactic_loop or AutodidacticLoop()
 
         # Pattern queues
-        self.auto_apply_queue: List[DiscoveredPattern] = []
-        self.manual_review_queue: List[DiscoveredPattern] = []
-        self.applied_patterns: List[str] = []
+        self.auto_apply_queue: list[DiscoveredPattern] = []
+        self.manual_review_queue: list[DiscoveredPattern] = []
+        self.applied_patterns: list[str] = []
 
     def load_patterns(self, results_file: Path) -> None:
         """Load patterns from cross-validation results"""
@@ -75,7 +75,7 @@ class AdaptiveIntegration:
             elif pattern.confidence >= self.manual_review_threshold:
                 self.manual_review_queue.append(pattern)
 
-    def apply_pattern(self, pattern: DiscoveredPattern, context: Dict[str, Any]) -> str:
+    def apply_pattern(self, pattern: DiscoveredPattern, context: dict[str, Any]) -> str:
         """Apply a pattern and record the application"""
         application_id = str(uuid.uuid4())
 
@@ -99,10 +99,10 @@ class AdaptiveIntegration:
         application_id: str,
         pattern_id: str,
         success: bool,
-        performance_gain: Optional[float] = None,
-        quality_score: Optional[float] = None,
-        user_feedback: Optional[str] = None,
-        metrics: Optional[Dict[str, Any]] = None,
+        performance_gain: float | None = None,
+        quality_score: float | None = None,
+        user_feedback: str | None = None,
+        metrics: dict[str, Any] | None = None,
     ) -> None:
         """Record the outcome of a pattern application"""
         outcome = PatternOutcome(
@@ -118,17 +118,17 @@ class AdaptiveIntegration:
 
         self.autodidactic_loop.record_outcome(outcome)
 
-    def get_next_pattern(self) -> Optional[DiscoveredPattern]:
+    def get_next_pattern(self) -> DiscoveredPattern | None:
         """Get the next pattern to apply (highest confidence first)"""
         if self.auto_apply_queue:
             return self.auto_apply_queue.pop(0)
         return None
 
-    def get_pattern_stats(self, pattern_id: str) -> Optional[Dict[str, Any]]:
+    def get_pattern_stats(self, pattern_id: str) -> dict[str, Any] | None:
         """Get learning statistics for a pattern"""
         return self.autodidactic_loop.get_pattern_stats(pattern_id)
 
-    def get_integration_summary(self) -> Dict[str, Any]:
+    def get_integration_summary(self) -> dict[str, Any]:
         """Get summary of integration status"""
         learning_summary = self.autodidactic_loop.get_learning_summary()
 
@@ -143,7 +143,7 @@ class AdaptiveIntegration:
 def simulate_pattern_application(
     pattern: DiscoveredPattern,
     integration: AdaptiveIntegration,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Simulate applying a pattern and measuring the outcome
 
     In production, this would actually apply the optimization.

@@ -11,6 +11,14 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
+# Rust KD-tree fast path
+try:
+    import whitemagic_rust as _wr
+    _RUST_KDTREE_AVAILABLE = True
+except ImportError:
+    _wr = None  # type: ignore[assignment]
+    _RUST_KDTREE_AVAILABLE = False
+
 # Optional dependencies for HDBSCAN clustering
 _hdbscan: Any = None
 _HDBSCAN_AVAILABLE = False
@@ -101,6 +109,52 @@ def detect_hdbscan(
         f"HDBSCAN: {len(groups)} clusters, "
         f"{sum(1 for lbl in labels if lbl == -1)} noise points",
     )
+    return groups, stabilities
+
+
+def detect_kdtree(
+    coords: list[tuple[float, ...]],
+    ids: list[str] | None = None,
+    min_members: int = 3,
+    max_radius: float = 0.5,
+) -> tuple[list[list[int]], list[float]]:
+    """Fast KD-tree constellation detection via Rust PyConstellationDetector.
+
+    Automatically uses the O(n log n) KD-tree path for 5D coordinates,
+    falling back to the O(n²) brute-force path for other dimensions.
+
+    Returns (groups, stabilities) where groups are lists of member-indices
+    and stabilities are 0-1 scores based on cluster tightness.
+    """
+    if not _RUST_KDTREE_AVAILABLE:
+        raise ImportError("whitemagic_rust required for KD-tree clustering")
+    if len(coords) == 0:
+        return [], []
+
+    det = _wr.PyConstellationDetector(min_members, max_radius)
+    id_list = ids or [str(i) for i in range(len(coords))]
+
+    for i, c in enumerate(coords):
+        det.add_point(id_list[i], list(c))
+
+    constellations = det.detect_constellations()
+
+    groups: list[list[int]] = []
+    stabilities: list[float] = []
+    for c in constellations:
+        indices = []
+        for member_id in c.members:
+            try:
+                indices.append(id_list.index(member_id))
+            except ValueError:
+                pass
+        if indices:
+            groups.append(indices)
+            # Stability: tighter radius = higher stability
+            stability = max(0.0, 1.0 - c.radius / max_radius) if max_radius > 0 else 0.5
+            stabilities.append(stability)
+
+    logger.info(f"KD-tree: {len(groups)} constellations from {len(coords)} points")
     return groups, stabilities
 
 

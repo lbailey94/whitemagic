@@ -6,7 +6,6 @@ Classifies user prompts into routine categories (managerial) vs novel ideas (cre
 Used by the Auto-Prompting Supervisor to identify the "70%" of routine work.
 """
 
-from typing import Tuple
 
 
 class PromptClassifier:
@@ -35,7 +34,7 @@ class PromptClassifier:
         ]
     }
 
-    def classify(self, prompt: str) -> Tuple[str, float]:
+    def classify(self, prompt: str) -> tuple[str, float]:
         """
         Classify a prompt string.
         Returns (category, confidence).

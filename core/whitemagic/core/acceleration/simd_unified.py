@@ -13,7 +13,7 @@ All operations route through Rust accelerators with Python fallback.
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Tuple, cast
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def batch_cosine(query: list[float], vectors: list[list[float]]) -> list[float]:
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'batch_cosine'):
-        return cast(List[float], rust.batch_cosine(query, vectors))
+        return cast(list[float], rust.batch_cosine(query, vectors))
 
     return [cosine_similarity(query, vec) for vec in vectors]
 
@@ -86,7 +86,7 @@ def pairwise_distance_matrix(vectors: list[list[float]]) -> list[list[float]]:
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'pairwise_distance_matrix'):
-        return cast(List[List[float]], rust.pairwise_distance_matrix(vectors))
+        return cast(list[list[float]], rust.pairwise_distance_matrix(vectors))
 
     # Python fallback
     n = len(vectors)
@@ -106,7 +106,7 @@ def top_k_nearest(query: list[float], vectors: list[list[float]], k: int = 10) -
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'top_k_nearest'):
-        return cast(List[Tuple[int, float]], rust.top_k_nearest(query, vectors, k))
+        return cast(list[tuple[int, float]], rust.top_k_nearest(query, vectors, k))
 
     # Python fallback
     similarities = [(i, cosine_similarity(query, vec)) for i, vec in enumerate(vectors)]
@@ -158,7 +158,7 @@ def holographic_5d_knn(query: tuple[float, ...], coords: list[tuple[float, ...]]
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'holographic_5d_knn'):
-        return cast(List[int], rust.holographic_5d_knn(list(query), [list(c) for c in coords], k))
+        return cast(list[int], rust.holographic_5d_knn(list(query), [list(c) for c in coords], k))
 
     # Python fallback
     distances = [(i, holographic_5d_distance(query, coord)) for i, coord in enumerate(coords)]
@@ -201,7 +201,7 @@ def grid_density_scan(points: list[tuple[float, float]], grid_size: int = 50) ->
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'grid_density_scan'):
-        return cast(List[List[int]], rust.grid_density_scan(points, grid_size))
+        return cast(list[list[int]], rust.grid_density_scan(points, grid_size))
 
     # Python fallback
     grid = [[0] * grid_size for _ in range(grid_size)]
@@ -236,7 +236,7 @@ def extract_keywords(text: str, top_k: int = 10) -> list[tuple[str, float]]:
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'extract_keywords'):
-        return cast(List[Tuple[str, float]], rust.extract_keywords(text, top_k))
+        return cast(list[tuple[str, float]], rust.extract_keywords(text, top_k))
 
     # Python fallback - simple word frequency
     import re
@@ -263,7 +263,7 @@ def batch_normalize(vectors: list[list[float]]) -> list[list[float]]:
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'batch_normalize'):
-        return cast(List[List[float]], rust.batch_normalize(vectors))
+        return cast(list[list[float]], rust.batch_normalize(vectors))
 
     # Python fallback
     import math
@@ -285,7 +285,7 @@ def batch_centroid(vectors: list[list[float]]) -> list[float]:
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'batch_centroid'):
-        return cast(List[float], rust.batch_centroid(vectors))
+        return cast(list[float], rust.batch_centroid(vectors))
 
     # Python fallback
     if not vectors:
@@ -307,7 +307,7 @@ def batch_topk_cosine(query: list[float], vectors: list[list[float]], k: int = 1
     """
     rust = _init_rust()
     if rust and hasattr(rust, 'batch_topk_cosine'):
-        return cast(List[Tuple[int, float]], rust.batch_topk_cosine(query, vectors, k))
+        return cast(list[tuple[int, float]], rust.batch_topk_cosine(query, vectors, k))
 
     return top_k_nearest(query, vectors, k)
 

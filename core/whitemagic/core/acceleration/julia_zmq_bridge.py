@@ -8,7 +8,7 @@ import logging
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import zmq
 
@@ -20,9 +20,9 @@ class JuliaZMQClient:
     def __init__(self, host: str = "127.0.0.1", port: int = 5555):
         self.host = host
         self.port = port
-        self._context: Optional[Any] = None
-        self._socket: Optional[Any] = None
-        self._server_process: Optional[subprocess.Popen] = None
+        self._context: Any | None = None
+        self._socket: Any | None = None
+        self._server_process: subprocess.Popen | None = None
 
     def connect(self) -> bool:
         """Connect to Julia server, starting it if needed."""
@@ -105,7 +105,7 @@ class JuliaZMQClient:
             logger.error(f"Failed to start Julia server: {e}")
             return False
 
-    def _send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    def _send_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send request to Julia server."""
         if not self._socket:
             raise RuntimeError("Not connected to Julia server")
@@ -117,7 +117,7 @@ class JuliaZMQClient:
             return {"status": "error", "message": "Invalid response from Julia server"}
         return result
 
-    def rrf_fuse(self, lists: List[List[str]], weights: List[float], k: int = 60) -> List[str]:
+    def rrf_fuse(self, lists: list[list[str]], weights: list[float], k: int = 60) -> list[str]:
         """RRF fusion via Julia."""
         response = self._send_request({
             "method": "rrf_fuse",
@@ -130,8 +130,8 @@ class JuliaZMQClient:
         else:
             raise RuntimeError(f"RRF fuse failed: {response.get('error')}")
 
-    def pagerank(self, edges: List[tuple], weights: List[float],
-                 damping: float = 0.85) -> Dict[str, float]:
+    def pagerank(self, edges: list[tuple], weights: list[float],
+                 damping: float = 0.85) -> dict[str, float]:
         """PageRank via Julia."""
         edge_list = [[src, dst] for src, dst in edges]
         response = self._send_request({
@@ -145,8 +145,8 @@ class JuliaZMQClient:
         else:
             raise RuntimeError(f"PageRank failed: {response.get('error')}")
 
-    def walk_scoring(self, seed: str, edges: List[tuple],
-                     node_scores: Dict[str, float], max_depth: int = 5) -> Dict[str, float]:
+    def walk_scoring(self, seed: str, edges: list[tuple],
+                     node_scores: dict[str, float], max_depth: int = 5) -> dict[str, float]:
         """Graph walk scoring via Julia."""
         edge_list = [[src, dst] for src, dst in edges]
         response = self._send_request({
@@ -176,9 +176,9 @@ class JuliaZMQClient:
             self._server_process.wait(timeout=5)
 
 # Global client
-_julia_client: Optional[JuliaZMQClient] = None
+_julia_client: JuliaZMQClient | None = None
 
-def get_julia_client() -> Optional[JuliaZMQClient]:
+def get_julia_client() -> JuliaZMQClient | None:
     """Get global Julia ZMQ client."""
     global _julia_client
     if _julia_client is None:

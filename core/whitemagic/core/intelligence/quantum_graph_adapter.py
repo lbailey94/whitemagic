@@ -8,7 +8,7 @@ import logging
 import math
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from whitemagic.core.intelligence.quantum_inspired_graph import (
     QuantumGraphEngine,
@@ -30,22 +30,22 @@ class QuantumWalkConfig:
 class QuantumGraphAdapter:
     """Adapter that enhances classical graph walking with quantum-inspired algorithms."""
 
-    def __init__(self, classical_walker: Optional[GraphWalker] = None):
+    def __init__(self, classical_walker: GraphWalker | None = None):
         self._classical = classical_walker or GraphWalker()
         self._quantum = QuantumGraphEngine(walker_sigma=2.0)
         self._config = QuantumWalkConfig()
 
     def quantum_enhanced_walk(
         self,
-        seed_ids: List[str],
+        seed_ids: list[str],
         hops: int = 2,
         top_k: int = 5,
-        query_embedding: Optional[List[float]] = None,
-        oracle_func: Optional[Callable[[str], bool]] = None,
-        get_neighbors_func: Optional[Callable[[str], List[Dict]]] = None,
+        query_embedding: list[float] | None = None,
+        oracle_func: Callable[[str], bool] | None = None,
+        get_neighbors_func: Callable[[str], list[dict]] | None = None,
     ) -> WalkResult:
         """Perform a quantum-enhanced graph walk.
-        
+
         Strategy:
         1. Start with classical walk for initial seed expansion
         2. Apply Grover amplification if oracle provided
@@ -115,7 +115,7 @@ class QuantumGraphAdapter:
         logger.info(f"⚛️ Quantum-enhanced walk: {len(final_nodes)} nodes in superposition")
         return result
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get combined statistics from classical and quantum engines."""
         return {
             "classical": self._classical.get_stats(),

@@ -14,9 +14,12 @@ This allows gardens to provide semantic context to the holographic memory system
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

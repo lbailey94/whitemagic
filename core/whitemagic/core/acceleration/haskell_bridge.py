@@ -7,9 +7,14 @@ Note: Due to GHC RTS circular dependencies (RTS ↔ ghc-prim), the Haskell
 library requires LD_PRELOAD to be set before Python starts. Use the helper
 script or set environment variables manually:
 
-    export LD_LIBRARY_PATH=/home/lucas/.ghcup/ghc/9.6.6/lib/ghc-9.6.6/lib/x86_64-linux-ghc-9.6.6
+    export LD_LIBRARY_PATH=/path/to/ghc/lib/x86_64-linux-ghc-9.6.6
     export LD_PRELOAD=$LD_LIBRARY_PATH/libHSrts-1.0.2-ghc9.6.6.so:$LD_LIBRARY_PATH/libHSghc-prim-0.10.0-ghc9.6.6.so:$LD_LIBRARY_PATH/libHSbase-4.18.2.1-ghc9.6.6.so
     python your_script.py
+
+Override paths via environment:
+
+    WM_GHC_LIB_DIR — GHC library directory (e.g. output of `ghc --print-libdir`)
+    WM_HS_LIB      — Full path to libwhitemagic_hs.so
 """
 
 from __future__ import annotations
@@ -18,7 +23,6 @@ import ctypes
 import logging
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -26,8 +30,27 @@ logger = logging.getLogger(__name__)
 
 _lib: Any = None
 _HAS_HS = False
-_GHC_LIB_DIR = "/home/lucas/.ghcup/ghc/9.6.6/lib/ghc-9.6.6/lib/x86_64-linux-ghc-9.6.6"
-_HS_LIB_PATH = "/home/lucas/Desktop/WHITEMAGIC/polyglot/whitemagic-hs/libwhitemagic_hs.so"
+
+
+def _resolve_ghc_lib_dir() -> str:
+    """Resolve GHC library directory via env var or ghc --print-libdir."""
+    env_dir = os.environ.get("WM_GHC_LIB_DIR", "")
+    if env_dir:
+        return env_dir
+    try:
+        result = subprocess.run(
+            ["ghc", "--print-libdir"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ""
+
+
+_GHC_LIB_DIR = _resolve_ghc_lib_dir()
+_HS_LIB_PATH = os.environ.get("WM_HS_LIB", "")
 
 # Core GHC libraries needed for RTS initialization
 _GHC_CORE_LIBS = [

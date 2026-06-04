@@ -1,9 +1,8 @@
 # Thought Galaxy Creation, Scoring, and Recall System
-from typing import List
 
 
 class CognitiveEpisode:
-    def __init__(self, id: str, embeddings: List[float], tags: List[str]):
+    def __init__(self, id: str, embeddings: list[float], tags: list[str]):
         self.id = id
         self.embeddings = embeddings
         self.tags = tags
@@ -22,7 +21,7 @@ class ThoughtGalaxy:
         for ep in self.episodes:
             ep.score = len(ep.tags) * 1.5 # Placeholder scoring
 
-    def recall(self, query_tags: List[str], top_k: int = 5) -> List[CognitiveEpisode]:
+    def recall(self, query_tags: list[str], top_k: int = 5) -> list[CognitiveEpisode]:
         # Simple intersection scoring for now
         results = []
         for ep in self.episodes:

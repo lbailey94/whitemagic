@@ -6,7 +6,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 from unittest.mock import MagicMock
 
 if 'whitemagic.core.memory.neural_system' not in sys.modules:
@@ -35,6 +35,37 @@ _HOLO_FACTORY: Any | None = None
 _HOLO_FACTORY_ATTEMPTED = False
 _GAN_YING_EVENT_TYPE: Any | None = None
 _GAN_YING_EVENT_TYPE_ATTEMPTED = False
+
+# Lifecycle hooks for decoupled memory enrichment (breaks circular deps)
+# Modules like entity_extractor and constellations register callbacks here.
+_store_hooks: list[Callable[[Memory], None]] = []
+_search_hooks: list[Callable[[list[Memory]], None]] = []
+
+
+def register_store_hook(fn: Callable[[Memory], None]) -> None:
+    """Register a callback invoked after a memory is stored."""
+    _store_hooks.append(fn)
+
+
+def register_search_hook(fn: Callable[[list[Memory]], None]) -> None:
+    """Register a callback invoked after a search returns results."""
+    _search_hooks.append(fn)
+
+
+def _emit_store_hooks(memory: Memory) -> None:
+    for hook in _store_hooks:
+        try:
+            hook(memory)
+        except Exception:
+            pass
+
+
+def _emit_search_hooks(results: list[Memory]) -> None:
+    for hook in _search_hooks:
+        try:
+            hook(results)
+        except Exception:
+            pass
 
 
 def _get_holographic_factory() -> Any | None:
@@ -257,7 +288,6 @@ class UnifiedMemory:
                 logger.debug(f"Embedding engine unavailable: {_e}")  # Skip silently
 
         # v15.2: Auto-extract entities and relations into knowledge graph
-        # v16: Use LightNER for fast pattern-based extraction, fall back to LLM
         if enable_entity_extraction:
             try:
                 content_for_extraction = str(content)[:4000]
@@ -269,18 +299,14 @@ class UnifiedMemory:
                 kg = get_kg_v2()
                 result = kg.extract_and_store(memory.id, content_for_extraction)
 
-                # If no relations found and LLM is available, try LLM-based extraction
+                # If no relations found, emit hook for LLM-based extraction
                 if result.get("relations_extracted", 0) == 0:
-                    try:
-                        from whitemagic.core.intelligence.entity_extractor import (
-                            get_entity_extractor,
-                        )
-                        extractor = get_entity_extractor()
-                        extractor.extract_and_store(memory.id, content_for_extraction)
-                    except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                        logger.debug(f"Entity LLM extraction failed for {memory.id}: {_e}")
-            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Entity extraction unavailable: {_e}")  # Skip silently
+                    _emit_store_hooks(memory)
+            except (ImportError, ModuleNotFoundError, AttributeError):
+                # KG v2 unavailable; fall back to hook-based extraction
+                _emit_store_hooks(memory)
+            except Exception as _e:
+                logger.debug(f"Entity extraction failed: {_e}")
 
         return memory
 
@@ -306,16 +332,9 @@ class UnifiedMemory:
         results = self.backend.search(query=query, tags=tags, memory_type=memory_type,
                                  min_importance=min_importance, limit=limit)
 
-        # Annotate results with constellation context (B2 v13.3.2)
+        # Annotate results with constellation context via hooks (breaks circular dep)
         if results:
-            try:
-                from whitemagic.core.memory.constellations import (
-                    get_constellation_detector,
-                )
-                detector = get_constellation_detector()
-                detector.annotate_memories(results, backend=self.backend)
-            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Constellation annotation failed: {_e}")
+            _emit_search_hooks(results)
 
         # Emit search event for Gan Ying integration
         event_type = _get_gan_ying_event_type()
@@ -651,16 +670,9 @@ class UnifiedMemory:
                     mem.metadata["query_constellation"] = query_constellation_name
                 results.append(mem)
 
-        # Constellation annotation
+        # Constellation annotation via hooks (breaks circular dep)
         if results:
-            try:
-                from whitemagic.core.memory.constellations import (
-                    get_constellation_detector,
-                )
-                detector = get_constellation_detector()
-                detector.annotate_memories(results, backend=self.backend)
-            except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Constellation annotation failed: {_e}")
+            _emit_search_hooks(results)
 
         return results
 

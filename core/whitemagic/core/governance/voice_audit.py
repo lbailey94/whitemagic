@@ -22,7 +22,7 @@ import logging
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class AuditReport:
     verified_claims: int = 0
     hallucinated_claims: list[dict[str, Any]] = field(default_factory=list)
     orphaned_ledger_entries: list[dict[str, Any]] = field(default_factory=list)
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     quarantine_triggered: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -86,7 +86,7 @@ class ClaimLog:
             module=module,
             tool=tool,
             params=params or {},
-            claimed_at=datetime.now(timezone.utc),
+            claimed_at=datetime.now(UTC),
         )
         with self._lock:
             self._claims.append(entry)
@@ -101,7 +101,7 @@ class ClaimLog:
                 if not claim.verified and claim.tool == tool:
                     if params is None or self._params_match(claim.params, params):
                         claim.verified = True
-                        claim.verified_at = datetime.now(timezone.utc)
+                        claim.verified_at = datetime.now(UTC)
                         return claim
         return None
 
@@ -111,7 +111,7 @@ class ClaimLog:
             return [c for c in self._claims if not c.verified]
 
     def _prune_old(self) -> None:
-        cutoff = datetime.now(timezone.utc) - self._max_age
+        cutoff = datetime.now(UTC) - self._max_age
         self._claims = [c for c in self._claims if c.claimed_at > cutoff]
 
     @staticmethod

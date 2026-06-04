@@ -167,7 +167,7 @@ class ParallelFileReader:
         """Close the threading manager."""
         self.manager.shutdown()
 
-    def __enter__(self) -> "ParallelFileReader":
+    def __enter__(self) -> ParallelFileReader:
         """Context manager entry."""
         self.manager.start()
         return self

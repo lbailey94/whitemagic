@@ -16,6 +16,7 @@ import asyncio
 import json
 import os
 import shutil
+import sys
 import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -480,7 +481,7 @@ class TestHermesHookScripts:
     POLICY_HOOK = "/tmp/whitemagic_policy_hook.py"
     CONTEXT_HOOK = "/tmp/whitemagic_context_hook.py"
     MEMORY_HOOK = "/tmp/whitemagic_memory_bridge.py"
-    PYTHON = "/home/lucas/Desktop/WHITEMAGIC/.venv/bin/python"
+    PYTHON = sys.executable
 
     @pytest.fixture(scope="class", autouse=True)
     def _skip_if_hooks_missing(self):

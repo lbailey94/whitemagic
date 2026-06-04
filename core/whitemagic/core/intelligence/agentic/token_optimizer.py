@@ -140,7 +140,7 @@ class QueryCache:
                         created=parse_datetime(item["created"]),
                         hits=item.get("hits", 0),
                     )
-            except IOError:
+            except OSError:
                 pass
 
     def _save(self) -> None:

@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,10 @@ class AccessPattern:
     """Represents a discovered access pattern."""
     pattern_id: str
     pattern_type: str  # 'frequent_access', 'co_access', 'temporal', 'cache_candidate'
-    memory_ids: List[str]
+    memory_ids: list[str]
     frequency: int
     confidence: float
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
     discovered_at: str
 
 
@@ -46,26 +46,26 @@ class AccessPattern:
 class SemanticCluster:
     """Represents a semantic cluster across galaxies."""
     cluster_id: str
-    memory_ids: List[str]
-    common_tags: Set[str]
+    memory_ids: list[str]
+    common_tags: set[str]
     avg_importance: float
-    galaxy_sources: List[str]
+    galaxy_sources: list[str]
     confidence: float
 
 
 class GalaxyPatternMiner:
     """Mine patterns from galaxy archive databases."""
 
-    def __init__(self, galaxy_paths: List[str]):
+    def __init__(self, galaxy_paths: list[str]):
         """Initialize the miner.
 
         Args:
             galaxy_paths: List of paths to galaxy DB files
         """
         self.galaxy_paths = galaxy_paths
-        self.connections: Dict[str, sqlite3.Connection] = {}
-        self.patterns: List[AccessPattern] = []
-        self.clusters: List[SemanticCluster] = []
+        self.connections: dict[str, sqlite3.Connection] = {}
+        self.patterns: list[AccessPattern] = []
+        self.clusters: list[SemanticCluster] = []
 
         logger.info(f"🌌 GalaxyPatternMiner initialized with {len(galaxy_paths)} galaxies")
 
@@ -90,7 +90,7 @@ class GalaxyPatternMiner:
             conn.close()
         self.connections.clear()
 
-    def mine_access_patterns(self, min_frequency: int = 5) -> List[AccessPattern]:
+    def mine_access_patterns(self, min_frequency: int = 5) -> list[AccessPattern]:
         """Mine memory access patterns from access logs.
 
         Args:
@@ -169,7 +169,7 @@ class GalaxyPatternMiner:
         logger.info(f"✓ Discovered {len(patterns)} access patterns")
         return patterns
 
-    def mine_co_access_patterns(self, min_co_occurrence: int = 3) -> List[AccessPattern]:
+    def mine_co_access_patterns(self, min_co_occurrence: int = 3) -> list[AccessPattern]:
         """Mine co-access patterns (memories accessed together).
 
         Args:
@@ -227,7 +227,7 @@ class GalaxyPatternMiner:
         logger.info(f"✓ Discovered {len(patterns)} co-access patterns")
         return patterns
 
-    def mine_cache_candidates(self, min_access: int = 10, min_importance: float = 0.7) -> List[AccessPattern]:
+    def mine_cache_candidates(self, min_access: int = 10, min_importance: float = 0.7) -> list[AccessPattern]:
         """Identify memories that should be cached.
 
         Args:
@@ -309,7 +309,7 @@ class GalaxyPatternMiner:
         logger.info(f"✓ Discovered {len(patterns)} cache candidate patterns")
         return patterns
 
-    def mine_semantic_clusters(self, min_cluster_size: int = 3) -> List[SemanticCluster]:
+    def mine_semantic_clusters(self, min_cluster_size: int = 3) -> list[SemanticCluster]:
         """Mine semantic clusters based on tags and content.
 
         Args:
@@ -345,7 +345,7 @@ class GalaxyPatternMiner:
         clusters = []
 
         # Aggregate tags across all galaxies
-        tag_to_memories: Dict[str, List[Tuple[str, str, float]]] = defaultdict(list)
+        tag_to_memories: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
 
         for db_path, conn in self.connections.items():
             try:
@@ -395,7 +395,7 @@ class GalaxyPatternMiner:
         logger.info(f"✓ Discovered {len(clusters)} semantic clusters")
         return clusters
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get mining summary statistics."""
         pattern_types = Counter(p.pattern_type for p in self.patterns)
 
@@ -410,10 +410,10 @@ class GalaxyPatternMiner:
 
 
 # Singleton instance
-_galaxy_miner: Optional[GalaxyPatternMiner] = None
+_galaxy_miner: GalaxyPatternMiner | None = None
 
 
-def get_galaxy_miner(galaxy_paths: Optional[List[str]] = None) -> GalaxyPatternMiner:
+def get_galaxy_miner(galaxy_paths: list[str] | None = None) -> GalaxyPatternMiner:
     """Get the singleton GalaxyPatternMiner instance.
 
     Args:

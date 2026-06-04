@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Set
 
 _STOP_WORDS = {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
@@ -26,13 +25,13 @@ class AssociationMiner:
         self.persist = persist
         self.total_runs = 0
 
-    def _extract_keywords(self, text: str) -> Set[str]:
+    def _extract_keywords(self, text: str) -> set[str]:
         """Extract lowercase alphanumeric keywords, excluding stop words."""
         words = re.findall(r"[a-zA-Z]+", text.lower())
         return {w for w in words if w not in _STOP_WORDS and len(w) > 2}
 
     @staticmethod
-    def _compute_overlap(a: Set[str], b: Set[str]) -> tuple[float, Set[str]]:
+    def _compute_overlap(a: set[str], b: set[str]) -> tuple[float, set[str]]:
         """Compute Jaccard-like overlap score and shared keywords."""
         if not a or not b:
             return 0.0, set()

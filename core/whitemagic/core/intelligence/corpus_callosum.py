@@ -16,7 +16,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ class CorpusCallosumBus:
             dominant_hemisphere=dominant,
             escalated=escalated,
             duration_ms=elapsed_ms,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
         self._debates[debate_id] = result

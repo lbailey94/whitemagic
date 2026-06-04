@@ -73,7 +73,7 @@ class BatchResult:
     latency_ms: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "BatchResult":
+    def from_dict(cls, data: dict[str, Any]) -> BatchResult:
         return cls(
             id=data.get("id", 0),
             status=data.get("status", "unknown"),
@@ -91,7 +91,7 @@ class BatchResponse:
     commands_processed: int
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "BatchResponse":
+    def from_dict(cls, data: dict[str, Any]) -> BatchResponse:
         return cls(
             request_id=data.get("request_id", ""),
             results=[BatchResult.from_dict(r) for r in data.get("results", [])],

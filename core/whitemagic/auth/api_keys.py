@@ -3,9 +3,8 @@ import json
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -18,8 +17,8 @@ class APIKeyMetadata(BaseModel):
     name: str
     owner: str
     created_at: datetime
-    expires_at: Optional[datetime] = None
-    scopes: List[str] = ["*"]
+    expires_at: datetime | None = None
+    scopes: list[str] = ["*"]
     is_active: bool = True
 
 class APIKeySystem:
@@ -28,7 +27,7 @@ class APIKeySystem:
     Provides secure generation and validation of keys.
     """
 
-    def __init__(self, storage_path: Optional[str] = None):
+    def __init__(self, storage_path: str | None = None):
         if storage_path:
             self.storage_path = Path(storage_path)
         else:
@@ -39,13 +38,13 @@ class APIKeySystem:
         if self.storage_path.parent:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._keys: Dict[str, str] = {}  # hashed_key -> metadata_json (legacy/unused in new persistence)
-        self._metadata: Dict[str, APIKeyMetadata] = {}
+        self._keys: dict[str, str] = {}  # hashed_key -> metadata_json (legacy/unused in new persistence)
+        self._metadata: dict[str, APIKeyMetadata] = {}
 
         # Load keys from storage
         self._load()
 
-    def generate_key(self, name: str, owner: str, expires_days: Optional[int] = None) -> tuple[str, APIKeyMetadata]:
+    def generate_key(self, name: str, owner: str, expires_days: int | None = None) -> tuple[str, APIKeyMetadata]:
         """Generate a new API key."""
         # Create a prefix for identification (wm_ for WhiteMagic)
         raw_key = f"wm_{secrets.token_urlsafe(32)}"
@@ -53,13 +52,13 @@ class APIKeySystem:
 
         expires_at = None
         if expires_days:
-            expires_at = datetime.now(timezone.utc) + timedelta(days=expires_days)
+            expires_at = datetime.now(UTC) + timedelta(days=expires_days)
 
         metadata = APIKeyMetadata(
             key_id=key_id,
             name=name,
             owner=owner,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             expires_at=expires_at
         )
 
@@ -79,7 +78,7 @@ class APIKeySystem:
 
         return raw_key, metadata
 
-    def validate_key(self, raw_key: str) -> Optional[APIKeyMetadata]:
+    def validate_key(self, raw_key: str) -> APIKeyMetadata | None:
         """Validate an API key and return its metadata if valid."""
         hashed_key = self._hash_key(raw_key)
         key_id = self._keys.get(hashed_key)
@@ -91,7 +90,7 @@ class APIKeySystem:
         if not metadata or not metadata.is_active:
             return None
 
-        if metadata.expires_at and metadata.expires_at < datetime.now(timezone.utc):
+        if metadata.expires_at and metadata.expires_at < datetime.now(UTC):
             metadata.is_active = False
             self._save()  # Persist expiration status
             return None
@@ -141,7 +140,7 @@ class APIKeySystem:
             return
 
         try:
-            with open(self.storage_path, 'r') as f:
+            with open(self.storage_path) as f:
                 data = json.load(f)
 
             self._keys = data.get("keys", {})

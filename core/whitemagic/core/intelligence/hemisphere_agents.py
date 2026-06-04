@@ -58,7 +58,7 @@ class HemisphereAgent:
     def critique(self, position: str) -> str:
         """Critique a position from the opposing hemisphere."""
         logger.warning("HemisphereAgent.critique called on base class — use LeftHemisphereAgent or RightHemisphereAgent")
-        return f"[BASE] No critique available — use a concrete hemisphere agent."
+        return "[BASE] No critique available — use a concrete hemisphere agent."
 
 
 class LeftHemisphereAgent(HemisphereAgent):

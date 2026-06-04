@@ -9,7 +9,7 @@ Each optimizer implements specific workflow optimizations with measurable impact
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -52,15 +52,15 @@ class MemoryWorkflowOptimizer:
         self.enable_cache = enable_cache
 
         # Caches
-        self.link_cache: Dict[str, List[str]] = {}  # memory_id -> similar_memory_ids
-        self.consolidation_cache: Dict[str, Dict[str, Any]] = {}  # memory_id -> consolidation_data
+        self.link_cache: dict[str, list[str]] = {}  # memory_id -> similar_memory_ids
+        self.consolidation_cache: dict[str, dict[str, Any]] = {}  # memory_id -> consolidation_data
 
         # Metrics
         self.metrics = OptimizationMetrics("MemoryWorkflow")
 
         logger.info("🚀 MemoryWorkflowOptimizer initialized")
 
-    def pre_compute_semantic_links(self, memory_id: str, memory_data: Dict[str, Any]) -> Optional[List[str]]:
+    def pre_compute_semantic_links(self, memory_id: str, memory_data: dict[str, Any]) -> list[str] | None:
         """
         Pre-compute semantic links for a newly created memory.
 
@@ -87,7 +87,7 @@ class MemoryWorkflowOptimizer:
 
             # Pre-compute similar memories (simplified - would use embeddings in production)
             # For now, just return empty list to demonstrate the mechanism
-            similar_ids: List[str] = []
+            similar_ids: list[str] = []
 
             # In production, this would:
             # 1. Get embedding for new memory
@@ -108,7 +108,7 @@ class MemoryWorkflowOptimizer:
             logger.error(f"Error pre-computing semantic links: {e}")
             return None
 
-    def pre_warm_consolidation(self, memory_id: str, memory_data: Dict[str, Any]) -> bool:
+    def pre_warm_consolidation(self, memory_id: str, memory_data: dict[str, Any]) -> bool:
         """
         Pre-warm consolidation cache for high-importance memories.
 
@@ -148,7 +148,7 @@ class MemoryWorkflowOptimizer:
             logger.error(f"Error pre-warming consolidation: {e}")
             return False
 
-    def get_consolidation_data(self, memory_id: str) -> Optional[Dict[str, Any]]:
+    def get_consolidation_data(self, memory_id: str) -> dict[str, Any] | None:
         """Get pre-computed consolidation data if available."""
         if memory_id in self.consolidation_cache:
             self.metrics.cache_hits += 1
@@ -158,7 +158,7 @@ class MemoryWorkflowOptimizer:
         self.metrics.cache_misses += 1
         return None
 
-    def clear_cache(self, memory_id: Optional[str] = None):
+    def clear_cache(self, memory_id: str | None = None):
         """Clear cache for a specific memory or all memories."""
         if memory_id:
             self.link_cache.pop(memory_id, None)
@@ -167,7 +167,7 @@ class MemoryWorkflowOptimizer:
             self.link_cache.clear()
             self.consolidation_cache.clear()
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get optimization metrics."""
         return {
             "optimization": self.metrics.optimization_name,
@@ -196,17 +196,17 @@ class PatternLearningOptimizer:
         self.enable_batching = enable_batching
 
         # Pending confirmations for batch processing
-        self.pending_confirmations: Dict[str, Dict[str, Any]] = {}
+        self.pending_confirmations: dict[str, dict[str, Any]] = {}
 
         # Pre-warmed UI state
-        self.ui_cache: Dict[str, Dict[str, Any]] = {}
+        self.ui_cache: dict[str, dict[str, Any]] = {}
 
         # Metrics
         self.metrics = OptimizationMetrics("PatternLearning")
 
         logger.info("🚀 PatternLearningOptimizer initialized")
 
-    def pre_warm_confirmation_ui(self, pattern_id: str, pattern_data: Dict[str, Any]) -> bool:
+    def pre_warm_confirmation_ui(self, pattern_id: str, pattern_data: dict[str, Any]) -> bool:
         """
         Pre-warm confirmation UI components when pattern is detected.
 
@@ -238,7 +238,7 @@ class PatternLearningOptimizer:
             logger.error(f"Error pre-warming UI: {e}")
             return False
 
-    def add_to_batch(self, pattern_id: str, pattern_data: Dict[str, Any]):
+    def add_to_batch(self, pattern_id: str, pattern_data: dict[str, Any]):
         """
         Add pattern to batch for related pattern detection.
 
@@ -281,7 +281,7 @@ class PatternLearningOptimizer:
         except Exception as e:
             logger.error(f"Error processing batch: {e}")
 
-    def get_ui_data(self, pattern_id: str) -> Optional[Dict[str, Any]]:
+    def get_ui_data(self, pattern_id: str) -> dict[str, Any] | None:
         """Get pre-warmed UI data if available."""
         if pattern_id in self.ui_cache:
             self.metrics.cache_hits += 1
@@ -295,7 +295,7 @@ class PatternLearningOptimizer:
         """Force process current batch (for testing or shutdown)."""
         self._process_batch()
 
-    def get_metrics(self) -> Dict[str, Any]:
+    def get_metrics(self) -> dict[str, Any]:
         """Get optimization metrics."""
         return {
             "optimization": self.metrics.optimization_name,
@@ -309,8 +309,8 @@ class PatternLearningOptimizer:
 
 
 # Global instances (singleton pattern)
-_memory_optimizer: Optional[MemoryWorkflowOptimizer] = None
-_pattern_optimizer: Optional[PatternLearningOptimizer] = None
+_memory_optimizer: MemoryWorkflowOptimizer | None = None
+_pattern_optimizer: PatternLearningOptimizer | None = None
 
 
 def get_memory_optimizer() -> MemoryWorkflowOptimizer:
@@ -329,7 +329,7 @@ def get_pattern_optimizer() -> PatternLearningOptimizer:
     return _pattern_optimizer
 
 
-def get_all_optimization_metrics() -> Dict[str, Any]:
+def get_all_optimization_metrics() -> dict[str, Any]:
     """Get metrics from all optimizers."""
     return {
         "memory_workflow": get_memory_optimizer().get_metrics(),

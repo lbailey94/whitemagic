@@ -8,17 +8,17 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 
 def find_library(
     lib_name: str,
-    base_path: Optional[Path] = None,
-    env_var: Optional[str] = None,
-    search_paths: Optional[list[str]] = None,
-) -> Optional[str]:
+    base_path: Path | None = None,
+    env_var: str | None = None,
+    search_paths: list[str] | None = None,
+) -> str | None:
     """
     Locate a compiled shared library.
 
@@ -69,10 +69,10 @@ class LibraryLoader:
     def __init__(
         self,
         lib_name: str,
-        base_path: Optional[Path] = None,
-        env_var: Optional[str] = None,
-        search_paths: Optional[list[str]] = None,
-        setup_function: Optional[Callable[[Any], None]] = None,
+        base_path: Path | None = None,
+        env_var: str | None = None,
+        search_paths: list[str] | None = None,
+        setup_function: Callable[[Any], None] | None = None,
     ):
         """
         Initialize the library loader.
@@ -90,11 +90,11 @@ class LibraryLoader:
         self.search_paths = search_paths or []
         self.setup_function = setup_function
 
-        self._lib: Optional[Any] = None
+        self._lib: Any | None = None
         self._lock = threading.Lock()
         self._available = False
 
-    def _find_library(self) -> Optional[str]:
+    def _find_library(self) -> str | None:
         """Find the library using configured search paths."""
         return find_library(
             self.lib_name,
@@ -103,7 +103,7 @@ class LibraryLoader:
             self.search_paths,
         )
 
-    def load(self) -> Optional[Any]:
+    def load(self) -> Any | None:
         """
         Load the library (lazy initialization).
 
@@ -144,7 +144,7 @@ class LibraryLoader:
         return self._available
 
     @property
-    def lib(self) -> Optional[Any]:
+    def lib(self) -> Any | None:
         """Get the loaded library."""
         return self.load()
 

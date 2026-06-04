@@ -140,7 +140,7 @@ class AsyncGanYingBus:
                     await self._dispatch(item)
                     self._metrics["events_processed"] += 1
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
             except Exception as e:
                 logger.error(f"Error processing event: {e}")
