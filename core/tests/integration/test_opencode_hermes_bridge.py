@@ -478,19 +478,24 @@ class TestHermesHookScripts:
       - post_llm_call  -> whitemagic_memory_bridge.py
     """
 
-    POLICY_HOOK = "/tmp/whitemagic_policy_hook.py"
-    CONTEXT_HOOK = "/tmp/whitemagic_context_hook.py"
-    MEMORY_HOOK = "/tmp/whitemagic_memory_bridge.py"
+    HOOKS_DIR = ROOT / "whitemagic" / "hermes" / "hooks"
+    POLICY_HOOK = str(HOOKS_DIR / "whitemagic_policy_hook.py")
+    CONTEXT_HOOK = str(HOOKS_DIR / "whitemagic_context_hook.py")
+    MEMORY_HOOK = str(HOOKS_DIR / "whitemagic_memory_bridge.py")
     PYTHON = sys.executable
 
     @pytest.fixture(scope="class", autouse=True)
     def _skip_if_hooks_missing(self):
-        if not Path(self.POLICY_HOOK).exists():
-            pytest.skip("Policy hook script not found")
-        if not Path(self.CONTEXT_HOOK).exists():
-            pytest.skip("Context hook script not found")
-        if not Path(self.MEMORY_HOOK).exists():
-            pytest.skip("Memory hook script not found")
+        missing = []
+        for name, path in (
+            ("Policy", self.POLICY_HOOK),
+            ("Context", self.CONTEXT_HOOK),
+            ("Memory", self.MEMORY_HOOK),
+        ):
+            if not Path(path).exists():
+                missing.append(f"{name} hook script not found: {path}")
+        if missing:
+            pytest.skip("; ".join(missing))
 
     @staticmethod
     def _run_hook(script: str, event: dict) -> dict:

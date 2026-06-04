@@ -100,13 +100,13 @@ The `structural_stub` count went from 59 to 70 despite the refactor claiming stu
   - **Skip test files** — `FileIndex.is_test_file()` now filters test files at the stub checker level, eliminating false positives from test scaffolds.
   - **CLI scaffold downgrade** — functions in `cli_*.py` files with trivial bodies (no args, `pass` or `return None`) are now categorized as `cli_scaffold` with **WARNING** severity instead of ERROR.
   - **Plugin hook downgrade** — methods in files named `plugin`/`base` with docstrings mentioning "hook", "override", "subclass", "plugin", or "implement" are now categorized as `plugin_hook` with **WARNING** severity.
-  - These should significantly reduce the `structural_stub` ERROR count (from 70 to a lower number) by reclassifying intentional scaffolds.
+  - **Verified impact**: `structural_stub` dropped from **70 → 29** ERRORs. Reclassified: **31** `cli_scaffold` WARNINGs + **5** `plugin_hook` WARNINGs. Total ERROR severity across all categories dropped from **76 → 35**.
 - **Tests**: 146/146 passed.
 
 ### What remains open
 
 - **Path hygiene** — 87 concrete `hardcoded_path` findings (vs 58), 7 patterns
-- **Structural stubs** — 70 findings, clustered in `plugins/base.py` (11), `cli/cli_sangha.py` (5), tests, media_processor, event_ring_bridge
+- **Structural stubs** — after STRATA improvements: **29** actual `structural_stub` ERRORs, **31** `cli_scaffold` WARNINGs, **5** `plugin_hook` WARNINGs. Total ERROR severity dropped from **76 → 35**.
 - **Rust panic risks** — 390 findings (backlog, not immediate)
 - **Broad exceptions / logging f-strings** — ~3,600 combined (noise backlog)
 - **Dead code / copy-paste / unused imports** — ~4,800 combined (noise backlog)
@@ -114,7 +114,7 @@ The `structural_stub` count went from 59 to 70 despite the refactor claiming stu
 
 ### Fragment Re-index (June 3)
 
-Rebuilt the external index from scratch:
+#### Before exclusions (default rules only)
 
 | Metric | May 15 | June 3 | Delta |
 |--------|--------|--------|-------|
@@ -123,27 +123,33 @@ Rebuilt the external index from scratch:
 | Source | 136.6 MB | **231.4 MB** | **+94.8 MB** |
 | Index | 197.3 MB | **330.4 MB** | **+133.1 MB** |
 
-**Finding**: The index is heavily polluted with auxiliary and archive content. Queries for current code (e.g., `galactic_telepathy.rs`, `plugins/base.py`) return archived copies from `whitemagic-aux/archive/` or the triage document itself before returning the actual current source file.
+**Finding**: The index was heavily polluted with auxiliary and archive content. Queries for current code returned archived copies from `whitemagic-aux/archive/` or the triage document itself before the actual current source file.
 
-**Root cause**: The default `fragment index` command does not exclude:
+#### After `--exclude` + pruning (verified)
+
+```bash
+cargo run -- index /home/lucas/Desktop/WHITEMAGIC \
+  --output /tmp/whitemagic-fragment-index-clean \
+  --exclude "whitemagic-aux" \
+  --exclude "auxiliary projects" \
+  --exclude "docs/archive"
+```
+
+| Metric | Before | After | Reduction |
+|--------|--------|-------|-----------|
+| Files | 22,511 | **10,920** | **51%** |
+| Chunks | 119,373 | **49,460** | **59%** |
+| Source | 231.4 MB | **134.5 MB** | **42%** |
+| Index | 330.4 MB | **189.4 MB** | **43%** |
+| Time | 282.87s | **181.59s** | **36%** |
+
+The clean index now properly excludes:
 
 - `whitemagic-aux/` (archive backups, ~2,271 Markdown files + code)
 - `auxiliary projects/` (STRATA, Fragment, edge-chat, etc.)
 - `docs/archive/` (superseded docs)
-- `.git/` (version control)
-- `node_modules/`, `target/`, `__pycache__/` (build artifacts)
-
-**Impact**: STRATA and the triage document rank higher than current source files for many queries because they contain dense references to the concepts being searched.
-
-**Recommended fix for next Fragment pass**:
-
-```bash
-cargo run -- index /home/lucas/Desktop/WHITEMAGIC \
-  --output /tmp/whitemagic-fragment-index \
-  --exclude "whitemagic-aux/**,auxiliary projects/**,docs/archive/**,.git/**,node_modules/**,target/**,__pycache__/**"
-```
-
-Or add these to a `.fragment/config.toml` default exclusion list.
+- `.git/`, `node_modules/`, `target/`, `__pycache__/` (build artifacts)
+- Plus new defaults: `.pytest_cache/`, `.hypothesis/`, `.tox/`, `.ruff_cache/`, etc.
 
 ### Tool locations
 
