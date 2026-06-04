@@ -80,6 +80,29 @@ The `structural_stub` count went from 59 to 70 despite the refactor claiming stu
 - **CODEX module cleanup** — addressed in `68df60d`
 - **Types cleanup** — addressed in `68df60d`
 
+### Tool Improvements Applied June 3
+
+#### Fragment
+
+- **Added `--exclude` CLI flag** to `fragment index` command. Accepts repeated patterns that merge with config defaults. Example:
+  ```bash
+  cargo run -- index /home/lucas/Desktop/WHITEMAGIC \
+    --output /tmp/whitemagic-fragment-index \
+    --exclude "whitemagic-aux" --exclude "auxiliary projects" --exclude "docs/archive"
+  ```
+- **Directory pruning** in `extract/walker.rs` — `WalkDir` now skips excluded directories entirely instead of walking into them and filtering files. Major performance win for large excluded trees.
+- **Expanded default exclusions** — added `.pytest_cache/`, `.hypothesis/`, `.tox/`, `.ruff_cache/`, `.coverage/`, `coverage/`, `htmlcov/`, `*.so`, `*.dylib`, `*.wasm`.
+- **Tests**: 14/14 passed.
+
+#### STRATA
+
+- **`stubs.py` refinements**:
+  - **Skip test files** — `FileIndex.is_test_file()` now filters test files at the stub checker level, eliminating false positives from test scaffolds.
+  - **CLI scaffold downgrade** — functions in `cli_*.py` files with trivial bodies (no args, `pass` or `return None`) are now categorized as `cli_scaffold` with **WARNING** severity instead of ERROR.
+  - **Plugin hook downgrade** — methods in files named `plugin`/`base` with docstrings mentioning "hook", "override", "subclass", "plugin", or "implement" are now categorized as `plugin_hook` with **WARNING** severity.
+  - These should significantly reduce the `structural_stub` ERROR count (from 70 to a lower number) by reclassifying intentional scaffolds.
+- **Tests**: 146/146 passed.
+
 ### What remains open
 
 - **Path hygiene** — 87 concrete `hardcoded_path` findings (vs 58), 7 patterns

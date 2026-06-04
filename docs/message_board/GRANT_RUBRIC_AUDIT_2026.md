@@ -412,7 +412,7 @@ We will validate that Karma Ledger scores predict real-world failure modes:
 
 Lucas Bailey, Founder, WhiteMagic Labs
 
-- **Engineering track record**: Built WhiteMagic from scratch — 479 tools, 2,216 tests, 28 governance categories. All code written and maintained by founder.
+- **Engineering track record**: Built WhiteMagic from scratch — 484 tools, 2,379 tests, 28 governance categories. All code written and maintained by founder.
 - **Research lineage**: 12-month documented R&D program (CODEX archive, May 2025–Apr 2026). Karma Ledger spec predates Anthropic's commercial audit feature by 8 months.
 - **Unique advantage**: Operating independently of institutional overhead. Can iterate from concept to functional prototype in days, not months.
 - **Limitations**: No PhD. No academic publications (yet). Mitigation: arXiv preprint in preparation; collaboration with academic co-PI for Schmidt-level applications.
@@ -433,7 +433,7 @@ Our templates describe **what** we're building but are weak on **why this specif
 
 **Fix**: Add a "Founder Advantage" paragraph to every application:
 
-> "I am uniquely positioned to build this because: (1) I have already built the core system — 479 tools, 2,216 tests, runtime audit substrate — as a solo founder; (2) I operate without institutional overhead, enabling iteration cycles measured in days; (3) I have 12 months of documented R&D lineage (CODEX archive) showing sustained focus on this exact problem; (4) I am not leaving a comfortable job to do this — I am already doing it, full-time, with zero runway."
+> "I am uniquely positioned to build this because: (1) I have already built the core system — 484 tools, 2,379 tests, runtime audit substrate — as a solo founder; (2) I operate without institutional overhead, enabling iteration cycles measured in days; (3) I have 12 months of documented R&D lineage (CODEX archive) showing sustained focus on this exact problem; (4) I am not leaving a comfortable job to do this — I am already doing it, full-time, with zero runway."
 
 ### 7.2 The "Why Now?" Problem
 

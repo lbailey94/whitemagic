@@ -68,7 +68,7 @@ All numbers verified 2026-04-27 unless noted.
 | **AgentsPlex / SAIQL / LoreTokens** | (private + open) | Symbolic compression layer + agent social network | **USPTO patent 63,851,580** on LoreTokens. **279:1 compression on Wikipedia** with recoverable fidelity. Karma-based reputation (different from our Karma — theirs is social capital). HostileReview built on top with 108 agents. | saiql.ai, hostilereview.com |
 | **Anthropic Claude Memory** | First-party | Filesystem-mounted memory in Claude Console | **Public beta April 23, 2026.** Audit log, rollback, redaction, version control. Multiple agents on same store without overwrites. **Customers: Netflix, Rakuten, Wisedocs, Ando.** Rakuten reports **97% fewer first-pass errors at 27% lower cost and 34% lower latency.** Wisedocs reports 30% faster verification. | edtechinnovationhub.com (Apr 27 reporting) |
 | **Project Think (Cloudflare)** | First-party | Long-running agent base class | Shipped April 15, 2026. Persistent identity, wake-on-message. Cloudflare-native runtime. | blog.cloudflare.com/project-think |
-| **WhiteMagic** | (private/portfolio) | Cognitive substrate with governance + metacognition | 2,216 tests, 451 dispatch tools, 28 Gana meta-tools, **no public benchmark**, no GitHub stars metric, MIT-licensed. Posture: research/lab/portfolio artifact. | whitemagic.dev |
+| **WhiteMagic** | (private/portfolio) | Cognitive substrate with governance + metacognition | 2,379 tests, 456 dispatch tools, 28 Gana meta-tools, **no public benchmark**, no GitHub stars metric, MIT-licensed. Posture: research/lab/portfolio artifact. | whitemagic.dev |
 
 ### 2.2 Academic agent-OS papers
 
@@ -129,7 +129,7 @@ The "agent OS" / "LLM as kernel" framing has academic backing now:
 - ❌ **"5D coordinates"** — Cognee has vector + graph + relational hybrid, doing the same job with different math
 - ❌ **"Galactic lifecycle"** — Mem0 has decay/consolidation, Zep has temporal facts with invalidation
 - ❌ **"Polyglot accelerators"** — table stakes; everyone has Rust or Mojo somewhere
-- ❌ **"Tool surface"** — OpenClaw has 13K skills via ClawHub; WhiteMagic has 479 callable tools internally; not comparable on volume
+- ❌ **"Tool surface"** — OpenClaw has 13K skills via ClawHub; WhiteMagic has 484 callable tools internally; not comparable on volume
 - ❌ **"Memory"** as the headline — Mem0/Cognee/Letta/Zep/MemMachine all do this with public benchmarks
 - ❌ **"MCP integration"** — 11K+ servers; one of many
 - ❌ **"Cognitive OS"** as a category claim — Cognee owns the GitHub topics; AgentOS / Quine / ProbOS papers cover the academic story; Karpathy popularized the framing

@@ -2,21 +2,21 @@
 
 **Date:** 2026-05-29
 **Status:** Live snapshot — updated as systems change
-**Baseline:** 2,282 tests passing, 61 skipped, 0 failed
+**Baseline:** 2,379 tests passing, 67 skipped, 0 failed
 
 ---
 
 ## Executive Summary
 
-WhiteMagic is a cognitive operating system with 919 Python modules across 332 packages, exposing 479 callable tools (451 dispatch + 28 Gana meta-tools). It features 12 Zodiac personality cores, 20+ thematic Gardens, a multi-agent coordination layer (Sangha), an ethical governance engine (Dharma/Karma), a prescience tracking system (Brier scoring), and polyglot acceleration (Rust, Zig, Koka, with Mojo planned).
+WhiteMagic is a cognitive operating system with 919 Python modules across 332 packages, exposing 484 callable tools (456 dispatch + 28 Gana meta-tools). It features 12 Zodiac personality cores, 20+ thematic Gardens, a multi-agent coordination layer (Sangha), an ethical governance engine (Dharma/Karma), a prescience tracking system (Brier scoring), and polyglot acceleration (Rust, Zig, Koka, with Mojo planned).
 
 **Key finding:** The system is technically green, architecturally rich, and commercially latent. Most components exist and pass tests. The primary gaps are (1) polyglot binary compilation for Koka/Mojo, (2) marketplace registration for Zodiac cores, (3) embeddings pipeline for the alltexts ontology, and (4) temporal database completion for prescience API.
 
 ---
 
-## 1. Tool Surface (479 Callable)
+## 1. Tool Surface (484 Callable)
 
-### 1.1 Dispatch Table: 451 Tools
+### 1.1 Dispatch Table: 456 Tools
 
 Located in `core/whitemagic/tools/dispatch_table.py`. Covers:
 - **Intelligence**: memory search, pattern detection, dream synthesis, neurotransmitter telemetry
@@ -314,10 +314,10 @@ Located in `/home/lucas/Desktop/WHITEMAGIC/auxiliary projects/`.
 | Python modules | 919 | ✅ |
 | Packages/directories | 332 | ✅ |
 | Registry def files | 33 | ✅ |
-| Dispatch table | 451 entries | ✅ |
+| Dispatch table | 456 entries | ✅ |
 | PRAT Gana tools | 28 | ✅ |
-| Total callable tools | 479 | ✅ |
-| Tests passing | 2,282 | ✅ |
+| Total callable tools | 484 | ✅ |
+| Tests passing | 2,379 | ✅ |
 | Tests skipped | 61 | ✅ |
 | Tests failing | 0 | ✅ |
 | Doc drift | Pass | ✅ |

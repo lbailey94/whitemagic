@@ -180,7 +180,7 @@ These come from the April audit. They are not "nice to have." They are safety/co
 |--------|------------------------|----------------------|------------|
 | Tests passing | 2,216 | 2,243 | 2,310+ |
 | Tests skipped | 67 | 67 | ~20 |
-| Tool surface | 479 callable, 451 dispatch, 28 Ganas | Same | Same |
+| Tool surface | 484 callable, 456 dispatch, 28 Ganas | Same | Same |
 | Stubs | 0 | 0 | 0 |
 | Python files | ~819 | ~819 | — |
 | Lines of Python | ~182K | ~195K (per STRATEGIC_ROADMAP) | — |

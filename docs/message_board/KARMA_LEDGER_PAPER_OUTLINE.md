@@ -3,7 +3,7 @@
 **Target venue**: arxiv.org (preprint) + submit to ICML/NeurIPS Workshop on Agentic Systems or ACM FAccT  
 **Length**: ~6,000 words  
 **Figures**: 1 architecture diagram, 1 comparison table  
-**Code repository**: https://github.com/whitemagic-ai/whitemagic (v22.2.0, 2,216 tests)
+**Code repository**: https://github.com/whitemagic-ai/whitemagic (v22.2.0, 2,379 tests)
 **Date of first spec**: 2025-05-26 (MandalaOS Concept Review, ChatGPT conversation archive)  
 **Date of implementation**: 2026-02-07 (WhiteMagic v11.2.0)  
 **Date of public release**: 2026-04-16 (WhiteMagic v22.0.0)
@@ -12,7 +12,7 @@
 
 ## Abstract (150 words)
 
-We introduce the Karma Ledger, a runtime substrate that tracks declared versus actual side-effects of tool-executing agents. Unlike post-hoc audit logs, the Karma Ledger binds a tool's statically declared effect manifest to its runtime behavior; mismatches accrue "karma debt" that feeds back into a seven-dimensional Harmony Vector governing system health. The design was first specified on 2025-05-26 and implemented in the WhiteMagic cognitive operating system, where it operates across 479 callable tools with an 8-stage dispatch pipeline including Dharma ethical governance, maturity gating, and circuit-breaker resilience. We describe the mechanism, prove three safety properties (non-repudiation, graduated throttling, bounded debt explosion), and compare against the structurally similar audit-log subsystem shipped by Anthropic in Claude Managed Agents (2026-04-23). The prior-art trail is documented; neither system caused the other.
+We introduce the Karma Ledger, a runtime substrate that tracks declared versus actual side-effects of tool-executing agents. Unlike post-hoc audit logs, the Karma Ledger binds a tool's statically declared effect manifest to its runtime behavior; mismatches accrue "karma debt" that feeds back into a seven-dimensional Harmony Vector governing system health. The design was first specified on 2025-05-26 and implemented in the WhiteMagic cognitive operating system, where it operates across 484 callable tools with an 8-stage dispatch pipeline including Dharma ethical governance, maturity gating, and circuit-breaker resilience. We describe the mechanism, prove three safety properties (non-repudiation, graduated throttling, bounded debt explosion), and compare against the structurally similar audit-log subsystem shipped by Anthropic in Claude Managed Agents (2026-04-23). The prior-art trail is documented; neither system caused the other.
 
 ---
 
@@ -133,8 +133,8 @@ We introduce the Karma Ledger, a runtime substrate that tracks declared versus a
 
 ### 6.1 Codebase
 - Python 3.12, Pydantic V2, pytest + Hypothesis
-- 2,216 tests, 67 skipped (optional deps), 0 failures
-- 479 callable tools across 451 dispatch entries
+- 2,379 tests, 67 skipped (optional deps), 0 failures
+- 484 callable tools across 456 dispatch entries
 - Property tests for distance metrics, karma debt bounds, galactic zone classification
 
 ### 6.2 Reproducibility
@@ -154,7 +154,7 @@ We introduce the Karma Ledger, a runtime substrate that tracks declared versus a
 | Ethical governance | Declarative YAML rules (Dharma) | Constitutional AI (hidden) |
 | Health metric | 7-dim Harmony Vector | Not exposed |
 | Open source | MIT + Apache-2.0 | Proprietary |
-| Test coverage | 2,216 property + unit tests | Unknown |
+| Test coverage | 2,379 property + unit tests | Unknown |
 
 **Statement**: Neither system caused the other. The prior-art trail for Karma Ledger is documented via dated conversation archives and version-control history. Anthropic's system is a production-grade implementation of a similar intuition from a well-resourced lab. Both advance the field.
 

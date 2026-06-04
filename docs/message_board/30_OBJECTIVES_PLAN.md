@@ -164,7 +164,7 @@ This document translates the SD card reconnaissance and web cross-reference into
 > **⚠️ Note:** Original Obj 7 (CI Test Baseline Lock) has been promoted to **Phase 0 (Obj 0b)** since it gates all technical work and has no dependencies.
 
 ### Objective 7: PRAT Dispatch Pipeline Documentation (was Obj 8)
-**Rationale:** 451 dispatch entries + 28 Gana meta-tools are opaque to new contributors.
+**Rationale:** 456 dispatch entries + 28 Gana meta-tools are opaque to new contributors.
 
 **Completion Criteria:**
 - [ ] `docs/PRAT_GUIDE.md`: how to add a tool, register, write handler, add test.

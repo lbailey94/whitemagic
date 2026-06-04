@@ -48,7 +48,7 @@ Use this as the opening of every application, customized per funder:
 
 **Page 2 — Team**:
 - Lead: Lucas Bailey
-- WhiteMagic stats: 2,216 tests, 479 tools, 28-Gana framework
+- WhiteMagic stats: 2,379 tests, 484 tools, 28-Gana framework
 - Prior art: Karma Ledger spec (May 2025), predates Anthropic audit log (Apr 2026)
 - Collaborators: "Solo founder with AI-assisted development pipeline"
 
@@ -141,8 +141,8 @@ URL: https://whitemagic.dev
 GitHub: https://github.com/whitemagic-ai/whitemagic
 
 Key achievements:
-- 2,216 passing tests, 0 failures
-- 479 callable tools, 28 Gana governance categories
+- 2,379 passing tests, 0 failures
+- 484 callable tools, 28 Gana governance categories
 - Karma Ledger: runtime audit of declared-vs-actual side-effects
 - Public since [DATE], MIT-licensed
 ```
