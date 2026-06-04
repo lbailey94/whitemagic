@@ -1,6 +1,6 @@
 # Grant Content Library — WhiteMagic Labs
 
-**Date**: 2026-04-30
+**Date**: 2026-06-03
 **Purpose**: Single source of truth for canonical, copy-paste-ready content blocks used across all grant applications. Prevents drift and reduces writing time.
 **Status**: Living document — update after every submission and when metrics change.
 
@@ -14,7 +14,7 @@
 4. Paste into the application.
 
 **Current canonical metrics** (update after every test run):
-- **Tests**: 2,216 passed, 67 skipped, 0 failed
+- **Tests**: 2,379 passed, 67 skipped, 0 failed
 - **Tools**: 479 callable across 451 dispatch entries, 28 Gana meta-tools (PRAT mode)
 - **License**: MIT
 - **Version**: 22.2.0
@@ -45,7 +45,7 @@
 > **Lead**: Lucas Bailey, Founder, WhiteMagic Labs
 >
 > WhiteMagic is an open-source cognitive substrate with the following verified state:
-> - **2,216 passing tests**, 0 failures, 67 skipped (optional-dependency features)
+> - **2,379 passing tests**, 0 failures, 67 skipped (optional-dependency features)
 > - **479 callable tools** across 451 dispatch entries, compressible to 28 Gana meta-tools via PRAT
 > - **MIT-licensed**, publicly available since [DATE]
 > - **Prior art**: 12-month documented research program across 316 AI-assisted conversations (CODEX archive, May 2025–Apr 2026). Karma Ledger spec drafted May 2025; implemented Feb 2026. CyberBrain architecture designed Sep 2025. MandalaOS governance spec drafted Oct 2025.
@@ -108,6 +108,7 @@
 | Feb 2026 | Karma Ledger implemented | Working code with test-backed verification |
 | Apr 2026 | Anthropic Claude Memory audit log shipped | Structurally related commercial feature; validates problem space |
 | Apr 2026 | 2,216 tests, 0 failures verified | Production-grade engineering hygiene |
+| Jun 2026 | 2,379 tests, 0 failures verified | Second-pass cleanup, type fixes, import sorting |
 | [DATE] | arXiv preprint submitted | Citable artifact for all future grant applications |
 | [DATE] | CODEX archive indexed | 316 conversations, 8 knowledge domains, ~500K+ tokens of documented research lineage |
 
@@ -281,8 +282,8 @@
 |---|---|---|
 | Benchmark does not generalize across model families | 30% | Test on 3 families (GPT-4, Claude, Llama-3); publish negative results if correlation breaks |
 | Safety labs do not adopt the benchmark | 50% | Partner with 2 labs before public release; integrate into popular frameworks (LangChain, AutoGPT); offer office hours |
-| Founder health / family emergency | 15% | All code is documented and tested (2,216 tests); any engineer can pick up the codebase |
 | Compute costs exceed budget | 25% | Use open-source models for 80% of runs; reserve 20% budget buffer; apply for API grants (OpenAI, Anthropic) |
+| Founder health / family emergency | 15% | All code is documented and tested (2,379 tests); any engineer can pick up the codebase |
 | Scope creep delays deliverables | 20% | Monthly milestone reviews; explicit "not in scope" list; time-boxed sprints |
 | Negative publicity from prior-art claims | 10% | Use respectful language ("independently developed," "parallel emergence"); never name competitors adversarially |
 ```
@@ -336,7 +337,7 @@
 
 I am uniquely positioned to build this because:
 
-1. **Code exists**: I have already built the core system — 479 tools, 2,216 tests, runtime audit substrate — as a solo founder. This is not a proposal to start research; it is a proposal to productize and benchmark existing work.
+1. **Code exists**: I have already built the core system — 479 tools, 2,379 tests, runtime audit substrate — as a solo founder. This is not a proposal to start research; it is a proposal to productize and benchmark existing work.
 
 2. **Speed**: Operating without institutional overhead, I iterate from concept to functional prototype in days, not months. The Karma Ledger spec was drafted in May 2025 and implemented by February 2026 — a 9-month solo R&D cycle that would take a university lab 2+ years.
 
@@ -363,4 +364,4 @@ I am uniquely positioned to build this because:
 
 ---
 
-*Last updated: 2026-05-05 | Current metrics: 2,216 tests, 67 skipped, 0 failed, 479 tools, v22.2.0*
+*Last updated: 2026-06-03 | Current metrics: 2,379 tests, 67 skipped, 0 failed, 479 tools, v22.2.0*
