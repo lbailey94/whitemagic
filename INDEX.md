@@ -89,8 +89,10 @@ Private filenames are intentionally not enumerated in this public index.
 | `MARKDOWN_CORPUS_CLASSIFICATION_PLAN_2026-05-21.md` | Phase C inventory and taxonomy for tracked WhiteMagic docs vs auxiliary/private Markdown corpora, with Fragment-assisted pass plan | May 21 |
 | `DOCS_HYGIENE_PATCH_SUMMARY_2026-05-21.md` | Commit-ready patch narrative for Truth Spine, private-docs policy, handoff refresh, and message-board triage | May 21 |
 | `SESSION_SUMMARY.md` | Master historical handoff with May 21 current-status addendum, test metrics, and next docs-hygiene steps | May 21 |
+| `SESSION_REPORT_2026-06-04.md` | Session summary — architectural clarity, competitive positioning, 4 commits, verification gates | Jun 4 |
 | `RESEARCH_SYNTHESIS_2026-06-04.md` | Comprehensive internal audit + 8-domain external web research comparing May 15 plan, June 4 built state, and external world; includes critical assessment and updated recommendations | Jun 4 |
 | `SESSION_REPORT_2026-06-05.md` | Session completion report — Karma Ledger benchmark harness, password-protected /garden route, site truth-spine fixes, grant corpus metric refresh, and MCP 2.0 readiness assessment | Jun 5 |
+| `SESSION_REPORT_AGENTDOJO_2026-06-05.md` | AgentDojo Dharma defense integration — structural verification, LocalLLM native tool-calling patch, OpenCode/Ollama investigation, CPU timeout on benchmark | Jun 5 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
 | `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
