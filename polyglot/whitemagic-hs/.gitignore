@@ -1,0 +1,7 @@
+# Stack build artifacts
+.stack-work/
+*.hi
+*.o
+
+# Compiled benchmark binary
+bench/BenchHolographic

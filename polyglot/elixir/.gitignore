@@ -1,0 +1,4 @@
+# Generated artifacts
+deps/
+_build/
+erl_crash.dump
