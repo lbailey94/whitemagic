@@ -89,6 +89,8 @@ core/whitemagic-rust/rust_ci_full.log
 # === Large data files (>100MB, exceed GitHub limit) ===
 polyglot/mojo/.pixi/
 data/models/*.onnx
+apps/site/public/models/*.onnx
+*.onnx
 
 # === Mojo compiled binaries ===
 polyglot/mojo/association_miner
