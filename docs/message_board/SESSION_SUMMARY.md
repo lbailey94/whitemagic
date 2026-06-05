@@ -1,5 +1,51 @@
 # WhiteMagic v22.0.0 + v22.2 — Session Summary & Handoff Document
 
+## Current Status Addendum — 2026-06-05
+
+> **Polyglot Backend Integration — 6 gaps closed.**
+
+| Surface | Current State |
+|---------|---------------|
+| Release baseline | v22.2.0 release baseline: 2,216 passed, 67 skipped, 0 failed |
+| Current local audit baseline | **2,423 passed**, 67 skipped, 0 failed |
+| Tool surface | **487 callable tools**, **459 dispatch entries**, 28 Gana meta-tools |
+| Polyglot backends | Julia, Elixir, Haskell (compiled binary preferred), Rust |
+| Rust bridge | HRR ops (`encode_hrr`, `bind`, `unbind`, `dual_encode`, `joint_query`), `constellation_detect` |
+| New tool | `polyglot.search` — convenience tool combining encode + nearest_neighbors |
+
+### June 5 Verified Gates
+
+| Gate | Result |
+|------|--------|
+| `scripts/check_doc_drift.py` | **Passed** (all 9 checks) |
+| `scripts/check_versions.py` | **Passed** |
+| Full core test suite | **2,423 passed**, 67 skipped, 0 failed |
+| Polyglot integration tests | **17 passed** (0 skipped, 0 failed) |
+| Untracked public Markdown | None |
+
+### What Changed
+
+1. **`search_memories` spatial filtering** — `handle_search_memories` now accepts `polyglot_backend`, encodes the query into a holographic coordinate, and re-ranks `recall()` results by galactic-distance proximity.
+2. **Rust bridge enrichment** — `bridge.rs` now exposes `encode_hrr`, `bind`, `unbind`, `dual_encode`, `joint_query`, and `constellation_detect`. `wm-core/src/lib.rs` exports `hrr_to_coordinate` and `joint_query`.
+3. **Compiled Haskell benchmark parity** — `bench_polyglot.py` auto-detects compiled `polyglot/bridges/haskell/bridge`; Python dispatcher already prefers compiled binary over `runhaskell`.
+4. **`polyglot.search` tool** — New `handle_polyglot_search` convenience handler + registry definition + dispatch table entry. One call returns both the query coordinate and nearest-neighbor results.
+5. **Integration tests** — Added `TestPolyglotMemoryQueryRustHRR` (2 tests) and `TestPolyglotSearch` (1 test) in `core/tests/unit/test_polyglot.py`.
+6. **Doc drift correction** — Updated tool counts from 486/458 to 487/459 in `AI_PRIMARY.md`, `AGENTS.md`, `SYSTEM_MAP.md`, and `docs/public/SYSTEM_MAP.md`.
+
+### Files Touched
+
+- `core/whitemagic/tools/handlers/memory.py`
+- `core/whitemagic/tools/handlers/polyglot.py`
+- `core/whitemagic/tools/dispatch_memory.py`
+- `core/whitemagic/tools/registry_defs/polyglot.py`
+- `core/tests/unit/test_polyglot.py`
+- `polyglot/whitemagic-rs/crates/wm-core/src/lib.rs`
+- `polyglot/whitemagic-rs/crates/wm-core/examples/bridge.rs`
+- `polyglot/bench_polyglot.py`
+- `AI_PRIMARY.md`, `AGENTS.md`, `SYSTEM_MAP.md`, `docs/public/SYSTEM_MAP.md`
+
+---
+
 ## Current Status Addendum — 2026-05-21
 
 > **Read this first.** The April session summary below is preserved as historical context. The current working baseline is newer.
@@ -1208,3 +1254,14 @@ Created `docs/message_board/STRATEGIC_ROADMAP_V23.md` with:
 4. **Multi-user isolation** — Per-user galaxies with auth
 5. **WebSocket bidirectional sync** — Real-time collaboration
 6. **Hetzner VPS deployment** — Make it public
+
+---
+
+## Session Addendum — 2026-06-04: Economic Strategy & Pricing Update
+
+See `docs/message_board/SESSION_SUMMARY_2026-06-04.md` for full details. Key accomplishments:
+
+- **Pricing updated**: Office Hours $700→$1,000, Architecture Review $7,000→$12,000, Engagement From $30,000→From $35,000. All 11 site files updated; zero old-price references remain.
+- **`.well-known/agent.json` refreshed** to v22.2.0 / 484 tools / 2,379 tests.
+- **Grant Submission Playbook created**: Copy-paste ready guide for Manifund ($25K, 2 hours) and LTFF ($35K, 1 day) with expected value math (~$22.9K combined).
+- **Site Deployment Guide created**: `whitemagic-site/DEPLOY.md` — static export, Next.js server, Hetzner VPS options.
