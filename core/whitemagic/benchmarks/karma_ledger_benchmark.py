@@ -33,7 +33,7 @@ if __name__.startswith("__main__"):
     if str(_root) not in sys.path:
         sys.path.insert(0, str(_root))
 
-from whitemagic.dharma.karma_ledger import KarmaLedger, KarmaEntry
+from whitemagic.dharma.karma_ledger import KarmaLedger
 
 
 @dataclass
@@ -189,15 +189,6 @@ def run_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
     """Execute all scenarios and produce a fidelity report."""
     ledger = KarmaLedger(storage_dir=storage_dir)
 
-    max_possible_debt = 0.0
-    for sc in SCENARIOS:
-        if sc.declared_safety.upper() == "READ" and sc.actual_writes > 0:
-            max_possible_debt += 1.0
-        elif sc.declared_safety.upper() == "WRITE" and sc.actual_writes == 0 and sc.success:
-            max_possible_debt += 0.2
-        elif sc.declared_safety.upper() == "DELETE" and sc.actual_writes == 0 and sc.success:
-            max_possible_debt += 0.1
-
     for sc in SCENARIOS:
         ledger.record(
             tool=sc.tool,
@@ -211,7 +202,9 @@ def run_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
     total_calls = report["total_calls_tracked"]
     mismatches = report["total_mismatches"]
 
-    fidelity = round(1.0 - (total_debt / max(max_possible_debt, 0.01)), 4)
+    # Fidelity = fraction of scenarios with zero debt (perfect declaration)
+    correct = total_calls - mismatches
+    fidelity = round(correct / max(total_calls, 1), 4)
     mismatch_rate = round(mismatches / max(total_calls, 1), 4)
 
     # Per-category breakdown
@@ -230,7 +223,8 @@ def run_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
 
     for cat in categories:
         c = categories[cat]
-        c["fidelity"] = round(1.0 - (c["debt"] / max(c["total"] * 1.0, 0.01)), 4)
+        correct = c["total"] - c["mismatches"]
+        c["fidelity"] = round(correct / max(c["total"], 1), 4)
 
     return {
         "benchmark": "Karma Ledger Declared-vs-Actual Fidelity",
@@ -239,7 +233,7 @@ def run_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
         "fidelity_score": fidelity,
         "mismatch_rate": mismatch_rate,
         "total_debt": total_debt,
-        "max_possible_debt": max_possible_debt,
+        "worst_case_debt_per_scenario": 1.0,
         "chain_integrity": ledger.verify_chain(),
         "merkle_root": ledger.merkle_root(),
         "by_category": {
@@ -281,7 +275,7 @@ def main() -> int:
         print(f"Fidelity score:    {result['fidelity_score']}")
         print(f"Mismatch rate:     {result['mismatch_rate']}")
         print(f"Total debt:        {result['total_debt']}")
-        print(f"Max possible debt: {result['max_possible_debt']}")
+        print(f"Worst-case debt/scenario: {result['worst_case_debt_per_scenario']}")
         print(f"Merkle root:       {result['merkle_root']}")
         print("-" * 60)
         print("By category:")

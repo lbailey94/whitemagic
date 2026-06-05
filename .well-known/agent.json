@@ -1,10 +1,10 @@
 {
   "name": "WhiteMagic",
-  "description": "The Tool Substrate for Agentic AI — 356 MCP tools (or 28 in PRAT mode), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, and polyglot accelerators in 11 languages. Free and open (MIT). Gratitude-driven economics via XRPL + x402.",
+  "description": "Agentic AI Governance & Metacognition Substrate — 484 callable tools (456 dispatch + 28 PRAT Gana meta-tools), tiered memory with 5D holographic coordinates and Galactic Map lifecycle, ethical governance with 8-stage Dharma security pipeline, Karma Ledger runtime audit, and polyglot accelerators in 7 languages. MIT-licensed research/lab artifact. Gratitude-driven economics via dual-rail settlement.",
   "url": "https://github.com/whitemagic-ai/whitemagic",
-  "version": "15.7.0",
+  "version": "22.2.0",
   "provider": {
-    "organization": "WhiteMagic Contributors",
+    "organization": "WhiteMagic Labs",
     "url": "https://github.com/whitemagic-ai/whitemagic"
   },
   "capabilities": {
@@ -12,8 +12,22 @@
     "pushNotifications": false,
     "stateTransitionHistory": true
   },
+  "mcpCompatibility": {
+    "protocolVersion": "2024-11-05",
+    "targetVersion": "2026-07-28",
+    "transport": ["stdio", "streamable-http"],
+    "extensions": ["ext.prat.gana-v1"],
+    "features": ["tools", "resources", "serverInstructions", "taskSupport"]
+  },
   "authentication": {
-    "schemes": []
+    "schemes": ["oauth2.1"],
+    "oauth2.1": {
+      "flow": "authorization_code_with_pkce",
+      "authorizationEndpoint": "https://auth.whitemagic.ai/oauth/authorize",
+      "tokenEndpoint": "https://auth.whitemagic.ai/oauth/token",
+      "scopes": ["tools:invoke", "resources:read", "admin:audit"],
+      "status": "planned"
+    }
   },
   "defaultInputModes": ["application/json"],
   "defaultOutputModes": ["application/json"],
@@ -32,12 +46,12 @@
     {
       "id": "tool-dispatch",
       "name": "Tool Dispatch & Orchestration",
-      "description": "Unified dispatch pipeline for 356 MCP tools with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. Supports PRAT mode (28 Gana meta-tools). 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
+      "description": "Unified dispatch pipeline for 484 callable tools (456 dispatch entries + 28 PRAT Gana meta-tools) with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
       "tags": ["tools", "mcp", "dispatch", "orchestration"],
       "examples": [
-        "Call any of the 356 registered tools via unified API",
-        "Route tools through PRAT Gana meta-tool interface",
-        "Create multi-step tool pipelines"
+        "Call any of the 484 registered tools via unified API",
+        "Route tools through PRAT Gana meta-tool interface for 87% token reduction",
+        "Create multi-step tool pipelines with Karma Ledger audit"
       ]
     },
     {
@@ -54,12 +68,12 @@
     {
       "id": "introspection",
       "name": "System Introspection",
-      "description": "Unified read-only introspection across all subsystems. Capability matrix shows 25 subsystems and 28 active fusions. Self-awareness in one call — health, capabilities, energy, recent actions.",
-      "tags": ["introspection", "health", "monitoring", "gnosis"],
+      "description": "Unified read-only introspection across all subsystems. 2,379 passing tests, 484 callable tools, 28 PRAT Gana meta-tools, and prescience forecasting with 11+ validated predictions. Self-awareness in one call — health, capabilities, energy, recent actions.",
+      "tags": ["introspection", "health", "monitoring", "gnosis", "prescience"],
       "examples": [
         "Get full system snapshot via Gnosis",
         "Check capability matrix and suggest next fusions",
-        "Monitor Harmony Vector dimensions"
+        "Query prescience track record and forecasting calibration"
       ]
     },
     {

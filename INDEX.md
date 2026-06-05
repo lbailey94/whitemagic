@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0
-**Last Updated**: June 4, 2026
+**Last Updated**: June 4, 2026 (afternoon update — Sefirotic prior-art timeline corrected)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -96,6 +96,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `GRANT_EXECUTION_PLAN_2026-04-28.md` | Consolidated week-by-week grant action sequence with expected value math, tracking setup, and user-priority decisions | Apr 28 |
 | `GRANT_APPLICATION_TEMPLATES_2026.md` | Reverse-engineered application structures for Manifund, Foresight, SFF, Schmidt, LTFF — reusable content blocks, per-funder customization cheat sheet, rapid iteration system | Apr 28 |
 | `GRANT_CONTENT_LIBRARY.md` | Canonical copy-paste-ready content blocks for all grant applications — universal paragraph, team bio, technical achievements, budget templates, milestones, prior-art timeline, risk mitigation, open-source/IP language, theory of change, construct validity, calibrated confidence, failure modes, ecosystem connection, why now, founder advantage, ambitious vision | Apr 30 |
+| `GRANT_SUBMISSION_PLAYBOOK_2026-06-04.md` | Step-by-step submission guide for Manifund + LTFF — exact fields to fill, copy-paste blocks, budget templates, and expected value math. Action-ready; no further research needed. | Jun 4 |
 | `GRANT_RUBRIC_AUDIT_2026.md` | Rubric audit — current templates vs. actual funder evaluation criteria (Manifund, LTFF, Foresight, SFF, Schmidt, NSF SBIR). Identifies 21 gaps with specific fixes and action items. | Apr 30 |
 | `A_PLUS_GRANT_GUIDE_2026.md` | From A- to A+ — 7 dimensions that separate competitive from winning applications, with 14-day action plan and honest assessment of time/cost/probability | Apr 30 |
 | `PRIOR_ART_AND_PATHS_2026-04-27.md` | Cross-referenced WhiteMagic chronology vs. competitors (CODEX OpenAI/Grok/X archives) + branching-path math | Apr 27 |
@@ -333,6 +334,7 @@ Integration guides and strategies for external agent runtimes (OpenCode, Hermes,
 | `OPENCODE_HERMES_INTEGRATION_STRATEGY.md` | WhiteMagic ↔ OpenCode / Hermes integration strategy — MCP server hardening, ACP compatibility, governance substrate positioning |
 | `OPENCODE_HERMES_MCP_SETUP.md` | Copy-pasteable MCP configs for OpenCode & Hermes — stdio, HTTP, ACP mode, troubleshooting, verification commands |
 | `HERMES_DEEP_INTEGRATION.md` | Deep architecture analysis of Hermes subsystems — 9 hook events, 6 integration pathways, memory bridge, governance skill design |
+| `HERMES_INTEGRATION_RESEARCH_JUNE_2026.md` | June 2026 research update — Hermes v0.15.0 refactor, native plugin types (Memory Provider / Context Engine), competitive landscape (Arbiter-K, Microsoft AGT, Codex, Claude), revised implementation plan |
 
 ---
 
