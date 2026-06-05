@@ -68,7 +68,7 @@ export function SQLiteOPFSDemo() {
 
   const handleSeedDemo = async () => {
     const demoMemories = [
-      { content: "WhiteMagic is a cognitive operating system for agentic AI", garden: "wisdom" },
+      { content: "WhiteMagic is a agent governance and metacognition substrate for agentic AI", garden: "wisdom" },
       { content: "The galaxy has 28 gardens organized in 7 ganYing clusters", garden: "mystery" },
       { content: "Memory holography uses 5D coordinates (x, y, z, w, t)", garden: "truth" },
       { content: "The dispatch pipeline has 8 stages with Dharma governance", garden: "dharma" },

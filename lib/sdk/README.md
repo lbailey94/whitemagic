@@ -1,6 +1,6 @@
 # @whitemagic/sdk
 
-TypeScript client SDK for WhiteMagic — local-first cognitive operating system for AI agents.
+TypeScript client SDK for WhiteMagic — local-first agent governance and metacognition substrate for AI agents.
 
 ## Installation
 

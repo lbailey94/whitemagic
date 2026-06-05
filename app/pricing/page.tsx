@@ -79,7 +79,7 @@ const TIERS: Tier[] = [
     price: "From $35,000",
     cadence: "4–8 week implementation",
     description:
-      "Multi-week implementation on one of three tracks: Private AI Deployment, Agent Governance, or MCP Engineering. Weekly delivery, Friday demo, no hand-wave billing.",
+      "Multi-week implementation on one of three tracks: Private AI Deployment, Agent Governance, or MCP Governance & Scale. Weekly delivery, Friday demo, no hand-wave billing.",
     features: [
       "Scope defined in a free 30-minute intake call",
       "Fixed scope, weekly check-ins with running software",

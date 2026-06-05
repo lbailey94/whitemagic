@@ -62,7 +62,7 @@ ${ROADMAP_UPDATES.map(
 
 2. **Agent Governance** — Framework-agnostic implementation of Dharma Rules, Karma Ledger, Circuit Breakers, Harmony Vector monitoring, and OpenTelemetry-compatible trace planning for existing agent systems. Maps to OWASP LLM Top 10 (v1.1, covers agentic AI) and EU AI Act Article 14. 3-5 weeks typical.
 
-3. **MCP Engineering** — Production MCP servers, tool contract design, observability, governance integration, auth/idempotency/structured errors, and 28-Gana compression where it fits. For teams building agent systems that need to scale context efficiently. 2-4 weeks typical.`,
+3. **MCP Governance & Scale** — Production MCP servers, tool contract design, observability, governance integration, auth/idempotency/structured errors, and 28-Gana compression where it fits. For teams building agent systems that need to scale context efficiently. 2-4 weeks typical.`,
   },
   {
     title: "Pricing tiers",

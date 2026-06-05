@@ -166,7 +166,7 @@ const TIERS: Tier[] = [
     ],
     typicalOrg: "A handful of frontier labs, hyperscalers, and the most ambitious AI-native product companies. Also the rare, well-resourced solo operator who built their own stack from first principles.",
     climbTo: "Define the next rung.",
-    serviceHint: "MCP Engineering + Private AI Deployment",
+    serviceHint: "MCP Governance & Scale + Private AI Deployment",
   },
 ];
 

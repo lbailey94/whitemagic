@@ -2,7 +2,7 @@
  * WhiteMagic Dashboard — Main Dashboard Page
  *
  * PWA-enabled dashboard for monitoring and interacting with the WhiteMagic
- * cognitive operating system. Displays:
+ * agent governance and metacognition substrate. Displays:
  * - Memory graph visualization
  * - Wu Xing elemental balance
  * - Gan Ying resonance monitor

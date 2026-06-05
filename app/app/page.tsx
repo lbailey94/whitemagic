@@ -108,7 +108,7 @@ export default function PWAAppPage() {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-white mb-2">WhiteMagic PWA</h1>
           <p className="text-gray-400 text-sm">
-            Local-first cognitive operating system — runs entirely in your browser
+            Local-first agent governance and metacognition substrate — runs entirely in your browser
           </p>
         </div>
 

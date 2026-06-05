@@ -76,7 +76,7 @@ export const SERVICES: Record<ServiceSlug, Service> = {
   },
   "mcp-engineering": {
     slug: "mcp-engineering",
-    name: "MCP Engineering",
+    name: "MCP Governance & Scale",
     shortName: "MCP",
     oneLiner:
       "Production MCP servers, tool contract design, observability, and governance integration.",

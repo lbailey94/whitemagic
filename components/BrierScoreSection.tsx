@@ -3,7 +3,7 @@
 import { Target, TrendingUp, AlertTriangle } from "lucide-react";
 
 const BENCH_ROW = [
-  { name: "WhiteMagic Labs (stated)", bs: "0.0845", bi: "70.9%", bss: "0.662", highlight: true },
+  { name: "WhiteMagic Labs (stated)", bs: "0.0958", bi: "69.0%", bss: "-0.302", highlight: true },
   { name: "WhiteMagic Labs (behavioral)", bs: "0.0507", bi: "77.5%", bss: "0.797", highlight: true },
   { name: "ForecastBench superforecasters", bs: "0.086", bi: "70.6%", bss: "—", highlight: false },
   { name: "Grok 4.20 (Preview)", bs: "0.102", bi: "68.0%", bss: "—", highlight: false },
@@ -18,7 +18,7 @@ export function BrierScoreSection() {
 
         <div>
           <p className="mb-2 font-mono text-xs uppercase tracking-widest text-lavender">
-            Brier scoring · updated May 26, 2026
+            Brier scoring · updated June 5, 2026
           </p>
           <h2 className="font-head text-2xl font-semibold tracking-tight text-ink md:text-3xl">
             Calibration against the gold standard.
@@ -35,19 +35,19 @@ export function BrierScoreSection() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-border bg-surface-alt p-5">
             <Target className="mb-3 h-5 w-5 text-lavender" />
-            <p className="font-head text-3xl font-bold text-ink">0.0845</p>
+            <p className="font-head text-3xl font-bold text-ink">0.0958</p>
             <p className="mt-0.5 text-sm font-medium text-fg">Brier score</p>
             <p className="mt-1 text-xs text-dim">Lower is better. 0.25 = random guessing.</p>
           </div>
           <div className="rounded-2xl border border-border bg-surface-alt p-5">
             <TrendingUp className="mb-3 h-5 w-5 text-lavender" />
-            <p className="font-head text-3xl font-bold text-ink">70.9%</p>
+            <p className="font-head text-3xl font-bold text-ink">69.0%</p>
             <p className="mt-0.5 text-sm font-medium text-fg">Brier Index (stated)</p>
             <p className="mt-1 text-xs text-dim">Behavioral recalibration ≈ 77.5%. Superforecasters ≈ 70.6%.</p>
           </div>
           <div className="rounded-2xl border border-border bg-surface-alt p-5">
             <AlertTriangle className="mb-3 h-5 w-5 text-amber-400" />
-            <p className="font-head text-3xl font-bold text-ink">−0.283</p>
+            <p className="font-head text-3xl font-bold text-ink">−0.302</p>
             <p className="mt-0.5 text-sm font-medium text-fg">Calibration gap</p>
             <p className="mt-1 text-xs text-dim">Negative = underconfident. Predicted lower than reality.</p>
           </div>
@@ -108,12 +108,12 @@ export function BrierScoreSection() {
         <div className="rounded-2xl border border-dashed border-border bg-surface-alt p-5 text-sm text-muted">
           <p className="mb-1 font-mono text-xs uppercase tracking-widest text-lavender">Calibration caveat</p>
           <p>
-            All 15 closed predictions resolved <em>positive</em> (outcome = 1). This means the Brier decomposition
+            All 18 closed predictions resolved <em>positive</em> (outcome = 1). This means the Brier decomposition
             cannot compute meaningful resolution or uncertainty — there is no variance in outcomes to measure against.
             The Brier score is therefore driven entirely by reliability: how close your confidence levels were to 1.0.
             A negative calibration gap (−0.283) indicates you were systematically <strong>underconfident</strong> —
             predicting 0.55–0.80 on events that all happened. With falsified claims, the calibration curve would be
-            more informative. The 70.9% Brier Index is legitimate, but the decomposition is structurally incomplete
+            more informative. The 69.0% Brier Index is legitimate, but the decomposition is structurally incomplete
             until the track record includes misses.
           </p>
         </div>
