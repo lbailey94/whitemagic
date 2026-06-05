@@ -40,7 +40,9 @@ except ImportError as e:
                  print(f"   >>> BREAKTHROUGH: {e.data['core_pattern']} (Gain: {e.data['resonance_gain']})")
 
     class MockEngine:
-        def start(self): pass
+        def start(self):
+            """Mock start — no-op for demo purposes."""
+            _ = self  # Intentionally empty: mock lifecycle placeholder
 
     get_bus = MockBus
     get_emergence_engine = MockEngine

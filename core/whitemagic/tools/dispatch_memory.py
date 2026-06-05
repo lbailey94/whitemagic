@@ -93,4 +93,9 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     # --- Simple Aliases ---
     "remember": LazyHandler("aliases", "handle_remember"),
     "recall": LazyHandler("aliases", "handle_recall"),
+
+    # --- Polyglot Holographic Memory Backends ---
+    "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
+    "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
+    "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
 }

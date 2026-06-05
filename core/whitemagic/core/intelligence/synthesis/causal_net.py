@@ -21,8 +21,8 @@ class CausalNet:
     """
 
     def mine_causal_patterns(self, query: str = "", max_patterns: int = 10) -> list[dict[str, Any]]:
-        """Placeholder for causal mining logic."""
-        return []
+        """Mine causal patterns from memory clusters — not yet implemented."""
+        raise NotImplementedError("Causal pattern mining is not yet implemented.")
 
     def get_stats(self) -> dict[str, Any]:
         """Placeholder for causal stats logic."""

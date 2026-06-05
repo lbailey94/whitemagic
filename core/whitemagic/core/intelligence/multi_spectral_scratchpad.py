@@ -74,9 +74,7 @@ def analyze_scratchpad(
     )
 
     # Default to WM_ROOT so tools run hermetically under WM_STATE_ROOT.
-    # Path expansion justified: Labs tier
-    # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-    base_dir_path = WM_ROOT if base_dir is None else Path(base_dir).expanduser().resolve()
+    base_dir_path = WM_ROOT if base_dir is None else Path(base_dir).resolve()
     reasoner = MultiSpectralReasoner(base_dir=base_dir_path)
     result = reasoner.reason(question=question, lenses=lenses, context=context)
 

@@ -52,8 +52,8 @@ class EmergenceEngine:
         self._insights: list[EmergenceInsight] = []
 
     def scan(self, context: Any = None) -> list[EmergenceInsight]:
-        """Scan for emergent patterns — graceful fallback returns empty list."""
-        return []
+        """Scan for emergent patterns across the knowledge graph and memory stream."""
+        raise NotImplementedError("Emergence scanning is not yet implemented.")
 
 class ResonanceAmplifier:
     """Amplifies salient patterns through the Gan Ying bus."""

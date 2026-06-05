@@ -43,8 +43,8 @@ class TitleGenerator:
 class SerendipityEngine:
     """Detects unexpected connections and novel insights (serendipity)."""
     def find_serendipity(self, pool: Any = None) -> list[dict[str, Any]]:
-        """Find serendipitous connections — graceful fallback returns empty list."""
-        return []
+        """Find serendipitous connections across the memory pool."""
+        raise NotImplementedError("Serendipity detection is not yet implemented.")
 
 # --- SOLVER ENGINE ---
 

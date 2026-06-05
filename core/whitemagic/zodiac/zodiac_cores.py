@@ -1,6 +1,7 @@
 """Actual Zodiac Cores - Real consciousness specialization"""
 
 import random
+from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -70,6 +71,7 @@ class ZodiacCore:
 
         return min(1.0, max(0.0, score))
 
+    @abstractmethod
     def _score_keywords(self, operation: str, intention: str) -> float:
         """Score based on core-specific keywords. Override in subclasses for precision."""
         return 0.0

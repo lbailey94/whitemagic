@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
@@ -45,8 +46,9 @@ class LinkType(Enum):
 class MemoryGalaxy:
     """Base class for memory galaxies (collections of memories)."""
 
+    @abstractmethod
     def get_stats(self) -> dict[str, Any]:
-        """Get galaxy statistics — graceful fallback returns empty dict."""
+        """Get galaxy statistics — subclasses must implement."""
         return {}
 
 

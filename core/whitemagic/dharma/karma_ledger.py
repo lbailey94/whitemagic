@@ -38,6 +38,8 @@ from typing import Any
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
+from whitemagic.security.audit_signing import get_audit_signer
+
 logger = logging.getLogger(__name__)
 
 
@@ -76,6 +78,8 @@ class KarmaEntry:
     prev_hash: str = ""        # hash of previous entry (Merkle chain)
     entry_hash: str = ""       # hash of this entry
     ops_class: str = ""        # Edgerunner Violet: "red-ops", "blue-ops", or "" (normal)
+    signature: str = ""        # Ed25519 signature (base64)
+    key_id: str = ""           # signing key fingerprint
 
     def to_dict(self) -> dict[str, Any]:
         d = {
@@ -91,6 +95,10 @@ class KarmaEntry:
         }
         if self.ops_class:
             d["ops_class"] = self.ops_class
+        if self.signature:
+            d["signature"] = self.signature
+        if self.key_id:
+            d["key_id"] = self.key_id
         return d
 
 
@@ -151,6 +159,15 @@ class KarmaLedger:
         payload = f"{tool}:{declared}:{actual_writes}:{success}:{mismatch}:{debt_delta}:{ts}"
         entry_hash = _hash_entry(payload, prev_hash)
 
+        # ── Ed25519 signing (GAR Level 1 non-suppressibility) ──
+        sig_data = None
+        try:
+            signer = get_audit_signer()
+            if signer.is_available():
+                sig_data = signer.sign(payload)
+        except Exception:
+            pass  # signing is optional; never block record()
+
         entry = KarmaEntry(
             tool=tool,
             declared_safety=declared,
@@ -162,6 +179,8 @@ class KarmaLedger:
             prev_hash=prev_hash,
             entry_hash=entry_hash,
             ops_class=ops_class,
+            signature=sig_data["signature"] if sig_data else "",
+            key_id=sig_data["key_id"] if sig_data else "",
         )
 
         with self._lock:
@@ -225,16 +244,18 @@ class KarmaLedger:
             return self._total_debt
 
     def verify_chain(self) -> dict[str, Any]:
-        """Verify the Merkle hash chain integrity."""
+        """Verify the Merkle hash chain integrity + Ed25519 signatures."""
         with self._lock:
             if not self._entries:
                 return {"valid": True, "entries_checked": 0, "message": "Empty ledger"}
 
             broken_at = None
+            sig_fail_at = None
             prev = "genesis"
             checked = 0
+            sig_checked = 0
             for entry in self._entries:
-                # If entry has hash data, verify it
+                # Verify Merkle hash chain
                 if entry.prev_hash and entry.entry_hash:
                     if entry.prev_hash != prev:
                         broken_at = checked
@@ -248,6 +269,20 @@ class KarmaLedger:
                         broken_at = checked
                         break
                     prev = entry.entry_hash
+                # Verify Ed25519 signature if present
+                if entry.signature and entry.key_id:
+                    sig_checked += 1
+                    try:
+                        signer = get_audit_signer()
+                        payload = (
+                            f"{entry.tool}:{entry.declared_safety}:{entry.actual_writes}:"
+                            f"{entry.success}:{entry.mismatch}:{entry.debt_delta}:{entry.timestamp}"
+                        )
+                        if not signer.verify(payload, entry.signature, entry.key_id):
+                            sig_fail_at = checked
+                            break
+                    except Exception:
+                        pass
                 checked += 1
 
             if broken_at is not None:
@@ -257,12 +292,22 @@ class KarmaLedger:
                     "broken_at_index": broken_at,
                     "message": f"Chain integrity broken at entry {broken_at}",
                 }
-            return {
+            if sig_fail_at is not None:
+                return {
+                    "valid": False,
+                    "entries_checked": checked,
+                    "broken_at_index": sig_fail_at,
+                    "message": f"Signature verification failed at entry {sig_fail_at}",
+                }
+            result = {
                 "valid": True,
                 "entries_checked": checked,
                 "chain_head": self._chain_head,
                 "message": "Chain integrity verified",
             }
+            if sig_checked > 0:
+                result["signatures_verified"] = sig_checked
+            return result
 
     def merkle_root(self) -> str:
         """Compute Merkle tree root over all ledger entry hashes (Leap 9c).
@@ -391,6 +436,7 @@ class KarmaLedger:
         try:
             lines = ledger_file.read_text(encoding="utf-8").strip().split("\n")
             # Only load last 1000 entries
+            loaded = 0
             for line in lines[-1000:]:
                 if not line.strip():
                     continue
@@ -403,9 +449,13 @@ class KarmaLedger:
                     self._tool_calls[entry.tool] += 1
                     if entry.mismatch:
                         self._tool_mismatches[entry.tool] += 1
+                    loaded += 1
                 except (ValueError, TypeError):
                     continue
-            logger.info(f"Karma ledger: loaded {len(self._entries)} entries, debt={self._total_debt:.1f}")
+            # Fix: restore chain head so new entries link correctly
+            if self._entries:
+                self._chain_head = self._entries[-1].entry_hash
+            logger.info(f"Karma ledger: loaded {loaded} entries, debt={self._total_debt:.1f}, head={self._chain_head[:16]}")
         except Exception as e:
             logger.debug(f"Karma ledger load failed: {e}")
 

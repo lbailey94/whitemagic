@@ -236,6 +236,26 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     query = kwargs.get("query", "")
     limit = kwargs.get("limit", 20)
     include_private = kwargs.get("include_private", False)
+    polyglot_backend = kwargs.get("polyglot_backend")
+
+    # Optional: compute holographic coordinates via polyglot backend
+    polyglot_meta: dict[str, Any] = {}
+    if polyglot_backend:
+        try:
+            from whitemagic.tools.handlers.polyglot import handle_polyglot_memory_query
+            pg_result = handle_polyglot_memory_query(
+                operation="encode",
+                text=query,
+                backend=polyglot_backend,
+            )
+            if pg_result["status"] == "success":
+                polyglot_meta["holographic_coord"] = pg_result["result"]
+                polyglot_meta["backend"] = polyglot_backend
+            else:
+                polyglot_meta["holographic_error"] = pg_result.get("error", "unknown")
+        except Exception as e:
+            polyglot_meta["holographic_error"] = str(e)
+
     try:
         memories = recall(query=query, limit=limit)
     except Exception as exc:
@@ -244,6 +264,7 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
             "count": 0,
             "memories": [],
             "warning": f"search_memories degraded: {exc}",
+            **polyglot_meta,
         }
 
     # v15: Filter out private and model_exclude memories from MCP responses
@@ -255,6 +276,22 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
             and not _flag_enabled(getattr(m, "model_exclude", False))
         ]
 
+    # Optional: spatial re-ranking via polyglot holographic V coordinate
+    query_v: float | None = None
+    if polyglot_meta.get("holographic_coord"):
+        coord = polyglot_meta["holographic_coord"]
+        query_v = coord.get("v") if isinstance(coord, dict) else None
+
+    if query_v is not None:
+        ranked = []
+        for m in memories:
+            dist = abs(m.galactic_distance - query_v)
+            ranked.append((dist, m))
+        ranked.sort(key=lambda x: x[0])
+        memories = [m for _, m in ranked]
+        polyglot_meta["spatial_ranked"] = True
+        polyglot_meta["query_v"] = query_v
+
     # Track context reuse in telemetry
     try:
         from whitemagic.core.monitoring.telemetry import get_telemetry
@@ -262,14 +299,18 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     except (ImportError, ModuleNotFoundError) as e:
         logger.debug(f"Silenced memory telemetry err: {e}")
 
-    return {
+    result: dict[str, Any] = {
         "status": "success",
         "count": len(memories),
         "memories": [
             {
                 "id": str(m.id),
-                "content": m.content[:200] if isinstance(m.content, str) else str(m.content)[:200]
+                "content": m.content[:200] if isinstance(m.content, str) else str(m.content)[:200],
+                "galactic_distance": round(m.galactic_distance, 3),
             }
             for m in memories
         ],
     }
+    if polyglot_meta:
+        result["polyglot"] = polyglot_meta
+    return result

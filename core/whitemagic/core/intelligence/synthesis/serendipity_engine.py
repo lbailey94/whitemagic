@@ -47,9 +47,7 @@ class SerendipityEngine:
         # Ensure parent directory exists for restricted/sandbox environments.
         try:
             from pathlib import Path
-            # Path expansion justified: Labs tier
-            # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-            Path(self.db_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+            Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
         self._conn: sqlite3.Connection | None = None
@@ -473,9 +471,14 @@ class SerendipityEngine:
             pass
 
     def _on_pattern_detected(self, event: Any) -> None:
-        """Handle pattern detection - surface related dormant memories."""
-        # Could trigger targeted surfacing based on pattern context
-        pass
+        """Handle pattern detection - surface related dormant memories.
+
+        Currently a no-op: pattern events are logged by the bus but no automatic
+        surfacing is wired. Future implementation should query dormant memories
+        related to the detected pattern and emit a surfacing suggestion.
+        """
+        # Acknowledge event; surfacing logic deferred until context mapping is ready.
+        _ = event
 
 # Global instance
 _serendipity_engine = None

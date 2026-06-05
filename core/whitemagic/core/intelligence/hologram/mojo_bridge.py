@@ -43,9 +43,7 @@ class MojoEncoderBridge:
         try:
             mojo_bin = os.getenv("WHITEMAGIC_MOJO_BIN")
             if mojo_bin:
-                # Path expansion justified: Labs tier
-                # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-                candidate = Path(mojo_bin).expanduser()
+                candidate = Path(mojo_bin)
                 if candidate.is_file():
                     self.mojo_bin = str(candidate)
 

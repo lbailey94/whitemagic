@@ -1,7 +1,7 @@
 # Polyglot Build Status — WhiteMagic v22.2.0
 
-**Last verified**: 2026-05-16  
-**Method**: Direct compilation + archive excavation + source recovery + SD card CODEX migration
+**Last verified**: 2026-06-04  
+**Method**: Direct compilation + archive excavation + source recovery + SD card CODEX migration + JSON stdio bridge wiring
 
 ---
 
@@ -61,6 +61,48 @@ Recovered from SD card on 2026-05-16. Extracted to standalone project at `~/Desk
 - 1 builds to BEAM bytecode (Elixir)
 - 1 blocked on auth-gated compiler (Mojo — 3,644 lines of source ready)
 
-**Rust total**: 50,488 lines across WhiteMagic core + CODEX pipeline.
+**Rust total**: 50,488+ lines across WhiteMagic core + CODEX pipeline + archive.
 
-*Last updated: 2026-05-16 — after CODEX SD card migration, 2 compile bugs fixed, 17/18 tests pass.*
+**Archive recovery (2026-06-04)**: `polyglot/whitemagic-rust-archive/` holds 1,432 files (6.9M) — expanded superset of current `core/whitemagic-rust/` with additional modules (`adaptive_portal`, `geneseed_miner`, `heavens_net`, etc.). Diff and merge into canonical version is future work.
+
+---
+
+## JSON stdio Bridges (2026-06-04)
+
+New Python dispatcher routes holographic memory queries to Julia/Elixir/Haskell backends via JSON over stdio. Registered as WhiteMagic MCP tools: `polyglot.memory_query` and `polyglot.status`.
+
+| Backend | Bridge | Status | Tests |
+|---------|--------|--------|-------|
+| **Julia** | `bridges/julia/bridge.jl` | ✅ Operational | 15 tests pass |
+| **Elixir** | `bridges/elixir/bridge.exs` | ✅ Operational | 16 tests pass |
+| **Haskell** | `bridges/haskell/bridge.hs` | ✅ Operational | 5 tests pass |
+| **Rust** | `bridges/python/whitemagic_polyglot/__init__.py` (cargo) | ⏳ Pending | Awaiting bridge example |
+
+### Python Dispatcher
+- `whitemagic_polyglot.auto()` — tries Julia → Elixir → Haskell → Rust
+- `polyglot.status` — returns per-backend ping + health score
+- `polyglot.memory_query` — routes encode/NN/constellation/coherence ops
+
+---
+
+## Benchmark Results (2026-06-04)
+
+Run via `polyglot/bench_polyglot.py` — 20 texts encoded, 5 NN queries, k=3.
+
+| Backend | Encode Mean | Encode Tput | NN Mean | NN Tput |
+|---------|-------------|-------------|---------|---------|
+| **Julia** | 0.17 ms | 5,924 Hz | 1.03 ms | 976 Hz |
+| **Elixir** | 0.84 ms | 1,191 Hz | 9.72 ms | 103 Hz |
+| **Haskell** | 4.53 ms | 221 Hz | 88.15 ms | 11 Hz |
+
+*Haskell is interpreted via `runhaskell`; compiled binary would be ~10–50× faster.*
+
+---
+
+## Unified HRR + 5D Model (Option 2)
+
+The Rust `wm-core` crate implements joint symbolic-spatial queries:
+- `hrr_to_coordinate()` — projects HRR vectors onto 5D holographic axes
+- `joint_query()` — scores memories by both HRR cosine similarity AND 5D spatial proximity
+
+*Last updated: 2026-06-04 — after Go + Rust archive recovery from whitemagic0.2.*

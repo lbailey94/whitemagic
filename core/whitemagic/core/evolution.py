@@ -56,8 +56,8 @@ class ThoughtGalaxy:
         self._patterns = []
 
     def mine_patterns(self) -> list[dict[str, Any]]:
-        """Mine emergent patterns — graceful fallback returns empty list."""
-        return []
+        """Mine emergent patterns from stored thoughts."""
+        raise NotImplementedError("ThoughtGalaxy pattern mining is not yet implemented.")
 
 # --- SINGLETONS ---
 _adaptive: AdaptiveSystem | None = None

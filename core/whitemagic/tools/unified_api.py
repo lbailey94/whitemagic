@@ -137,9 +137,7 @@ def _resolve_base_path(kwargs: dict[str, Any]) -> Path:
     if not base_path:
         return cast("Path", WM_ROOT)
 
-    # Path expansion justified: User-provided paths - validation required
-    # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-    resolved = Path(base_path).expanduser().resolve()
+    resolved = Path(base_path).resolve()
 
     # Strong default: state lives under WM_STATE_ROOT. Allow external state roots
     # only via explicit opt-in.

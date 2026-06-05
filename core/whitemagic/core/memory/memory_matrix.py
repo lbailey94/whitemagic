@@ -165,8 +165,8 @@ class SimpleEmbeddingIndex:
 
     def stats(self) -> dict[str, Any]: return {"total_embeddings": len(self._index)}
     def search(self, query: str, limit: int = 10) -> list[tuple[str, float, str]]:
-        """Search memory matrix — graceful fallback returns empty list."""
-        return []
+        """Search memory matrix — not yet implemented."""
+        raise NotImplementedError("MemoryMatrix search is not yet implemented.")
 
 # --- HUB: MEMORY MATRIX ---
 

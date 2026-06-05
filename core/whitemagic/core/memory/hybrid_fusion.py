@@ -250,8 +250,7 @@ class OptimalHybridSearcher:
 
     def _get_graph_results(self, query: str, limit: int) -> list[dict]:
         """Get graph-based results (PageRank-boosted neighbors)."""
-        # Placeholder - would use graph_walker_hot_path
-        return []
+        raise NotImplementedError("Graph result fusion is not yet implemented.")
 
 
 def demo_hybrid_fusion():

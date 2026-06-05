@@ -35,9 +35,7 @@ class SubClusteringEngine:
         self.db_path = db_path or str(DB_PATH)
         try:
             from pathlib import Path
-            # Path expansion justified: Labs tier
-            # See /media/lucas/SD_CARD/WHITEMAGIC/core/docs/SECOND_TEAM_PATH_CLEANUP.md
-            Path(self.db_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+            Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
         self._conn: sqlite3.Connection | None = None

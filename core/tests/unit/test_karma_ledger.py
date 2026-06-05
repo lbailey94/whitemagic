@@ -50,19 +50,21 @@ class TestKarmaEntry:
         assert d["actual_writes"] == 1
 
 
+@pytest.fixture
+def ledger():
+    """Create a ledger with a temp storage dir."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        _ledger = KarmaLedger(storage_dir=Path(tmpdir))
+        yield _ledger
+
+
+@pytest.fixture
+def memory_ledger():
+    """Create an in-memory ledger (no persistence)."""
+    return KarmaLedger(storage_dir=None)
+
+
 class TestKarmaLedger:
-    @pytest.fixture
-    def ledger(self):
-        """Create a ledger with a temp storage dir."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            l = KarmaLedger(storage_dir=Path(tmpdir))
-            yield l
-
-    @pytest.fixture
-    def memory_ledger(self):
-        """Create an in-memory ledger (no persistence)."""
-        return KarmaLedger(storage_dir=None)
-
     # --- record ---
 
     def test_record_honest_read(self, memory_ledger):
@@ -243,6 +245,57 @@ class TestKarmaLedger:
             )
         report = memory_ledger.report()
         assert report["total_calls_tracked"] == 50
+
+
+class TestKarmaLedgerSigning:
+    @pytest.fixture(autouse=True)
+    def _isolate_signer(self, monkeypatch, tmp_path):
+        from whitemagic.security.audit_signing import AuditSigner
+        monkeypatch.setattr(
+            "whitemagic.security.audit_signing._state_root",
+            lambda: tmp_path,
+        )
+        AuditSigner._instance = None
+        AuditSigner._lock = None
+
+    def test_record_produces_signature_when_crypto_available(self, memory_ledger):
+        entry = memory_ledger.record("t1", "READ", 0, True)
+        # Signature fields may be empty if cryptography unavailable in env,
+        # but they must exist on the entry
+        assert hasattr(entry, "signature")
+        assert hasattr(entry, "key_id")
+        # When crypto is present, signing should succeed
+        from whitemagic.security.audit_signing import _CRYPTO_AVAILABLE
+        if _CRYPTO_AVAILABLE:
+            assert entry.signature
+            assert entry.key_id
+
+    def test_verify_chain_reports_signatures_verified(self, memory_ledger):
+        memory_ledger.record("t1", "READ", 0, True)
+        memory_ledger.record("t2", "WRITE", 1, True)
+        result = memory_ledger.verify_chain()
+        assert result["valid"] is True
+        from whitemagic.security.audit_signing import _CRYPTO_AVAILABLE
+        if _CRYPTO_AVAILABLE:
+            assert result.get("signatures_verified", 0) >= 1
+
+    def test_entry_to_dict_includes_signature_when_present(self, memory_ledger):
+        entry = memory_ledger.record("t1", "READ", 0, True)
+        d = entry.to_dict()
+        assert "signature" in d or entry.signature == ""
+        assert "key_id" in d or entry.key_id == ""
+
+    def test_signature_tampering_detected_in_verify_chain(self, memory_ledger):
+        from whitemagic.security.audit_signing import _CRYPTO_AVAILABLE
+        if not _CRYPTO_AVAILABLE:
+            pytest.skip("cryptography not installed")
+        memory_ledger.record("t1", "READ", 0, True)
+        # Tamper the signature of the loaded entry
+        with memory_ledger._lock:
+            memory_ledger._entries[-1].signature = "a" * 64
+        result = memory_ledger.verify_chain()
+        assert result["valid"] is False
+        assert "Signature" in result["message"] or "signature" in result["message"]
 
 
 class TestGetKarmaLedger:
