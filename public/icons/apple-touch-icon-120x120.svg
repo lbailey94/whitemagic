@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a1a3e"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="2.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="120" height="120" rx="18.0" fill="url(#bg)"/>
+
+  <!-- Orbit rings -->
+  <ellipse cx="60.0" cy="60.0" rx="25.2" ry="12.6"
+           fill="none" stroke="#06b6d4" stroke-width="0.96"
+           opacity="0.4" transform="rotate(0 60.0 60.0)"/>
+  <ellipse cx="60.0" cy="60.0" rx="35.699999999999996" ry="18.9"
+           fill="none" stroke="#7c3aed" stroke-width="0.72"
+           opacity="0.3" transform="rotate(30 60.0 60.0)"/>
+  <ellipse cx="60.0" cy="60.0" rx="46.2" ry="25.2"
+           fill="none" stroke="#67e8f9" stroke-width="0.48"
+           opacity="0.2" transform="rotate(60 60.0 60.0)"/>
+
+  <!-- Star glow -->
+  <circle cx="60.0" cy="60.0" r="50.4" fill="url(#glow)"/>
+
+  <!-- 5-pointed star (holographic symbol) -->
+  <polygon points="76.8,102.0 74.4,69.0 76.8,102.0 74.4,69.0 76.8,102.0 74.4,69.0 76.8,102.0 74.4,69.0 76.8,102.0 74.4,69.0"
+           fill="#7c3aed" opacity="0.9"/>
+
+  <!-- Core glow -->
+  <circle cx="60.0" cy="60.0" r="21.599999999999998" fill="url(#coreGlow)"/>
+
+  <!-- Core dot -->
+  <circle cx="60.0" cy="60.0" r="7.199999999999999" fill="#f59e0b"/>
+
+  <!-- Accent dots (representing 5D coordinates) -->
+  <circle cx="39.0" cy="47.4"
+          r="2.4" fill="#06b6d4" opacity="0.7"/>
+  <circle cx="76.8" cy="39.0"
+          r="1.7999999999999998" fill="#67e8f9" opacity="0.6"/>
+  <circle cx="85.2" cy="68.4"
+          r="2.1599999999999997" fill="#a78bfa" opacity="0.5"/>
+</svg>

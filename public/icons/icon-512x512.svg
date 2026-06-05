@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#1a1a3e"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="10.24"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="76.8" fill="url(#bg)"/>
+
+  <!-- Orbit rings -->
+  <ellipse cx="256.0" cy="256.0" rx="107.52" ry="53.76"
+           fill="none" stroke="#06b6d4" stroke-width="4.096"
+           opacity="0.4" transform="rotate(0 256.0 256.0)"/>
+  <ellipse cx="256.0" cy="256.0" rx="152.32" ry="80.63999999999999"
+           fill="none" stroke="#7c3aed" stroke-width="3.072"
+           opacity="0.3" transform="rotate(30 256.0 256.0)"/>
+  <ellipse cx="256.0" cy="256.0" rx="197.12" ry="107.52"
+           fill="none" stroke="#67e8f9" stroke-width="2.048"
+           opacity="0.2" transform="rotate(60 256.0 256.0)"/>
+
+  <!-- Star glow -->
+  <circle cx="256.0" cy="256.0" r="215.04" fill="url(#glow)"/>
+
+  <!-- 5-pointed star (holographic symbol) -->
+  <polygon points="327.7,435.2 317.4,294.4 327.7,435.2 317.4,294.4 327.7,435.2 317.4,294.4 327.7,435.2 317.4,294.4 327.7,435.2 317.4,294.4"
+           fill="#7c3aed" opacity="0.9"/>
+
+  <!-- Core glow -->
+  <circle cx="256.0" cy="256.0" r="92.16" fill="url(#coreGlow)"/>
+
+  <!-- Core dot -->
+  <circle cx="256.0" cy="256.0" r="30.72" fill="#f59e0b"/>
+
+  <!-- Accent dots (representing 5D coordinates) -->
+  <circle cx="166.4" cy="202.24"
+          r="10.24" fill="#06b6d4" opacity="0.7"/>
+  <circle cx="327.68" cy="166.4"
+          r="7.68" fill="#67e8f9" opacity="0.6"/>
+  <circle cx="363.52" cy="291.84"
+          r="9.216" fill="#a78bfa" opacity="0.5"/>
+</svg>

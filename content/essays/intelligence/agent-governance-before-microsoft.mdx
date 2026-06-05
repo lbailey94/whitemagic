@@ -1,0 +1,41 @@
+---
+title: "I built agent governance before Microsoft — here's what I learned"
+domain: intelligence
+date: "2026-04"
+epistemicTag: Proven
+---
+
+In February 2026, I shipped a **Dharma rules engine**, a **Karma audit ledger**, and an **8-stage middleware pipeline** as part of WhiteMagic's tool dispatch system. Two months later, Microsoft announced the Agent Governance Toolkit. The overlap is instructive — and the differences matter.
+
+## What We Both Built
+
+Both systems share a core insight: **agents need runtime governance, not just policy documents**. When an agent can call tools, access memory, and execute code, governance can't be a design document reviewed once a quarter. It has to execute on every tool call.
+
+WhiteMagic's approach predates Microsoft's public release by several months, but the architectural convergence suggests the problem space is well-defined:
+
+1. **Tool-level gating**: Every tool invocation passes through a middleware chain that can reject, modify, or audit the call.
+2. **Ethical ledger**: A persistent, append-only log of claims and verdicts — not just for debugging, but for accountability.
+3. **Voice audit**: Scanning agent outputs for boundary violations — false claims, scope creep, unauthorized disclosures.
+
+## Where We Differ
+
+Microsoft's toolkit is designed for enterprise integration — Azure-native, Entra ID-backed, and policy-as-code. WhiteMagic's governance is **local-first**, Python-native, and designed for researchers and small teams who can't or won't deploy to Azure.
+
+This matters because the governance surface is different:
+
+| Concern | Microsoft AGT | WhiteMagic Dharma |
+|---------|---------------|-------------------|
+| Deployment model | Azure cloud | Local / on-prem |
+| Policy language | YAML + Azure Policy | Python rules + PRAT Gana |
+| Audit trail | Azure Monitor | Karma Ledger (SQLite/PostgreSQL) |
+| Ethical framework | Compliance rules | Dharma ethics + 28 Gana system |
+
+## What I'd Do Differently
+
+The biggest lesson: **governance should be observable before it's enforceable**. In the first iteration, the Dharma engine rejected tool calls silently. This made debugging impossible — agents couldn't tell why they were being blocked. The fix was adding structured error envelopes with `error_code`, `details`, and `retryable` flags on every rejection.
+
+The second lesson: **epistemic tagging should be a first-class primitive**. Agents confidently assert falsehoods because we haven't taught them to label uncertainty. Every claim from an agent should carry a [Proven], [Promising], [Contested], [Speculative], or [Mythopoetic] tag. This is now part of the WhiteMagic stable envelope contract.
+
+## The Bottom Line
+
+The convergence with Microsoft validates the problem space. The divergence in deployment model and ethical framework is WhiteMagic's differentiator. If you're building agents that need runtime governance and can't ship your data to Azure, the architecture is ready to be adapted.
