@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import base64
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +23,6 @@ _CRYPTO_AVAILABLE = False
 try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
         Ed25519PrivateKey,
-        Ed25519PublicKey,
     )
     from cryptography.hazmat.primitives import serialization
     from cryptography.exceptions import InvalidSignature

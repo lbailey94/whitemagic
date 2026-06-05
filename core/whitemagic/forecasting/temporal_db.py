@@ -96,6 +96,15 @@ class TemporalForecastDB:
     def _init_db(self) -> None:
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
+            # Migrate: add behavioral_confidence if missing (added in v22.2.1)
+            cols = conn.execute(
+                "PRAGMA table_info(predictions)"
+            ).fetchall()
+            col_names = {c[1] for c in cols}
+            if "behavioral_confidence" not in col_names:
+                conn.execute(
+                    "ALTER TABLE predictions ADD COLUMN behavioral_confidence REAL"
+                )
 
     @contextmanager
     def _conn(self):
@@ -110,11 +119,14 @@ class TemporalForecastDB:
         finally:
             conn.close()
 
-    def seed_validated_claims(self) -> int:
-        """Insert the audited prescience claims from YAML (idempotent by source_ref).
+    def seed_validated_claims(self) -> dict[str, int]:
+        """Sync prescience claims from YAML into the DB (idempotent by source_ref).
+
+        Updates existing claims when the YAML has changed, inserts new ones,
+        and removes claims no longer present in the YAML.
 
         Returns:
-            Number of new rows inserted (0 if already seeded).
+            Dict with 'inserted', 'updated', 'removed' counts.
         """
         claims = _load_seed_claims()
         if not claims:
@@ -122,42 +134,68 @@ class TemporalForecastDB:
                 "No seed claims found. Ensure prescience_claims.yaml is present "
                 "in the forecasting package directory."
             )
-        inserted = 0
+        inserted = updated = removed = 0
+        yaml_refs = {c["source_ref"] for c in claims}
         with self._conn() as conn:
+            # Remove stale claims no longer in YAML
+            for row in conn.execute(
+                "SELECT source_ref FROM predictions"
+            ).fetchall():
+                if row["source_ref"] not in yaml_refs:
+                    conn.execute(
+                        "DELETE FROM predictions WHERE source_ref = ?",
+                        (row["source_ref"],),
+                    )
+                    removed += 1
+
             for claim in claims:
-                exists = conn.execute(
-                    "SELECT 1 FROM predictions WHERE source_ref = ?",
+                row = conn.execute(
+                    "SELECT status, claim, confidence, validation_date, lead_weeks, points, notes "
+                    "FROM predictions WHERE source_ref = ?",
                     (claim["source_ref"],),
                 ).fetchone()
-                if exists:
-                    continue
-                conn.execute(
-                    """
-                    INSERT INTO predictions
-                      (id, claim, source_date, source_ref, confidence, behavioral_confidence, category,
-                       status, validation_date, validation_ref, lead_weeks,
-                       points, notes, created_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    """,
-                    (
-                        str(uuid.uuid4()),
-                        claim["claim"],
-                        claim["source_date"],
-                        claim["source_ref"],
-                        claim["confidence"],
-                        claim.get("behavioral_confidence"),
-                        claim["category"],
-                        claim["status"],
-                        claim.get("validation_date"),
-                        claim.get("validation_ref"),
-                        claim.get("lead_weeks"),
-                        claim.get("points"),
-                        claim.get("notes", ""),
-                        datetime.utcnow().isoformat(),
-                    ),
+                new_vals = (
+                    claim["claim"],
+                    claim["source_date"],
+                    claim["source_ref"],
+                    claim["confidence"],
+                    claim.get("behavioral_confidence"),
+                    claim["category"],
+                    claim["status"],
+                    claim.get("validation_date"),
+                    claim.get("validation_ref"),
+                    claim.get("lead_weeks"),
+                    claim.get("points"),
+                    claim.get("notes", ""),
                 )
-                inserted += 1
-        return inserted
+                if row is None:
+                    conn.execute(
+                        """
+                        INSERT INTO predictions
+                          (id, claim, source_date, source_ref, confidence, behavioral_confidence, category,
+                           status, validation_date, validation_ref, lead_weeks,
+                           points, notes, created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        (str(uuid.uuid4()), *new_vals, datetime.utcnow().isoformat()),
+                    )
+                    inserted += 1
+                else:
+                    # Unconditional update — YAML is the source of truth; the cost
+                    # for ~24 rows is negligible and guarantees correctness.
+                    conn.execute(
+                        """
+                        UPDATE predictions SET
+                          claim = ?, source_date = ?, source_ref = ?, confidence = ?,
+                          behavioral_confidence = ?, category = ?, status = ?,
+                          validation_date = ?, validation_ref = ?, lead_weeks = ?,
+                          points = ?, notes = ?
+                        WHERE source_ref = ?
+                        """,
+                        (*new_vals, claim["source_ref"]),
+                    )
+                    updated += 1
+        return {"inserted": inserted, "updated": updated, "removed": removed}
 
     def add_prediction(
         self,

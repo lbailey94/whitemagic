@@ -102,4 +102,73 @@ The lean server is already effectively stateless. No code changes needed until t
 3. **Garden integration**: Wire Vaya Vida knowledge sphere or concept graph into the /garden route
 4. **Paper preprint**: Convert `KARMA_LEDGER_PAPER_OUTLINE.md` to arXiv-ready LaTeX/md
 
-*Last updated: 2026-06-05 11:15 UTC-4*
+## Phase 2 — Strategic Narrative & Competitive Intelligence (11:15–11:20 UTC-4)
+
+After the technical work above, the session shifted to **strategic synthesis** — comparing the April 28 grant strategy session to the current state, conducting external research, and constructing a canonical narrative arc.
+
+### 6. Exa MCP Competitive Intelligence
+
+Conducted targeted web research updating the competitive landscape:
+
+| Search Target | Key Finding | Impact on Strategy |
+|-------------|-------------|------------------|
+| **Microsoft ACS/ASSERT/AGT v4.0.0** | 4,000+ stars, 1,000+ tests, KPMG/IBM/Zscaler partners, 5 language SDKs, OWASP/NIST/EU AI Act coverage | Confirms governance is now mainstream; WhiteMagic's differentiation must be sharper |
+| **ArbiterOS/Arbiter-K** | 141 stars, 28K lines, AgentDojo 93.94%, Agent-SafetyBench 94.25%, published arXiv paper (Apr 2026) | Academic competitor with published benchmarks — exactly what WhiteMagic's Manifund proposal targets |
+| **AgentDojo / Agent-SafetyBench / AJ-Bench** | Active evaluation landscape with 2,000+ test cases, 8 risk categories | WhiteMagic has zero published benchmarks; the gap the Manifund application proposes to fill |
+
+### 7. Old Session vs. Current State Analysis
+
+Reviewed the April 28 session in depth. Key finding: **the June 3 assessment that "0 grants submitted = inaction" was wrong.** Between April 28 and June 5, the user completed:
+- Deep competitive reconnaissance (ArbiterOS, Microsoft AGT, Hermes)
+- Brier scoring and prescience validation (14 claims, score 0.0861)
+- Standards alignment mapping (NIST, IETF GAR, SCITT AIR, MCP 2.0)
+- Two complete grant drafts (Manifund $20K, LTFF $35K)
+- 10 new strategic documents (June 4–5)
+
+The work was invisible because it was on the desktop and in new docs, not reflected in the old `GRANT_PIPELINE_2026.md`.
+
+### 8. Research Studio vs. R&D Lab Positioning
+
+Established canonical positioning:
+- **"WhiteMagic Studios"** (not Labs) — signals creative/intellectual production, solo operation, output without shipped product
+- Narrative arc: **Act I (Prediction) → Act II (Convergence) → Act III (Measurement)**
+- WhiteMagic's unique position: **the referee, not the player** — measuring whether governance tools work, not building another toolkit
+
+### 9. Cost-Effective Testing Plan
+
+Determined that **no GPU PC is needed** for the scoped grant deliverables:
+- API calls (~$3,000–4,000) cover 95% of benchmark work
+- Existing laptop sufficient for dev/testing
+- Cloud CI (~$100/month) for reproducibility
+- Reserve hardware purchase for later if benchmark work generates real need
+
+### 10. Grant Submission Process Walkthrough
+
+Documented step-by-step submission for first-time applicant:
+- **Manifund**: Account → project page → submit to Joel Becker (15 min setup, 2–4 week turnaround, no LLC)
+- **LTFF**: Paperform paste from existing draft (1–2 hours, 3–6 week turnaround, no LLC)
+- **Foresight**: June 30 deadline, $75K–$125K ask, needs node engagement plan
+
+### 11. Narrative Arc Document Created
+
+Created `/home/lucas/Desktop/WHITEMAGIC_NARRATIVE_ARC_2026.md` (~1,500 lines):
+- Three-act structure with independently verifiable evidence
+- Every claim citable with archive IDs and filesystem paths
+- Honesty statement acknowledging selection bias and survivorship bias
+- Competitive comparison table
+- Appendices: prescience claims, competitive comparison, standards alignment, source files
+- Designed for: website front page, grant applications, investor decks, public communication
+
+---
+
+## Updated Next Steps
+
+1. **Submit Manifund application** — draft is ready, 60 minutes of form-filling
+2. **Submit LTFF application** — draft is ready, 90 minutes of form-filling
+3. **Deploy whitemagic.dev** (even minimal) — grants reference a non-existent URL
+4. **Expand benchmark suite** — Add real agent framework integrations
+5. **MCP 2.0 upgrade** — Monitor `mcp` PyPI for 2.0 release
+6. **Garden integration** — Wire Vaya Vida into /garden route
+7. **Foresight application** — Due June 30; draft after Manifund/LTFF submitted
+
+*Last updated: 2026-06-05 11:20 UTC-4*

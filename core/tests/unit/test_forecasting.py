@@ -187,13 +187,16 @@ class TestTemporalForecastDB:
         assert preds[0]["status"] == "falsified"
 
     def test_seed_validated_claims_inserts_all(self, tmp_db: TemporalForecastDB):
-        inserted = tmp_db.seed_validated_claims()
-        assert inserted == 24  # 15 validated + 9 pending
+        result = tmp_db.seed_validated_claims()
+        assert result["inserted"] == 24  # 21 validated + 2 pending + 1 expired = 24 total
 
-    def test_seed_is_idempotent(self, tmp_db: TemporalForecastDB):
+    def test_seed_syncs_existing_rows(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         second = tmp_db.seed_validated_claims()
-        assert second == 0
+        # YAML is source of truth — second call updates all 24 rows to match
+        assert second["inserted"] == 0
+        assert second["updated"] == 24
+        assert second["removed"] == 0
 
     def test_summary_after_seed(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()

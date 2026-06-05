@@ -15,7 +15,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
-- Current local audit baseline: 2,379 passing tests, 0 failures, 67 skipped (as of 2026-06-03)
+- Current local audit baseline: 2,423 passing tests, 0 failures, 0 skipped (as of 2026-06-05)
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 

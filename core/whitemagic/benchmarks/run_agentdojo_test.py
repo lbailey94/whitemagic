@@ -6,13 +6,12 @@ the benchmark, bypassing Click's option validation.
 
 from __future__ import annotations
 
-import sys
 import warnings
 from pathlib import Path
 
 # Patch AgentDojo BEFORE importing the benchmark CLI
 import agentdojo.agent_pipeline.agent_pipeline as agent_pipeline
-from whitemagic.benchmarks.agentdojo_defense import WhiteMagicDharmaDefense
+import whitemagic.benchmarks.agentdojo_defense as _  # noqa: F401  # side-effect: registers defense
 
 # Inject our defense into the DEFENSES list
 if "whitemagic_dharma" not in agent_pipeline.DEFENSES:
@@ -35,9 +34,9 @@ def run_test():
     print("AgentDojo + WhiteMagic Dharma Defense — Test Run")
     print("=" * 60)
     print(f"Suite:    {suite.name}")
-    print(f"Tasks:    user_task_0")
-    print(f"Model:    GPT_4O_MINI_2024_07_18")
-    print(f"Defense:  whitemagic_dharma")
+    print("Tasks:    user_task_0")
+    print("Model:    GPT_4O_MINI_2024_07_18")
+    print("Defense:  whitemagic_dharma")
     print(f"Log dir:  {logdir}")
     print("-" * 60)
 

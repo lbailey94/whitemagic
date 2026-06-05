@@ -5,15 +5,70 @@ with holographic coordinates from the active galaxy.
 """
 
 import os
+import sqlite3
 import time
+from concurrent.futures import Future
 from typing import Any
 
-from whitemagic.core.memory.constellation_algorithms import detect_kdtree
+from whitemagic.core.async_layer import AsyncCompat
+from whitemagic.core.memory.constellation_algorithms import detect_kdtree, detect_semantic
 from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
 
 # Simple TTL cache for constellation detection results
 _CONSTELLATION_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 _CONSTELLATION_CACHE_TTL: float = 60.0  # seconds
+
+# Track pending background refresh jobs so we don't duplicate work
+_BACKGROUND_REFRESH_JOBS: dict[str, Future] = {}
+
+
+def _refresh_constellation_cache(
+    galaxy_name: str | None = None,
+    limit: int = 500,
+    min_members: int = 3,
+    max_radius: float = 0.5,
+) -> list[dict[str, Any]]:
+    """Synchronous helper to rebuild the constellation cache.
+
+    Runs inside a background executor so the event loop is never blocked.
+    """
+    cache_key = f"{galaxy_name or 'active'}:{limit}"
+    try:
+        constellations = _build_constellations_from_galaxy(
+            limit=limit,
+            galaxy_name=galaxy_name,
+            min_members=min_members,
+            max_radius=max_radius,
+        )
+        _CONSTELLATION_CACHE[cache_key] = (time.time(), constellations)
+        return constellations
+    except Exception:
+        return []
+
+
+def _trigger_background_refresh(
+    galaxy_name: str | None = None,
+    limit: int = 500,
+    min_members: int = 3,
+    max_radius: float = 0.5,
+) -> None:
+    """Kick off a background thread to refresh constellation cache."""
+    cache_key = f"{galaxy_name or 'active'}:{limit}"
+
+    # Cancel any existing pending job for this key
+    existing = _BACKGROUND_REFRESH_JOBS.pop(cache_key, None)
+    if existing is not None and not existing.done():
+        existing.cancel()
+
+    executor = AsyncCompat.get_executor()
+    future = executor.submit(
+        _refresh_constellation_cache,
+        galaxy_name,
+        limit,
+        min_members,
+        max_radius,
+    )
+    _BACKGROUND_REFRESH_JOBS[cache_key] = future
 
 try:
     from fastapi import APIRouter, Body, Header, HTTPException, Request
@@ -290,6 +345,124 @@ def _build_constellations_from_galaxy(
     return constellations
 
 
+def _build_semantic_constellations_from_galaxy(
+    limit: int = 500,
+    galaxy_name: str | None = None,
+    similarity_threshold: float = 0.75,
+    min_members: int = 3,
+) -> list[dict[str, Any]]:
+    """Detect semantic constellations via embedding similarity clustering.
+
+    Args:
+        limit: Maximum nodes to consider.
+        galaxy_name: Optional galaxy to query.
+        similarity_threshold: Cosine similarity threshold for graph edges.
+        min_members: Minimum points per constellation.
+    """
+    try:
+        _, um = _resolve_galaxy(galaxy_name)
+    except HTTPException:
+        return []
+
+    # Query embeddings directly from the galaxy's SQLite DB
+    embeddings: list[list[float]] = []
+    mem_ids: list[str] = []
+    mem_lookup: dict[str, Any] = {}
+
+    try:
+        with um.backend.pool.connection() as conn:
+            # Check if memory_embeddings table exists
+            tables = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='memory_embeddings'",
+            ).fetchall()
+            if not tables:
+                return []
+
+            rows = conn.execute(
+                "SELECT memory_id, embedding FROM memory_embeddings LIMIT ?",
+                (limit,),
+            ).fetchall()
+
+            for row in rows:
+                mem_id = row[0]
+                blob = row[1]
+                # Unpack embedding blob (expects pack_embedding format)
+                try:
+                    from whitemagic.core.memory.embedding_similarity import unpack_embedding
+                    vec = unpack_embedding(blob)
+                    if vec and len(vec) > 0:
+                        embeddings.append([float(v) for v in vec])
+                        mem_ids.append(str(mem_id))
+                except Exception:
+                    pass
+    except Exception:
+        return []
+
+    if len(embeddings) < min_members:
+        return []
+
+    # Fetch memory metadata for the IDs we have embeddings for
+    try:
+        with um.backend.pool.connection() as conn:
+            conn.row_factory = sqlite3.Row
+            placeholders = ",".join("?" * len(mem_ids))
+            cursor = conn.execute(
+                f"SELECT id, title, tags, memory_type, importance, galactic_distance "
+                f"FROM memories WHERE id IN ({placeholders})",
+                mem_ids,
+            )
+            for row in cursor:
+                mem_lookup[str(row["id"])] = row
+    except Exception:
+        pass
+
+    try:
+        groups, stabilities = detect_semantic(
+            embeddings,
+            ids=mem_ids,
+            similarity_threshold=similarity_threshold,
+            min_members=min_members,
+        )
+    except Exception:
+        return []
+
+    constellations: list[dict[str, Any]] = []
+    for i, member_indices in enumerate(groups):
+        members_meta = [
+            mem_lookup.get(mem_ids[idx]) for idx in member_indices
+            if mem_ids[idx] in mem_lookup
+        ]
+        if not members_meta:
+            continue
+
+        # Dominant tags
+        tag_counts: dict[str, int] = {}
+        for meta in members_meta:
+            tags_str = meta.get("tags", "") or ""
+            for tag in str(tags_str).split(","):
+                tag = tag.strip()
+                if tag:
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        dominant_tags = sorted(tag_counts, key=lambda t: tag_counts[t], reverse=True)[:5]
+
+        # Representative labels
+        labels = [str(meta.get("title", mem_ids[idx]) or mem_ids[idx])[:30]
+                  for idx, meta in enumerate(members_meta) if meta is not None][:5]
+
+        constellations.append({
+            "id": f"semantic_{i}",
+            "name": f"Topic {i + 1}",
+            "size": len(member_indices),
+            "member_ids": [mem_ids[idx] for idx in member_indices[:10]],
+            "stability": round(stabilities[i] if i < len(stabilities) else 0.5, 3),
+            "dominant_tags": dominant_tags,
+            "representative_labels": labels,
+            "clustering": "semantic",
+        })
+
+    return constellations
+
+
 def _require_api_key(x_api_key: str | None) -> str | None:
     """Validate API key if WM_GALAXY_REQUIRE_KEY is set."""
     require = os.environ.get("WM_GALAXY_REQUIRE_KEY", "").lower() in ("1", "true", "yes")
@@ -422,6 +595,9 @@ if router is not None:
                 round(importance, 4),
                 round(importance, 4),
             )
+            # Invalidate constellation cache and queue background refresh
+            _CONSTELLATION_CACHE.pop(f"{x_galaxy_name or 'active'}:500", None)
+            _trigger_background_refresh(galaxy_name=x_galaxy_name, limit=500)
             return {
                 "id": mem.id,
                 "label": label,
@@ -440,7 +616,10 @@ if router is not None:
         x_api_key: str | None = Header(None, alias="X-API-Key"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
-        """Return detected constellations from the galaxy (cached, auto-detect)."""
+        """Return detected constellations from the galaxy (cached, auto-detect).
+
+        On cache miss triggers a background refresh so the next request is instant.
+        """
         _require_api_key(x_api_key)
 
         cache_key = f"{x_galaxy_name or 'active'}:{limit}"
@@ -456,6 +635,10 @@ if router is not None:
                 "cached_at": cached[0],
             }
 
+        # Cache miss: compute synchronously (first call) but also schedule
+        # a background refresh for the next request.
+        _trigger_background_refresh(galaxy_name=x_galaxy_name, limit=limit)
+
         constellations = _build_constellations_from_galaxy(
             limit=limit, galaxy_name=x_galaxy_name
         )
@@ -467,6 +650,36 @@ if router is not None:
             "constellations": constellations,
             "total": len(constellations),
             "source": "galaxy_manager",
+        }
+
+    @router.post("/constellations/refresh")
+    async def refresh_galaxy_constellations(
+        request: Request,
+        min_members: int = Body(3),
+        max_radius: float = Body(0.5),
+        limit: int = Body(500),
+        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
+    ) -> dict[str, Any]:
+        """Trigger a background refresh of the constellation cache.
+
+        Returns immediately; detection runs in a background thread.
+        """
+        _require_api_key(x_api_key)
+
+        cache_key = f"{x_galaxy_name or 'active'}:{limit}"
+        _CONSTELLATION_CACHE.pop(cache_key, None)
+        _trigger_background_refresh(
+            galaxy_name=x_galaxy_name,
+            limit=limit,
+            min_members=min_members,
+            max_radius=max_radius,
+        )
+
+        return {
+            "status": "refreshing",
+            "cache_key": cache_key,
+            "message": "Constellation detection running in background",
         }
 
     @router.post("/constellations/detect")
@@ -505,4 +718,41 @@ if router is not None:
             "source": "galaxy_manager",
             "elapsed_ms": round(elapsed * 1000, 2),
             "params": {"min_members": min_members, "max_radius": max_radius, "limit": limit},
+        }
+
+    @router.post("/constellations/semantic")
+    async def detect_semantic_constellations(
+        request: Request,
+        similarity_threshold: float = Body(0.75),
+        min_members: int = Body(3),
+        limit: int = Body(500),
+        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
+    ) -> dict[str, Any]:
+        """Detect semantic constellations using embedding similarity clustering.
+
+        Clusters memories by cosine similarity of their semantic embeddings
+        rather than spatial holographic coordinates.
+        """
+        _require_api_key(x_api_key)
+
+        t0 = time.time()
+        constellations = _build_semantic_constellations_from_galaxy(
+            limit=limit,
+            galaxy_name=x_galaxy_name,
+            similarity_threshold=similarity_threshold,
+            min_members=min_members,
+        )
+        elapsed = time.time() - t0
+
+        return {
+            "constellations": constellations,
+            "total": len(constellations),
+            "source": "semantic_embeddings",
+            "elapsed_ms": round(elapsed * 1000, 2),
+            "params": {
+                "similarity_threshold": similarity_threshold,
+                "min_members": min_members,
+                "limit": limit,
+            },
         }

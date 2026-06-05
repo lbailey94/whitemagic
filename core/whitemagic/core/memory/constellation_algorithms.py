@@ -266,3 +266,98 @@ def merge_adjacent(
         groups.append(group)
 
     return groups
+
+
+def detect_semantic(
+    embeddings: list[list[float]],
+    ids: list[str] | None = None,
+    similarity_threshold: float = 0.75,
+    min_members: int = 3,
+) -> tuple[list[list[int]], list[float]]:
+    """Cluster memories by semantic embedding similarity.
+
+    Uses cosine similarity (dot product for pre-normalized vectors) to build
+    a similarity graph, then extracts connected components as clusters.
+
+    Args:
+        embeddings: List of embedding vectors (should be normalized).
+        ids: Optional memory IDs (used for logging only).
+        similarity_threshold: Cosine similarity threshold for edge creation.
+        min_members: Minimum cluster size to return.
+
+    Returns:
+        (groups, stabilities) where groups are lists of member-indices
+        and stabilities are average intra-cluster similarity scores.
+    """
+    n = len(embeddings)
+    if n == 0:
+        return [], []
+
+    # Build similarity graph adjacency list
+    adjacency: dict[int, set[int]] = {i: set() for i in range(n)}
+
+    if _NP_AVAILABLE and n > 1:
+        data = _np.array(embeddings, dtype=_np.float32)
+        # Normalize for true cosine similarity
+        norms = _np.linalg.norm(data, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        data = data / norms
+        # Batch compute similarity matrix (upper triangle)
+        sim_matrix = data @ data.T
+        # Threshold and build adjacency
+        mask = sim_matrix >= similarity_threshold
+        for i in range(n):
+            neighbors = _np.where(mask[i])[0].tolist()
+            adjacency[i] = {j for j in neighbors if j != i}
+    else:
+        # Pure Python fallback
+        for i in range(n):
+            vec_i = embeddings[i]
+            norm_i = math.sqrt(sum(v * v for v in vec_i)) or 1.0
+            for j in range(i + 1, n):
+                vec_j = embeddings[j]
+                norm_j = math.sqrt(sum(v * v for v in vec_j)) or 1.0
+                dot = sum(a * b for a, b in zip(vec_i, vec_j))
+                sim = dot / (norm_i * norm_j)
+                if sim >= similarity_threshold:
+                    adjacency[i].add(j)
+                    adjacency[j].add(i)
+
+    # Connected components (BFS)
+    visited = set()
+    groups: list[list[int]] = []
+    stabilities: list[float] = []
+
+    for start in range(n):
+        if start in visited:
+            continue
+        component = []
+        queue = [start]
+        while queue:
+            node = queue.pop()
+            if node in visited:
+                continue
+            visited.add(node)
+            component.append(node)
+            for neighbor in adjacency[node]:
+                if neighbor not in visited:
+                    queue.append(neighbor)
+
+        if len(component) >= min_members:
+            # Compute stability as average pairwise similarity within component
+            if _NP_AVAILABLE and len(component) > 1:
+                idxs = _np.array(component, dtype=_np.int64)
+                sub_matrix = sim_matrix[_np.ix_(idxs, idxs)]
+                # Exclude diagonal
+                mask_off = ~_np.eye(len(component), dtype=bool)
+                avg_sim = float(sub_matrix[mask_off].mean()) if mask_off.any() else 1.0
+            else:
+                avg_sim = 1.0
+            groups.append(component)
+            stabilities.append(avg_sim)
+
+    logger.info(
+        f"Semantic: {len(groups)} clusters from {n} embeddings "
+        f"(threshold={similarity_threshold})",
+    )
+    return groups, stabilities

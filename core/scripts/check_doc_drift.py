@@ -264,7 +264,7 @@ def check_test_count_consistency() -> None:
     )
 
     release_baseline = 2216
-    current_audit_baseline = 2379
+    current_audit_baseline = 2423
     release_markers = ("release baseline", "v22.2.0 release", "v22.2 release")
     current_markers = ("current local audit", "current audit baseline", "live audit baseline")
     seen: dict[str, list[tuple[str, int, str]]] = {}
