@@ -21,7 +21,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SITE_DIR = SCRIPT_DIR.parent
-REPO_ROOT = SITE_DIR.parent.parent
+REPO_ROOT = Path.home() / "Desktop" / "WHITEMAGIC"
 CORE_DIR = REPO_ROOT / "core"
 FACTS_PATH = SITE_DIR / "lib" / "facts.ts"
 VENV_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
