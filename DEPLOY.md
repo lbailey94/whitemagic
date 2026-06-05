@@ -2,7 +2,7 @@
 
 **Site**: `whitemagic-site` (Next.js 15 + TypeScript + Tailwind CSS)
 **Location**: `/home/lucas/Desktop/whitemagic-site`
-**Last Updated**: 2026-06-04
+**Last Updated**: 2026-06-05
 
 ---
 
@@ -42,136 +42,121 @@ npm run lint
 # 3. Build locally (catches errors before remote deploy)
 npm run build
 
-# 4. Verify static export works
-ls -la out/          # should exist with index.html
+# 4. Verify server build output
+ls -la .next/server/app/
+# Should contain routes: index.html, about/, contact/, grants/, etc.
 ```
 
 ---
 
-## Option A: Static Export (Simplest)
+## Important: This Is a Next.js Server App
 
-This site is configured for **static export** — it generates plain HTML/JS/CSS files that can be served from any static host (GitHub Pages, Cloudflare Pages, Netlify, Vercel, or any web server).
+This site has **API routes** (`/api/aria/*`, `/api/well-known/*`, `/api/wm/*`) and **dynamic rewrites** that require a running Node.js server. **Static export is not supported** without removing these features.
+
+Deploy as a **Next.js server application**, not static HTML.
+
+---
+
+## Option A: Vercel (Fastest — Recommended)
+
+Vercel is the native host for Next.js. Connect your GitHub repo and auto-deploy on every push.
 
 ```bash
-cd /home/lucas/Desktop/whitemagic-site
+# 1. Ensure repo is pushed to GitHub
+#    (already done: lbailey94/whitemagic-site-private)
 
-# Set up environment (copy example, then fill in Stripe links if you have them)
-cp .env.local.example .env.local
-# Edit .env.local with your Stripe Payment Link URLs
+# 2. Go to vercel.com → Add New Project → Import GitHub repo
 
-# Build static export
-npm run build
-# Output goes to ./out/
+# 3. Vercel auto-detects Next.js settings. Click Deploy.
 
-# Verify
-ls out/
-# Should contain: index.html, 404.html, _next/, pricing/, services/, etc.
+# 4. Add environment variables in Vercel dashboard if needed:
+#    (Stripe links, API keys, etc.)
+
+# 5. Point whitemagic.dev DNS to Vercel
+#    A record: 76.76.21.21 (Vercel's anycast IP)
+#    Or CNAME: cname.vercel-dns.com
 ```
 
-### Deploy to Any Static Host
+**Pros**: Zero config, auto-deploy, edge network, serverless functions for API routes.
 
-**GitHub Pages**:
+---
+
+## Option B: Railway (Alternative)
+
+Railway also auto-detects Next.js and handles serverless functions.
+
 ```bash
-# Push the out/ folder to a gh-pages branch
-# Or use GitHub Actions (see .github/workflows/ if configured)
-```
+# 1. Go to railway.app → New Project → Deploy from GitHub repo
 
-**Cloudflare Pages**:
-```bash
-# Drag and drop the out/ folder into Cloudflare Pages dashboard
-# Or use Wrangler CLI
-npx wrangler pages deploy out/
-```
+# 2. Railway auto-detects Next.js and builds
 
-**Netlify**:
-```bash
-# Drag and drop the out/ folder into Netlify dashboard
-# Or use Netlify CLI
-netlify deploy --dir=out --prod
-```
+# 3. Add environment variables in Railway dashboard
 
-**Vercel**:
-```bash
-# Vercel auto-detects Next.js — just push to git and connect repo
-# Or use CLI
-vercel --prod
-```
-
-**Hetzner / Any VPS (Caddy / Nginx)**:
-```bash
-# On your VPS, create web root
-sudo mkdir -p /var/www/whitemagic-site
-sudo chown $USER:$USER /var/www/whitemagic-site
-
-# Copy built files
-rsync -avz --delete out/ user@your-server:/var/www/whitemagic-site/
-
-# Caddyfile example
-# Caddyfile:
-# whitemagic.dev {
-#     root * /var/www/whitemagic-site
-#     file_server
-#     try_files {path} {path}.html {path}/index.html =404
-# }
-
-# Nginx config example
-# server {
-#     listen 80;
-#     server_name whitemagic.dev;
-#     root /var/www/whitemagic-site;
-#     index index.html;
-#     location / {
-#         try_files $uri $uri.html $uri/ =404;
-#     }
-# }
+# 4. Generate domain or connect custom domain
 ```
 
 ---
 
-## Option B: Next.js Server (for API routes)
+## Option C: Hetzner VPS (Full Control)
 
-If you need the Librarian chat API (`/api/chat`) or other server-side routes:
+For self-hosted deployment with full control:
 
 ```bash
+# On your VPS
+cd /var/www/whitemagic-site
+
+# Clone or pull latest
+git pull origin main
+
+# Install and build
+npm install
 npm run build
-npm start
-# → Runs on port 3000 (or PORT env var)
-```
 
-Use **PM2** or **systemd** for production:
-
-```bash
-# PM2
-npm install -g pm2
+# Run with PM2
 pm2 start "npm start" --name whitemagic-site
 pm2 save
 pm2 startup
 
-# Or systemd service
-# See deploy/whitemagic-dashboard.service in the main repo for a template
+# Or use the systemd service template from the main repo:
+# /home/lucas/Desktop/WHITEMAGIC/docs/deploy/HETZNER_DEPLOY.md
+```
+
+**Caddy reverse proxy**:
+```
+whitemagic.dev {
+    reverse_proxy localhost:3000
+}
+```
+
+**Nginx reverse proxy**:
+```
+server {
+    listen 80;
+    server_name whitemagic.dev;
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
 ```
 
 ---
 
-## Option C: Hetzner VPS (Full Stack)
+## Option D: Static Export (Not Recommended)
 
-If deploying the **full WhiteMagic stack** (API + site + polyglot) alongside this site, see the existing guide:
+⚠️ **Static export disables API routes, rewrites, and dynamic rendering.**
 
-`/home/lucas/Desktop/WHITEMAGIC/docs/deploy/HETZNER_DEPLOY.md`
+If you absolutely need a static site, you would need to:
+1. Remove all `app/api/` routes
+2. Remove `rewrites()` from `next.config.mjs`
+3. Add `output: 'export'` to `next.config.mjs`
+4. Build with `npm run build` → output to `out/`
 
-For **site-only** deployment to an existing Hetzner VPS:
-
-```bash
-# Build locally
-cd /home/lucas/Desktop/whitemagic-site
-npm run build
-
-# Deploy via rsync
-rsync -avz --delete out/ whitemagic@your-hetzner-ip:/var/www/whitemagic-site/
-
-# Caddy already configured? Just reload
-ssh whitemagic@your-hetzner-ip "sudo systemctl reload caddy"
-```
+**This is not the intended deployment mode for this site.**
 
 ---
 
@@ -215,10 +200,10 @@ If using Cloudflare or another CDN: use their DNS, set A record, and enable prox
 ## Post-Deploy Verification
 
 ```bash
-# Check site loads
+# Check site loads (replace URL with your actual domain)
 curl -s https://whitemagic.dev | head -20
 
-# Check .well-known/agent.json
+# Check .well-known/agent.json (requires running server — API route)
 curl -s https://whitemagic.dev/.well-known/agent.json | python3 -m json.tool | head -10
 
 # Check pricing page
@@ -226,6 +211,9 @@ curl -s https://whitemagic.dev/pricing | grep -o '$[0-9,]*' | sort -u
 
 # Check OpenGraph image
 curl -sI https://whitemagic.dev/pricing/opengraph-image.png | head -5
+
+# Verify API routes respond
+curl -s https://whitemagic.dev/api/well-known/agent | python3 -m json.tool | head -5
 ```
 
 ---
@@ -234,11 +222,13 @@ curl -sI https://whitemagic.dev/pricing/opengraph-image.png | head -5
 
 | Symptom | Fix |
 |---|---|
-| `out/` folder is empty or missing `index.html` | Check `next.config.mjs` has `output: 'export'` (or `distDir: 'out'`) |
-| Images not loading in static export | Use `unoptimized: true` in `next.config.mjs` for static hosts |
-| API routes 404 in static export | Expected — static export has no server. Use Option B for API routes |
 | Build fails with TypeScript errors | Run `npm run typecheck` locally first |
+| Build fails with "metadata export from use client" | Remove `export const metadata` from client components. Metadata must be in server components only. |
+| API routes 404 on static host | Expected — this site requires a Node.js server. Deploy to Vercel, Railway, or VPS. |
+| Images not loading | Verify `next.config.mjs` has appropriate image configuration for your host |
 | Stripe links not appearing | Verify `.env.local` exists and URLs start with `https://` |
+| `.next/` build output missing | Run `npm run build` — output goes to `.next/`, not `out/` |
+| Server crashes on start | Check `PORT` env var isn't conflicting; verify Node.js 20+ |
 
 ---
 
@@ -250,22 +240,23 @@ cd /home/lucas/Desktop/whitemagic-site
 # Dev
 npm run dev
 
-# Build (static export)
+# Build (server app)
 npm run build
 
-# Check
-ls out/
+# Start production server
+npm start
 
-# Deploy (rsync to VPS example)
-rsync -avz --delete out/ user@server:/var/www/whitemagic-site/
+# Deploy to GitHub (for Vercel/Railway auto-deploy)
+git add -A && git commit -m "site: update" && git push origin main
 ```
 
 ---
 
-## Current Blockers (as of 2026-06-04)
+## Current Blockers (as of 2026-06-05)
 
 1. **No Stripe account**: Payment links fall back to `/contact` forms. Site is functional.
-2. **No deployed server**: Site is desktop-only. Pick a host from Option A and deploy.
-3. **No DNS**: `whitemagic.dev` (or your chosen domain) needs A record pointed at server.
+2. **No deployed server**: Site builds successfully but is not live. Pick a host from Option A–C and deploy.
+3. **No DNS**: `whitemagic.dev` needs A record or CNAME pointed at your deployment target.
+4. **No environment variables**: `.env.local` is not committed (correctly — it's gitignored). Add env vars in your hosting dashboard.
 
-The shortest path to live: **static export + Cloudflare Pages or Netlify** (free, 5 minutes). No server needed.
+The shortest path to live: **Vercel** (connect GitHub repo, auto-deploy, 5 minutes).

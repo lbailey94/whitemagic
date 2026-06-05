@@ -17,12 +17,6 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
-export const metadata = {
-  title: "The AI Capability Ladder — WhiteMagic Labs",
-  description:
-    "Eight tiers of AI capability, from casual chatbot user to sovereign operator. Find your rung, see what you can do at your level, and book the workshop that gets you to the next one.",
-};
-
 interface Tier {
   num: number;
   name: string;
