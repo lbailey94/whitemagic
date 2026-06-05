@@ -20,7 +20,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/admin", "/admin/:path*", "/garden", "/garden/:path*"],
 };
 
 const REALM = 'Basic realm="WhiteMagic Admin", charset="UTF-8"';

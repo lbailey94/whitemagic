@@ -81,7 +81,7 @@ export async function GET() {
         examples: [
           "What does the WhiteMagic Karma Ledger track?",
           "Show me the Dharma rule profiles available.",
-          "How does PRAT compression collapse 451 tools to 28 Ganas?",
+          "How does PRAT compression collapse 456 tools to 28 Ganas?",
         ],
         inputModes: ["text/plain"],
         outputModes: ["text/plain"],
