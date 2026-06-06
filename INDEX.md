@@ -47,7 +47,7 @@ These files live at the repository root. They are the **public face** of the pro
 | `AI_PRIMARY.md` | **AI agent onboarding** — primary instruction doc for AI collaborators | `run_mcp_lean.py`, `version_bump.py`, `generate_llms_txt.py` |
 | `AGENTS.md` | **AI agent operations** — coding conventions, testing protocol, change patterns | — |
 | `ARCHITECTURE_MANIFEST_2026-06-04.md` | **Post-extraction architecture clarity** — what this repo is, sibling repos, directory map | — |
-| `COMPETITIVE_POSITIONING_2026-06-04.md` | **Competitive analysis** — WhiteMagic vs Osabio, CogOS, Kumiho, MnemoCore, SARC, AI-CONSTITUTION | — |
+| `COMPETITIVE_POSITIONING_2026-06-05.md` | **Competitive analysis** — WhiteMagic vs Osabio, CogOS, Kumiho, MnemoCore, SARC, AI-CONSTITUTION, Microsoft ACS/AGT, ArbiterOS | — |
 | `skill.md` | MCP skill definition for agent registries | `version_bump.py` |
 
 ---
@@ -276,17 +276,20 @@ Technical specifications and standards.
 
 ---
 
-## Strategy Manifestos: `docs/strategy_manifestos/`
+## Strategy Manifestos: `docs/strategy_manifestos/` — ARCHIVED June 5, 2026
 
-Strategic vision documents and market analysis.
+> **Note**: The April 2026 strategy documents below are preserved as historical reference. Canonical competitive strategy and market analysis moved to external docs on June 5, 2026:
+> - `COMPETITIVE_POSITIONING_2026-06-05.md` (Desktop) — current competitive landscape
+> - `LTFF_SUBMISSION_DRAFT_2026-06-05.md` (Desktop) — grant strategy (LTFF)
+> - `MANIFUND_SUBMISSION_DRAFT_2026-06-05.md` (Desktop) — grant strategy (Manifund)
 
-| File | Topic |
-|------|-------|
-| `AGENT_FIRST_LAB_STRATEGY.md` | Agent-first lab strategy |
-| `AGENT_FIRST_ECONOMICS.md` | Agent-first economics analysis |
-| `STRATEGY_AGENT_ECONOMY.md` | Agent economy strategy |
-| `ON_PREMISE_EDGE_AI_SCENARIOS.md` | On-premise edge AI scenarios |
-| `COMPETITIVE_LANDSCAPE_PHASE_03_ERRATA.md` | Competitive landscape errata |
+| File | Topic | Status |
+|------|-------|--------|
+| `AGENT_FIRST_LAB_STRATEGY.md` | Agent-first lab strategy | Active |
+| `AGENT_FIRST_ECONOMICS.md` | Agent-first economics analysis | **ARCHIVED** — April 2026 market read; superseded by June 5 competitive positioning |
+| `STRATEGY_AGENT_ECONOMY.md` | Agent economy strategy | **ARCHIVED** — April 2026 market read; superseded by June 5 competitive positioning |
+| `ON_PREMISE_EDGE_AI_SCENARIOS.md` | On-premise edge AI scenarios | Active |
+| `COMPETITIVE_LANDSCAPE_PHASE_03_ERRATA.md` | Competitive landscape errata | Active |
 
 ---
 

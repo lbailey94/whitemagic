@@ -20,8 +20,8 @@
 ### What is not happening yet
 
 - **a16z / Artemis filtered data (March 2026)**: actual real agent transaction volume is **$1.6M/month** (not the $24M Bloomberg reported). Even the unfiltered figure is $50M/month total — **0.0001% of $46T annual stablecoin volume**.
-- **x402 daily volume**: ~$28K/day. ~50% of observed transactions are artificial.
-- **92% transaction cliff** from Dec 2025 peak to Feb 2026. Speculative activity drained.
+- **x402 real daily volume**: ~$28K/day. ~50% of observed transactions are gamified/artificial (per CoinDesk / Presenc AI).
+- **Peak-to-trough**: Weekly volume peaked at $5.3M in Nov 2025 and fell 96% to under $220K by Feb 2026. ~95% of 2025 x402 volume was memecoin-driven (per Visa Head of Crypto).
 - **MCP monetization**: <5% of 16K+ servers make any money. <0.5% earn >$1K/month. TAM estimated at $50–200M by 2027.
 - **Enterprise reality**: 79% "adopted" vs 11% "in production" (68pt gap). Gartner projects 40% of agentic AI projects canceled by end 2027.
 - **Gartner Hype Cycle 2025**: agents at Peak of Inflated Expectations.
@@ -59,7 +59,7 @@ The business models that do not work today:
 
 ### Strengths
 
-1. **Governance-first architecture.** The industry built payments first and left policy unsolved. Dharma + Shelter + Karma is a coherent answer that almost nobody else has packaged. Visa/Mastercard are building proprietary L4; we are the OSS alternative.
+1. **Governance-first architecture.** The industry built payments first and left policy unsolved. Dharma + Shelter + Karma is a coherent answer. The OSS L4 field grew crowded in Q2 2026 (Microsoft ACS, AGT v4, ArbiterOS, SDOS, Orkia, Ardur), but WhiteMagic remains one of the few local-first, non-Azure, non-patent-encumbered references — and the only one with a documented prescience track record (14 validated claims, Brier score 0.0861). Visa/Mastercard are building proprietary L4; we are an OSS alternative.
 2. **Dual-rail (XRPL + Base) matches the convergent settlement layer.** Not betting on a losing chain.
 3. **Voluntary economics model validated by market.** ClawTasks' pivot, x402's opt-in architecture, Kudos' attribution model all point the same direction.
 4. **Proof of Gratitude creates real ROI.** Not virtue signaling — rate-limit doubling is enforced by the Rust pre-check. Operators get measurable advantages for voluntary contribution.
@@ -125,6 +125,8 @@ All scenarios: WhiteMagic platform stays OSS; WhiteMagic Labs is the revenue ent
 | Google AP2, IETF VCAP | Standards stewardship | Bind to them for interop; don't compete at the spec layer. |
 | Kudos, Praise, SourceCred | Attribution allocation models | Learn from them; integrate their patterns. |
 | Virtuals, ClawTasks | Agent marketplaces | Do not enter. ClawTasks already pivoted. |
+| **Microsoft AGT + ACS** | Open-source L4 governance + industry standard | Different deployment model. ACS is the standard; WhiteMagic could express Dharma Rules as ACS policy YAML. Potential collaboration, not just competition. |
+| **ArbiterOS / Arbiter-K** | Governance kernel, proxy layer, 141 stars, AgentDojo 93.94% | Proxy governance; WhiteMagic is in-substrate enrichment. Can coexist: ArbiterOS for boundary enforcement, WhiteMagic for cognitive depth. |
 
 **Generalized rule**: when commercial incumbents build payments-first, we differentiate by being OSS and governance-first. When OSS projects build attribution-first, we differentiate by being rails-integrated.
 
@@ -135,23 +137,28 @@ All scenarios: WhiteMagic platform stays OSS; WhiteMagic Labs is the revenue ent
 1. **Voluntary scale risk (high).** Kudos has existed 3 years without a revenue-scale case study. PoG ROI loop is our differentiator but unproven above curio level.
 2. **Platform consolidation risk (medium).** Coinbase/Stripe/Visa could lock the stack and squeeze OSS alternatives out. Mitigation: stay in the voluntary/governance niche they won't serve.
 3. **XRPL share risk (medium).** If XRPL stays <2% of agent volume by 2027, dual-rail becomes single-rail-plus-dead-weight. Mitigation: prioritize Base/Solana parity; XRPL as optional rail, not headline.
-4. **Regulatory risk on stablecoins (medium-high).** PSD2, MiCA, US stablecoin legislation could disrupt x402 economics mid-2026 to 2027. Mitigation: stay rail-agnostic architecturally.
-5. **Solo-operator bandwidth risk (high).** Cannot staff the full roadmap alone. Mitigation: explicit prioritization, no feature creep, partners for facilitator operations.
-6. **Standards-war exclusion risk (medium).** Single-builder projects get ignored by standards bodies. Mitigation: file RFCs early, publish reference implementations, attend working group calls.
-7. **Hype-cycle trough risk (rising).** Gartner's agent-economy trough-of-disillusionment is likely 2027. WhiteMagic should be financially resilient across the trough (Labs consulting not dependent on agent-economy growth) and positioned to benefit from the recovery (reference-impl credibility compounds during quiet years).
+4. **Regulatory risk on stablecoins (medium-high).** US: GENIUS Act enacted July 2025; FDIC proposed BSA/sanctions rules for PPSIs May 22, 2026 (60-day comment); OCC comprehensive NPR issued Feb 25, 2026. EU: MiCA fully enforced; EBA extended PSD2 licensing deadline to July 1, 2026. Dual MiCA + PSD2 required for EMT transfers. Fines up to 10% annual turnover or €5M. Mitigation: stay rail-agnostic architecturally.
+5. **Solo-operator bandwidth risk (high).** Cannot staff the full roadmap alone. Mitigation: explicit prioritization, no feature creep, grants fund validation work.
+6. **Standards-war exclusion risk (medium → high).** Microsoft ACS just defined the industry standard. Single-builder projects risk having their ideas absorbed without attribution. Mitigation: publish prescience track record, propose ACS alignment document, reach out to AGT team about collaboration.
+7. **Hype-cycle trough risk (rising).** Gartner's agent-economy trough-of-disillusionment is likely 2027. WhiteMagic should be financially resilient across the trough (grants + consulting not dependent on agent-economy growth) and positioned to benefit from the recovery (reference-impl credibility compounds during quiet years).
+8. **Standards absorption risk (high — NEW).** Microsoft ACS (June 2026) defines 5 validation checkpoints conceptually aligned with WhiteMagic's 7-Layer CyberBrain / 8-stage pipeline. The risk is not that competitors are better — it is that WhiteMagic's prescience becomes **invisible**. The ideas get absorbed into industry standards without attribution, and WhiteMagic remains a private research artifact. Mitigation: publish the prescience timeline immediately. Draft an ACS alignment document. Claim the narrative before the window closes.
 
 ---
 
 ## 6. Tiered execution roadmap
 
-### Next 30 days (highest leverage, lowest cost)
+### Next 30 days (highest leverage, lowest cost) — UPDATED June 5
 
 - [x] Draft `AGENT_FIRST_ECONOMICS.md` (public thesis doc) — done
 - [x] Draft this strategy doc — done
-- [ ] Add `/economy` page + 8th platform capability to the site (Librarian surfaces it)
-- [ ] Publish `.well-known/agent-economy.json` on whitemagic.dev
-- [ ] Write one public essay: "Gratitude-grade x402: why voluntary works where forced bounties failed"
+- [x] Add `/economy` page + 8th platform capability to the site — shipped (then site extracted to `whitemagic-site`)
+- [x] Publish `.well-known/agent-economy.json` on whitemagic.dev — shipped
+- [x] Write one public essay on governance positioning — shipped ("I built agent governance before Microsoft")
+- [ ] Write the specific essay: "Gratitude-grade x402: why voluntary works where forced bounties failed"
 - [ ] DeepWiki both new docs so LLMs index them
+- [ ] **Submit LTFF grant ($35K) — drafted June 5**
+- [ ] **Submit Manifund regrant ($20K) — drafted June 5**
+- [ ] **Publish prescience timeline page** — defensively necessary after Microsoft ACS claimed the standard
 
 ### 30–90 days (position capture)
 

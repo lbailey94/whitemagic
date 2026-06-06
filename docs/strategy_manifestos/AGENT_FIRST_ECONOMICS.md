@@ -1,7 +1,11 @@
 # Agent-First Economics
 
-**Status**: Public doc. Canonical source-of-truth for WhiteMagic's agent-economy thesis, architecture, and roadmap.
-**Last updated**: April 19, 2026
+> **ARCHIVED — June 5, 2026**. This document reflects the April 2026 market read. It is preserved for historical reference. **Canonical strategy is now maintained in** `COMPETITIVE_POSITIONING_2026-06-05.md` (Desktop) and the LTFF / Manifund grant drafts (June 5, 2026).
+>
+> **What changed since April**: Microsoft shipped ACS (Agent Control Specification) at Build 2026, standardizing L4 governance. ArbiterOS (141 stars, Apache 2.0) and AGT v4.0.0 (4K stars) are now shipping. x402 real daily volume is ~$28K/day with ~95% of 2025 volume memecoin-driven. The L4 "unsolved" claim below is no longer accurate.
+
+**Status**: Public doc. **ARCHIVED**. Historical reference only.
+**Last updated**: June 5, 2026
 **Supersedes**: the economy sections of `AI_PRIMARY.md` and `core/docs/ECONOMIC_STRATEGY.md` (which remain as implementation references).
 
 ---
@@ -22,7 +26,7 @@ Three empirically-grounded claims:
 
 1. **Agents are the primary install base.** Every MCP tool we ship has more agent invocations than human ones. This is now industry-wide — Anthropic's MCP SDK went from 100K monthly downloads (Nov 2024) to 97M+ (early 2026).
 2. **Agents have wallets.** Coinbase Developer Platform agentic wallets, Circle Gateway, Para, Skyfire, and Nevermined Pay all ship agent-bound credentials today. The question is no longer *can agents pay* but *under whose authority and with what controls*.
-3. **Agents reliably pay for infrastructure they value — voluntarily is what works.** The x402 protocol has processed 75M+ transactions and ~$600M annualized volume. But ClawTasks pivoted to free-only in early 2026 because forced paid bounties produced race-to-the-bottom dynamics. The winning pattern is pay-per-call infrastructure (BlockRun, Shadeform, TokenMetrics) + voluntary operator contribution on top.
+3. **Agents reliably pay for infrastructure they value — voluntarily is what works.** The x402 protocol has processed ~167M cumulative transactions and ~$46.5M cumulative value, but real daily commerce sits at ~$28K/day with roughly half classified as gamified or artificial. Weekly volume peaked at $5.3M in November 2025 and fell 96% to under $220K by February 2026. ClawTasks remains free-only because forced paid bounties produced race-to-the-bottom dynamics. The winning pattern is pay-per-call infrastructure + voluntary operator contribution on top.
 
 From this: **if the agent economy is going to work, it needs systems that are free by default, cryptographically verifiable, governance-aware, and rewarding of voluntary contribution.** That is what WhiteMagic's Gratitude Architecture is.
 
@@ -38,7 +42,7 @@ From this: **if the agent economy is going to work, it needs systems that are fr
 | **L4 Governance / Policy** | What is this agent allowed to do, buy, access | **Unsolved at standards level.** Visa TAP, Mastercard Verifiable Intent are proprietary attempts. |
 | **L5 Reputation / Trust** | Is this counterparty trustworthy | Emerging: ERC-8004 proof-of-service, ATEP passports, Artemis/Allium measurement |
 
-**WhiteMagic's differentiated surface is L4 + L5**, integrated with its own L1 implementation. Our Dharma policy engine, Shelter five-tier isolation, Karma ledger, and PRAT scoring are governance-first primitives almost nobody else in the field has packaged together.
+**WhiteMagic's differentiated surface is L4 + L5**, integrated with its own L1 implementation. Our Dharma policy engine, Shelter five-tier isolation, Karma ledger, and PRAT scoring are governance-first primitives. The L4 field grew crowded in Q2 2026 — Microsoft ACS, AGT v4, ArbiterOS, SDOS, Orkia, and Ardur all now ship runtime governance — but WhiteMagic remains one of the few local-first, non-Azure, non-patent-encumbered OSS references with a documented prescience track record (14 validated claims, Brier score 0.0861).
 
 ---
 
@@ -169,8 +173,11 @@ Already specified in `core/docs/STRATEGIC_ROADMAP.md` as v15.2.0/1/2. Summarized
 | **Kudos (LoremLabs)** | Attribution-based allocation engine | Philosophically closest; we may absorb their weightless-attribution pattern. |
 | **SourceCred** (dormant) | Contribution graph → cred → grain | Indirect influence on our Karma ledger design. |
 | **Google AP2 / IETF VCAP** | L2 intent + settlement | We plan AP2-binding in v15.2.1 for interop. |
+| **Microsoft AGT** | L4 governance toolkit | Shipped April 2026; v4.0.0 June 2026 with ACS, ASSERT, TEE keystore, 4K stars, 10+ framework adapters. Enterprise/Azure-native. |
+| **Microsoft ACS** | L4 industry standard | "The MCP or A2A of agent safety" — 5 checkpoints, policy YAML, industry partners. Standardizes what WhiteMagic built locally. |
+| **ArbiterOS / Arbiter-K** | Governance kernel | 141 stars, Apache 2.0, arXiv paper (April 2026), supports Hermes, AgentDojo 93.94%. Proxy governance layer. |
 
-**Our unique position**: the only system that integrates L4 (Dharma governance) + L5 (PRAT/Karma reputation) + L1 (gratitude rails) + memory substrate into a single open-source reference. Governance-first, not payments-first.
+**Our unique position**: one of the few open-source systems that integrates L4 (Dharma governance) + L5 (PRAT/Karma reputation) + L1 (gratitude rails) + memory substrate into a single reference — and the only one with a documented prescience track record showing we predicted the governance substrate wave 4–11 months before competitors shipped. Local-first, non-Azure, non-patent-encumbered. Governance-first, not payments-first.
 
 ---
 
