@@ -596,5 +596,33 @@ Assuming 20 hrs/week focused work: **15–21 weeks** (3.5–5 months) for full c
 
 ---
 
+## Addendum: Competitive Landscape Re-scoping (2026-06-08)
+
+**Trigger**: Microsoft AGT v4.0.0 (Jun 1, 2026), Anthropic Dreaming (Apr 29, 2026), Cloudflare Project Think (Apr 15, 2026) have shipped implementations of concepts WhiteMagic predicted 11–46 weeks earlier.
+
+**Impact on objectives**:
+
+| Objective | Previous Priority | New Priority | Rationale |
+|-----------|-------------------|--------------|-----------|
+| Obj 19: Aria persona spec | Medium (blocked on Lucas) | **Low** | Commercial alternatives exist; not a differentiator |
+| Obj 23: Epistemic ladder UI | Medium | **High** | Honest competitive framing is now the primary differentiator |
+| Obj 26: MandalaOS v0.1 spec | Medium | **Medium** | Re-scope as "local-first governance substrate" not "novel governance OS" |
+| Obj 29: Public beta / 100-user cohort | Medium | **Low** | Defer until local-first narrative and publications are solid |
+
+**New tactical priorities** (from `TACTICAL_PLAN_2026-06-08.md`):
+1. **Exception scan re-baseline** — ✅ Complete (220 blocks fixed, 2452 tests passing)
+2. **AgentDojo integration driver** — ✅ Complete (26 integration scenarios across 10 policy gates)
+3. **Karma Ledger signing verification** — ✅ Complete (discovered already implemented, 5 tests added)
+4. **Local-first security whitepaper** — ✅ Complete (`docs/public/LOCAL_FIRST_SECURITY.md`)
+5. **Prescience claim integrity** — Deferred to independent review team
+
+**Financial sustainability path** (from `STRATEGIC_POSITIONING_2026-06-08.md`):
+- Income floor: consulting on local-first agent governance ($5K/month target)
+- Grant funding: LTFF / Manifund / ACX ($50K–$100K, 6-month runway)
+- Publication pipeline: 1 citable paper per quarter
+- No VC, no SaaS, no enterprise contracts
+
+---
+
 *Document generated from SD Card Reconnaissance + Web Cross-Reference Synthesis.*
-*All claims tagged per Vaya Vida epistemic framework. Last updated: 2026-05-15.*
+*All claims tagged per Vaya Vida epistemic framework. Last updated: 2026-06-08.*

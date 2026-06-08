@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0
-**Last Updated**: June 5, 2026 (positioning patch applied, stale-string elimination, Brier recalibration, 11-file desktop site update)
+**Last Updated**: June 8, 2026 (competitive landscape analysis, NSA MCP self-assessment, prescience update, 4 new docs)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -97,6 +97,11 @@ Private filenames are intentionally not enumerated in this public index.
 | `SESSION_REPORT_POSITIONING_PATCH_2026-06-05.md` | Site positioning patch application — stale-string elimination, Brier score recalibration, 11-file update on desktop site, verification, and honest assessment of repo/desktop divergence | Jun 5 |
 | `SESSION_REPORT_2026-06-05_v2.md` | Unified session report — prescience audit completion (21 claims, 523 pts), positioning patch applied, automated regeneration pipeline built, live data refreshed (2,423 tests, 487 tools), Galaxy API semantic constellation endpoint | Jun 5 |
 | `SESSION_REPORT_DRIFT_SYNC_2026-06-05.md` | Drift sync and test hardening — fixed 2 test failures, 7 warnings, prescience pipeline sync, doc drift baseline updated to 2,422, canonical docs refreshed | Jun 5 |
+| `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` | 10-theme security audit against NSA MCP publication — 3 strong, 6 partial, 1 weak | Jun 8 |
+| `STRATEGIC_POSITIONING_2026-06-08.md` | Honest competitive assessment: what WhiteMagic cannot compete on vs. what it can own | Jun 8 |
+| `TACTICAL_PLAN_2026-06-08.md` | Immediate (this week) + short-term (2–4 weeks) action roadmap | Jun 8 |
+| `PRESCIENCE_UPDATE_2026-06-08.md` | Updated prescience ledger: 21 claims, 523+ points, Brier 0.0958, honest misses | Jun 8 |
+| `SESSION_REPORT_2026-06-08.md` | Full session narrative — competitive landscape analysis, immediate fixes, strategic docs | Jun 8 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
 | `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
@@ -116,10 +121,16 @@ Private filenames are intentionally not enumerated in this public index.
 | `CODEX_SYNTHESIS_THREE_REVIEW.md` | Synthesis of three independent review teams: code audit, grant strategy review, CODEX extraction — integrated execution plan with 12-project portfolio math | Apr 29 |
 | `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
 | `RELEASE_READINESS_v22.0.0.md` | Release gate checklist — 34 checks, all passed | Apr 25 |
+| `SESSION_REPORT_14_OBJECTIVES_2026-04-16.md` | Phase 0-2 sprint — 14/14 objectives completed: resonance consolidation, exception narrowing (537 blocks), version unification, automation scripts | Apr 16 |
 | `STRATEGIC_PIVOT_ANALYSIS.md` | Post-v22 strategic direction — Mem0 rejection, CyberBrain pivot | Apr 20 |
 | `SITE_LAUNCH_CHECKLIST.md` | Pre-launch tasks for whitemagic.dev | Apr 25 |
 | `SESSION_STATE.md` | Session state tracking for island-c endpoints | Apr 20 |
 | `SHIP_SURFACE.md` | Core shipping surface audit | Apr 25 |
+| `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` | Security self-assessment against NSA MCP publication — 10-theme coverage matrix with gaps and comparison to Microsoft AGT | Jun 8 |
+| `TACTICAL_PLAN_2026-06-08.md` | Immediate and short-term action plan from competitive landscape analysis — exception scan, AgentDojo, Karma signing, 30-objectives revision | Jun 8 |
+| `STRATEGIC_POSITIONING_2026-06-08.md` | Strategic repositioning post-convergence — local-first thesis, prescience as asset, integration not competition, publication pipeline | Jun 8 |
+| `PRESCIENCE_UPDATE_2026-06-08.md` | Prescience ledger update — new validation events (AGT v4, Anthropic Dreaming, Cloudflare Think), honest misses, updated scorecard | Jun 8 |
+| `SESSION_REPORT_2026-06-08.md` | Session report — competitive landscape follow-up, immediate fixes, adversarial tests, Karma signing verification, local-first security whitepaper | Jun 8 |
 
 ---
 
@@ -224,6 +235,7 @@ Docs published to the website, GitHub, or legal pages.
 | `ENCRYPTION_AT_REST.md` | Encryption specifications |
 | `GALAXY_PER_CLIENT_GUIDE.md` | Per-client galaxy setup |
 | `MCP_CONFIG_EXAMPLES.md` | MCP client configuration examples |
+| `LOCAL_FIRST_SECURITY.md` | Local-first security model whitepaper — threat model, controls, comparison to cloud governance, honest gap assessment | Jun 8 |
 | `GLOSSARY.md` | Terminology glossary |
 | `GIT_HISTORY_EXPLANATION.md` | Git history and migration notes |
 | `AI_PRIMARY.md` | **Deprecated copy** — canonical is at root (`AI_PRIMARY.md`) |
