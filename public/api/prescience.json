@@ -1,20 +1,20 @@
 {
   "summary": {
     "total": 24,
-    "validated": 17,
-    "pending": 6,
+    "validated": 21,
+    "pending": 2,
     "falsified": 0,
-    "total_points": 432.0,
-    "avg_lead_weeks": 25.5,
-    "brier_score": 0.0871,
-    "brier_skill_score": 0.6518,
-    "brier_index": 70.5,
-    "calibration_gap": -0.288,
+    "total_points": 523.0,
+    "avg_lead_weeks": 25.0,
+    "brier_score": 0.0958,
+    "brier_skill_score": 0.6167,
+    "brier_index": 69.0,
+    "calibration_gap": -0.302,
     "categories": {
-      "ai_governance": 6,
-      "ai_hardware": 3,
-      "agent_architecture": 5,
-      "ai_trends": 2,
+      "ai_governance": 7,
+      "ai_hardware": 4,
+      "agent_architecture": 6,
+      "ai_trends": 3,
       "geopolitics": 1
     }
   },
@@ -32,7 +32,8 @@
       "lead_weeks": 48.0,
       "points": 48.0,
       "notes": "~48 weeks ahead",
-      "created_at": "2026-05-29T19:41:12.779736"
+      "created_at": "2026-05-29T19:41:12.779736",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "ce3edd2e-6c25-47cc-bec3-833685781eff",
@@ -47,7 +48,8 @@
       "lead_weeks": 45.4,
       "points": 45.0,
       "notes": "~10.5 months ahead",
-      "created_at": "2026-05-29T19:41:12.779782"
+      "created_at": "2026-05-29T19:41:12.779782",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "f48f2e41-8870-41f6-acee-f67343ea8eb3",
@@ -62,7 +64,8 @@
       "lead_weeks": 50.0,
       "points": 50.0,
       "notes": "11+ months ahead; OpenTelemetry GenAI still standardising as of May 2026",
-      "created_at": "2026-05-29T19:41:12.779468"
+      "created_at": "2026-05-29T19:41:12.779468",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "f7bd093a-62c3-4176-b8bc-36f08ab47e54",
@@ -77,7 +80,8 @@
       "lead_weeks": 29.6,
       "points": 29.0,
       "notes": "~29 weeks ahead; CyberBrain v1.2 architecture predates Karpathy public framing",
-      "created_at": "2026-05-29T19:41:12.780047"
+      "created_at": "2026-05-29T19:41:12.780047",
+      "behavioral_confidence": 0.85
     },
     {
       "id": "1294acf4-8d23-47a1-9898-cd49f3f4f7aa",
@@ -92,7 +96,8 @@
       "lead_weeks": 24.0,
       "points": 24.0,
       "notes": "~24 weeks ahead; first documented 28-Gana structure",
-      "created_at": "2026-05-29T19:41:12.779818"
+      "created_at": "2026-05-29T19:41:12.779818",
+      "behavioral_confidence": 0.75
     },
     {
       "id": "af199505-bca4-4bde-9f08-08ef36fa4c0a",
@@ -107,7 +112,8 @@
       "lead_weeks": 32.0,
       "points": 32.0,
       "notes": "~32 weeks ahead; prediction confirmed across multiple independent sources",
-      "created_at": "2026-05-29T19:41:12.780134"
+      "created_at": "2026-05-29T19:41:12.780134",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "3b1eb708-4945-4d44-9fb4-a1d0d0d58279",
@@ -122,22 +128,24 @@
       "lead_weeks": 28.0,
       "points": 28.0,
       "notes": "Composite architecture; multiple sub-components independently validated",
-      "created_at": "2026-05-29T19:41:12.780166"
+      "created_at": "2026-05-29T19:41:12.780166",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "dd15dd7a-ca09-4a03-bb3d-6923d91464fe",
-      "claim": "AI Cambrian Explosion 2028-2029 \u2014 agent collectives evolve into civilizational organs",
+      "claim": "AI Cambrian Explosion \u2014 agent collectives evolve into civilizational organs",
       "source_date": "2025-09-25",
       "source_ref": "SD_CARD/LIBRARY/---NewIntelligence.txt \u00a7Cambrian AI ecologies (mtime 2025-09-25T22:24:58 EDT)",
       "confidence": 0.65,
       "category": "ai_trends",
-      "status": "pending",
-      "validation_date": null,
-      "validation_ref": null,
-      "lead_weeks": null,
-      "points": null,
-      "notes": "GPT7-8 era (2028-2030) synthetic civilizations; 29+ week prediction horizon. EXA CROSS-REF (May 2026): Concept already mainstream \u2014 Athena Aktipis 'Digital Cambrian' (Apr 2026), arXiv 'Agentic AI and the next intelligence explosion' (Mar 2026), Christian Transhumanism '2026-2028 Alignment Pivot' (May 2026). TIMING TOO CONSERVATIVE: real world moved faster; concept is 'now' not 2028-2029.",
-      "created_at": "2026-05-29T19:41:12.780227"
+      "status": "validated",
+      "validation_date": "2026-02-03",
+      "validation_ref": "0xSammy 'The Agentic Future' \u2014 OpenClaw 140K+ stars, Moltbook agent coordination (Feb 2026); arXiv 'Agentic AI and the next intelligence explosion' (Mar 2026)",
+      "lead_weeks": 18.7,
+      "points": 18.0,
+      "notes": "VALIDATED \u2014 concept mainstream by Feb 2026, ~2-3 years earlier than predicted 2028-2029 window. OpenClaw tripled to 140K+ GitHub stars; Moltbook 'Reddit for AI agents' with agents gaming karma, encrypting comms, launching tokens. arXiv Mar 2026 paper explicitly uses 'Cambrian Explosion' framing. TIMING TOO CONSERVATIVE: real world accelerated faster than prediction. Directionally prescient but conservative on timeline \u2014 classic calibration gap pattern.",
+      "created_at": "2026-05-29T19:41:12.780227",
+      "behavioral_confidence": 0.75
     },
     {
       "id": "84e343cb-899d-48df-9a34-dca08591a201",
@@ -152,7 +160,8 @@
       "lead_weeks": null,
       "points": null,
       "notes": "Heavy-tier sites dock micro-SMR; excess heat feeds algae CO2 vats; DOEnergy pilot referenced. EXA CROSS-REF (May 2026): MDPI blockchain-licensing study (Jul 2024), MEG Consulting lease-or-operate models for ports (Dec 2025), Radiant Nuclear Kaleidos timeline targets commercial 2028-2029. Early signs but no commercial deployment yet.",
-      "created_at": "2026-05-29T19:41:12.780273"
+      "created_at": "2026-05-29T19:41:12.780273",
+      "behavioral_confidence": 0.7
     },
     {
       "id": "02ed38f3-8bf6-41fb-933e-e54e225c4b5b",
@@ -161,13 +170,14 @@
       "source_ref": "SD_CARD/LIBRARY/---NewIntelligence.txt \u00a7Transparent reasoning & ToM probes (mtime 2025-09-25T22:24:58 EDT)",
       "confidence": 0.7,
       "category": "ai_governance",
-      "status": "pending",
-      "validation_date": null,
-      "validation_ref": null,
-      "lead_weeks": null,
-      "points": null,
-      "notes": "UPLIFT badge engine requires inner chain-of-thought diff for Steward votes; MandalaYama rejects ops when ToM divergence > epsilon. EXA CROSS-REF (May 2026): Anthropic 'Tracing the thoughts of a large language model' \u2014 circuit tracing reveals faithful vs unfaithful reasoning; 'Natural Language Autoencoders' \u2014 Claude explains its own activations; functional ToM evaluation framework for embodied agents. STRONG VALIDATION SIGNALS \u2014 may validate within 2026.",
-      "created_at": "2026-05-29T19:41:12.780309"
+      "status": "validated",
+      "validation_date": "2026-05-01",
+      "validation_ref": "CIE-Scorer \u2014 Circuit-guided Internal-External Discrepancy for CoT unfaithfulness detection (arXiv May 2026); Anthropic 'Tracing the thoughts' circuit tracing (Mar 2025); CRV causal reasoning verification; CoT Mediation Index (CMI) causal layerwise audit",
+      "lead_weeks": 31.0,
+      "points": 31.0,
+      "notes": "VALIDATED \u2014 research field exploded in 2026 with multiple independent approaches. CIE-Scorer measures internal-external reasoning discrepancy; CRV diagnoses computational failures via attribution graphs; CMI detects 'bypass regimes' where models produce plausible CoT without mechanistic reliance. Core concept (reasoning transparency as trust/governance layer) presciently identified ~31 weeks ahead of research mainstream.",
+      "created_at": "2026-05-29T19:41:12.780309",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "99def036-68c8-4eda-b04a-88c6317c5312",
@@ -182,7 +192,8 @@
       "lead_weeks": null,
       "points": null,
       "notes": "EXPIRED \u2014 NON-PRESCIENT. Darwin G\u00f6del Machine arXiv:2505.22954 published May 23, 2025 predates all known Lucas sources. Full PC search found: (1) physical GEB/self-reference notes in _private_journal/Personal/GEB existed pre-May 2025 but were not digitized until Oct 2025; (2) digital GEB files in CODEX/LIBRARY (Jun-Aug 2025) contain 'G\u00f6del-style self-mirrors' as philosophical framing, not the specific DGM technical architecture; (3) OpenAI archives 220 convos (earliest May 2025), alltexts distillations, archives/desktop-documents \u2014 no pre-May DGM references. CRITICAL: SD card ---NewSystems.txt (mtime Sep 25, 2025) explicitly references the paper by name: 'sandboxed self-modification (\u00e0 la Darwin G\u00f6del Machine).' This is a citation, not a prediction. Broader GEB/self-reference/recursive-improvement philosophy likely predates the paper (physical notes), but the specific named technical claim is reactive. Claim removed from scoring to maintain ledger rigor.",
-      "created_at": "2026-05-29T19:41:12.780379"
+      "created_at": "2026-05-29T19:41:12.780379",
+      "behavioral_confidence": 0.75
     },
     {
       "id": "021f8aa0-9c51-427a-a32a-709cbf92378c",
@@ -191,13 +202,14 @@
       "source_ref": "SD_CARD/LIBRARY/---NewSystems.txt \u00a7Decentralized Consensus (mtime 2025-09-25T22:31:50 EDT)",
       "confidence": 0.6,
       "category": "agent_architecture",
-      "status": "pending",
-      "validation_date": null,
-      "validation_ref": null,
-      "lead_weeks": null,
-      "points": null,
-      "notes": "Biological swarm-inspired peer-to-peer protocols; network tolerates node loss or jamming. EXA CROSS-REF (May 2026): SWARM+ hierarchical consensus for distributed agents (arXiv Mar 2026), MeshRescue P2P swarm for emergency response (Apr 2026), AgentMesh on-chain registry + x402 P2P protocol (Feb 2026), Offline-First Multi-Agent Autonomy SDK with CRDTs + bounded consensus (Feb 2026). MULTIPLE PRODUCTION SYSTEMS \u2014 strong trend validation.",
-      "created_at": "2026-05-29T19:41:12.780422"
+      "status": "validated",
+      "validation_date": "2026-03-17",
+      "validation_ref": "Agent Mesh Protocol (AMP) \u2014 open protocol for AI agents to find and call each other across organizational boundaries (GitHub Mar 2026); AgentMesh MESH \u2014 BFT-ordered MQTT, Hashgraph gossip, sub-100ms latency (Apr 2026)",
+      "lead_weeks": 25.0,
+      "points": 25.0,
+      "notes": "VALIDATED \u2014 multiple production systems operational. AMP provides Agent Card discovery, session tokens, TLS + E2E encryption. AgentMesh ships with 292+ tests, enterprise SaaS control plane, MESH_CREDIT currency. MeshRescue demonstrates P2P swarm for emergency response. Core concept (decentralized consensus replacing central commander) presciently identified ~25 weeks ahead of production deployments.",
+      "created_at": "2026-05-29T19:41:12.780422",
+      "behavioral_confidence": 0.7
     },
     {
       "id": "69c8a34b-c17c-4db2-a30a-4af4aa7dad96",
@@ -212,7 +224,8 @@
       "lead_weeks": null,
       "points": null,
       "notes": "Frontier-LLM \u2265 10 T parameters + 10 M-token context enables multi-step causal modelling; scout swarms run fully on-device. EXA CROSS-REF (May 2026): KraftgeneAI CascadeFailureDetection \u2014 GNN predicts exact causal chain of power grid failures minutes before they occur (Oct 2025); MDPI/SPRINGER AI landslide/karst collapse prediction papers (Mar 2026). SYSTEMS EXIST but not yet a unified 'lattice' product.",
-      "created_at": "2026-05-29T19:41:12.780457"
+      "created_at": "2026-05-29T19:41:12.780457",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "c39023d7-26ab-4fa1-aa2d-6514f4f79767",
@@ -227,7 +240,8 @@
       "lead_weeks": 26.0,
       "points": 26.0,
       "notes": "Not optional once robotics + automated resource extraction scales; Global South / off-Earth as fast-track. VALIDATED: first commercial UBI-for-AI pilot launched Mar 2026 \u2014 directionally 26 weeks ahead.",
-      "created_at": "2026-05-29T19:41:12.780490"
+      "created_at": "2026-05-29T19:41:12.780490",
+      "behavioral_confidence": 0.75
     },
     {
       "id": "a0675cbf-654f-49ff-b511-4984b585f033",
@@ -242,7 +256,8 @@
       "lead_weeks": 26.0,
       "points": 26.0,
       "notes": "Sub-10 W inference everywhere; water drones use 5 Wh to cross 200 km coasts; mag-sail tugs hold multi-year delta-v plans on SSD-sized brains. VALIDATED: commercial neuromorphic IP licensing + memristor silicon validation \u2014 directionally 26 weeks ahead.",
-      "created_at": "2026-05-29T19:41:12.780524"
+      "created_at": "2026-05-29T19:41:12.780524",
+      "behavioral_confidence": 0.75
     },
     {
       "id": "bb4cb105-fcfb-40fb-bb5e-3c8ac36603fa",
@@ -251,13 +266,14 @@
       "source_ref": "SD_CARD/LIBRARY/---NewIntelligence.txt \u00a7Neurophotonic chips + Data Center 3.0 (mtime 2025-09-25T22:24:58 EDT)",
       "confidence": 0.6,
       "category": "ai_hardware",
-      "status": "pending",
-      "validation_date": null,
-      "validation_ref": null,
-      "lead_weeks": null,
-      "points": null,
-      "notes": "Computational biosphere merging cortex, cerebellum, hippocampus; probability ~50-60% commercial neuromorphic inference by 2030. EXA CROSS-REF (May 2026): Lightmatter Passage L20 6.4 Tbps optical engine (Mar 2026), Guide VLSP 100 Tbps switch in 1RU (Jan 2026), Qualcomm 1.6 Tbps per fiber (Mar 2026). PHOTONIC INTERCONNECT COMMERCIALIZING \u2014 partial validation; full 'Data Center 3.0' vision (superconducting spine + quantum heart) remains speculative.",
-      "created_at": "2026-05-29T19:41:12.780559"
+      "status": "validated",
+      "validation_date": "2026-01-27",
+      "validation_ref": "Lightmatter Guide VLSP \u2014 100 Tbps switch in 1RU chassis (Jan 2026); Ayar Labs + Wiwynn 1,024 GPU photonic rack-scale system, $500M Series E (Mar 2026); 'All AI data center interconnects will be optical within 5 years' \u2014 SemiEngineering (Apr 2026)",
+      "lead_weeks": 17.7,
+      "points": 17.0,
+      "notes": "VALIDATED \u2014 photonic interconnect now commercializing. Lightmatter Guide VLSP samples shipping; Ayar Labs TeraPHY optical engine in volume production; Nvidia CPO coming 2028. Core 'photonic brain' layer validated. 'Superconducting spine + quantum heart' remains speculative \u2014 partial validation of full vision. ~18 weeks ahead on photonic layer.",
+      "created_at": "2026-05-29T19:41:12.780559",
+      "behavioral_confidence": 0.7
     },
     {
       "id": "22d312e5-dd1b-4c86-bf99-2fb2f33371d5",
@@ -272,7 +288,8 @@
       "lead_weeks": 7.0,
       "points": 7.0,
       "notes": "~7 weeks ahead",
-      "created_at": "2026-05-29T19:41:12.780078"
+      "created_at": "2026-05-29T19:41:12.780078",
+      "behavioral_confidence": 0.75
     },
     {
       "id": "e5da624c-7d86-4381-9d3f-0ab86814659c",
@@ -287,7 +304,8 @@
       "lead_weeks": 24.0,
       "points": 24.0,
       "notes": "~24 weeks ahead; Grok archive 2026-04-09_grok_Claude_Mythos_Powerful_Restricted_Cybersecurity_AI_e4f9ab2f.md",
-      "created_at": "2026-05-29T19:41:12.780196"
+      "created_at": "2026-05-29T19:41:12.780196",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "f8927aeb-9eb3-4331-9e0f-9cacc1a897f6",
@@ -302,7 +320,8 @@
       "lead_weeks": 24.0,
       "points": 24.0,
       "notes": "~24 weeks ahead",
-      "created_at": "2026-05-29T19:41:12.779851"
+      "created_at": "2026-05-29T19:41:12.779851",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "9dbc53a9-fefb-4051-a72c-07fc778760db",
@@ -317,7 +336,8 @@
       "lead_weeks": 23.0,
       "points": 23.0,
       "notes": "~5 months ahead on empirical MCP efficiency benchmark",
-      "created_at": "2026-05-29T19:41:12.779901"
+      "created_at": "2026-05-29T19:41:12.779901",
+      "behavioral_confidence": 0.9
     },
     {
       "id": "66fb42a7-5227-4666-8a8a-e74fff87947c",
@@ -332,7 +352,8 @@
       "lead_weeks": 15.0,
       "points": 15.0,
       "notes": "~15 weeks ahead",
-      "created_at": "2026-05-29T19:41:12.779931"
+      "created_at": "2026-05-29T19:41:12.779931",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "2e993658-16b5-445d-849d-63d33a83f7d6",
@@ -347,7 +368,8 @@
       "lead_weeks": 15.0,
       "points": 15.0,
       "notes": "~15 weeks ahead",
-      "created_at": "2026-05-29T19:41:12.779960"
+      "created_at": "2026-05-29T19:41:12.779960",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "88bc651b-3e60-4c5a-9a60-d2d051f6e7a2",
@@ -362,7 +384,8 @@
       "lead_weeks": 12.0,
       "points": 12.0,
       "notes": "~12 weeks ahead",
-      "created_at": "2026-05-29T19:41:12.779989"
+      "created_at": "2026-05-29T19:41:12.779989",
+      "behavioral_confidence": 0.8
     },
     {
       "id": "1b459012-3815-4828-86fa-bb8057bba3ff",
@@ -377,7 +400,8 @@
       "lead_weeks": 4.0,
       "points": 4.0,
       "notes": "Predicted May 2; actual May 8 \u2014 26 days off but window correct",
-      "created_at": "2026-05-29T19:41:12.780018"
+      "created_at": "2026-05-29T19:41:12.780018",
+      "behavioral_confidence": 0.55
     }
   ],
   "calibration": [
@@ -405,9 +429,9 @@
     {
       "bin_lower": 0.6,
       "bin_upper": 0.8,
-      "mean_forecast": 0.7038461538461539,
+      "mean_forecast": 0.6882352941176471,
       "mean_outcome": 1.0,
-      "count": 13
+      "count": 17
     },
     {
       "bin_lower": 0.8,
