@@ -467,7 +467,7 @@ class CoreAccessLayer:
                 "min_strength": round(row["min_strength"] or 0, 3),
                 "max_strength": round(row["max_strength"] or 0, 3),
             }
-        except Exception:
+        except (sqlite3.Error, TypeError):
             return {"total_associations": 0}
 
     def find_broken_associations(self, limit: int = 20) -> list[dict[str, Any]]:
@@ -488,7 +488,7 @@ class CoreAccessLayer:
                 LIMIT ?
             """, (limit,)).fetchall()
             return [dict(r) for r in rows]
-        except Exception:
+        except sqlite3.Error:
             return []
 
     # ------------------------------------------------------------------
@@ -536,7 +536,7 @@ class CoreAccessLayer:
             """, (threshold,)).fetchall()
 
             access_by_day: dict[str, int] = {r["day"]: r["cnt"] for r in access_rows}
-        except Exception:
+        except sqlite3.Error:
             return []
 
         # Build buckets
@@ -591,7 +591,7 @@ class CoreAccessLayer:
                 "daily_avg_30d": round(last_30d / 30, 1),
                 "acceleration": round(acceleration, 2),  # >1 = accelerating
             }
-        except Exception:
+        except (sqlite3.Error, TypeError):
             return {"total": 0}
 
     # ------------------------------------------------------------------
@@ -711,7 +711,7 @@ class CoreAccessLayer:
                     sources.append("graph")
                 scored.append((r.memory_id, r.score, sources))
             logger.debug("RRF: Rust-accelerated path (%d results)", len(scored))
-        except Exception:
+        except (ImportError, AttributeError):
             # Python fallback
             vec_rank: dict[str, int] = {}
             for rank, mid in enumerate(vec_ids):
@@ -873,7 +873,7 @@ class CoreAccessLayer:
                 LIMIT ?
             """, (min_gravity, limit)).fetchall()
             return [dict(r) for r in rows]
-        except Exception:
+        except sqlite3.Error:
             return []
 
 

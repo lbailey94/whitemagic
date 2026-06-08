@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0
-**Last Updated**: June 8, 2026 (competitive landscape analysis, NSA MCP self-assessment, prescience update, 4 new docs)
+**Last Updated**: June 8, 2026 (competitive landscape analysis, NSA MCP self-assessment, prescience update, prescience methodology, 5 new docs)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -101,6 +101,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `STRATEGIC_POSITIONING_2026-06-08.md` | Honest competitive assessment: what WhiteMagic cannot compete on vs. what it can own | Jun 8 |
 | `TACTICAL_PLAN_2026-06-08.md` | Immediate (this week) + short-term (2–4 weeks) action roadmap | Jun 8 |
 | `PRESCIENCE_UPDATE_2026-06-08.md` | Updated prescience ledger: 21 claims, 523+ points, Brier 0.0958, honest misses | Jun 8 |
+| `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal prescience methodology — evidence standards, Brier scoring, calibration decomposition, reproducibility, academic citation | Jun 8 |
 | `SESSION_REPORT_2026-06-08.md` | Full session narrative — competitive landscape analysis, immediate fixes, strategic docs | Jun 8 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
@@ -130,6 +131,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `TACTICAL_PLAN_2026-06-08.md` | Immediate and short-term action plan from competitive landscape analysis — exception scan, AgentDojo, Karma signing, 30-objectives revision | Jun 8 |
 | `STRATEGIC_POSITIONING_2026-06-08.md` | Strategic repositioning post-convergence — local-first thesis, prescience as asset, integration not competition, publication pipeline | Jun 8 |
 | `PRESCIENCE_UPDATE_2026-06-08.md` | Prescience ledger update — new validation events (AGT v4, Anthropic Dreaming, Cloudflare Think), honest misses, updated scorecard | Jun 8 |
+| `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal prescience methodology — evidence standards, Brier scoring, calibration decomposition, reproducibility, academic citation | Jun 8 |
 | `SESSION_REPORT_2026-06-08.md` | Session report — competitive landscape follow-up, immediate fixes, adversarial tests, Karma signing verification, local-first security whitepaper | Jun 8 |
 
 ---

@@ -63,12 +63,14 @@ class ConsolidationEngine:
         """Check if consolidation is needed (sync version)."""
         try:
             stats = self.manager.stats()
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Manager stats failed, estimating from recent memories: {e}")
             # Fallback: estimate from recent memories
             try:
                 recent = self.manager.read_recent_memories(memory_type="short_term", limit=100)
                 short_term_count = len(recent)
-            except Exception:
+            except Exception as e2:
+                logger.debug(f"Recent memories read failed: {e2}")
                 short_term_count = 0
             stats = {"short_term": short_term_count}
 
@@ -173,7 +175,8 @@ class ConsolidationEngine:
 
                     if similarity > self.thresholds["similarity"]:
                         duplicates.append((mem1, mem2, similarity))
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Duplicate similarity check failed: {e}")
                     continue
 
         # Sort by similarity (highest first)
@@ -315,8 +318,8 @@ class ConsolidationEngine:
                             if age_days > 30:
                                 should_promote = True
                                 promotion_reason.append(f"age_{age_days}d")
-                        except Exception:
-                            pass
+                        except (ValueError, TypeError) as e:
+                            logger.debug(f"Date parse failed for promotion check: {e}")
 
                     # Rule 3: Size-based promotion (>1000 words)
                     word_count = len(content.split())
@@ -440,8 +443,8 @@ class ConsolidationEngine:
                 for memory in memories:
                     try:
                         self.manager.delete(memory.filename, permanent=False)
-                    except Exception:
-                        pass
+                    except OSError as e:
+                        logger.debug(f"Archive delete failed for {memory.filename}: {e}")
 
                 return consolidated  # type: ignore[no-any-return]
             else:

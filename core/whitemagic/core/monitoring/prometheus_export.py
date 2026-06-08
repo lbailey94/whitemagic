@@ -143,8 +143,8 @@ class PrometheusMetrics:
                 if status == "error":
                     self._tool_errors.labels(tool=tool_name).inc()
                 self._tool_duration.labels(tool=tool_name).observe(duration_seconds)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Prometheus metric record failed for {tool_name}: {e}")
 
     def set_memory_count(self, memory_type: str, count: int) -> None:
         """Set memory count gauge."""
@@ -153,8 +153,8 @@ class PrometheusMetrics:
 
         try:
             self._memory_count.labels(type=memory_type).set(count)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Prometheus memory_count set failed: {e}")
 
     def set_cold_start(self, duration_seconds: float) -> None:
         """Set cold start gauge."""
@@ -163,8 +163,8 @@ class PrometheusMetrics:
 
         try:
             self._cold_start.set(duration_seconds)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Prometheus cold_start set failed: {e}")
 
     def set_db_connections(self, count: int) -> None:
         """Set active DB connections gauge."""
@@ -173,8 +173,8 @@ class PrometheusMetrics:
 
         try:
             self._db_connections.set(count)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Prometheus db_connections set failed: {e}")
 
     def set_circuit_breaker(self, tool_name: str, state: str) -> None:
         """Set circuit breaker state (closed=0, open=1, half_open=2)."""
@@ -184,8 +184,8 @@ class PrometheusMetrics:
         state_map = {"closed": 0, "open": 1, "half_open": 2}
         try:
             self._circuit_breaker_state.labels(tool=tool_name).set(state_map.get(state, 0))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Prometheus circuit_breaker set failed: {e}")
 
     def status(self) -> dict[str, Any]:
         """Get Prometheus exporter status."""

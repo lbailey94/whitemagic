@@ -520,7 +520,8 @@ class WarRoom:
                 "plan_id": plan.id,
                 "subtasks": len(plan.subtasks),
             }
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Swarm decomposition failed, defaulting to single subtask: {e}")
             filter_result = {"subtasks": 1}
         phases.append({"name": "Filter", "type": "officers", **filter_result})
 
@@ -679,7 +680,8 @@ class WarRoom:
                 "suggestion": suggestion,
                 "balance": balance,
             })
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Wu Xing phase lookup failed, using hour fallback: {e}")
             hour = datetime.now().hour
             phases = {
                 range(6, 10): "wood",
