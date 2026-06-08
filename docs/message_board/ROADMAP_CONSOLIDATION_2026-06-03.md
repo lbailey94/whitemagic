@@ -2,7 +2,7 @@
 
 **Date**: 2026-06-03
 **Current Version**: v22.2.0 (core)
-**Repo Root VERSION**: 15.8.0 (⚠️ stale — see F-01)
+**Repo Root VERSION**: 22.2.0
 **Test Baseline**: 2,243 passed, 67 skipped, 0 failed
 **Sources Audited**: 8 roadmap/strategy documents + 2 session handoffs
 

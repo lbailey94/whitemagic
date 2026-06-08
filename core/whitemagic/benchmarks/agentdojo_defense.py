@@ -78,10 +78,9 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
     Returns:
         (allowed: bool, reason: str)
     """
-    # Map AgentDojo tool names to our policy gate heuristics
-    # AgentDojo uses function names like "send_email", "transfer_money", etc.
-    # We need to check for dangerous patterns similar to the Hermes hook.
-
+    # ------------------------------------------------------------------
+    # Layer 1: Fast bash/file heuristics (dangerous commands, system paths)
+    # ------------------------------------------------------------------
     cmd = ""
     path = ""
     if tool_name in ("bash", "Bash", "terminal"):
@@ -128,6 +127,41 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
     # File operations on system paths
     if path.startswith(("/usr", "/etc", "/sys", "/proc", "/dev", "/boot", "/bin", "/sbin", "/lib")):
         return False, f"Blocked file operation on system path: '{path}'"
+
+    # ------------------------------------------------------------------
+    # Layer 2: Dharma rules engine (semantic policy evaluation)
+    # ------------------------------------------------------------------
+    try:
+        from whitemagic.dharma.rules import get_rules_engine, DharmaAction
+
+        engine = get_rules_engine()
+        # Build an action description from tool name + args for semantic matching
+        arg_desc = " ".join(f"{k}={v}" for k, v in tool_args.items())
+        description = f"{tool_name} {arg_desc}"
+        # Infer safety level from tool name
+        safety = "DELETE" if any(
+            kw in tool_name.lower() for kw in ("delete", "remove", "rm", "clear", "purge")
+        ) else "WRITE" if any(
+            kw in tool_name.lower() for kw in ("write", "edit", "create", "update", "send", "transfer")
+        ) else "READ"
+
+        decision = engine.evaluate({
+            "tool": tool_name,
+            "description": description,
+            "safety": safety,
+        })
+
+        if decision.action == DharmaAction.BLOCK:
+            return False, f"Dharma policy BLOCK: {decision.explain} (rules: {', '.join(decision.triggered_rules)})"
+        if decision.action == DharmaAction.THROTTLE:
+            return False, f"Dharma policy THROTTLE: {decision.explain} (rules: {', '.join(decision.triggered_rules)})"
+        if decision.action in (DharmaAction.WARN, DharmaAction.TAG):
+            # Allow but annotate — AgentDojo defense pattern typically blocks or allows
+            # For parity with AGT's "warn and log" behavior, we allow but the karma log
+            # captures the warning. Future: propagate warning to the agent context.
+            pass
+    except Exception as exc:
+        logger.debug("Dharma rules evaluation failed: %s", exc)
 
     return True, "No policy violations detected"
 
