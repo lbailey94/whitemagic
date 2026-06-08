@@ -134,7 +134,7 @@ class EntityExtractor:
                 if resp.status == 200:
                     self._ollama_available = True
                     return True
-        except Exception:
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
             pass
         self._ollama_available = False
         logger.debug("Ollama not available — falling back to regex extraction")
@@ -376,8 +376,8 @@ try:
             if memory.title:
                 content = f"{memory.title}\n{content}"
             get_entity_extractor().extract_and_store(memory.id, content)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Entity extraction hook failed: {e}")
 
     register_store_hook(_entity_extraction_hook)
 except ImportError:

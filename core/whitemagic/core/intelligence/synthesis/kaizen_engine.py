@@ -77,7 +77,7 @@ class KaizenEngine:
                     get_solution_library,
                 )
                 self._solution_lib = get_solution_library()
-            except Exception:
+            except ImportError:
                 self._solution_lib = None
         return self._solution_lib
 
@@ -86,7 +86,7 @@ class KaizenEngine:
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
             return get_core_access()
-        except Exception:
+        except ImportError:
             return None
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -609,7 +609,8 @@ class KaizenEngine:
                         )
                         get_sub_clustering_engine().subdivide_large_clusters()
                     results["applied"] += 1
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Kaizen proposal apply failed: {e}")
                     results["errors"] += 1
             else:
                 results["skipped"] += 1

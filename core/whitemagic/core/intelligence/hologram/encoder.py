@@ -336,7 +336,8 @@ class CoordinateEncoder:
                         mojo_coords.get("w", w),
                         mojo_coords.get("v", v),
                     )
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Mojo router failed, falling back to Python math: {e}")
                 self._routing_active = False
                 # Fall through to Python math
 

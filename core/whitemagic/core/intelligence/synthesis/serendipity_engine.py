@@ -48,7 +48,7 @@ class SerendipityEngine:
         try:
             from pathlib import Path
             Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
+        except OSError:
             pass
         self._conn: sqlite3.Connection | None = None
 
@@ -62,7 +62,7 @@ class SerendipityEngine:
                 conn.execute("PRAGMA synchronous = NORMAL")
                 conn.execute("PRAGMA foreign_keys = ON")
                 conn.execute("PRAGMA busy_timeout = 30000")
-            except Exception:
+            except sqlite3.OperationalError:
                 pass
             self._conn = conn
         return self._conn
@@ -328,8 +328,8 @@ class SerendipityEngine:
                 timestamp=datetime.now(),
             )
             bus.emit(event)
-        except Exception:
-            pass  # Gan Ying not available
+        except (ImportError, AttributeError) as e:
+            logger.debug(f"Gan Ying emit failed: {e}")
 
     def _get_core_access(self) -> Any:
         """Lazy-load the CoreAccessLayer."""
@@ -337,7 +337,7 @@ class SerendipityEngine:
             try:
                 from whitemagic.core.intelligence.core_access import get_core_access
                 self._core_access = get_core_access()
-            except Exception:
+            except ImportError:
                 pass
         return self._core_access
 
@@ -382,7 +382,7 @@ class SerendipityEngine:
                     ordered_mids,
                 ).fetchall()
                 row_map = {r["id"]: r for r in rows}
-            except Exception:
+            except sqlite3.Error:
                 row_map = {}
         else:
             row_map = {}
@@ -439,7 +439,7 @@ class SerendipityEngine:
                     orphan_ids,
                 ).fetchall()
                 row_map = {r["id"]: r for r in rows}
-            except Exception:
+            except sqlite3.Error:
                 pass
 
         for orphan in orphans:
@@ -467,8 +467,8 @@ class SerendipityEngine:
             from whitemagic.core.resonance.gan_ying_enhanced import EventType, get_bus
             bus = get_bus()
             bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
-        except Exception:
-            pass
+        except (ImportError, AttributeError) as e:
+            logger.debug(f"Gan Ying listen failed: {e}")
 
     def _on_pattern_detected(self, event: Any) -> None:
         """Handle pattern detection - surface related dormant memories.

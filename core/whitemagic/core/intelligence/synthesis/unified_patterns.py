@@ -7,10 +7,13 @@ Provides unified access to search and correlate patterns across:
 - Cascade Patterns (tool chains)
 """
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from importlib.util import find_spec
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class PatternType(Enum):
@@ -95,7 +98,8 @@ class UnifiedPatternAPI:
                     patterns = []
 
                 results.extend(patterns)
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Pattern engine {engine_name!r} search failed: {e}")
                 continue
 
         # Filter by pattern type if specified
@@ -158,8 +162,8 @@ class UnifiedPatternAPI:
                     confidence=p.confidence,
                     metadata={"frequency": p.frequency},
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Core pattern search failed: {e}")
 
         return patterns
 
@@ -196,8 +200,8 @@ class UnifiedPatternAPI:
                             "evidence": getattr(p, "evidence", [])[:3],
                         },
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Holographic pattern search failed: {e}")
 
         return patterns
 
@@ -220,8 +224,8 @@ class UnifiedPatternAPI:
                         confidence=rule.get("confidence", 0.5),
                         metadata=rule,
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Edge pattern search failed: {e}")
 
         return patterns
 
@@ -268,8 +272,8 @@ class UnifiedPatternAPI:
                         "pattern": p,
                         "evidence_titles": evidence[:10],
                     }
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Holographic evidence fetch failed: {e}")
 
         # Get core patterns
         core_titles = {}
@@ -278,8 +282,8 @@ class UnifiedPatternAPI:
                 report = self._engines["core"].extract_patterns(min_confidence=0.3)
                 for p in report.solutions[:100]:
                     core_titles[p.title[:50]] = p
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Core pattern title fetch failed: {e}")
 
         # Find overlaps where holographic evidence contains core pattern titles
         for holo_desc, holo_data in holo_evidence.items():
@@ -310,7 +314,7 @@ class UnifiedPatternAPI:
             try:
                 import whitemagic_rs
                 return float(whitemagic_rs.fast_similarity(text1, text2))
-            except Exception:
+            except ImportError:
                 pass
 
         # Fallback to word overlap
@@ -364,7 +368,7 @@ class UnifiedPatternAPI:
                 LIMIT ?
             """, (min_count, limit))
             return [dict(row) for row in cur.fetchall()]
-        except Exception:
+        except sqlite3.Error:
             return []
         finally:
             conn.close()

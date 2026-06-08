@@ -3,9 +3,12 @@
 Handles case normalization, plural/singular, synonyms, and orphan tags.
 """
 
+import logging
 import re
 import sqlite3
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class TagNormalizer:
@@ -126,9 +129,8 @@ class TagNormalizer:
                     return sorted(similar_pairs, key=lambda x: -x[2])
         except ImportError:
             pass
-        except Exception:
-            # Fallback to Python if Rust fails
-            pass
+        except Exception as e:
+            logger.debug(f"Rust string similarity failed, falling back to Python: {e}")
 
         # Python Fallback
         similar_pairs = []

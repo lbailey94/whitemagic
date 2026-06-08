@@ -11,12 +11,15 @@ Knowledge Gaps Addressed:
 - Gap 4: High Future + High Importance (strategic vision)
 """
 
+import logging
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 
 class PredictionType(Enum):
@@ -118,7 +121,7 @@ class PredictiveEngine:
         try:
             from whitemagic.core.intelligence.core_access import get_core_access
             return get_core_access()
-        except Exception:
+        except ImportError:
             return None
 
     def predict(self) -> PredictiveReport:
@@ -151,7 +154,7 @@ class PredictiveEngine:
                 if len(predictions) > 1000:
                     # Not typical for predictions, but we handle it
                     pass
-        except Exception:
+        except ImportError:
             pass
 
         # Standard sort is extremely fast for small lists
@@ -857,7 +860,7 @@ class PredictiveEngine:
                         seen.add(p.id)
                         unique.append(p)
                 return unique
-        except Exception:
+        except ImportError:
             pass
 
         seen = set()
@@ -877,7 +880,8 @@ class PredictiveEngine:
             api = get_pattern_api()
             stats = api.get_stats()
             return int(stats["total_patterns"])
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Pattern count failed: {e}")
             return 0
 
     def _get_knowledge_gaps(self) -> list[dict[str, Any]]:

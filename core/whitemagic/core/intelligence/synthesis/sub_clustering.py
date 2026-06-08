@@ -4,9 +4,12 @@ Refines large clusters into granular topics using 4D coordinates
 and quadrant-based segmentation.
 """
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -36,7 +39,7 @@ class SubClusteringEngine:
         try:
             from pathlib import Path
             Path(self.db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
+        except OSError:
             pass
         self._conn: sqlite3.Connection | None = None
 
@@ -50,7 +53,7 @@ class SubClusteringEngine:
                 conn.execute("PRAGMA synchronous = NORMAL")
                 conn.execute("PRAGMA foreign_keys = ON")
                 conn.execute("PRAGMA busy_timeout = 5000")
-            except Exception:
+            except sqlite3.OperationalError:
                 pass
             self._conn = conn
         return conn

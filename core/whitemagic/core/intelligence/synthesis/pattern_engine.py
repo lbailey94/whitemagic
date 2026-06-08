@@ -113,22 +113,22 @@ class PatternEngine:
         if unified:
             try:
                 stats["engines"]["unified"] = unified.get_stats()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Unified pattern stats failed: {e}")
 
         holographic = self._get_holographic()
         if holographic:
             try:
                 stats["engines"]["holographic"] = holographic.get_stats()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Holographic pattern stats failed: {e}")
 
         memory = self._get_memory()
         if memory:
             try:
                 stats["engines"]["memory"] = memory.get_stats()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Memory pattern stats failed: {e}")
 
         return stats
 

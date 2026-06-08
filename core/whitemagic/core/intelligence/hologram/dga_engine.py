@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -7,6 +8,8 @@ from typing import Any
 import numpy as np
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -82,7 +85,8 @@ class DGAEngine:
                 "ganas_list": sorted(ganas),
                 "core_version": "6.0.0",
             }
-        except Exception:
+        except OSError as e:
+            logger.debug(f"Genotype capture failed: {e}")
             return {"error": "failed_genotype_capture"}
 
     def _capture_phenotype(self) -> dict[str, Any]:

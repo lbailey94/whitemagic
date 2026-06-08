@@ -7,9 +7,12 @@ key phrases, and content analysis.
 from __future__ import annotations
 
 import importlib
+import logging
 import re
 import sqlite3
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class TitleGenerator:
@@ -89,7 +92,8 @@ class TitleGenerator:
                     return response_text
 
             return None
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Title generation via LLM bridge failed: {e}")
             return None
 
     def _extract_header(self, content: str) -> str | None:

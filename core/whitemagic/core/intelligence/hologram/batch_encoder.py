@@ -7,12 +7,15 @@ Used as fallback when Mojo is unavailable, or as primary for robustness.
 Handles None values gracefully and processes batches efficiently.
 """
 
+import logging
 import sys
 import time
 from dataclasses import dataclass
 from typing import Any
 
 from whitemagic.utils.fast_json import loads as _json_loads
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -69,8 +72,8 @@ class FastBatchEncoder:
             try:
                 coord = self._encode_single(mem)
                 results.append(coord)
-            except Exception:
-                # Fallback to neutral position
+            except Exception as e:
+                logger.debug(f"Batch encode single memory failed, using neutral: {e}")
                 results.append(HolographicCoord(0.0, 0.0, 0.0, 0.5))
         return results
 

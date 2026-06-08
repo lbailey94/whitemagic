@@ -211,7 +211,7 @@ class CorpusCallosumBus:
                 # because the handler wrapper will manage async if needed.
                 # For deterministic testing, we use heuristic fallback.
                 raise RuntimeError("Force heuristic fallback for sync context")
-            except Exception:
+            except (ImportError, RuntimeError):
                 # Heuristic fallback (deterministic, no external deps)
                 left_pos = f"Left: '{topic}' requires systematic analysis, risk assessment, and deterministic safeguards."
                 right_pos = f"Right: '{topic}' is an opportunity for creative transformation and novel patterns."
