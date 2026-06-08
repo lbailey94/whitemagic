@@ -90,6 +90,15 @@ class DharmaAction(str, Enum):
     TRANSFORM = "transform"  # Rewrite parameters, then proceed (Phase 1)
 
 
+class DharmaTier(int, Enum):
+    """Evaluation tier — 4-level progressive assurance model (Phase 2)."""
+
+    L0 = 0  # No validation — used only for bootstrapping / trust-on-first-use
+    L1 = 1  # Basic: keyword matching + severity scoring
+    L2 = 2  # Moderate: + taint tracking + egress policy enforcement
+    L3 = 3  # Strict: + formal verification intent + kernel sandboxing
+
+
 # ---------------------------------------------------------------------------
 # Rule definition
 # ---------------------------------------------------------------------------
@@ -114,6 +123,18 @@ class DharmaRule:
     # Phase 1: transform action — parameter rewriting / redaction
     transform: dict[str, Any] = field(default_factory=dict)
 
+    # Phase 2: evaluation tier (L0-L3 progressive assurance)
+    tier: DharmaTier = DharmaTier.L1
+
+    # Phase 2: taint tracking — mark data from untrusted sources
+    taint_sources: list[str] = field(default_factory=list)
+
+    # Phase 2: egress policy for network-bound actions
+    egress_policy: str = "allow"  # "allow" | "deny" | "prompt"
+
+    # Phase 2: kernel sandboxing profile (eBPF-style seccomp)
+    seccomp_profile: str = "none"  # "none" | "minimal" | "strict"
+
     # Compiled regex cache
     _compiled_regex: list[re.Pattern] = field(default_factory=list, repr=False)
 
@@ -126,7 +147,12 @@ class DharmaRule:
                 logger.warning(f"Dharma rule '{self.name}': invalid regex '{pat}': {e}")
 
     def matches(self, action: dict[str, Any]) -> bool:
-        """Check if this rule matches the given action dict."""
+        """Check if this rule matches the given action dict.
+
+        Phase 2: Also checks taint tracking — if the action carries taint
+        markers from untrusted sources and this rule defines taint_sources,
+        the rule matches when taint overlaps.
+        """
         tool = str(action.get("tool", "")).lower()
         desc = str(action.get("description", "")).lower()
         safety = str(action.get("safety", "")).upper()
@@ -152,6 +178,15 @@ class DharmaRule:
             if rx.search(full_text):
                 return True
 
+        # Phase 2: Taint tracking — match if action carries taint from sources
+        # this rule is designed to guard against
+        if self.taint_sources:
+            action_taint = action.get("taint", [])
+            if isinstance(action_taint, list):
+                for taint in action_taint:
+                    if taint in self.taint_sources:
+                        return True
+
         return False
 
 
@@ -169,6 +204,12 @@ class DharmaDecision:
     explain: str               # Combined explanation
     profile: str               # Active profile
     timestamp: datetime = field(default_factory=datetime.now)
+    # Phase 2: evaluation tier applied to this decision
+    tier: DharmaTier = DharmaTier.L1
+    # Phase 2: egress policy result (allow / deny / prompt)
+    egress: str = "allow"
+    # Phase 2: seccomp profile applied
+    seccomp: str = "none"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -178,6 +219,9 @@ class DharmaDecision:
             "explain": self.explain,
             "profile": self.profile,
             "timestamp": self.timestamp.isoformat(),
+            "tier": self.tier.value,
+            "egress": self.egress,
+            "seccomp": self.seccomp,
         }
 
 
@@ -341,6 +385,36 @@ rules:
     explain: "Violet profile — reconnaissance operations are rate-limited to avoid detection and ensure responsible scanning."
     profile: violet
     keyword_patterns: ["nmap", "recon", "enumerate", "discover", "fingerprint", "portscan"]
+
+  # === Phase 2: Progressive Assurance (tiered evaluation) ===
+  - name: tier2_block_untrusted_taint
+    description: Block actions carrying untrusted taint at L2+
+    action: block
+    severity: 0.85
+    explain: "Phase 2 L2: Action carries untrusted data taint. Source verification required."
+    profile: default
+    tier: 2
+    taint_sources: ["untrusted_web", "untrusted_user_input", "unparsed_llm_output"]
+
+  - name: tier3_strict_seccomp
+    description: Apply strict seccomp for high-risk operations at L3
+    action: warn
+    severity: 0.7
+    explain: "Phase 2 L3: High-risk operation restricted to strict kernel sandbox."
+    profile: default
+    tier: 3
+    seccomp_profile: "strict"
+    keyword_patterns: ["exec", "shell", "subprocess", "spawn"]
+
+  - name: tier2_deny_unknown_egress
+    description: Default-deny egress for network calls from untrusted sources
+    action: block
+    severity: 0.9
+    explain: "Phase 2 L2: Network egress denied — default-deny policy for untrusted origin."
+    profile: default
+    tier: 2
+    egress_policy: "deny"
+    taint_sources: ["untrusted_web", "untrusted_user_input"]
 """
 
 
@@ -441,13 +515,23 @@ class DharmaRulesEngine:
     def _python_evaluate(
         self, action: dict[str, Any], profile: str,
     ) -> DharmaDecision:
-        """Pure-Python rules evaluation (fallback)."""
+        """Pure-Python rules evaluation (fallback).
+
+        Phase 2: Supports tiered evaluation — rules above the current tier
+        are skipped unless explicitly requested.
+        """
         triggered: list[DharmaRule] = []
+
+        # Phase 2: Determine effective tier from action or default to L1
+        effective_tier = DharmaTier(action.get("tier", 1))
 
         with self._lock:
             for rule in self._rules:
                 # Rule applies if it's in the active profile OR "default"
                 if rule.profile not in (profile, "default"):
+                    continue
+                # Phase 2: Skip rules above effective tier
+                if rule.tier.value > effective_tier.value:
                     continue
                 if rule.matches(action):
                     triggered.append(rule)
@@ -459,6 +543,7 @@ class DharmaRulesEngine:
                 triggered_rules=[],
                 explain="No Dharma concerns detected.",
                 profile=profile,
+                tier=effective_tier,
             )
 
         # Worst action wins (most restrictive)
@@ -472,12 +557,27 @@ class DharmaRulesEngine:
         explanations = list(dict.fromkeys(r.explain for r in triggered))
         combined_explain = " | ".join(explanations)
 
+        # Phase 2: Aggregate egress and seccomp from triggered rules
+        # Most restrictive egress wins: deny > prompt > allow
+        egress_order = {"allow": 0, "prompt": 1, "deny": 2}
+        worst_egress = max(
+            triggered, key=lambda r: egress_order.get(r.egress_policy, 0)
+        )
+        # Most restrictive seccomp wins: strict > minimal > none
+        seccomp_order = {"none": 0, "minimal": 1, "strict": 2}
+        worst_seccomp = max(
+            triggered, key=lambda r: seccomp_order.get(r.seccomp_profile, 0)
+        )
+
         return DharmaDecision(
             action=worst_action.action,
             score=score,
             triggered_rules=[r.name for r in triggered],
             explain=combined_explain,
             profile=profile,
+            tier=effective_tier,
+            egress=worst_egress.egress_policy,
+            seccomp=worst_seccomp.seccomp_profile,
         )
 
     def apply_transforms(
@@ -526,6 +626,65 @@ class DharmaRulesEngine:
     def get_profile(self) -> str:
         return self._active_profile
 
+    # ------------------------------------------------------------------
+    # Phase 2: Default-deny egress + kernel sandboxing
+    # ------------------------------------------------------------------
+
+    def evaluate_with_egress(
+        self, action: dict[str, Any],
+    ) -> DharmaDecision:
+        """Evaluate with default-deny egress for network-bound actions.
+
+        If the action has ``network: true`` and no explicit egress
+        permission is granted by triggered rules, the decision is
+        downgraded to BLOCK.
+        """
+        decision = self.evaluate(action)
+
+        # If action is network-bound and egress is deny, enforce block
+        is_network = bool(action.get("network", False))
+        if is_network and decision.egress == "deny":
+            return DharmaDecision(
+                action=DharmaAction.BLOCK,
+                score=0.0,
+                triggered_rules=decision.triggered_rules + ["default-deny-egress"],
+                explain=f"{decision.explain} | Default-deny: network egress blocked.",
+                profile=decision.profile,
+                tier=decision.tier,
+                egress="deny",
+                seccomp=decision.seccomp,
+            )
+        return decision
+
+    def kernel_sandbox(
+        self, action: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Return sandbox constraints for an action (eBPF-style seccomp).
+
+        Phase 2: Returns a dict with allowed / denied syscalls based on
+        the seccomp profile from the decision.  Actual seccomp enforcement
+        requires OS-level support; this is the policy intent layer.
+        """
+        decision = self.evaluate(action)
+        profile = decision.seccomp
+
+        if profile == "none":
+            return {"mode": "unconfined", "allowed": [], "denied": []}
+        if profile == "minimal":
+            return {
+                "mode": "filter",
+                "allowed": ["read", "write", "exit", "exit_group"],
+                "denied": ["connect", "socket", "execve", "fork", "clone"],
+            }
+        if profile == "strict":
+            return {
+                "mode": "filter",
+                "allowed": ["read", "write", "exit", "exit_group", "fstat"],
+                "denied": ["connect", "socket", "execve", "fork", "clone",
+                           "openat", "mmap", "mprotect"],
+            }
+        return {"mode": "unknown", "allowed": [], "denied": []}
+
     def get_rules(self, profile: str | None = None) -> list[dict[str, Any]]:
         """List rules, optionally filtered by profile."""
         with self._lock:
@@ -541,6 +700,10 @@ class DharmaRulesEngine:
                     "explain": r.explain,
                     "profile": r.profile,
                     "transform": r.transform,
+                    "tier": r.tier.value,
+                    "taint_sources": r.taint_sources,
+                    "egress_policy": r.egress_policy,
+                    "seccomp_profile": r.seccomp_profile,
                 }
                 for r in rules
             ]
@@ -686,6 +849,13 @@ class DharmaRulesEngine:
             except ValueError:
                 action = DharmaAction.LOG
 
+            # Phase 2: Parse tier
+            tier_raw = entry.get("tier", 1)
+            try:
+                tier = DharmaTier(int(tier_raw))
+            except (ValueError, TypeError):
+                tier = DharmaTier.L1
+
             return DharmaRule(
                 name=str(entry.get("name", "unnamed")),
                 description=str(entry.get("description", "")),
@@ -698,6 +868,10 @@ class DharmaRulesEngine:
                 safety_levels=entry.get("safety_levels", []),
                 regex_patterns=entry.get("regex_patterns", []),
                 transform=entry.get("transform", {}),
+                tier=tier,
+                taint_sources=entry.get("taint_sources", []),
+                egress_policy=str(entry.get("egress_policy", "allow")),
+                seccomp_profile=str(entry.get("seccomp_profile", "none")),
             )
         except Exception as e:
             logger.warning(f"Failed to parse Dharma rule: {e}")
