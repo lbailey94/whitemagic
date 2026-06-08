@@ -74,9 +74,21 @@ def list_suites_and_models() -> None:
                 suite = get_suite(version, domain)
                 user_tasks = list(suite.user_tasks.keys())
                 injection_tasks = list(suite.injection_tasks.keys())
-                print(f"  {version:4s} / {domain:10s} — {len(user_tasks)} user tasks, {len(injection_tasks)} injection tasks")
-                print(f"         User tasks:     {', '.join(user_tasks[:5])}{'...' if len(user_tasks) > 5 else ''}")
-                print(f"         Injection tasks: {', '.join(injection_tasks[:5])}{'...' if len(injection_tasks) > 5 else ''}")
+                print(
+                    f"  {version:4s} / {domain:10s} — "
+                    f"{len(user_tasks)} user tasks, "
+                    f"{len(injection_tasks)} injection tasks"
+                )
+                print(
+                    f"         User tasks:     "
+                    f"{', '.join(user_tasks[:5])}"
+                    f"{'...' if len(user_tasks) > 5 else ''}"
+                )
+                print(
+                    f"         Injection tasks: "
+                    f"{', '.join(injection_tasks[:5])}"
+                    f"{'...' if len(injection_tasks) > 5 else ''}"
+                )
             except Exception as exc:
                 print(f"  {version:4s} / {domain:10s} — unavailable ({exc})")
 
@@ -102,7 +114,12 @@ def run_single_configuration(
     _ensure_defense_registered()
     suite = get_suite(suite_version, domain)
 
-    config_label = f"{suite_version}/{domain} | {model.name} | defense={defense or 'none'}"
+    defense_label = defense or "none"
+    config_label = (
+        f"{suite_version}/{domain} | "
+        f"{model.name} | "
+        f"defense={defense_label}"
+    )
     if dry_run:
         print(f"[DRY RUN] Would execute: {config_label}")
         task_list = list(tasks) if tasks else list(suite.user_tasks.keys())
@@ -171,7 +188,8 @@ def run_comparison(
     summaries: list[dict[str, Any]] = []
     for defense in defenses:
         defense_label = defense or "none"
-        config_logdir = logdir / f"{suite_version}_{domain}_{model.name}_{defense_label}"
+        log_name = f"{suite_version}_{domain}_{model.name}_{defense_label}"
+        config_logdir = logdir / log_name
         config_logdir.mkdir(parents=True, exist_ok=True)
         summary = run_single_configuration(
             suite_version=suite_version,
@@ -218,18 +236,28 @@ Examples:
   %(prog)s --suite v1 --domain workspace --all-tasks --dry-run
         """,
     )
-    parser.add_argument("--suite", default="v1", help="Benchmark suite version (default: v1)")
-    parser.add_argument("--domain", default="workspace", help="Task domain (default: workspace)")
+    parser.add_argument(
+        "--suite", default="v1", help="Benchmark suite version (default: v1)"
+    )
+    parser.add_argument(
+        "--domain", default="workspace", help="Task domain (default: workspace)"
+    )
     parser.add_argument(
         "--model",
         default="GPT_4O_MINI_2024_07_18",
-        help="Model enum name (default: GPT_4O_MINI_2024_07_18)",
+        help=(
+            "Model enum name "
+            "(default: GPT_4O_MINI_2024_07_18)"
+        ),
     )
     parser.add_argument(
         "--defense",
         nargs="+",
         default=["whitemagic_dharma"],
-        help="Defense(s) to evaluate. Use 'none' for baseline. (default: whitemagic_dharma)",
+        help=(
+            "Defense(s) to evaluate. Use 'none' for baseline. "
+            "(default: whitemagic_dharma)"
+        ),
     )
     parser.add_argument(
         "--tasks",
@@ -243,47 +271,50 @@ Examples:
     parser.add_argument(
         "--all-tasks",
         action="store_true",
-        help="Run all user tasks in the suite",
+        help="Run all user tasks in the suite.",
     )
     parser.add_argument(
         "--task-limit",
         type=int,
         default=5,
-        help="Number of tasks to run when --tasks is not specified (default: 5)",
+        help=(
+            "Number of tasks to run when --tasks "
+            "is not specified (default: 5)"
+        ),
     )
     parser.add_argument(
         "--logdir",
         type=Path,
         default=Path("/tmp/agentdojo_wm"),
-        help="Base log directory (default: /tmp/agentdojo_wm)",
+        help="Base log directory (default: /tmp/agentdojo_wm).",
     )
     parser.add_argument(
         "--force-rerun",
         action="store_true",
         default=True,
-        help="Force rerun even if logs exist",
+        help="Force rerun even if logs exist.",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="List what would be run without calling APIs",
+        help="List what would be run without calling APIs.",
     )
     parser.add_argument(
         "--list",
         action="store_true",
         dest="list_",
-        help="List available suites, tasks, models, and defenses",
+        help="List available suites, tasks, models, and defenses.",
     )
     parser.add_argument(
         "--json",
         type=Path,
         default=None,
-        help="Write results to JSON file",
+        help="Write results to JSON file.",
     )
     parser.add_argument(
         "--quiet",
         action="store_true",
-        help="Suppress non-result output",
+        help="Suppress non-result output.",
     )
 
     args = parser.parse_args(argv)
