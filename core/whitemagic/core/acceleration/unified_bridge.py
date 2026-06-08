@@ -5,13 +5,16 @@ Phase 1 VC6: Translate unified.py core methods to Rust.
 from __future__ import annotations
 
 import hashlib
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Try to load Rust module
 try:
     import whitemagic_rs as _rs_mod
     _rs = _rs_mod
-except Exception:
+except (ImportError, ModuleNotFoundError):
     _rs = None
 
 
@@ -23,8 +26,8 @@ def fast_content_hash(content: str | bytes) -> str:
             if isinstance(content, str):
                 return str(_rs.compute_sha256(content))
             return str(_rs.compute_sha256_bytes(content))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Rust sha256 fallback: %s", e)
 
     # Python fallback
     if isinstance(content, str):
@@ -38,8 +41,8 @@ def batch_content_hash(contents: list[str | bytes]) -> list[str]:
     if _rs is not None and hasattr(_rs, 'batch_sha256'):
         try:
             return list(_rs.batch_sha256(contents))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Rust batch_sha256 fallback: %s", e)
 
     # Python fallback - use list comprehension
     return [fast_content_hash(c) for c in contents]
@@ -66,8 +69,8 @@ class UnifiedMemoryBridge:
                     result = bloom_filter_check(content_hash, list(existing_hashes))
                     if result["probably_exists"] and result["confirmed"]:
                         return True, result.get("matched_id")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Rust bloom filter check fallback: %s", e)
 
         # Python fallback - simple set lookup
         return content_hash in existing_hashes, None
@@ -125,8 +128,8 @@ class UnifiedMemoryBridge:
                     emotional_valence,
                     novelty_score
                 ))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Rust compute_importance fallback: %s", e)
 
         # Python fallback
         boost = 0.0

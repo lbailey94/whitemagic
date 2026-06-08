@@ -9,6 +9,7 @@ Features:
 """
 
 import json
+import logging
 import queue
 import subprocess
 import threading
@@ -23,6 +24,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import whitemagic_rust as rs
+
+logger = logging.getLogger(__name__)
 
 KOKA_DIR = Path(__file__).parent.parent.parent.parent / "whitemagic-koka"
 _DEFAULT_PARALLEL_CALL_TIMEOUT_S = 8.0
@@ -230,7 +233,8 @@ class KokaProcess:
                     result_queue.put(stdout.readline())
                 else:
                     result_queue.put(None)
-            except Exception:
+            except (OSError, ValueError) as e:
+                logger.debug("Koka stdout read failed: %s", e)
                 result_queue.put(None)
 
         thread = threading.Thread(target=_reader, name=f"hybrid-koka-{self.binary_name}-{self.pool_id}", daemon=True)
@@ -326,8 +330,8 @@ class KokaProcess:
             if self._proc:
                 try:
                     self._proc.terminate()
-                except Exception:
-                    pass
+                except OSError as e:
+                    logger.debug("Koka process terminate failed: %s", e)
                 self._proc = None
             self._healthy = False
 
@@ -600,7 +604,8 @@ class HybridDispatcherV2:
                 result = str(prat_route_fn(tool))
             else:
                 result = PythonFastPath.prat_route(tool)
-        except Exception:
+        except Exception as e:
+            logger.debug("Rust prat_route fallback: %s", e)
             result = PythonFastPath.prat_route(tool)
 
         latency = (time.perf_counter() - start) * 1_000_000
@@ -616,7 +621,8 @@ class HybridDispatcherV2:
                 results = cast(list[str], prat_route_batch_fn(tools))
             else:
                 results = [PythonFastPath.prat_route(t) for t in tools]
-        except Exception:
+        except Exception as e:
+            logger.debug("Rust prat_route_batch fallback: %s", e)
             results = [PythonFastPath.prat_route(t) for t in tools]
 
         latency = (time.perf_counter() - start) * 1_000_000
@@ -634,7 +640,8 @@ class HybridDispatcherV2:
                 result = str(resonance_predecessor_fn(gana))
             else:
                 result = PythonFastPath.get_predecessor(gana)
-        except Exception:
+        except Exception as e:
+            logger.debug("Rust resonance_predecessor fallback: %s", e)
             result = PythonFastPath.get_predecessor(gana)
 
         latency = (time.perf_counter() - start) * 1_000_000
@@ -650,7 +657,8 @@ class HybridDispatcherV2:
                 result = str(resonance_successor_fn(gana))
             else:
                 result = PythonFastPath.get_successor(gana)
-        except Exception:
+        except Exception as e:
+            logger.debug("Rust resonance_successor fallback: %s", e)
             result = PythonFastPath.get_successor(gana)
 
         latency = (time.perf_counter() - start) * 1_000_000

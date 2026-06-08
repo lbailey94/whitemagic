@@ -227,8 +227,8 @@ class GalacticTelepathyEngine:
                         mem = um.backend.get(mid)
                         if mem:
                             memories.append(mem)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Failed to get memory %s during sync: %s", mid, e)
                 return memories
         except Exception as e:
             logger.error(f"Failed to get modified memories: {e}")
@@ -472,7 +472,8 @@ class GalacticTelepathyEngine:
                 )
                 row = cursor.fetchone()
                 return row[0] if row else None
-        except Exception:
+        except Exception as e:
+            logger.debug("Telepathy target lookup failed: %s", e)
             return None
 
     def _store_pending_association(
@@ -497,8 +498,8 @@ class GalacticTelepathyEngine:
                 )
                 conn.commit()
                 return True
-        except Exception:
-            # Table might not exist — that's okay
+        except Exception as e:
+            logger.debug("Pending association store failed (table may not exist): %s", e)
             return False
 
     def _detect_conflict(
@@ -531,7 +532,7 @@ class GalacticTelepathyEngine:
                             if meta.get("telepathy_source_id") == mem.id:
                                 # Same memory, already synced
                                 return None
-                        except Exception:
+                        except (json.JSONDecodeError, TypeError):
                             pass
 
                     # Divergent content with same hash (rare but possible)
@@ -593,8 +594,8 @@ class GalacticTelepathyEngine:
                     "transfer_fidelity": "full",
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Galactic telepathy event emit failed: %s", e)
 
     def federated_sync(
         self,

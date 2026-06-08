@@ -182,7 +182,7 @@ class DreamState:
                         end = min(len(lines), line_no + 5)
                         snippet = "".join(lines[start:end])
                         context_snippets.append(f"--- FILE: {os.path.basename(file_path)} (Line {line_no}) ---\n{snippet}")
-                except Exception:
+                except (OSError, UnicodeDecodeError):
                     pass
 
         "\n".join(context_snippets)
@@ -203,7 +203,8 @@ class DreamState:
                 insight_text = response["response"].strip()
             else:
                 insight_text = f"💡 Combining {' + '.join(pattern_names[:2])} reveals a strategic resonance in {patterns[0].get('domain', 'tech')} through pattern emergence."
-        except Exception:
+        except Exception as e:
+            logger.debug("Dream insight generation failed: %s", e)
             insight_text = f"💡 Combining {' + '.join(pattern_names[:2])} reveals a strategic resonance in {patterns[0].get('domain', 'tech')} through pattern emergence."
 
         return DreamInsight(
@@ -254,8 +255,8 @@ class DreamState:
                         application_count=0,
                     )
                     self.antibody_library.register(antibody)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Antibody registration failed for dream insight %s: %s", insight.id, e)
 
             # Emergence Detector
             if self.emergence_detector:
@@ -265,8 +266,8 @@ class DreamState:
                         outcome="High value insight from dream",
                         context={"source": "dream_state", "novelty": insight.novelty_score},
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Emergence detector observe failed: %s", e)
 
             # Gan Ying Bus
             if self.bus:
@@ -282,8 +283,8 @@ class DreamState:
                         timestamp=datetime.now(),
                         confidence=insight.novelty_score,
                     ))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Gan Ying bus emit failed for dream insight: %s", e)
 
     def get_best_insights(self, min_novelty: float = 0.7) -> list[DreamInsight]:
         """Get most novel insights."""

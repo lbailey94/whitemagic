@@ -15,9 +15,12 @@ Features:
 Philosophy: Memory is identity. Perfect recall enables growth.
 """
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -100,7 +103,8 @@ class MemoryInjector:
             # Extract key sections (limit size)
             lines = content.split("\n")[:50]
             return "\n".join(lines)
-        except Exception:
+        except (OSError, UnicodeDecodeError) as e:
+            logger.debug("Resume file read failed: %s", e)
             return ""
 
     def get_recent_short_term(self, limit: int = 5) -> list[str]:
@@ -124,8 +128,8 @@ class MemoryInjector:
                     if line and not line.startswith("#") and not line.startswith("-"):
                         summaries.append(line[:200])
                         break
-            except Exception:
-                pass
+            except (OSError, UnicodeDecodeError) as e:
+                logger.debug("Short-term memory read failed: %s", e)
 
         return summaries
 
@@ -155,8 +159,8 @@ class MemoryInjector:
                 score = sum(1 for w in query_words if w in content)
                 if score > 0:
                     scored_files.append((score, f))
-            except Exception:
-                pass
+            except (OSError, UnicodeDecodeError) as e:
+                logger.debug("Long-term memory scoring failed for %s: %s", f.name, e)
 
         # Sort by score, take top results
         scored_files.sort(key=lambda x: -x[0])
@@ -171,8 +175,8 @@ class MemoryInjector:
                     if line:
                         summaries.append(line[:200])
                         break
-            except Exception:
-                pass
+            except (OSError, UnicodeDecodeError) as e:
+                logger.debug("Long-term memory summary failed for %s: %s", f.name, e)
 
         return summaries
 
@@ -201,8 +205,8 @@ class MemoryInjector:
             if current:
                 state["active_tasks"] = current.active_tasks[:3]
                 state["completed_tasks"] = len(current.completed_tasks)
-        except Exception:
-            pass
+        except (ImportError, AttributeError) as e:
+            logger.debug("Session handoff load failed: %s", e)
 
         return state
 

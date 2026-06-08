@@ -303,7 +303,8 @@ class MemoryConsolidator:
                 mem_b = um.backend.recall(tgt_id)
                 if not mem_a or not mem_b:
                     continue
-            except Exception:
+            except Exception as e:
+                logger.debug("Memory recall failed during dedup check: %s", e)
                 continue
 
             result["duplicates_found"] += 1
@@ -495,7 +496,7 @@ class MemoryConsolidator:
                 get_bicameral_reasoner,
             )
             get_bicameral_reasoner()
-        except Exception:
+        except (ImportError, AttributeError):
             return
 
         # --- Left hemisphere: logical cross-cluster links ---
@@ -576,8 +577,8 @@ class MemoryConsolidator:
                     mem.memory_type = MemoryType.LONG_TERM
                     mem.importance = min(1.0, (mem.importance or 0.5) + 0.05)
                     promotions += 1
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Memory promotion failed for %s: %s", mem.id, e)
 
         return promotions
 
@@ -683,8 +684,8 @@ class MemoryConsolidator:
                 declared_safety="READ",
                 actual_writes=report.strategies_synthesized + report.promotions,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Karma ledger append failed after consolidation: %s", e)
 
     # ------------------------------------------------------------------
     # Events
@@ -720,8 +721,8 @@ class MemoryConsolidator:
                         "themes": [s["theme"] for s in strategies[:5]],
                     },
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Event emission failed during consolidation: %s", e)
 
     # ------------------------------------------------------------------
     # Introspection
