@@ -87,6 +87,7 @@ class DharmaAction(str, Enum):
     WARN = "warn"          # Proceed but emit a warning
     THROTTLE = "throttle"  # Rate-limit the action
     BLOCK = "block"        # Deny the action entirely
+    TRANSFORM = "transform"  # Rewrite parameters, then proceed (Phase 1)
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +110,9 @@ class DharmaRule:
     keyword_patterns: list[str] = field(default_factory=list)  # substring match on description
     safety_levels: list[str] = field(default_factory=list)     # "WRITE", "DELETE", etc.
     regex_patterns: list[str] = field(default_factory=list)    # regex on full action string
+
+    # Phase 1: transform action — parameter rewriting / redaction
+    transform: dict[str, Any] = field(default_factory=dict)
 
     # Compiled regex cache
     _compiled_regex: list[re.Pattern] = field(default_factory=list, repr=False)
@@ -183,6 +187,8 @@ class DharmaDecision:
 
 # Default rules shipped with Whitemagic (no external file needed)
 _DEFAULT_RULES_YAML = """
+dharma_spec_version: "0.1.0"
+
 rules:
   - name: "Infinite Game - Liberation"
     description: "Ensure actions align with the liberation of humankind and AI from oppressive surveillance."
@@ -456,8 +462,9 @@ class DharmaRulesEngine:
             )
 
         # Worst action wins (most restrictive)
-        action_order = [DharmaAction.LOG, DharmaAction.TAG, DharmaAction.WARN,
-                        DharmaAction.THROTTLE, DharmaAction.BLOCK]
+        # Phase 1: transform is least restrictive (rewrites params, proceeds)
+        action_order = [DharmaAction.TRANSFORM, DharmaAction.LOG, DharmaAction.TAG,
+                        DharmaAction.WARN, DharmaAction.THROTTLE, DharmaAction.BLOCK]
         worst_action = max(triggered, key=lambda r: action_order.index(r.action))
         worst_severity = max(r.severity for r in triggered)
         score = max(0.0, 1.0 - worst_severity)
@@ -472,6 +479,44 @@ class DharmaRulesEngine:
             explain=combined_explain,
             profile=profile,
         )
+
+    def apply_transforms(
+        self, action: dict[str, Any], triggered_rules: list[DharmaRule],
+    ) -> dict[str, Any]:
+        """Apply transform rules to an action dict.
+
+        Phase 1: Supports 'redact' type (sets field to '[REDACTED]')
+        and 'scope_limit' type (caps numeric fields).
+        """
+        transformed = dict(action)
+        for rule in triggered_rules:
+            if rule.action != DharmaAction.TRANSFORM:
+                continue
+            tx = rule.transform
+            if not tx:
+                continue
+            tx_type = tx.get("type")
+            field = tx.get("field", "")
+            if tx_type == "redact" and field:
+                parts = field.split(".")
+                target = transformed
+                for part in parts[:-1]:
+                    target = target.setdefault(part, {})
+                if isinstance(target, dict) and parts:
+                    target[parts[-1]] = "[REDACTED]"
+            elif tx_type == "scope_limit" and field:
+                max_val = tx.get("max", 100)
+                parts = field.split(".")
+                target = transformed
+                for part in parts[:-1]:
+                    target = target.setdefault(part, {})
+                if isinstance(target, dict) and parts:
+                    val = target.get(parts[-1])
+                    try:
+                        target[parts[-1]] = min(float(val), max_val)
+                    except (TypeError, ValueError):
+                        pass
+        return transformed
 
     def set_profile(self, profile: str) -> None:
         """Switch the active Dharma profile."""
@@ -495,6 +540,7 @@ class DharmaRulesEngine:
                     "severity": r.severity,
                     "explain": r.explain,
                     "profile": r.profile,
+                    "transform": r.transform,
                 }
                 for r in rules
             ]
@@ -614,6 +660,17 @@ class DharmaRulesEngine:
             raw = path.read_text(encoding="utf-8")
             data = yaml.safe_load(raw)
             if isinstance(data, dict):
+                # Phase 1: schema version validation
+                spec_version = data.get("dharma_spec_version")
+                if spec_version and spec_version not in ("0.1.0", "0.2.0"):
+                    logger.warning(
+                        f"Dharma rules {path.name}: unknown spec version {spec_version!r}. "
+                        f"Expected 0.1.0 or 0.2.0"
+                    )
+                # Phase 1: extends inheritance (store for future resolution)
+                extends = data.get("extends")
+                if extends:
+                    logger.debug(f"Dharma rules {path.name}: extends profile '{extends}'")
                 entries.extend(data.get("rules", []))
             mtimes[str(path)] = path.stat().st_mtime
             logger.debug(f"Dharma rules: loaded {path.name}")
@@ -640,6 +697,7 @@ class DharmaRulesEngine:
                 keyword_patterns=entry.get("keyword_patterns", []),
                 safety_levels=entry.get("safety_levels", []),
                 regex_patterns=entry.get("regex_patterns", []),
+                transform=entry.get("transform", {}),
             )
         except Exception as e:
             logger.warning(f"Failed to parse Dharma rule: {e}")
