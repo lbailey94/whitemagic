@@ -231,7 +231,7 @@ class DharmaDecision:
 
 # Default rules shipped with Whitemagic (no external file needed)
 _DEFAULT_RULES_YAML = """
-dharma_spec_version: "0.1.0"
+dharma_spec_version: "0.2.0"
 
 rules:
   - name: "Infinite Game - Liberation"
@@ -684,6 +684,164 @@ class DharmaRulesEngine:
                            "openat", "mmap", "mprotect"],
             }
         return {"mode": "unknown", "allowed": [], "denied": []}
+
+    # ------------------------------------------------------------------
+    # Phase 3: Formal verification + external backends
+    # ------------------------------------------------------------------
+
+    def verify_rules(self) -> list[dict[str, Any]]:
+        """Formal verification intent — detect contradictions and gaps.
+
+        Phase 3: Static analysis of the ruleset. Returns a list of
+        verification findings (not full SMT solving — that requires
+        Z3/TLA+ infrastructure).  This is the *intent* layer.
+        """
+        findings: list[dict[str, Any]] = []
+        with self._lock:
+            rules = list(self._rules)
+
+        # Check 1: Contradictory rules (same pattern, different actions)
+        for i, r1 in enumerate(rules):
+            for r2 in rules[i + 1:]:
+                if r1.profile != r2.profile:
+                    continue
+                # Heuristic: same keywords + same tools = potential contradiction
+                if set(r1.keyword_patterns) & set(r2.keyword_patterns):
+                    if r1.action != r2.action and r1.severity > 0.5 and r2.severity > 0.5:
+                        findings.append({
+                            "type": "contradiction",
+                            "severity": "high",
+                            "rules": [r1.name, r2.name],
+                            "detail": (
+                                f"Rules '{r1.name}' ({r1.action.value}) and "
+                                f"'{r2.name}' ({r2.action.value}) match overlapping "
+                                f"keywords but prescribe different actions."
+                            ),
+                        })
+
+        # Check 2: Unreachable rules (BLOCK rule shadowed by earlier BLOCK)
+        # Simplified: if two rules have identical patterns and both BLOCK,
+        # the second is redundant.
+        seen_block_patterns: set[str] = set()
+        for rule in rules:
+            if rule.action == DharmaAction.BLOCK:
+                sig = "|".join(sorted(rule.keyword_patterns)) + "::" + "|".join(sorted(rule.tool_patterns))
+                if sig in seen_block_patterns and sig:
+                    findings.append({
+                        "type": "redundancy",
+                        "severity": "medium",
+                        "rule": rule.name,
+                        "detail": f"Rule '{rule.name}' is redundant — identical patterns already blocked.",
+                    })
+                seen_block_patterns.add(sig)
+
+        # Check 3: Missing taint coverage for egress-deny rules
+        for rule in rules:
+            if rule.egress_policy == "deny" and not rule.taint_sources:
+                findings.append({
+                    "type": "gap",
+                    "severity": "medium",
+                    "rule": rule.name,
+                    "detail": (
+                        f"Rule '{rule.name}' denies egress but has no taint_sources. "
+                        f"Without taint tracking, this may block legitimate traffic."
+                    ),
+                })
+
+        return findings
+
+    def to_rego(self) -> str:
+        """Compile rules to OPA/Rego syntax (Phase 3 backend).
+
+        Returns a Rego module string.  This is a best-effort translation;
+        some Dharma concepts (taint tracking, seccomp) have no direct
+        Rego equivalent and are emitted as comments.
+        """
+        lines = [
+            "package whitemagic.dharma",
+            "",
+            "# Auto-generated from DharmaRulesEngine (Phase 3)",
+            "# Some features (taint, seccomp) are policy-intent only.",
+            "",
+            "default allow := false",
+            "default warn := false",
+            "",
+        ]
+        with self._lock:
+            rules = list(self._rules)
+
+        for rule in rules:
+            lines.append(f"# Rule: {rule.name} (profile={rule.profile}, tier={rule.tier.value})")
+            lines.append(f"# {rule.description}")
+            # Keyword conditions
+            conds = []
+            for kw in rule.keyword_patterns:
+                conds.append(f'contains(input.description, "{kw}")')
+            for pat in rule.tool_patterns:
+                if "*" in pat or "?" in pat:
+                    conds.append(f'glob.match("{pat}", [], input.tool)')
+                else:
+                    conds.append(f'input.tool == "{pat}"')
+            for sl in rule.safety_levels:
+                conds.append(f'input.safety == "{sl}"')
+            if conds:
+                body = "\n    ".join(conds)
+            else:
+                body = "true"
+            rego_action = "allow" if rule.action == DharmaAction.LOG else "warn" if rule.action == DharmaAction.WARN else "deny"
+            lines.append(f"{rego_action} if {{")
+            lines.append(f"    {body}")
+            lines.append("}")
+            lines.append("")
+
+        lines.append("# Taint tracking intent (no direct Rego equivalent)")
+        lines.append("# Egress policy intent (no direct Rego equivalent)")
+        lines.append("# Seccomp profile intent (no direct Rego equivalent)")
+        return "\n".join(lines)
+
+    def to_cedar(self) -> str:
+        """Compile rules to Cedar schema syntax (Phase 3 backend).
+
+        Returns a Cedar policy string.  Cedar is AWS's authorization
+        language; this is a best-effort structural mapping.
+        """
+        lines = [
+            "// Auto-generated from DharmaRulesEngine (Phase 3)",
+            "// Cedar backend: structural mapping of Dharma rules",
+            "",
+        ]
+        with self._lock:
+            rules = list(self._rules)
+
+        for idx, rule in enumerate(rules, 1):
+            lines.append(f"// Rule {idx}: {rule.name}")
+            lines.append(f"// Profile: {rule.profile} | Tier: {rule.tier.value} | Severity: {rule.severity}")
+            lines.append("permit(")
+            lines.append("  principal,")
+            lines.append("  action,")
+            lines.append("  resource")
+            lines.append(")")
+            lines.append("when {")
+            # Map keyword patterns to Cedar constraints
+            conds = []
+            for kw in rule.keyword_patterns:
+                conds.append(f'  resource.description.contains("{kw}")')
+            for pat in rule.tool_patterns:
+                if "*" not in pat and "?" not in pat:
+                    conds.append(f'  action == DharmaAction::"{pat}"')
+            for sl in rule.safety_levels:
+                conds.append(f'  resource.safety == Safety::"{sl}"')
+            if conds:
+                lines.append("\n".join(conds))
+            else:
+                lines.append("  true")
+            lines.append("}")
+            if rule.action == DharmaAction.BLOCK:
+                lines.append("unless { true }  // BLOCK: deny all matches")
+            lines.append("")
+
+        lines.append("// Taint tracking, egress, seccomp: Cedar extensions required")
+        return "\n".join(lines)
 
     def get_rules(self, profile: str | None = None) -> list[dict[str, Any]]:
         """List rules, optionally filtered by profile."""
