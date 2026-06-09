@@ -1,5 +1,65 @@
 # WhiteMagic v22.0.0 + v22.2 — Session Summary & Handoff Document
 
+## Current Status Addendum — 2026-06-08 (Evening)
+
+> **Bare Exception Sweep Complete — 145 files cleaned, 0 bare `except Exception:` blocks remain.**
+
+| Surface | Current State |
+|---------|---------------|
+| Release baseline | v22.2.0 release baseline: 2,216 passed, 67 skipped, 0 failed |
+| Current local audit baseline | **2,469 passed**, 0 skipped, 9 failed (all pre-existing) |
+| Tool surface | 487 callable tools, 459 dispatch entries, 28 Gana meta-tools |
+| Exception hygiene | **0 bare `except Exception:`** blocks remain across `whitemagic/` tree |
+| Syntax cleanliness | 0 syntax/indentation errors (`compileall` clean) |
+| Prescience track record | 21 validated claims, 523+ points, 25-week avg lead, Brier 0.0958 |
+| Strategic positioning | Local-first governance substrate (honest competitive assessment complete) |
+
+### June 8 Verified Gates
+
+| Gate | Result |
+|------|--------|
+| `scripts/check_doc_drift.py` | **Passed** (all 9 checks) |
+| `scripts/check_versions.py` | **Passed** |
+| Full core test suite | **2,469 passed**, 9 failed (pre-existing: fastembed missing ×8, GanYingBus.emit API mismatch ×1) |
+| Exception scan | `grep -c "except Exception:"` → 0 bare blocks remain |
+| Syntax scan | `python -m compileall whitemagic/` → 0 errors |
+
+### What Changed (June 8)
+
+1. **Bare exception elimination (evening session)** — 145 Python files cleaned:
+   - Manual fixes for 7 high-density files (miners.py, galaxy_manager.py, fusions.py, memory_matrix.py, simd.py, intelligence.py, _consolidated.py)
+   - Automated script sweep across ~137 remaining files with contextual classification
+   - ~20 syntax errors from script insertion manually repaired
+   - All blocks now either catch specific exceptions or log via `logger.debug(...)`
+
+2. **Competitive landscape documentation (morning session)** — 4 strategic docs created:
+   - `STRATEGIC_POSITIONING_2026-06-08.md` — honest assessment of what WhiteMagic cannot compete on vs. what it can own
+   - `TACTICAL_PLAN_2026-06-08.md` — immediate (this week) + short-term (2–4 weeks) action roadmap
+   - `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` — 10-theme security audit (3 strong, 6 partial, 1 weak)
+   - `PRESCIENCE_UPDATE_2026-06-08.md` — updated ledger with AGT v4, Anthropic Dreaming, Cloudflare Think validations
+
+3. **Adversarial test suite** — 24 scenarios across bash heuristics, Dharma default rules, profile gates, and combined evaluation. All pass.
+
+4. **Karma Ledger signing verification** — 5 tests added for Ed25519 roundtrip, tamper detection, chain verification.
+
+5. **Dharma specification v0.1.0** — formal spec document with YAML schema, action spectrum, profiles, and upgrade path.
+
+### Files Created (June 8)
+
+- `docs/message_board/SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md`
+- `docs/message_board/STRATEGIC_POSITIONING_2026-06-08.md`
+- `docs/message_board/TACTICAL_PLAN_2026-06-08.md`
+- `docs/message_board/NSA_MCP_SELF_ASSESSMENT_2026-06-08.md`
+- `docs/message_board/PRESCIENCE_UPDATE_2026-06-08.md`
+- `docs/message_board/DHARMA_SPEC_2026-06-08.md`
+- `docs/public/LOCAL_FIRST_SECURITY.md`
+- `core/tests/unit/test_agentdojo_adversarial.py`
+- `core/tests/unit/test_karma_ledger_signing.py`
+- `core/scripts/fix_bare_except.py`
+- `core/scripts/fix_bare_except_v2.py`
+
+---
+
 ## Current Status Addendum — 2026-06-05
 
 > **Polyglot Backend Integration — 6 gaps closed.**
