@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0
-**Last Updated**: June 8, 2026 (competitive landscape analysis, NSA MCP self-assessment, prescience update, prescience methodology, Dharma spec, 6 new docs)
+**Last Updated**: June 8, 2026 (evening — exception sweep complete, STATE_REPORT, competitive landscape analysis, NSA MCP self-assessment, prescience update, methodology, Dharma spec, 8 new docs)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -105,6 +105,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `DHARMA_SPEC_2026-06-08.md` | Dharma governance specification v0.1.0 — YAML schema, action spectrum, profiles, Karmic trace, upgrade path, competitive comparison | Jun 8 |
 | `SESSION_REPORT_2026-06-08.md` | Full session narrative — competitive landscape analysis, immediate fixes, strategic docs | Jun 8 |
 | `SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md` | Bare `except Exception:` elimination across 145 Python files — contextual specificity, logging, syntax repair, 2,469 tests passing | Jun 8 |
+| `STATE_REPORT_2026-06-08.md` | Comprehensive project state assessment — metrics trajectory Apr→Jun, strategic positioning evolution, code hygiene before/after, open items | Jun 8 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
 | `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
