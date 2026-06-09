@@ -351,7 +351,7 @@ def handle_forge_status(**kwargs: Any) -> dict[str, Any]:
             name for name in TOOL_TO_GANA
             if name.startswith("ext.") or name.startswith("custom.")
         ]
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
     return {

@@ -188,7 +188,7 @@ class CircuitBreaker:
                 state=state_map[self._state],
                 failures=len(self._failure_timestamps),
             )
-        except Exception:
+        except (ImportError, AttributeError):
             pass  # StateBoard is optional
 
     def status(self) -> dict[str, Any]:

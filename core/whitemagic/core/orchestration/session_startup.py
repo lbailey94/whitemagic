@@ -291,11 +291,13 @@ class SessionStartupOrchestrator:
                     def activate() -> None:
                         try:
                             get_garden(g)
-                        except Exception:
+                        except Exception as e:
+                            logger.debug("Operation failed: %s", e)
                             pass
                     return activate
                 results.append(self._safe_activate(f"Garden: {garden}", make_activator(garden)))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         return results

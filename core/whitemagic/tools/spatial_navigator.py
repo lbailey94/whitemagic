@@ -28,7 +28,10 @@ Usage:
     related = discover_related("memory_id_123", vary_axes=["y"])  # Same emotion/time, different abstraction
 """
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 try:
     from whitemagic.tools.coordinate_explainer import interpret_memory
@@ -212,7 +215,7 @@ def find_neighbors(memory_id: str, k: int = 5, radius: float | None = None, weig
     try:
         from whitemagic.core.memory.holographic import get_holographic_memory
         holo = get_holographic_memory()
-    except Exception:
+    except (ImportError, AttributeError):
         return []
 
     # Build query from reference memory

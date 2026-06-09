@@ -39,7 +39,7 @@ class HRRMojoBridge:
                 timeout=5
             )
             return result.returncode == 0
-        except Exception:
+        except OSError:
             return False
 
     def bind(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -92,7 +92,8 @@ class HRRMojoBridge:
             for p in [a_path, b_path, out_path]:
                 try:
                     os.unlink(p)
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
     def unbind(self, bound: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -140,7 +141,8 @@ class HRRMojoBridge:
             for p in [bound_path, b_path, out_path]:
                 try:
                     os.unlink(p)
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
     def benchmark(self, iterations: int = 1000) -> dict:

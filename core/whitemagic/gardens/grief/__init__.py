@@ -166,7 +166,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
                 "energy": round(snap.energy, 3),
                 "dharma": round(snap.dharma, 3),
             }
-        except Exception:
+        except (ImportError, AttributeError):
             snapshot["harmony"] = {"unavailable": True}
 
         # Shadow health

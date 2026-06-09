@@ -63,7 +63,7 @@ def _get_garden_perspective(gana_name: str, task: str) -> dict[str, Any]:
             "garden": meta["garden"],
             "perspective": f"{meta['meaning']} lens on: {task[:100]}",
         }
-    except Exception:
+    except (ImportError, AttributeError):
         return {
             "gana": gana_name,
             "perspective": f"(metadata unavailable for {gana_name})",
@@ -207,7 +207,7 @@ def _detect_conflicts(
                     "description": f"{p['gana']} is degraded — its perspective may be unreliable.",
                     "resolution": "Weight this Gana's input lower; prefer healthy peers.",
                 })
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
     return conflicts
@@ -269,7 +269,7 @@ def _calculate_gratitude_boost(quadrants: set[str]) -> float:
 
         # Cap at 1.5x (50% boost)
         return float(min(1.5, boost))
-    except Exception:
+    except (ImportError, AttributeError):
         return 1.0
 
 
@@ -284,7 +284,7 @@ def _record_sabha_karma(result: dict[str, Any]) -> None:
             actual_writes=0,
             success=bool(result.get("recommendation")),
         )
-    except Exception:
+    except (ImportError, AttributeError):
         pass  # Karma ledger optional
 
 

@@ -103,7 +103,8 @@ class ZodiacCouncil:
                 try:
                     dist = dga.calculate_distance(local_sig, agent_id)
                     a_weight = 1.0 + (1.0 - dist) # Closer = more weight
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
             # 3. Activity Weight (Frequency - Mocked for now, integrate with Chat later)

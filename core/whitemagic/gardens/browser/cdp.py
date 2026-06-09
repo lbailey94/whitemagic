@@ -238,7 +238,8 @@ class CDPConnection:
         for handler in handlers:
             try:
                 await handler(event)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 logger.debug("CDP event handler error, skipping handler")  # Don't let handler errors break event loop
 
     def on(self, event_name: str, handler: Callable[[CDPEvent], Awaitable[None]]) -> None:

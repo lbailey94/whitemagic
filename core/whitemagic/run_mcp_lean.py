@@ -409,7 +409,7 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
             if dg != gana or dt != tool_name or da != tool_args or do != operation:
                 _compressed_in = True
                 gana, tool_name, tool_args, operation = dg, dt, da, do
-    except Exception:
+    except (ImportError, AttributeError):
         pass  # Compression is optional; never block dispatch
 
     # --- Input validation ---
@@ -471,7 +471,7 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
                 st = comp.stats(_sample_payload, _sample_comp)
                 if st["estimated_tokens_saved"] > 0:
                     logger.debug("PRAT vectorized: saved ~%d tokens (ratio %.2fx)", st["estimated_tokens_saved"], st["ratio"])
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
         return result
     except ImportError as exc:

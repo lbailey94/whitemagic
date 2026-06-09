@@ -68,7 +68,7 @@ class PolyglotAccelerator:
             if status["has_zig_simd"]:
                 self._zig_available = True
                 logger.info(f"⚡ Zig SIMD available (lane_width={status['lane_width']})")
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         # Check Mojo
@@ -78,7 +78,7 @@ class PolyglotAccelerator:
             if router._mojo_available:
                 self._mojo_available = True
                 logger.info("🔥 Mojo acceleration available")
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         if not any([self._rust_available, self._zig_available, self._mojo_available]):

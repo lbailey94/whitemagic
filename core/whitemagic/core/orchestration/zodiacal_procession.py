@@ -126,7 +126,8 @@ class ZodiacalProcession:
         for callback in self.callbacks.get(event, []):
             try:
                 callback(data)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Also emit to Gan Ying Bus

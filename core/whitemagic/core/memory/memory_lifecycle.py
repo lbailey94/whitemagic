@@ -121,7 +121,8 @@ class MemoryLifecycleManager:
                 try:
                     created = datetime.fromisoformat(created_at)
                     days_old = max(0.0, (datetime.now() - created).total_seconds() / 86400.0)
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     continue
 
                 if days_old < 0.5:

@@ -160,7 +160,8 @@ class DreamCycle:
                 # For now, we assume Elixir is monitoring activity via its own hooks
                 # or the bridge will handle the signal.
                 pass
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         if self._dreaming:
@@ -320,7 +321,8 @@ class DreamCycle:
                                 "INSERT OR IGNORE INTO tags (memory_id, tag) VALUES (?, ?)",
                                 [(row["id"], tag) for tag in auto_tags],
                             )
-                        except Exception:
+                        except Exception as e:
+                            logger.debug("Operation failed: %s", e)
                             pass
                         tagged_count += 1
 
@@ -538,7 +540,8 @@ class DreamCycle:
                         f"{b['constellation_1']} <-> {b['constellation_2']}"
                         for b in bridges_cal[:3]
                     ]
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         return result
@@ -601,7 +604,7 @@ class DreamCycle:
                         actual_writes=inhibited,
                         success=True,
                     )
-                except Exception:
+                except (ImportError, AttributeError):
                     pass
 
             # Detect communities for context
@@ -609,7 +612,8 @@ class DreamCycle:
                 communities = engine.detect_communities()
                 result["communities_detected"] = len(communities)
                 result["largest_community"] = communities[0].size if communities else 0
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         except Exception as e:
@@ -654,7 +658,7 @@ class DreamCycle:
 
             # Persist emergence insights as dream memories (self-reinforcing loop)
             persisted_count = self._persist_dream_insights(insights[:3])
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         # Auto-merge converging constellations (v15.9)
@@ -912,7 +916,8 @@ class DreamCycle:
                         },
                     )
                     persisted += 1
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
         except Exception as e:
             logger.debug(f"Failed to persist dream insights: {e}")
@@ -933,7 +938,7 @@ class DreamCycle:
                 source="dream_cycle",
                 data={"dream_event": event_name, **data},
             ))
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     # ------------------------------------------------------------------

@@ -114,7 +114,7 @@ class PatternFederation:
                     },
                     confidence=confidence,
                 ))
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
         logger.info(f"📚 Pattern '{name}' added to federation")

@@ -353,7 +353,8 @@ class ConstellationDetector:
                         # Skip generic tags
                         if tag not in ("archive", "scavenged", "meta", "history"):
                             counts[tag] += cnt
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         return counts
@@ -508,7 +509,8 @@ class ConstellationDetector:
                     if not hasattr(mem, "metadata") or mem.metadata is None:
                         mem.metadata = {}
                     mem.metadata["constellation"] = match
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 continue
 
         return memories
@@ -547,7 +549,7 @@ class ConstellationDetector:
             result = um.backend.get_constellation_membership(memory_id)
             if result:
                 return cast(dict[str, Any], result)
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         # Slow path: scan cached report member_ids
@@ -904,7 +906,8 @@ class ConstellationDetector:
                         f"{len(novel)} novel, {len(forgotten)} forgotten",
                     )
                 return matched, novel, forgotten
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass  # Fall back to Python/NumPy
 
         # Build cost matrix: n_new × n_old (distances)
@@ -957,7 +960,7 @@ class ConstellationDetector:
                     event_type=EventType.PATTERN_DETECTED,
                     data={"type": "FORGOTTEN_CONCEPT", "constellation": name},
                 )
-        except Exception:
+        except (ImportError, AttributeError):
             pass  # Gan Ying bus optional
 
 
@@ -1002,7 +1005,7 @@ try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             detector.annotate_memories(results, backend=um.backend)
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     register_search_hook(_constellation_annotation_hook)

@@ -231,7 +231,8 @@ class KokaNativeBridge:
                     result_queue.put(line)
                 else:
                     result_queue.put(None)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
         thread = threading.Thread(target=_reader, name='wm-koka-readline', daemon=True)

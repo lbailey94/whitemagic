@@ -281,7 +281,8 @@ class SQLiteBackend:
         logger.debug("SQLiteBackend.count_with_rust: falling back to Python count")
         try:
             return self._simple.count(memory_type)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return 0
 
     # --- Helpers ---

@@ -214,7 +214,7 @@ class FoolGuard:
                     "doctrine": "uncarved_block",
                 },
             ))
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         self.last_ralph_event = datetime.now()

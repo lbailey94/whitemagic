@@ -247,7 +247,7 @@ class ChariotArchaeologist:
             # Read file content (safe read)
             try:
                 content = file_path.read_text(encoding="utf-8", errors="ignore")
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 return # Skip unreadable
 
             with self.lock:
@@ -290,7 +290,8 @@ class ChariotArchaeologist:
                 }
                 self.write_finding(finding)
 
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             with self.lock:
                 self.stats_data["errors"] += 1
 

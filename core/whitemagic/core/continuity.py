@@ -35,7 +35,7 @@ def get_seen_registry():
                     if SEEN_REGISTRY.exists():
                         try:
                             data = _json_loads(SEEN_REGISTRY.read_text()) or []
-                        except Exception:
+                        except (OSError, UnicodeDecodeError):
                             data = []
                     data.append(entry)
                     atomic_write(SEEN_REGISTRY, _json_dumps(data, indent=2))
@@ -129,7 +129,8 @@ class ContinuitySuite:
                     "plugged": batt.power_plugged,
                     "secsleft": batt.secsleft if batt.secsleft != psutil.POWER_TIME_UNLIMITED else "unlimited",
                 }
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         return {"percent": 100, "plugged": True} # Default/Desktop
 

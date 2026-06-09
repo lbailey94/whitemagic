@@ -143,7 +143,8 @@ class SemanticSearcher:
                     try:
                         metadata = yaml.safe_load(parts[1])
                         content_text = parts[2].strip()
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("Operation failed: %s", e)
                         # Fallback if yaml fails
                         metadata = {}
                         content_text = content

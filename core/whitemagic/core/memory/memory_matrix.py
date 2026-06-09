@@ -59,7 +59,8 @@ class SeenRegistry:
                     data = _json_loads(self.storage_path.read_text()) or {}
                 for path, entry_data in data.items():
                     self._entries[path] = SeenEntry(**entry_data)
-            except Exception: pass
+            except Exception as e:
+                logger.debug("Memory matrix load failed: %s", e)
 
     def _save(self) -> None:
         data = {path: asdict(entry) for path, entry in self._entries.items()}
@@ -116,7 +117,8 @@ class ChronologicalTimeline:
                     data = _json_loads(self.storage_path.read_text())
                 self._events = [TimelineEvent.from_dict(e) for e in data.get("events", [])]
                 self._event_counter = data.get("counter", len(self._events))
-            except Exception: pass
+            except Exception as e:
+                logger.debug("Timeline load failed: %s", e)
 
     def _save(self) -> None:
         data = {
@@ -161,7 +163,8 @@ class SimpleEmbeddingIndex:
             try:
                 with file_lock(self.storage_path):
                     self._index = _json_loads(self.storage_path.read_text()) or {}
-            except Exception: pass
+            except Exception as e:
+                logger.debug("Embedding index load failed: %s", e)
 
     def stats(self) -> dict[str, Any]: return {"total_embeddings": len(self._index)}
     def search(self, query: str, limit: int = 10) -> list[tuple[str, float, str]]:
@@ -202,7 +205,9 @@ class MemoryMatrix:
                 if {"session_id", "started", "last_activity"}.issubset(filtered.keys()):
                     self._session = SessionContext(**filtered)
                 else: self._new_session()
-            except Exception: self._new_session()
+            except Exception as e:
+                logger.debug("Session load failed: %s", e)
+                self._new_session()
         else: self._new_session()
 
     def _new_session(self) -> None:

@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from whitemagic.config.concurrency import TEST_RUNNER_WORKERS
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -204,7 +206,8 @@ class ParallelTestRunner:
                         errors += 1
                     else:
                         failed += 1
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     errors += 1
 
         duration = time.time() - start_time

@@ -46,7 +46,8 @@ _RESERVED_KEYS = {
 def _stable_sorted(items: Iterable[Any]) -> list[Any]:
     try:
         return sorted(items)
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return sorted(items, key=lambda x: str(x))
 
 
@@ -72,7 +73,6 @@ def coerce_jsonable(value: Any) -> Any:
         try:
             return coerce_jsonable(value.to_dict())
         except Exception as e:
-            import logging
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
     if isinstance(value, Mapping):
         out: dict[str, Any] = {}

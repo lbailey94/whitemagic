@@ -449,7 +449,8 @@ class UnifiedOrchestrator:
                     event_type="wonder_sparked",
                     metadata=event.payload,
                 )
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
     async def _on_community_gathered(self, event: OrchestrationEvent) -> None:
@@ -539,7 +540,8 @@ class UnifiedOrchestrator:
                         "emergence_timestamp": datetime.now().isoformat(),
                     },
                 )
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Create narrative memory of the emergence
@@ -630,7 +632,8 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
                 status = self._nervous_system.get_subsystem_status()
                 active_count = sum(1 for s in status.values() if s.get("active", False))
                 scores.append(active_count / 8.0)  # 8 subsystems including apotheosis
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Gardens contribution
@@ -644,7 +647,8 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
                     scores.append(1.0)
                 else:
                     scores.append(0.5)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         return sum(scores) / len(scores) if scores else 0.0

@@ -229,14 +229,16 @@ class HolographicMemory:
         if self._index_5d:
             try:
                 return {"status": "active", "backend": "rust5d", "size": self._index_5d.size()}
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 return {"status": "error", "backend": "rust5d"}
         if not self._index:
             return {"status": "unavailable"}
         try:
             stats = self._index.stats()
             return {"status": "active", "backend": "rust4d", **stats}
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return {"status": "error"}
 
     def find_clusters(self, radius: float = 0.35, min_size: int = 2) -> list[tuple[tuple[float, float, float, float], list[str]]]:

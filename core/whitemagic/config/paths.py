@@ -8,6 +8,7 @@ Policy (AI-first / OSS-friendly):
 - Whitemagic should not write runtime state into the repo by default.
 - Callers can explicitly set `WM_STATE_ROOT` to place state wherever they want.
 """
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -176,7 +177,6 @@ def get_external_app_data_paths(app_name: str) -> list[Path]:
 
 def ensure_paths() -> Any:
     """Ensure all core directories exist."""
-    import logging
     log = logging.getLogger(__name__)
     if not os.getenv("WM_SILENT_INIT"):
         log.info(f"Ensuring paths exist at {WM_ROOT}...")
@@ -222,7 +222,8 @@ def ensure_paths() -> Any:
     # DB path may be overridden (e.g., containers); ensure its parent exists.
     try:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
     if not os.getenv("WM_SILENT_INIT"):
         log.info("Paths verified.")

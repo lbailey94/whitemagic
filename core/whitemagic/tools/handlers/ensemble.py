@@ -338,7 +338,7 @@ def handle_ensemble_history(**kwargs: Any) -> dict[str, Any]:
                 "consensus": record.get("analysis", {}).get("consensus_strength"),
                 "created_at": record.get("created_at"),
             })
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             continue
         if len(entries) >= limit:
             break

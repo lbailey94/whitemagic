@@ -48,7 +48,8 @@ class BalanceMonitor:
             return 1.0
         try:
             return float(hv.snapshot().harmony_score)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return 1.0
 
     def get_status(self) -> dict[str, Any]:
@@ -97,7 +98,8 @@ class BalanceMonitor:
             return {}
         try:
             return dict(hv.snapshot().to_dict())
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return {}
 
 

@@ -112,13 +112,15 @@ class EmbeddingEngine:
         if self._db_conn is not None:
             try:
                 self._db_conn.close()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
             self._db_conn = None
         if self._cold_db_conn is not None:
             try:
                 self._cold_db_conn.close()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
             self._cold_db_conn = None
         self._invalidate_vec_cache()
@@ -161,7 +163,8 @@ class EmbeddingEngine:
                     if res is None:
                         return False
                     return cast(int, res[0]) > 0
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     return False
             return False
 
@@ -320,7 +323,8 @@ class EmbeddingEngine:
                 current_count = cold_db.execute(
                     "SELECT COUNT(*) FROM memory_embeddings",
                 ).fetchone()[0]
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 current_count = 0
 
             if current_count == 0:
@@ -336,7 +340,8 @@ class EmbeddingEngine:
                 rows = cold_db.execute(
                     "SELECT memory_id, embedding FROM memory_embeddings",
                 ).fetchall()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 return [], []
 
             ids = [r[0] for r in rows]
@@ -400,7 +405,8 @@ class EmbeddingEngine:
             ).fetchone()
             if row and row[0]:
                 return unpack_embedding(row[0])
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         return None
 
@@ -416,7 +422,8 @@ class EmbeddingEngine:
             ).fetchone()
             if row and row[0]:
                 return unpack_embedding(row[0])
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         return None
 
@@ -433,7 +440,8 @@ class EmbeddingEngine:
             db.commit()
             self._invalidate_vec_cache()
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return False
 
     def cache_embedding(self, memory_id: str, embedding: list[float]) -> bool:
@@ -449,7 +457,8 @@ class EmbeddingEngine:
             db.commit()
             self._invalidate_vec_cache()
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return False
 
     def _invalidate_vec_cache(self) -> None:
@@ -566,7 +575,8 @@ class EmbeddingEngine:
                 current_count = db.execute(
                     "SELECT COUNT(*) FROM memory_embeddings",
                 ).fetchone()[0]
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 current_count = 0
 
             if (self._vec_cache_ids is not None
@@ -579,7 +589,8 @@ class EmbeddingEngine:
                 rows = db.execute(
                     "SELECT memory_id, embedding FROM memory_embeddings",
                 ).fetchall()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 return [], []
 
             if not rows:
@@ -679,7 +690,8 @@ class EmbeddingEngine:
                     (mid, pack_embedding(emb), MODEL_NAME),
                 )
                 cached += 1
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
         db.commit()
         self._invalidate_vec_cache()
@@ -977,7 +989,8 @@ class EmbeddingEngine:
             results.sort(key=lambda r: r["similarity"], reverse=True)
             return results[:max_results]
 
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return []
 
     async def embedding_stats_async(self) -> dict[str, Any]:
@@ -993,7 +1006,8 @@ class EmbeddingEngine:
             if cold_db:
                 try:
                     cold_total = cold_db.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0]
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
             hnsw_status = "active" if self._hnsw_index is not None else (
                 "available" if self._hnsw_is_available() else "not_installed"
@@ -1026,7 +1040,8 @@ class EmbeddingEngine:
             if cold_db:
                 try:
                     cold_total = cast(int, cold_db.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0])
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
             hnsw_status = "active" if self._hnsw_index is not None else (
                 "available" if self._hnsw_is_available() else "not_installed"

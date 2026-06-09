@@ -7,6 +7,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 
 class SpellType(Enum):
@@ -58,7 +60,8 @@ class Spell:
             try:
                 self.effect(context or {})
                 return SpellOutcome.SUCCESS
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 return SpellOutcome.FAILED
 
         # Symbolic cast (no executable effect)

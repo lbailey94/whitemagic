@@ -535,7 +535,7 @@ class PolyglotRouter:
                                 results.append((str(path), i + 1, line.strip(), 1.0, ""))
                                 if len(results) >= limit:
                                     return results
-                    except Exception:
+                    except (OSError, UnicodeDecodeError):
                         continue
             return results
 
@@ -638,7 +638,8 @@ class PolyglotRouter:
                         "size": stat.st_size,
                         "mtime": stat.st_mtime,
                     })
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
             return results
 

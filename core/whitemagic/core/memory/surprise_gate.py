@@ -111,7 +111,7 @@ class SurpriseGate:
             engine = get_embedding_engine()
             if not engine.available():
                 raise RuntimeError("Embeddings unavailable")
-        except Exception:
+        except (ImportError, AttributeError):
             # No embeddings → pass through as normal create
             with self._lock:
                 self._total_evaluations += 1
@@ -145,7 +145,8 @@ class SurpriseGate:
             hits = engine.search_similar(
                 content, limit=limit, min_similarity=0.0,
             )
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             hits = []
 
         if not hits:

@@ -27,6 +27,7 @@ automatically on first open (idempotent — safe to call multiple times).
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -37,6 +38,8 @@ from typing import Any
 import yaml
 
 from whitemagic.config.paths import get_state_root
+
+logger = logging.getLogger(__name__)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS predictions (
@@ -113,7 +116,8 @@ class TemporalForecastDB:
         try:
             yield conn
             conn.commit()
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             conn.rollback()
             raise
         finally:
@@ -388,7 +392,6 @@ class TemporalForecastDB:
             return []
 
         from whitemagic.forecasting.brier import calibration_curve as _cc
-
         forecasts = [r["confidence"] for r in rows]
         outcomes = [1 if r["status"] == "validated" else 0 for r in rows]
         return _cc(forecasts, outcomes, n_bins=n_bins)

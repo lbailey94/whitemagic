@@ -94,12 +94,14 @@ class DreamConsolidator:
 
                 try:
                     created_at = datetime.fromisoformat(created_at_str) if created_at_str else now
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     created_at = now
 
                 try:
                     last_revisited = datetime.fromisoformat(last_revisited_str) if last_revisited_str else created_at
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     last_revisited = created_at
 
                 age_days = (now - created_at).total_seconds() / 86400.0

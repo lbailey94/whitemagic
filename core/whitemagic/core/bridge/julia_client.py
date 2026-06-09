@@ -97,7 +97,8 @@ class JuliaPersistentClient:
             sock.close()
             ctx.term()
             return cast(bool, response.get("pong", False))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return False
 
     def _send_request(self, request: dict) -> dict:
@@ -204,7 +205,8 @@ class JuliaPersistentClient:
             self.server_process.terminate()
             try:
                 self.server_process.wait(timeout=5)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 self.server_process.kill()
         self._connected = False
         logger.info("Julia client stopped")

@@ -7,6 +7,8 @@ Theme: Resilience, Memory, Closure, Governance.
 from typing import Any
 
 from .base import BaseGana, GanaCall, LunarMansion
+import logging
+logger = logging.getLogger(__name__)
 
 
 class DipperGana(BaseGana):
@@ -523,7 +525,7 @@ Structure allows for rest and recovery.
                         "log": result.stdout[:200] if status == "success" else result.stderr,
                         "status": "structured",
                     }
-            except Exception:
+            except OSError:
                 pass
 
         if "session_handoff" in call.task or "handoff" in call.task:

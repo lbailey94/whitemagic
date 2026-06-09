@@ -24,7 +24,7 @@ def get_system_time(**kwargs: Any) -> dict[str, Any]:
     try:
         from whitemagic.core.temporal import get_system_time as _get_time
         return _get_time()
-    except Exception:
+    except (ImportError, AttributeError):
         from datetime import datetime
         return {"iso": datetime.now().isoformat(), "source": "python_fallback"}
 
@@ -39,5 +39,5 @@ def _emit_resonance_event(event_type: str, data: dict[str, Any], source: str = "
         else:
             event = ResonanceEvent(source=source, event_type=EventType.SYSTEM_STATE_CHANGE, data={"event_type": event_type, **data})
             bus.emit(event)
-    except Exception:
+    except (ImportError, AttributeError):
         pass

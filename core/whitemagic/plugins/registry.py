@@ -149,7 +149,7 @@ class PluginRegistry:
             self.load_order = state.get("load_order", [])
             self.loaded_at = state.get("loaded_at", {})
             return True
-        except Exception:
+        except (json.JSONDecodeError, TypeError):
             return False
 
     def get_dependencies(self, name: str) -> list[str]:

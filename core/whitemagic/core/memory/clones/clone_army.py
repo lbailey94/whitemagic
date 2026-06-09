@@ -121,7 +121,8 @@ class CloneArmy:
                         line_number=i + 1,
                         match_context=context[:500],
                     ))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         return results
@@ -237,7 +238,8 @@ class CloneArmy:
                 try:
                     results = future.result(timeout=5.0)
                     all_results.extend(results)
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
         self._results = all_results

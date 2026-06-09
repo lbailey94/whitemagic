@@ -84,7 +84,8 @@ class NervousSystem:
                     status[name] = "OK" if organ.is_healthy() else "UNHEALTHY"
                 else:
                     status[name] = "REGISTERED"
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 status[name] = "ERROR"
         return status
 

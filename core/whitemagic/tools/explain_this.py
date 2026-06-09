@@ -83,7 +83,7 @@ def _get_tool_metadata(tool_name: str) -> dict[str, Any]:
                 "gana": tool.gana,
                 "garden": tool.garden,
             }
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     return {"name": tool_name, "category": "unknown", "safety": "unknown"}
 
@@ -150,7 +150,8 @@ def _estimate_resources(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any
                 estimate["expected_side_effects"].append("System-level mutation")
 
         return estimate
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return {"reads": True, "writes": False, "deletes": False}
 
 

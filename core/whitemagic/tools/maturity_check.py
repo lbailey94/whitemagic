@@ -82,7 +82,7 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
             )
             if hs_result and "allowed_categories" in hs_result:
                 logger.debug("Haskell maturity gate consulted for %s", tool_name)
-    except Exception:
+    except (ImportError, AttributeError):
         pass  # Haskell unavailable, fall through to Python
 
     # Check current maturity
@@ -125,5 +125,6 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
                 "required_level": required,
             },
         }
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return None  # If maturity system is unavailable, allow through

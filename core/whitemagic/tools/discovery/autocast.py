@@ -117,7 +117,7 @@ class ToolDiscovery:
                     confidence=0.8
                 )
                 self.gan_ying.emit(event, cascade=True)
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
     def discover_by_category(self, category: str) -> list[dict[str, Any]]:
@@ -261,7 +261,7 @@ class ToolDiscovery:
                             "confidence": 0.3,
                             "strategy": "random",
                         })
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
         # Deduplicate and sort by confidence

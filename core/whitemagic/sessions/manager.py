@@ -14,6 +14,8 @@ from uuid import uuid4
 from whitemagic.config.paths import SESSIONS_DIR
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
+import logging
+logger = logging.getLogger(__name__)
 
 
 class SessionStatus(Enum):
@@ -118,7 +120,7 @@ class SessionManager:
             session = Session.from_dict(data)
             self._active_sessions[session_id] = session
             return session
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return None
 
     def list_sessions(self, status: SessionStatus | None = None, limit: int = 10) -> list[Session]:
@@ -131,7 +133,7 @@ class SessionManager:
                 if status and session.status != status:
                     continue
                 sessions.append(session)
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 continue
 
         # Sort by updated_at desc

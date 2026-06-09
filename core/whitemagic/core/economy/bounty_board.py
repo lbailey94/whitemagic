@@ -115,7 +115,7 @@ class BountyBoard:
                             bounty.status = "active"
                             self._persist(bounty)
                             return {"status": "ok", "bounty": bounty.to_dict()}
-                except Exception:
+                except (ImportError, AttributeError):
                     continue
 
         return {"status": "error", "message": "Escrow transaction not found or invalid"}

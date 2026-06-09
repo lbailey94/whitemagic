@@ -369,7 +369,7 @@ class CPUInferenceEngine:
                     method="count",
                     tokens_equivalent=500,
                 )
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
         # Count Python files (general fallback)

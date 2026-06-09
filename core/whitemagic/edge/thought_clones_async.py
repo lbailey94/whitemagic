@@ -685,7 +685,7 @@ async def doctrine_deploy(
                         "nature": "qi",
                         "wu_xing_phase": spec.wu_xing_phase.value,
                     })
-                except Exception:
+                except (ImportError, AttributeError):
                     pass
 
         return {

@@ -155,7 +155,8 @@ class OTelExporter:
                 ) as span:
                     if status == "error":
                         span.set_status(trace.StatusCode.ERROR)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # In-memory buffer

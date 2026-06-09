@@ -291,7 +291,7 @@ class MemoryLifecycleManager:
                     declared_safety="READ",
                     actual_writes=archived,
                 )
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     def _emit_event(self, report: Any) -> None:
@@ -311,7 +311,7 @@ class MemoryLifecycleManager:
                     "decayed": getattr(report, "decayed", 0),
                 },
             ))
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     # ------------------------------------------------------------------

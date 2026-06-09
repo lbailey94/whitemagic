@@ -28,6 +28,8 @@ from __future__ import annotations
 import importlib.util
 import math
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 HAS_RUST = importlib.util.find_spec("whitemagic_rs") is not None
 
@@ -88,7 +90,8 @@ class MemoryStatsAnalyzer:
                 # Rust batch_retention_to_distance can be repurposed for zone mapping
                 # But it expects specific args. Let's use the faster Python approach with list comprehension
                 pass
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Optimized Python: use bisect for O(log n) zone lookup per distance

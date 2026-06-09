@@ -196,7 +196,8 @@ class DispatchBridge:
             if breaker_state == 1:  # OPEN
                 self._total_denied += 1
                 return DispatchResult.CIRCUIT_OPEN
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass  # Board not available, skip check
 
         # 3. Rate limit (simplified — full rate limiting is in Rust)
@@ -211,7 +212,8 @@ class DispatchBridge:
                 routed = self._zig_lib.wm_dispatch_route(tool_id)
                 if isinstance(routed, (int, float)):
                     return int(routed)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         return _HANDLER_TABLE.get(tool_id, 0)
@@ -233,7 +235,8 @@ class DispatchBridge:
                 result["zig_checks"] = self._zig_lib.wm_dispatch_stats_total()
                 result["zig_allowed"] = self._zig_lib.wm_dispatch_stats_allowed()
                 result["zig_denied"] = self._zig_lib.wm_dispatch_stats_denied()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
         return result
 

@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT, get_external_app_data_paths
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -141,7 +143,8 @@ class WindsurfConversationReader:
                     "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
                     "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
                 })
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 continue
 
         return conversations
@@ -314,7 +317,8 @@ class WindsurfConversationReader:
                         "match_count": len(matches),
                         "matches": matches
                     })
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 continue
 
         return results

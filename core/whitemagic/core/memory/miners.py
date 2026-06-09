@@ -381,7 +381,7 @@ class AssociationMiner:
                 result = rust_kw(text, max_keywords)
                 if result is not None:
                     return cast(set[str], result)
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
         # Python extraction (fastest path for keywords)
@@ -549,7 +549,7 @@ class AssociationMiner:
                     for (mid, _), kw_set in zip(texts_for_batch, result):
                         fingerprints[mid] = kw_set
                     batch_done = True
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
             if not batch_done:
@@ -614,8 +614,8 @@ class AssociationMiner:
                                     (p.target_id, p.source_id, p.overlap_score, _now, _now),
                                 )
                                 report.links_created += 1
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug("Association link insert failed: %s", e)
             except Exception as e:
                 logger.error(f"Association mining: persistence failed: {e}")
 
@@ -819,8 +819,8 @@ class AssociationMiner:
                                     ),
                                 )
                                 report.links_created += 1
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug("Semantic link insert failed: %s", e)
             except Exception as e:
                 logger.error(f"Semantic mining: persistence failed: {e}")
 
@@ -1080,8 +1080,8 @@ class CausalMiner:
             )
             if pairs:
                 use_embeddings = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("find_similar_pairs failed: %s", e)
 
         # Hydrate memory metadata for temporal + tag signals
         try:
@@ -1132,8 +1132,8 @@ class CausalMiner:
                 ).fetchall()
                 for row in rows:
                     existing_directed.add((row[0], row[1]))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Causal existing edges fetch failed: %s", e)
 
         # Score each pair
         edges: list[CausalEdge] = []
@@ -1232,8 +1232,8 @@ class CausalMiner:
                                     ),
                                 )
                                 report.edges_created += 1
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug("Causal edge insert failed: %s", e)
             except Exception as e:
                 logger.error(f"Causal mining: persistence failed: {e}")
 

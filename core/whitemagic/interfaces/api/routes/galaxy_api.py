@@ -13,6 +13,8 @@ from typing import Any
 from whitemagic.core.async_layer import AsyncCompat
 from whitemagic.core.memory.constellation_algorithms import detect_kdtree, detect_semantic
 from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+import logging
+logger = logging.getLogger(__name__)
 
 # Simple TTL cache for constellation detection results
 _CONSTELLATION_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
@@ -42,7 +44,8 @@ def _refresh_constellation_cache(
         )
         _CONSTELLATION_CACHE[cache_key] = (time.time(), constellations)
         return constellations
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return []
 
 
@@ -154,7 +157,8 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -
             memories.extend(page)
             if len(memories) >= limit:
                 break
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     if not memories:
@@ -163,7 +167,8 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -
     coords_map: dict[str, tuple] = {}
     try:
         coords_map = um.backend.get_all_coords()
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     nodes: list[dict[str, Any]] = []
@@ -209,7 +214,8 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -
             )
             for row in cursor:
                 edges.append({"source": row[0], "target": row[1], "strength": round(row[2] or 0.5, 2)})
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     return nodes, edges
@@ -241,7 +247,8 @@ def _build_constellations_from_galaxy(
             memories.extend(page)
             if len(memories) >= limit:
                 break
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     if not memories:
@@ -250,7 +257,8 @@ def _build_constellations_from_galaxy(
     coords_map: dict[str, tuple] = {}
     try:
         coords_map = um.backend.get_all_coords()
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     # Build coordinate list with IDs
@@ -286,7 +294,8 @@ def _build_constellations_from_galaxy(
         groups, stabilities = detect_kdtree(
             coords, ids=mem_ids, min_members=min_members, max_radius=max_radius
         )
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return []
 
     constellations: list[dict[str, Any]] = []
@@ -393,9 +402,9 @@ def _build_semantic_constellations_from_galaxy(
                     if vec and len(vec) > 0:
                         embeddings.append([float(v) for v in vec])
                         mem_ids.append(str(mem_id))
-                except Exception:
+                except (ImportError, AttributeError):
                     pass
-    except Exception:
+    except (ImportError, AttributeError):
         return []
 
     if len(embeddings) < min_members:
@@ -413,7 +422,8 @@ def _build_semantic_constellations_from_galaxy(
             )
             for row in cursor:
                 mem_lookup[str(row["id"])] = row
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     try:
@@ -423,7 +433,8 @@ def _build_semantic_constellations_from_galaxy(
             similarity_threshold=similarity_threshold,
             min_members=min_members,
         )
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return []
 
     constellations: list[dict[str, Any]] = []
@@ -575,7 +586,7 @@ if router is not None:
                 if mt.name.lower() == zone.upper() or mt.name.lower() == zone.lower():
                     mem_type = mt
                     break
-        except Exception:
+        except (ImportError, AttributeError):
             mem_type = None
 
         try:

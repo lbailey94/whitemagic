@@ -44,7 +44,7 @@ def _read_cache() -> dict | None:
         data = cast(dict[str, Any], _json_loads(p.read_text(encoding="utf-8")))
         if time.time() - data.get("ts", 0) < _CACHE_TTL_SECONDS:
             return data
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         pass
     return None
 
@@ -58,7 +58,7 @@ def _write_cache(latest: str, current: str) -> None:
             _json_dumps({"ts": time.time(), "latest": latest, "current": current}),
             encoding="utf-8",
         )
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         pass
 
 

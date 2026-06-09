@@ -42,7 +42,8 @@ def _safe(fn: Callable[[], T], default: T | None = None) -> T | None:
     """Call fn, return default on any failure."""
     try:
         return fn()
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return default
 
 

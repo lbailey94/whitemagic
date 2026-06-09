@@ -5,6 +5,8 @@ from pathlib import Path
 import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
+import logging
+logger = logging.getLogger(__name__)
 
 try:
     from rich.console import Console
@@ -162,7 +164,7 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
                     _ok(f"{model_count} model(s) available")
                 else:
                     _skip("Ollama installed but not running")
-            except Exception:
+            except OSError:
                 _skip("Ollama installed but not responding")
         else:
             _skip("Ollama not found (optional — install from ollama.com)")

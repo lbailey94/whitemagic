@@ -4,7 +4,10 @@ Phase 1 VC3: Translate deploy_grand_army.py sorting to Rust.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, TypeVar
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -12,7 +15,7 @@ T = TypeVar('T')
 _rs: Any = None
 try:
     import whitemagic_rust as _rs
-except Exception:
+except (ImportError, ModuleNotFoundError):
     pass
 
 
@@ -33,7 +36,8 @@ def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:
             else:
                 # Rust can't handle key functions - use Python
                 pass
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
     # Python fallback
@@ -67,7 +71,8 @@ def parallel_sort_by_key(
     if _rs is not None and hasattr(_rs, 'sort_dicts_by_field'):
         try:
             return list(_rs.sort_dicts_by_field(data, key_field, reverse))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
     # Python fallback
@@ -106,7 +111,8 @@ class ParallelSorter:
         if self._rust_available:
             try:
                 return list(_rs.parallel_sort_batch(batches, reverse))
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Python fallback - use ThreadPoolExecutor for parallel sorting

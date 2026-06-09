@@ -63,7 +63,8 @@ class DistributedCache:
             # Test connection
             if self._redis_client is not None:
                 self._redis_client.ping()
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             # Fallback to in-memory
             self._redis_client = None
 

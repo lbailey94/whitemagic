@@ -220,7 +220,8 @@ class KnowledgeGraphV2:
                         )
                     )
                     stored += 1
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
             conn.commit()

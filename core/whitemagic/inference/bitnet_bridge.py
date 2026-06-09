@@ -192,5 +192,5 @@ def _emit_inference_event(result: dict[str, Any], prompt: str) -> Any:
                 "status": result.get("status"),
             },
         ))
-    except Exception:
+    except (ImportError, AttributeError):
         pass

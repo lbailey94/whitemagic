@@ -64,7 +64,8 @@ def emit_event(event_type: str | EventType, data: dict[str, Any], confidence: fl
             timestamp=datetime.now(),
         )
         bus.emit(event)
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass  # Graceful degradation
 
 
@@ -172,7 +173,7 @@ def setup_gan_ying_listeners() -> None:
                         # Decay significantly
                         memory.neuro_score = max(0.0, memory.neuro_score - 0.15)
                         logger.info(f"🧠 Neural decay: {memory.title} weakened by rejection")
-                except Exception:
+                except (ImportError, AttributeError):
                     pass
 
         # 3. Emotional resonance (Joy) boosts active memories
@@ -234,7 +235,7 @@ def setup_gan_ying_listeners() -> None:
                             # Boost memories that were found
                             mem.neuro_score = min(1.0, mem.neuro_score + 0.05)
                     logger.info(f"🧠 Boosted {len(related_results)} memories from successful clone search")
-                except Exception:
+                except (ImportError, AttributeError):
                     pass
 
         # Register listeners

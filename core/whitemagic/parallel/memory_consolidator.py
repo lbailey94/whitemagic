@@ -14,6 +14,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -107,7 +109,7 @@ class ParallelMemoryConsolidator:
                 content=content,
                 word_count=len(content.split()),
             )
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return None
 
     def consolidate(self, memory_dir: Path | None = None) -> ConsolidationResult:

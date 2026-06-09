@@ -229,7 +229,8 @@ class UMAPProjector:
         n_clusters = 0
         try:
             n_clusters = self._cluster_points(points, coords)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         elapsed = (time.perf_counter() - start) * 1000

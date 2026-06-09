@@ -83,7 +83,7 @@ def _cosine(a: list[float], b: list[float]) -> float:
             cosine_similarity as _simd_cos,
         )
         return cast(float, _simd_cos(a, b))
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     d=sum(x*y for x,y in zip(a,b))
     na=math.sqrt(sum(x*x for x in a))
@@ -121,7 +121,8 @@ class VectorSearch:
                     vec=list(struct.unpack(f"{n}f",vb))
                     self._cache[mid]=vec
                     self._meta[mid]={"title":t or "","snippet":s or ""}
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
     def _encode(self, texts: list[str]) -> list[list[float]]:
@@ -222,7 +223,7 @@ class VectorSearch:
                         vecs = list(self._cache.values())
                         topk = batch_topk_cosine(qvec, vecs, limit)
                         scored = [(ids[idx], score) for idx, score in topk]
-                    except Exception:
+                    except (ImportError, AttributeError):
                         scored = []
                 if not scored:
                     for mid,vec in self._cache.items():
@@ -269,7 +270,8 @@ def get_vector_status() -> dict[str, Any]:
             with sqlite3.connect(db) as c:
                 row = c.execute("SELECT COUNT(*) FROM embeddings").fetchone()
                 indexed = int(row[0]) if row else 0
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         indexed = 0
 
     return {

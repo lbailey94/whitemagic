@@ -27,12 +27,14 @@ def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
         avg_distance = 0.0
         try:
             constellations = len(gm.constellations) if hasattr(gm, "constellations") else 0
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         try:
             if hasattr(gm, "get_average_distance"):
                 avg_distance = gm.get_average_distance()
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         return {

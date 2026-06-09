@@ -6,6 +6,8 @@ Manage the 26 consciousness domains.
 from typing import Any
 
 import click
+import logging
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -58,7 +60,7 @@ def activate(garden: str) -> None:
                 "garden": garden,
                 "timestamp": "now",
             })
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     except ValueError as e:

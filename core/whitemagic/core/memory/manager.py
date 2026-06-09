@@ -7,6 +7,8 @@ from typing import Any, cast
 
 from whitemagic.core.memory.unified import UnifiedMemory, get_unified_memory
 from whitemagic.core.memory.unified_types import Memory, MemoryType
+import logging
+logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
@@ -222,7 +224,7 @@ class MemoryManager:
         try:
             from whitemagic.optimization.predictive_cache import get_memory_cache
             return cast(dict[str, Any], get_memory_cache().get_stats())
-        except Exception:
+        except (ImportError, AttributeError):
             return None
 
     def list_all_memories(self, include_archived: bool = False, sort_by: str = "created") -> dict[str, list[dict[str, Any]]]:

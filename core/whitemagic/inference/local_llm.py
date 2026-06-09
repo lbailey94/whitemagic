@@ -41,7 +41,8 @@ class LocalLLM:
                     logger.warning(f"Model {self.model} not found in Ollama. Available: {models}")
             else:
                 self._available = False
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             self._available = False
 
     @property

@@ -385,7 +385,7 @@ class MarketplaceBridge:
                     service_type="marketplace_exchange",
                     memo=f"Exchange {negotiation_id}",
                 )
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         return {

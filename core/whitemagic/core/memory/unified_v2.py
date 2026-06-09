@@ -101,7 +101,7 @@ class UnifiedMemoryV2:
             try:
                 from whitemagic_rs import query_route
                 strategy = query_route(query) or "hybrid_balanced"
-            except Exception:
+            except (ImportError, AttributeError):
                 strategy = "hybrid_balanced"
         elif strategy is None:
             strategy = "hybrid_balanced"

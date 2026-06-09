@@ -92,7 +92,8 @@ def show_config() -> None:
     """Print a safe, minimal configuration summary for diagnostics."""
     try:
         current = _load_manager_attr("config")
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         current = None
 
     env_value = getattr(current, "environment", "unknown")

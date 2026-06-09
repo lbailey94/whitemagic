@@ -7,6 +7,8 @@ Prevents system overload while maximizing throughput.
 import os
 import subprocess
 from dataclasses import dataclass
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,7 +69,7 @@ def detect_hardware() -> HardwareProfile:
             elif line.startswith('MemAvailable:'):
                 avail_ram_kb = int(line.split()[1])
                 available_ram_gb = avail_ram_kb / (1024**2)
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         total_ram_gb = 8.0
         available_ram_gb = 4.0
 
@@ -84,7 +86,7 @@ def detect_hardware() -> HardwareProfile:
             disk_free_gb = float(parts[3].rstrip('G'))
         else:
             disk_free_gb = 50.0
-    except Exception:
+    except (ImportError, AttributeError):
         disk_free_gb = 50.0
 
     # Compute safe limits
@@ -174,7 +176,8 @@ def check_resource_headroom() -> dict:
             "cpu_percent_used": cpu_percent,
             "safe_to_proceed": ram_percent_used < 85 and cpu_percent < 90,
         }
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return {
             "ram_available_gb": 4.0,
             "ram_percent_used": 50.0,

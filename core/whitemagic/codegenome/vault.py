@@ -28,7 +28,7 @@ def _emit_gan_ying(event_type: str, data: dict[str, Any]) -> None:
         from whitemagic.core.resonance.gan_ying import get_bus
         bus = get_bus()
         bus.emit(event_type, data)
-    except Exception:
+    except (ImportError, AttributeError):
         pass  # Graceful degradation if Gan Ying is unavailable
 
 

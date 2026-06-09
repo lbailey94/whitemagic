@@ -220,7 +220,7 @@ def _get_harmony_snapshot() -> dict[str, Any]:
             "error_rate": snap.error_rate,
             "dharma": snap.dharma,
         }
-    except Exception:
+    except (ImportError, AttributeError):
         return {
             "harmony_score": 1.0,
             "guna_dominant": "rajasic",
@@ -250,7 +250,7 @@ def _get_lunar_phase() -> tuple:
         phase = get_current_lunar_phase()
         mansion = _mock_lunar_mansion()
         return (phase, mansion.number)
-    except Exception:
+    except (ImportError, AttributeError):
         import time as _t
         days = _t.time() / 86400
         phase = (days % 29.53059) / 29.53059
@@ -380,7 +380,7 @@ def build_resonance_context(gana_name: str) -> dict[str, Any]:
                 f"consecutive_failures={rep['consecutive_failures']}). "
                 f"Consider routing to a peer Gana."
             )
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
     return ctx
@@ -418,7 +418,7 @@ def _compute_prat_economics(
                 safety_multiplier = 1.5
             elif td and td.safety.value == "delete":
                 safety_multiplier = 2.0
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     call_cost = round(base_cost * safety_multiplier, 2)

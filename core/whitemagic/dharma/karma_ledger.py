@@ -165,7 +165,8 @@ class KarmaLedger:
             signer = get_audit_signer()
             if signer.is_available():
                 sig_data = signer.sign(payload)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass  # signing is optional; never block record()
 
         entry = KarmaEntry(
@@ -281,7 +282,8 @@ class KarmaLedger:
                         if not signer.verify(payload, entry.signature, entry.key_id):
                             sig_fail_at = checked
                             break
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("Operation failed: %s", e)
                         pass
                 checked += 1
 

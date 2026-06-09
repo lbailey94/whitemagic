@@ -92,7 +92,8 @@ class LocalReasoningEngine:
                 insight = rule(query)
                 if insight:
                     insights.append(insight)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # 2. Pattern matching (fast, regex)
@@ -162,7 +163,8 @@ class LocalReasoningEngine:
                         method="pattern_match",
                         tokens_saved=100,
                     ))
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         return insights
@@ -195,7 +197,8 @@ class LocalReasoningEngine:
                 ))
 
             return insights
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return []
 
     def _embedding_search(self, query: str, max_results: int) -> list[LocalInsight]:
@@ -220,7 +223,8 @@ class LocalReasoningEngine:
                 ))
 
             return insights
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return []
 
     def _generate_summary(self, query: str, insights: list[LocalInsight]) -> str:
@@ -272,7 +276,7 @@ def garden_count_rule(query: str) -> LocalInsight | None:
                 method="rule",
                 tokens_saved=1000,
             )
-        except Exception:
+        except (ImportError, AttributeError):
             pass
     return None
 
@@ -306,7 +310,7 @@ def cpu_inference_rule(query: str) -> LocalInsight | None:
                     method="cpu_inference",
                     tokens_saved=result.tokens_equivalent,
                 )
-        except Exception:
+        except (ImportError, AttributeError):
             pass
     return None
 

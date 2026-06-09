@@ -7,9 +7,12 @@ enabling precise navigation to specific functions within gardens.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from whitemagic.core.intelligence.garden_gana_registry import (
     calculate_resonance,
@@ -62,7 +65,7 @@ class GardenFunctionRegistry:
                 self._rebuild_indices()
                 self._loaded = True
                 return True
-            except Exception:
+            except (json.JSONDecodeError, TypeError):
                 pass
         return False
 

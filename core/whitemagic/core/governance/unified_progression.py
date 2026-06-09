@@ -159,7 +159,7 @@ class UnifiedProgressionDaemon:
                     "activations": self.state.total_activations,
                 },
             )
-        except Exception:
+        except (ImportError, AttributeError):
             pass  # OTEL is optional; never block the progression clock
 
 # Singleton instance

@@ -62,7 +62,7 @@ class SutraKernelBridge:
             if score < 0.7:
                 return "Intervene: Cautionary threshold reached."
             return "Observe" if score > 0.9 else "Rajasic: Proceed with logging"
-        except Exception:
+        except (ImportError, AttributeError):
             # Absolute last resort: Fail-Safe (Restrictive)
             return "Intervene: Safety system failure."
 

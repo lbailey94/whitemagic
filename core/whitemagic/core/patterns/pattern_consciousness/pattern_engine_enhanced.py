@@ -195,7 +195,8 @@ class EnhancedPatternEngine:
                     "timestamp": datetime.now().isoformat(),
                 })
 
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             # Graceful fallback
             pass
 

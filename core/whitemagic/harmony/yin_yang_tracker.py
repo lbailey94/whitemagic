@@ -23,6 +23,8 @@ from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.core import parse_datetime
+import logging
+logger = logging.getLogger(__name__)
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
@@ -238,7 +240,7 @@ class YinYangBalanceTracker:
                 confidence=1.0 - metrics.balance_score,
                 timestamp=datetime.now(),
             ))
-        except Exception:
+        except (ImportError, AttributeError):
             # Fail silently if Gan Ying not available
             pass
 

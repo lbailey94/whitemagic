@@ -575,7 +575,8 @@ class OMSManager:
                         "topic": manifest.get("meta", {}).get("topic", ""),
                         "memory_count": manifest.get("meta", {}).get("memory_count", 0),
                     })
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 continue
 
         return {"status": "ok", "packages": packages, "directory": search_dir}

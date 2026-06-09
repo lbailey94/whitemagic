@@ -109,7 +109,7 @@ def export_audit_log(
                 "result_status": "info",
                 "metadata": rl_stats,
             })
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
     # Sort by timestamp descending

@@ -211,7 +211,7 @@ class CommunityDharma:
                     },
                     confidence=consensus.consensus_score,
                 ))
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
     def get_community_guidelines(self) -> list[dict[str, Any]]:

@@ -237,7 +237,8 @@ class OpenDomainRecall:
                 AND content MATCH ?
                 LIMIT 1000
             """, (query,))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             # Fallback to simple LIKE
             cursor = conn.execute("""
                 SELECT id, title, content FROM memories

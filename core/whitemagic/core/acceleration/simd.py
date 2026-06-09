@@ -62,14 +62,16 @@ def _init_libs():
             try:
                 _rust_lib = ctypes.CDLL(rust_path)
                 _rust_available = True
-            except Exception: pass
+            except OSError:
+                pass
         # Zig init
         zig_path = _find_lib("zig")
         if zig_path:
             try:
                 _zig_lib = ctypes.CDLL(zig_path)
                 _zig_available = True
-            except Exception: pass
+            except OSError:
+                pass
 
 # --- COSINE & DISTANCE OPS ---
 

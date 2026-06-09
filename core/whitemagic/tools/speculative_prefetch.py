@@ -265,7 +265,7 @@ class SpeculativePrefetcher:
                 "timestamp": time.time(),
             })
             self._prefetch_count += 1
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
     def get_cached(self, tool_name: str) -> dict[str, Any] | None:

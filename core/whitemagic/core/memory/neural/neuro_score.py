@@ -19,6 +19,8 @@ from typing import Any
 
 from whitemagic.core.memory.neural.identity_anchors import auto_protect_memory
 from whitemagic.core.memory.neural.neural_memory import MemoryState, NeuralMemory
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -181,7 +183,8 @@ def calculate_neuro_score(memory: NeuralMemory, detailed: bool = False) -> float
                     is_mojo_optimized=True,
                 )
             return final_score
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
 
     # Legacy Python Fallback

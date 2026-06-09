@@ -199,6 +199,6 @@ class AutoimmuneSystemExtended(AutoimmuneSystem):
                     lines[v.line_number - 1] = lines[v.line_number - 1].strip()
                     v.file_path.write_text("\n".join(lines))
                     fixed += 1
-                except Exception:
+                except (OSError, UnicodeDecodeError):
                     pass
         return fixed

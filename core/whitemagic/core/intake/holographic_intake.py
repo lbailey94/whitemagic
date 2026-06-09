@@ -204,7 +204,8 @@ class HolographicIntake:
                             h = hashlib.sha256(row[0].encode()).hexdigest()[:16]
                             self._known_hashes.add(h)
                     conn.close()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
             logger.info(f"Loaded {len(self._known_hashes)} known content hashes")
@@ -216,7 +217,8 @@ class HolographicIntake:
         try:
             content = path.read_bytes()
             return hashlib.sha256(content).hexdigest()[:16]
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return ""
 
     # =========================================================================

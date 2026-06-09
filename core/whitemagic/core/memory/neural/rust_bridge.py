@@ -6,8 +6,11 @@ Falls back to Python implementations if Rust is unavailable.
 Created: December 2, 2025 (Hanuman Tuesday)
 """
 
+import logging
 from pathlib import Path
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 # Try to import Rust module
 try:
@@ -92,7 +95,7 @@ def build_word_index(
                 for word in set(words):
                     if len(word) >= min_word_length:
                         index[word].append(str(file))
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 pass
 
     return dict(index)
@@ -122,7 +125,8 @@ def scan_codebase(
                         "path": str(file),
                         "size": stat.st_size,
                     })
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
     return results
@@ -168,7 +172,7 @@ def extract_definitions(directory: str) -> list[dict[str, Any]]:
                     "name": match.group(2),
                     "file": str(file),
                 })
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             pass
 
     return defs
@@ -193,7 +197,7 @@ def audit_directory(directory: str) -> list[dict[str, Any]]:
                     "size": stat.st_size,
                     "lines": content.count("\n"),
                 })
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 pass
 
     return results

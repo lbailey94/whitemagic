@@ -105,7 +105,8 @@ class GardenStateTracker:
                     last_active = parse_datetime(state.last_activated)
                     duration = (datetime.now() - last_active).total_seconds()
                     state.total_time_active_seconds += duration
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
             self._save_state()

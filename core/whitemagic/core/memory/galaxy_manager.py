@@ -295,8 +295,8 @@ class GalaxyManager:
                 if existing:
                     skipped_dedup += 1
                     continue
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Dedup check failed: %s", e)
 
             try:
                 # Re-encode coordinates for target galaxy's space
@@ -343,11 +343,11 @@ class GalaxyManager:
                                              a["relation_type"], a["edge_type"],
                                              now, now),
                                         )
-                                    except Exception:
-                                        pass
+                                    except Exception as e:
+                                        logger.debug("Association copy insert failed: %s", e)
                                 tconn.commit()
-                except Exception:
-                    pass  # Association copy is best-effort
+                except Exception as e:
+                    logger.debug("Association copy failed: %s", e)  # Association copy is best-effort
 
                 # Record phylogenetic lineage edge (cross-galaxy bridge)
                 try:
@@ -360,7 +360,7 @@ class GalaxyManager:
                         target_id=new_mem.id,
                         mechanism="galaxy.transfer",
                     )
-                except Exception:
+                except (ImportError, AttributeError):
                     pass  # Lineage tracking is best-effort
 
                 # If move (not copy), archive the original
@@ -378,8 +378,8 @@ class GalaxyManager:
                 um = self._get_memory(gname)
                 stats = um.backend.get_stats()
                 self._galaxies[gname].memory_count = stats.get("total_memories", 0)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Galaxy stats update failed: %s", e)
         self._save_registry()
 
         return {
@@ -568,7 +568,7 @@ class GalaxyManager:
         def _read_file(f: Path) -> tuple[Path, str | None]:
             try:
                 return f, f.read_text(encoding="utf-8", errors="replace")
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 return f, None
 
         file_contents: list[tuple[Path, str | None]] = []
@@ -615,8 +615,8 @@ class GalaxyManager:
             stats = um.backend.get_stats()
             self._galaxies[galaxy_name].memory_count = stats.get("total_memories", 0)
             self._save_registry()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Ingest stats update failed: %s", e)
 
         return {
             "galaxy": galaxy_name,

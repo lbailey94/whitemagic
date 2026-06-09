@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 KOKA_DIR = Path(__file__).parent.parent / "whitemagic-koka"
 _DEFAULT_HYBRID_PROCESS_TIMEOUT_S = 5.0
@@ -185,7 +187,8 @@ class KokaProcess:
                     result_queue.put(proc.stdout.readline())
                 else:
                     result_queue.put(None)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
         thread = threading.Thread(target=_reader, name=f"hybrid-{self.binary_name}", daemon=True)

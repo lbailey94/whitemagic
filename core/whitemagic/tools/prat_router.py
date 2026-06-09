@@ -384,7 +384,8 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         if hasattr(_garden_instance, "get_status"):
             try:
                 native_result["garden_status"] = _garden_instance.get_status()
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
     # Add predecessor context to native operations

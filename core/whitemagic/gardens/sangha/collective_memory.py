@@ -139,7 +139,7 @@ class CollectiveMemory:
                     },
                     confidence=insight_entry["confidence"],
                 ))
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
         logger.info("🙏 Insight contributed to Sangha collective")

@@ -89,7 +89,7 @@ class UnifiedEmbedder:
             )
             return os.path.exists(mojo_path)
 
-        except Exception:
+        except OSError:
             return False
 
     def _check_rust_onnx(self) -> bool:

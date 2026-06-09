@@ -149,7 +149,7 @@ class SemanticFileWatcher:
                 data = _json_loads(self.config_path.read_text())
                 for path, config in data.get("watches", {}).items():
                     self._watches[path] = WatchConfig(**config)
-            except Exception:
+            except (OSError, UnicodeDecodeError):
                 self._watches = {}
 
     def _save_config(self) -> None:
@@ -257,11 +257,13 @@ class SemanticFileWatcher:
                     content = p.read_bytes()
                     metadata["content_hash"] = hashlib.sha256(content).hexdigest()[:16]
                     metadata["line_count"] = len(content.decode("utf-8", errors="ignore").splitlines())
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
             return metadata
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return {"error": "Could not extract metadata"}
 
     def _detect_themes(self, path: str) -> list[str]:
@@ -281,7 +283,7 @@ class SemanticFileWatcher:
                     themes.append(pattern_name)
 
             return themes[:5]  # Limit to top 5 themes
-        except Exception:
+        except (ImportError, AttributeError):
             return []
 
     def _handle_event(self, event: FileEvent) -> None:
@@ -345,14 +347,16 @@ class SemanticFileWatcher:
                         timestamp=datetime.now(),
                     ),
                 )
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Call registered callbacks
         for callback in self._callbacks:
             try:
                 callback(event)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
     # =========================================================================

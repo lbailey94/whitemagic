@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Quadrant(IntEnum):
@@ -375,7 +377,8 @@ def read_engine_board(slot: int) -> dict[str, object] | None:
                 "tick": getattr(resonance, "tick", 0),
             },
         }
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return {"slot": slot, "engine": entry.engine_name, "error": "board_unavailable"}
 
 

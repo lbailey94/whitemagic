@@ -65,7 +65,7 @@ def list_gardens() -> list[str]:
     try:
         from whitemagic.gardens.base_garden import GardenRegistry
         return list(GardenRegistry.list_gardens().keys())
-    except Exception:
+    except (ImportError, AttributeError):
         return []
 
 # --- UTILS ---

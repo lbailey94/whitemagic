@@ -214,7 +214,7 @@ class GalacticMap:
             )
             if rust_available():
                 rust_scorer = galactic_batch_score
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         for page in backend.list_all_paginated(batch_size=batch_size):
@@ -435,7 +435,7 @@ class GalacticMap:
                     result = rust_zone_stats(str(backend.db_path))
                     if result and "zones" in result:
                         return result["zones"]  # type: ignore[no-any-return]
-            except Exception:
+            except (ImportError, AttributeError):
                 pass
 
             # Python fallback

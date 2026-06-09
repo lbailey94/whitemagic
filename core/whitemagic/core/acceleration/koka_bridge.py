@@ -34,7 +34,8 @@ class KokaProcess:
                     result_queue.put(line)
                 else:
                     result_queue.put(None)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 result_queue.put(None)
 
         thread = threading.Thread(target=_reader, name=f"koka-bridge-{self.name}", daemon=True)
@@ -62,7 +63,8 @@ class KokaProcess:
     def close(self):
         try:
             self.send({"op": "quit"}, timeout=1.0)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         try:
             self.proc.wait(timeout=1.0)

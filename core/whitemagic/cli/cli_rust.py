@@ -120,7 +120,8 @@ def rust_status() -> int:
         try:
             exports = [x for x in dir(rust) if not x.startswith("_")]
             logger.info(f"   Exports: {len(exports)}")
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         return 0
     logger.info(f"❌ Rust bridge not available: {err}")

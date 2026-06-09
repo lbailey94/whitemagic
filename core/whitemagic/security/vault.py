@@ -112,7 +112,8 @@ class Vault:
         if env_key:
             try:
                 return base64.b64decode(env_key)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 logger.warning("WM_ENCRYPTION_KEY is not valid base64; ignoring")
 
         # Priority 2: OS keychain
@@ -257,7 +258,7 @@ class Vault:
                 new_machine_key = secrets.token_urlsafe(32)
                 key_file.write_text(new_machine_key)
                 key_file.chmod(0o600)
-        except Exception:
+        except (ImportError, AttributeError):
             logger.debug("Could not update machine key file during rekey")
 
         logger.info(f"Vault: re-keyed {count} secrets")

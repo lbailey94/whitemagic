@@ -249,7 +249,7 @@ class HomeostaticLoop:
             if avg_urgency > 0.7:
                 return min(1.0, (avg_urgency - 0.7) / 0.3)
             return 0.0
-        except Exception:
+        except (ImportError, AttributeError):
             return 0.0
 
     def _emit_to_arbiter(self, action: HomeostaticAction) -> None:

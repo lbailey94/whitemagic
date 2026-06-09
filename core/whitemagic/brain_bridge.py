@@ -119,7 +119,8 @@ def main():
 
         except json.JSONDecodeError:
             logger.error(f"Invalid JSON: {line}")
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             logger.error(f"Unexpected error: {traceback.format_exc()}")
             send_response({"status": "error", "message": "Internal bridge error"})
 

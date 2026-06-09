@@ -14,6 +14,8 @@ import pickle
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Callable, TypeVar, cast
+import logging
+logger = logging.getLogger(__name__)
 
 try:
     import redis
@@ -110,7 +112,8 @@ class RedisCache:
         try:
             self._client.ping()
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return False
 
     def ping(self) -> bool:
@@ -119,7 +122,8 @@ class RedisCache:
             return False
         try:
             return bool(self._client.ping())
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return False
 
     def _serialize(self, value: Any) -> bytes:

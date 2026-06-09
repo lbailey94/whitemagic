@@ -339,7 +339,8 @@ class HarmonyVector:
                 for zone, count in zone_counts.items()
             )
             return min(1.0, max(0.0, weighted_sum / total))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return 0.7  # Neutral fallback
 
     # ------------------------------------------------------------------

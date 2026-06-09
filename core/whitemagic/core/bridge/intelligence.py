@@ -39,7 +39,8 @@ def _emit_bridge_event(event_name: str, data: dict[str, Any]) -> None:
         bus = get_bus()
         event = ResonanceEvent(source="bridge_intelligence", event_type=EventType.INTERNAL_STATE_CHANGED, data={"bridge_event": event_name, **data})
         bus.emit(event)
-    except Exception: pass
+    except Exception as e:
+        logger.debug("Bridge event emit failed: %s", e)
 
 # --- REASONING ---
 

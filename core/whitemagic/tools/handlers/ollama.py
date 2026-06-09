@@ -141,7 +141,8 @@ def _inject_context(
         if strategy == "hybrid":
             try:
                 results = um.hybrid_recall(safe_query, final_limit=max_memories)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 results = um.search(safe_query, limit=max_memories)
         else:
             results = um.search(safe_query, limit=max_memories)

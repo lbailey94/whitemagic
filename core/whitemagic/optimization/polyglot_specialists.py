@@ -64,7 +64,7 @@ class PolyglotSpecialists:
             self.stats["zig"] += 1
             return SpecialistResult("SIMDProcessor", "zig", True, matrix,
                                    (time.time() - start) * 1000, False)
-        except Exception:
+        except (ImportError, AttributeError):
             import numpy as np
             # SpecialistResult expects Any, but we should be careful with types if we can
             matrix_fallback = np.zeros((len(vectors), len(vectors)))

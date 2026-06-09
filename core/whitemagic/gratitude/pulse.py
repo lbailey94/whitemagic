@@ -94,7 +94,8 @@ class GratitudePulse:
                                 await self._process_transactions(transactions)
                                 success = True
                                 break
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("Operation failed: %s", e)
                         continue
 
                 if not success:

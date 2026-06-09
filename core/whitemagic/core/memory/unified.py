@@ -56,7 +56,8 @@ def _emit_store_hooks(memory: Memory) -> None:
     for hook in _store_hooks:
         try:
             hook(memory)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
 
@@ -64,7 +65,8 @@ def _emit_search_hooks(results: list[Memory]) -> None:
     for hook in _search_hooks:
         try:
             hook(results)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
 

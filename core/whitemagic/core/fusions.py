@@ -128,9 +128,12 @@ def check_proactive_dream() -> dict[str, Any]:
                     dc._dreaming = True
                     emit_fusion_event("PROACTIVE_DREAM", {"energy_current": forecast.current, "energy_predicted": forecast.predicted})
                     return {"triggered": True, "dream_phase": "proactive_consolidation"}
-            except Exception: pass
+            except (ImportError, AttributeError) as e:
+                logger.debug("Dream cycle trigger failed: %s", e)
         return {"triggered": False, "reason": "energy forecast within safe range"}
-    except Exception: return {"triggered": False}
+    except Exception as e:
+        logger.debug("Energy dream trigger failed: %s", e)
+        return {"triggered": False}
 
 
 def mesh_memory_sync(memory_id: str | None = None, operation: str = "status", payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -548,7 +551,8 @@ def constellation_garden_activate(constellations: list) -> dict[str, Any]:
                                 "garden": garden_name,
                                 "reason": f"Constellation tags {tags[:3]} match {garden_name} garden",
                             })
-                    except Exception:
+                    except (ImportError, AttributeError) as e:
+                        logger.debug("Garden activation failed for %s: %s", garden_name, e)
                         activations.append({
                             "constellation": const.get("name", "unknown"),
                             "garden": garden_name,
@@ -935,7 +939,8 @@ def embedding_galactic_reindex(batch_size: int = 100) -> dict[str, Any]:
                 if coord:
                     gm.assign_zone(mem["id"], coord)
                     reindexed += 1
-            except Exception:
+            except (ImportError, AttributeError) as e:
+                logger.debug("Galactic reindex failed for %s: %s", mem.get("id"), e)
                 continue
 
         emit_fusion_event("EMBEDDING_GALACTIC_REINDEX", {
@@ -1025,7 +1030,8 @@ def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
                 mined = engine.mine(str(mem.get("content", "")))
                 if mined:
                     patterns.extend(mined)
-            except Exception:
+            except Exception as e:
+                logger.debug("Pattern mining failed: %s", e)
                 continue
 
         # Deduplicate by pattern signature
@@ -1083,7 +1089,8 @@ def garden_health_sync() -> dict[str, Any]:
                 if garden and hasattr(garden, "vitality"):
                     garden.vitality = score
                     synced.append({"garden": name, "vitality": round(score, 3)})
-            except Exception:
+            except (ImportError, AttributeError) as e:
+                logger.debug("Garden health sync failed for %s: %s", name, e)
                 continue
 
         emit_fusion_event("GARDEN_HEALTH_SYNC", {
@@ -1183,8 +1190,8 @@ def lifecycle_dream_trigger() -> dict[str, Any]:
         try:
             if hasattr(gm, "rotate"):
                 rotation = gm.rotate()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Galactic map rotation failed: %s", e)
 
         emit_fusion_event("LIFECYCLE_DREAM_TRIGGER", {
             "sweep_memories_affected": sweep_result.get("memories_affected", 0),

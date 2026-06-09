@@ -295,7 +295,8 @@ class GraphEngine:
                             edge_type="knowledge_graph",
                             direction="forward",
                         )
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass  # KG table may not exist
 
         except Exception as e:
@@ -338,7 +339,8 @@ class GraphEngine:
                 dict[str, float],
                 nx.eigenvector_centrality_numpy(G.to_undirected(), max_iter=max_iter),
             )
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             try:
                 return cast(
                     dict[str, float],
@@ -438,7 +440,8 @@ class GraphEngine:
             bc = between.get(node_id, 0.0)
 
             return float(bc * bridging_coeff)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return 0.0
 
     def find_bridge_nodes(self, top_n: int = 10) -> list[dict[str, Any]]:
@@ -479,7 +482,8 @@ class GraphEngine:
                         }
                         for r in results
                     ]
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass  # Fall back to Python
 
             UG = G.to_undirected()
@@ -543,7 +547,8 @@ class GraphEngine:
                         UG, weight="weight",
                     )
                     communities_list = [set(c) for c in communities_gen]
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     # Final fallback: connected components
                     communities_list = [
                         set(c) for c in nx.connected_components(UG)
@@ -602,7 +607,7 @@ class GraphEngine:
                 for row in rows:
                     tag_counts[row[0]] = row[1]
             return sorted(tag_counts.keys(), key=lambda t: tag_counts[t], reverse=True)[:5]
-        except Exception:
+        except (ImportError, AttributeError):
             return []
 
     # ------------------------------------------------------------------
@@ -657,7 +662,8 @@ class GraphEngine:
                     )
                     for r in results
                 ]
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass  # Fall back to Python
 
         # Python fallback
@@ -719,7 +725,7 @@ class GraphEngine:
                     (cutoff, cutoff),
                 ).fetchall()
                 return {row[0] for row in rows}
-        except Exception:
+        except (ImportError, AttributeError):
             return set()
 
     # ------------------------------------------------------------------

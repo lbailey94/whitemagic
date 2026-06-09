@@ -12,6 +12,7 @@ Architecture:
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,8 @@ from whitemagic.core.intelligence.garden_gana_registry import (
     calculate_resonance,
     get_by_garden,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -259,7 +262,7 @@ class GardenDirectory:
                 self._rebuild_garden_index()
                 self._loaded = True
                 return True
-            except Exception:
+            except (json.JSONDecodeError, TypeError):
                 pass
         return False
 

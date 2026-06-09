@@ -14,6 +14,7 @@ They are designed to be safe to run in automated contexts:
 
 from __future__ import annotations
 
+import logging
 import os
 import platform
 import re
@@ -275,7 +276,7 @@ def _git_list_files() -> list[Path] | None:
             capture_output=True,
             text=True,
         )
-    except Exception:
+    except OSError:
         return None
 
     paths: list[Path] = []

@@ -156,7 +156,8 @@ class RateLimiter:
                         "limit": result.get("limit", 60),
                         "current": result.get("current_rate", 0),
                     }
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass  # Rust call failed, fall through to Python
 
         # Trust-based multiplier (Gap A2 synthesis)
@@ -227,7 +228,7 @@ class RateLimiter:
             if agent_data:
                 tier = agent_data.get("tier", "STANDARD")
                 return self._TRUST_MULTIPLIERS.get(tier, 1.0)
-        except Exception:
+        except (ImportError, AttributeError):
             pass
         return 1.0  # default: no adjustment
 

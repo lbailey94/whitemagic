@@ -27,6 +27,8 @@ from typing import Any
 from whitemagic.config.paths import DB_PATH as MEM_DB
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
+import logging
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -244,7 +246,8 @@ def get_dream_insights(limit: int = 10) -> list:
         """, (limit,)).fetchall()
         conn.close()
         return [r[0] for r in rows if r[0]]
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return []
 
 
@@ -331,7 +334,7 @@ def get_haskell_balance() -> float:
         if "Hexagram" in result.stdout:
             return 0.8  # Auspicious
         return 0.5
-    except Exception:
+    except OSError:
         return 0.5
 
 def get_julia_resonance(impulse: float = 0.5) -> float:
@@ -350,7 +353,7 @@ def get_julia_resonance(impulse: float = 0.5) -> float:
             data = _json_loads(result.stdout)
             return float(min(data.get("peak_amplitude", 0.0), 1.0))
         return 0.0
-    except Exception:
+    except OSError:
         return 0.0
 
 def get_rust_acceleration(query_vec: list) -> list:
@@ -359,7 +362,8 @@ def get_rust_acceleration(query_vec: list) -> list:
         import whitemagic_rs as rs
         if hasattr(rs, "search"):
             return rs.search(query_vec)
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
     return []
 

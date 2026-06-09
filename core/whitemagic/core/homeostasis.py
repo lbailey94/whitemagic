@@ -92,7 +92,7 @@ class HomeostasisSystem:
                 tz_intensity = 1.0 - tz.intensity_cap
                 yin = min(1.0, yin + (tz_intensity * 0.2))
                 logger.info(f"🌌 Tzimtzum Bias Applied: +{tz_intensity * 0.2:.2f} Yin")
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         equilibrium = 1.0 - abs(yin - yang)

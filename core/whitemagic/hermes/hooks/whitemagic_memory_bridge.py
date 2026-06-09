@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import secrets
 import sys
+import logging
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -49,7 +51,7 @@ def _store_event(event: dict) -> str:
         if hasattr(mid, "memory_id"):
             return str(mid.memory_id)
         return str(mid) if mid else secrets.token_hex(8)
-    except Exception:
+    except (ImportError, AttributeError):
         # Graceful fallback when WM is not initialised
         return secrets.token_hex(8)
 

@@ -88,7 +88,8 @@ def cosine_similarity_zig(a: Sequence[float], b: Sequence[float]) -> float:
             ca = _to_c_float_array(a)
             cb = _to_c_float_array(b)
             return float(lib.wm_cosine_similarity(ca, cb, len(a)))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
     return _py_cosine(a, b)

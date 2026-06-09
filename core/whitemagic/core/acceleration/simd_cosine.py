@@ -292,7 +292,8 @@ def simd_status() -> dict[str, Any]:
     if lib is not None:
         try:
             lane = lib.wm_simd_lane_width()
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
     return {
         "has_zig_simd": _HAS_ZIG,

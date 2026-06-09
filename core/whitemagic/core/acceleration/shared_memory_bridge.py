@@ -254,7 +254,8 @@ class SharedMemoryBridge:
                 shm.unlink()
                 shm.close()
                 logger.info(f"Destroyed shared memory: {self.name}")
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
     def __enter__(self):

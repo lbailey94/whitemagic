@@ -117,7 +117,8 @@ class SelfMonitoringHealthLoop:
         try:
             import psutil
             memory_usage = psutil.virtual_memory().percent
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             memory_usage = 50.0
         readings["memory_usage"] = HealthReading(
             timestamp=now,
@@ -132,7 +133,7 @@ class SelfMonitoringHealthLoop:
             from whitemagic.core.monitoring.telemetry import get_telemetry
             telemetry = get_telemetry()
             response_time = telemetry.get_avg_duration() * 1000.0  # seconds -> ms
-        except Exception:
+        except (ImportError, AttributeError):
             response_time = 100.0
         readings["response_time"] = HealthReading(
             timestamp=now,

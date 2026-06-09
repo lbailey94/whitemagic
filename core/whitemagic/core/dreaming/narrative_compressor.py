@@ -346,7 +346,8 @@ class NarrativeCompressor:
                     title = mem.title or "untitled"
                     content = str(mem.content or "")[:300]
                     contents.append(f"[{title}]: {content}")
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         if not contents:
@@ -418,7 +419,7 @@ class NarrativeCompressor:
             result = _ollama_generate(prompt=prompt, model=None)
             if isinstance(result, dict) and result.get("response"):
                 return str(result["response"]).strip()
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         # Template fallback

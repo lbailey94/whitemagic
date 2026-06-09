@@ -182,7 +182,8 @@ def update_memory(memory_id: str) -> Any:
         try:
             manager.update_memory(memory_id, **data)
             return jsonify({"success": True})
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return jsonify({"error": "Memory not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -195,7 +196,8 @@ def delete_memory(memory_id: str) -> Any:
         try:
             manager.delete_memory(memory_id)
             return jsonify({"success": True})
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return jsonify({"error": "Memory not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -222,7 +224,8 @@ def get_events() -> Any:
                     "timestamp": event.get("timestamp", datetime.now().isoformat()),
                 }
                 events.append(event_data)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             if DEMO_MODE:
                 events = [
                     {
@@ -320,7 +323,8 @@ def get_gardens() -> Any:
                                 "last_activity": datetime.now().isoformat(),
                             },
                         )
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     gardens.append(
                         {
                             "id": name,
@@ -360,7 +364,8 @@ def search() -> Any:
                         "type": "memory",
                     },
                 )
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         # Search gardens and events
@@ -429,7 +434,8 @@ def get_polyglot_balance() -> Any:
             count = sum(1 for p in base_path.rglob(pattern)
                        if "_archives" not in str(p) and ".venv" not in str(p))
             stats[lang] += count
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
     return jsonify(stats)
@@ -502,14 +508,16 @@ def get_stats() -> Any:
         try:
             memories = manager.list(limit=1000)
             stats["total_memories"] = len(memories)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         # Get plugin count
         try:
             plugins = list_plugins()
             stats["active_plugins"] = len(plugins)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         return jsonify(stats)
@@ -534,7 +542,8 @@ def _extract_relationships(memory: dict[str, Any]) -> list[dict[str, Any]]:
                         "description": f"Related by tag: {tag}",
                     },
                 )
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
     return related
 
@@ -576,7 +585,7 @@ def _search_gardens_and_events(query: str) -> list[dict[str, Any]]:
                                 "garden": garden_name,
                             },
                         )
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         # Search events if resonance system is available
@@ -584,9 +593,9 @@ def _search_gardens_and_events(query: str) -> list[dict[str, Any]]:
             from whitemagic.core.resonance.gan_ying import get_bus
 
             get_bus()
-        except Exception:
+        except (ImportError, AttributeError):
             pass
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     return results
 

@@ -268,7 +268,8 @@ class EntropyScorer:
                     mem.metadata["abstraction_level"] = result.abstraction
                     mem.metadata["entropy_composite"] = result.composite
                     backend.store(mem)
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
 
         n = max(report.total_scored, 1)

@@ -214,7 +214,8 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
     # 8. Julia bridge
     try:
         report["julia"] = _load_cached_binary_status("julia", "/snap/bin/julia")
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         report["julia"] = {"available": False}
 
     # 9. Haskell bridge

@@ -192,7 +192,8 @@ def log_function_call(
                 result = func(*args, **kwargs)
                 log.debug(f"Completed {func.__name__}")
                 return result
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 log.error(f"Error in {func.__name__}", exc_info=True)
                 raise
         return wrapper

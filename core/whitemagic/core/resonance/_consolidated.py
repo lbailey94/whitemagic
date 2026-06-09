@@ -175,8 +175,10 @@ class GanYingBus:
         # Dispatch to listeners
         listeners = self._listeners.get(event.event_type, [])
         for listener in listeners:
-            try: listener(event)
-            except Exception: pass
+            try:
+                listener(event)
+            except Exception as e:
+                logger.debug("Listener dispatch failed: %s", e)
 
     def listen(self, event_type: EventType, callback: Callable):
         with self._lock:

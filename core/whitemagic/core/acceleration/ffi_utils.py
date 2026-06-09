@@ -180,6 +180,7 @@ def parse_null_separated_output(buffer: bytes, max_items: int = 100) -> list[str
                 result.append(item)
                 if len(result) >= max_items:
                     break
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             continue
     return result

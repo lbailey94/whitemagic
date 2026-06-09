@@ -54,7 +54,8 @@ def distance_5d(a: tuple[float, ...], b: tuple[float, ...]) -> float:
                 (a[0], a[1], a[2], a[3], a[4]),
                 (b[0], b[1], b[2], b[3], b[4]),
             ))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass  # Fall back to Python
     # Zig SIMD fallback
     try:
@@ -62,7 +63,7 @@ def distance_5d(a: tuple[float, ...], b: tuple[float, ...]) -> float:
             holographic_5d_distance,
         )
         return float(holographic_5d_distance(a, b, (1.0, 1.0, 1.0, 1.0, 1.0)))
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     return math.sqrt(sum((ai - bi) ** 2 for ai, bi in zip(a, b)))
 
@@ -177,7 +178,8 @@ def detect_grid(
                 coords_5d, bins, min_size, max_constellations
             )
             return groups_rust, [0.0] * len(groups_rust)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass  # Fall back to Python
 
     # Compute axis ranges

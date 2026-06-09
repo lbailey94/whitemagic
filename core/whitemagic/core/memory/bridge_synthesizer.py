@@ -86,13 +86,14 @@ class BridgeSynthesizer:
         try:
             from whitemagic.core.memory.graph_engine import get_graph_engine
             engine = get_graph_engine()
-        except Exception:
+        except (ImportError, AttributeError):
             return insights
 
         # Get communities for context
         try:
             communities = engine.detect_communities()
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             communities = []
 
         # Build node → community mapping
@@ -171,7 +172,8 @@ class BridgeSynthesizer:
                     neighbor_communities.add(comm)
 
             return sorted(neighbor_communities)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return []
 
     def _generate_hypothesis(
@@ -235,7 +237,7 @@ class BridgeSynthesizer:
             )
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()[:500]
-        except Exception:
+        except OSError:
             pass
         return None
 
@@ -264,9 +266,11 @@ class BridgeSynthesizer:
                         },
                     )
                     persisted += 1
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     pass
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         return persisted
 

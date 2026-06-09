@@ -39,7 +39,7 @@ def _init_backends():
             _BACKEND = "zig_simd"
             logger.info("graph_walker_hot_path: Zig SIMD active (lane_width=%d)",
                         status["lane_width"])
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     # Rust RRF fusion
     try:
@@ -48,7 +48,8 @@ def _init_backends():
             _RUST_RRF = whitemagic_rs.rrf_fuse
             if _BACKEND == "numpy":
                 _BACKEND = "rust"
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         pass
     # Julia — RRF fusion + PageRank (subprocess, used for multi-list merges)
     try:
@@ -59,7 +60,7 @@ def _init_backends():
         _JULIA_RRF = julia_rrf_fuse
         _JULIA_PAGERANK = julia_pagerank
         logger.info("graph_walker_hot_path: Julia RRF + PageRank available")
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     # Title-boosted vector search for LoCoMo 100%
     try:

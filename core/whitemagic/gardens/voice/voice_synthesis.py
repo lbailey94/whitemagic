@@ -9,12 +9,15 @@ that carries personality, style, and presence.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
+
+logger = logging.getLogger(__name__)
 
 get_bus: Any
 ResonanceEvent: Any
@@ -330,14 +333,15 @@ class VoiceSynthesis:
                     pattern_data["frequency"],
                 )
                 self.patterns[pattern_id].confidence = pattern_data["confidence"]
-        except Exception:
+        except (json.JSONDecodeError, TypeError):
             pass  # Skip corrupted files
 
     def save(self) -> None:
         """Persist voice patterns safely."""
         try:
             self._save_patterns()
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             # Last ditch effort logging or ignore
             pass
 

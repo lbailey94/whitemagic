@@ -22,6 +22,8 @@ from whitemagic.tools.envelope import coerce_jsonable
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 from whitemagic.utils.fileio import atomic_write, file_lock
+import logging
+logger = logging.getLogger(__name__)
 
 
 def _utc_now_iso() -> str:
@@ -73,7 +75,7 @@ def get_record(tool: str, key: str) -> IdempotencyRecord | None:
             stored_at=str(data.get("stored_at", "")),
             response=resp,
         )
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         return None
 
 

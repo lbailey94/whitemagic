@@ -191,8 +191,11 @@ class GraphEngine:
     def pagerank(self, alpha: float = 0.85) -> dict[str, float]:
         G = self.graph
         if G is None or not _NX_AVAILABLE: return {}
-        try: return cast(dict[str, float], nx.pagerank(G, alpha=alpha, weight="weight"))
-        except Exception: return {}
+        try:
+            return cast(dict[str, float], nx.pagerank(G, alpha=alpha, weight="weight"))
+        except Exception as e:
+            logger.debug("Pagerank computation failed: %s", e)
+            return {}
 
 # --- GRAPH WALKER ---
 

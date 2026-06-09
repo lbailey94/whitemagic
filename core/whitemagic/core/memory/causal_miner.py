@@ -207,7 +207,7 @@ class CausalMiner:
             )
             if pairs:
                 use_embeddings = True
-        except Exception:
+        except (ImportError, AttributeError):
             pass
 
         # Hydrate memory metadata for temporal + tag signals
@@ -259,7 +259,8 @@ class CausalMiner:
                 ).fetchall()
                 for row in rows:
                     existing_directed.add((row[0], row[1]))
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         # Score each pair
@@ -359,7 +360,8 @@ class CausalMiner:
                                     ),
                                 )
                                 report.edges_created += 1
-                            except Exception:
+                            except Exception as e:
+                                logger.debug("Operation failed: %s", e)
                                 pass
             except Exception as e:
                 logger.error(f"Causal mining: persistence failed: {e}")

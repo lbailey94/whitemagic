@@ -205,7 +205,8 @@ class AutoCaster:
                     bias += 0.1
 
             return bias
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             return 0.0
 
     def _should_auto_cast(self, confidence: float) -> bool:

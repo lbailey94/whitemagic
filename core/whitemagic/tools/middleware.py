@@ -98,7 +98,7 @@ def _ensure_cached() -> None:
         try:
             from whitemagic.dharma.governor import get_governor
             _get_governor = get_governor
-        except Exception:
+        except (ImportError, AttributeError):
             pass
         logger.debug("Middleware: governor dependency missing: %s", e)
     try:
@@ -114,7 +114,7 @@ def _ensure_cached() -> None:
     try:
         from whitemagic.utils.core import compact_dict
         _compact_fn = compact_dict
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     _cached = True
 
