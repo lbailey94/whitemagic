@@ -106,6 +106,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `SESSION_REPORT_2026-06-08.md` | Full session narrative — competitive landscape analysis, immediate fixes, strategic docs | Jun 8 |
 | `SESSION_REPORT_2026-06-09.md` | April release retrospective + competitive landscape synthesis (AGT v4, MnemoCore, Syntra, Magic) + strategic pivot options | Jun 9 |
 | `INTERNAL_RESEARCH_2026-06-09.md` | Codebase reality check: 935 Python files, 2,422 passing tests, Dharma (2,955 LOC), 5D holographic memory (real), stub audit, .md archaeology | Jun 9 |
+| `PHASE2_RESEARCH_2026-06-09.md` | Deep-dive answers: ILP payments (real), bounty board (real), polyglot builds (Rust ✅, Zig ✅), prescience claims (21 validated), tool surface (350+ LOC avg), 5D memory (Python works, Rust not wired) | Jun 9 |
 | `SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md` | Bare `except Exception:` elimination across 145 Python files — contextual specificity, logging, syntax repair, 2,469 tests passing | Jun 8 |
 | `STATE_REPORT_2026-06-08.md` | Comprehensive project state assessment — metrics trajectory Apr→Jun, strategic positioning evolution, code hygiene before/after, open items | Jun 8 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
