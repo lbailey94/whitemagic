@@ -16,3 +16,6 @@ tsconfig.tsbuildinfo
 .vercel/
 .vercel
 .env*
+
+# Research archive (2,781 images) — too large for site, lives in alltexts/
+content/research/domains/
