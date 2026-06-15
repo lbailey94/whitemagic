@@ -14,3 +14,5 @@ out/
 tsconfig.tsbuildinfo
 .turbo/
 .vercel/
+.vercel
+.env*
