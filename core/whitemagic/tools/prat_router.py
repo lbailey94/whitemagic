@@ -329,7 +329,19 @@ def route_prat_call(gana_name: str, tool: str | None = None,
                 )
             except (ImportError, AttributeError):
                 pass
-            return {"status": "error", "error": str(e), "tool": tool}
+            return {
+                "status": "error",
+                "error": str(e),
+                "tool": tool,
+                "gana": gana_name,
+                "error_code": "tool_execution_failed",
+                "suggestion": (
+                    f"Call failed inside {gana_name}. "
+                    "Use gan.a_ghost (list_ganas) to confirm this tool exists, "
+                    "gan.a_ghost (vitality) to check vitality, or "
+                    "gan.a_root (ship.check) to validate environment state."
+                ),
+            }
         except (ImportError, ModuleNotFoundError) as e:
             # Unexpected error - log and return
             logger.exception("Unexpected error calling tool %s", tool)
@@ -342,7 +354,18 @@ def route_prat_call(gana_name: str, tool: str | None = None,
                 )
             except (ImportError, AttributeError):
                 pass
-            return {"status": "error", "error": f"Tool execution failed: {type(e).__name__}", "tool": tool}
+            return {
+                "status": "error",
+                "error": f"Tool execution failed: {type(e).__name__}",
+                "tool": tool,
+                "gana": gana_name,
+                "error_code": "module_missing",
+                "suggestion": (
+                    f"Missing dependency for {gana_name}. "
+                    "Try gan.a_root (ship.check) to validate, "
+                    "or gan.a_root (state.paths) to inspect environment."
+                ),
+            }
 
         # ── Step 3: Record resonance state ──
         resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, tool, None, result))

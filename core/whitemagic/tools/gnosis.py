@@ -266,10 +266,15 @@ def _auto_suggest(
 
     # If no alerts and system is healthy, suggest productive work
     if not alerts:
+        # First-call discovery flow: a healthy system is the right time to
+        # surface what agents can do, not just check health.
+        actions.append({"tool": "list_ganas", "reason": "Discover the 28-Gana surface (first call)"})
+        actions.append({"tool": "vitality", "reason": "Check Gana vitality before routing"})
+        actions.append({"tool": "discover", "reason": "Bundle: gnosis + capabilities + list_ganas in one call"})
         actions.append({"tool": "salience.spotlight", "reason": "Check what deserves attention"})
         if stage in ("SEED", "BICAMERAL"):
             actions.append({"tool": "maturity.assess", "reason": "Work toward next maturity stage"})
-        return actions[:3]
+        return actions[:4]
 
     # Suggest based on specific alerts
     for alert in alerts:

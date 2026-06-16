@@ -100,6 +100,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "watcher_recent_events":   "gana_ghost",
     "watcher_stats":           "gana_ghost",
     "watcher_list":            "gana_ghost",
+    # First-call discovery: one-shot 28-Gana surface, vitality, and bundle
+    "list_ganas":              "gana_ghost",
+    "vitality":                "gana_ghost",
+    "discover":                "gana_ghost",
 
     # ═══ WILLOW — Resilience & Flexibility ═══
     "rate_limiter.stats":      "gana_willow",

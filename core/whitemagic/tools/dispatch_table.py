@@ -157,6 +157,9 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "ship.check": LazyHandler("introspection", "handle_ship_check"),
     "get_telemetry_summary": LazyHandler("introspection", "handle_get_telemetry_summary"),
     "health_report": LazyHandler("introspection", "handle_health_report"),
+    "list_ganas": LazyHandler("introspection", "handle_list_ganas"),
+    "vitality": LazyHandler("introspection", "handle_vitality"),
+    "discover": LazyHandler("introspection", "handle_discover"),
 
     # --- Metrics & Utility ---
     "track_metric": LazyHandler("misc", "handle_track_metric"),

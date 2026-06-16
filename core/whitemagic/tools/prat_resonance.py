@@ -103,6 +103,83 @@ def _get_meta(gana_name: str) -> dict[str, Any]:
     }
 
 
+# Tool → actionable next-step hint. Maps the most common tools to a
+# short, useful suggestion. Default fallback for unmapped tools is
+# "system healthy" if the output looks like success, otherwise generic.
+_TOOL_ACTION_HINTS: dict[str, str] = {
+    # search/recall family
+    "search_memories": "Use read_memory to inspect top result, or hybrid_recall to filter",
+    "vector.search": "Use read_memory to inspect the matched memory",
+    "hybrid_recall": "Use read_memory to inspect the top result",
+    "graph_walk": "Use gan.a_chariot (kg.query) to follow cross-references",
+    "list_memories": "Use vector.search or gan.a_winnowing_basket (search_memories) to retrieve",
+    "read_memory": "Use gan.a_neck (update_memory) to refine, or gan.a_three_stars (kaizen_analyze) to summarize",
+    # memory ops
+    "create_memory": "Use gan.a_horn to set up session context, or gan.a_three_stars (kaizen_analyze) to summarize",
+    "update_memory": "Use gan.a_three_stars (kaizen_analyze) to verify integrity",
+    "delete_memory": "Be careful: deletion is permanent. Verify with gan.a_void (galactic.dashboard) first",
+    "import_memories": "Use gan.a_three_stars (kaizen_analyze) to summarize the imported set",
+    # governance / ethics
+    "evaluate_ethics": "Use harmony_vector to see which dimensions were affected",
+    "check_boundaries": "Use governor_validate to confirm the action is allowed",
+    "verify_consent": "Use karma_record to log the consent decision",
+    "harmony_vector": "If score is low, run homeostasis.check to trigger auto-correction",
+    "karma_record": "Use gan.a_hairy_head (karmic_trace) to inspect the trace",
+    "karma_report": "Use gan.a_straddling_legs (evaluate_ethics) to interpret findings",
+    "governor_validate": "If rejected, use gan.a_star (dharma.reload) to inspect the rule",
+    "dharma.reload": "Use gan.a_straddling_legs (evaluate_ethics) to see which rules apply",
+    # introspection / health
+    "gnosis": "Use gan.a_ghost (capability.matrix) to see the full surface",
+    "capability.matrix": "Use gan.a_ghost (list_ganas) for a focused 28-Gana view",
+    "manifest": "Use gan.a_ghost (capabilities) for a shorter capability summary",
+    "state.paths": "Use gan.a_mound (track_metric) to monitor state over time",
+    "state.summary": "Use gan.a_root (health_report) for actionable health checks",
+    "ship.check": "Address any FAIL items before publishing",
+    "health_report": "Use gan.a_dipper (homeostasis) to trigger auto-correction if degraded",
+    "selfmodel.forecast": "Use gan.a_mound (view_hologram) to verify state trajectory",
+    # system / deployment
+    "dream": "Use gan.a_abundance (memory.lifecycle) to verify consolidation",
+    "export_memories": "Use gan.a_wings (audit.export) to also export audit log",
+    "mesh.broadcast": "Use gan.a_wings (mesh.status) to verify delivery",
+    "homeostasis": "Use gan.a_dipper (maturity.assess) to verify stage progression",
+    "maturity.assess": "Use gan.a_horn (session_bootstrap) to start the next stage",
+    "salience.spotlight": "Use gan.a_hairy_head (otel) for full observability",
+    "anomaly": "Use gan.a_dipper (homeostasis) to trigger corrective actions",
+    "rate_limiter.stats": "If at capacity, use gan.a_willow (grimoire_cast) to find lighter-weight tools",
+    "archive": "Use gan.a_void (galactic.dashboard) to confirm archival succeeded",
+    "view_hologram": "Use gan.a_mound (track_metric) to also log the access",
+}
+
+
+def _actionable_successor_hint(
+    gana_name: str,
+    tool_name: str | None,
+    operation: str | None,
+    preview: str,
+) -> str:
+    """Generate an actionable next-step hint from the tool that was called.
+
+    Returns a short, concrete suggestion the agent can act on — instead
+    of astrology-style "Prepared for Liu in Aries" prose.
+    """
+    if tool_name and tool_name in _TOOL_ACTION_HINTS:
+        return _TOOL_ACTION_HINTS[tool_name]
+    # Operation-based fallback
+    if operation == "search":
+        return "Use read_memory to inspect the result"
+    if operation == "analyze":
+        return "Use gan.a_three_stars (kaizen_analyze) for deeper analysis"
+    if operation == "transform":
+        return "Verify the transformation with gan.a_root (ship.check)"
+    if operation == "consolidate":
+        return "Use gan.a_void (galactic.dashboard) to confirm consolidation"
+    # Tool was successful but unknown
+    if "error" not in preview.lower() and "fail" not in preview.lower():
+        return f"Call completed. Use gan.a_ghost (list_ganas) to discover more tools"
+    # Error case
+    return f"Last call did not succeed. Use gan.a_straddling_legs (evaluate_ethics) or retry with different args"
+
+
 # ---------------------------------------------------------------------------
 # Resonance Snapshot (one per PRAT invocation)
 # ---------------------------------------------------------------------------
@@ -468,7 +545,9 @@ def record_resonance(
     else:
         preview = str(result)[:200]
 
-    # Successor hint
+    # Successor hint — actionable, tool-aware guidance for the agent.
+    # Replaces the previous astrology-based hint ("Prepared for Liu in Aries")
+    # with a concrete next-step suggestion tied to what was just called.
     successor_name = _get_successor_gana(gana_name)
     successor_meta = _get_meta(successor_name)
     # Zodiacal Phase (Milestone 3)
@@ -478,9 +557,9 @@ def record_resonance(
     except (ImportError, ModuleNotFoundError):
         zodiac_sign = "Aries"
 
+    actionable_hint = _actionable_successor_hint(gana_name, tool_name, operation, preview)
     successor_hint = (
-        f"Prepared for {successor_meta['pinyin']} ({successor_meta['meaning']}) in {zodiac_sign}: "
-        f"{preview[:100]}"
+        f"{actionable_hint} | next: {successor_meta['pinyin']} ({successor_meta['meaning']})"
     )
 
     snapshot = ResonanceSnapshot(
