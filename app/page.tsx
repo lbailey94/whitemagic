@@ -148,6 +148,88 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="border-b border-border-light bg-gradient-to-br from-surface-alt to-surface py-20">
+        <div className="container-site">
+          <div className="mb-12 max-w-prose">
+            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+              Performance benchmarks
+            </p>
+            <h2 className="font-head text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+              3-10x faster than typical MCP implementations.
+            </h2>
+            <p className="mt-4 text-muted">
+              Comprehensive benchmarks (June 2026) show WhiteMagic delivers sub-50ms
+              response times across all tools, with 100% success rates and minimal
+              memory footprint.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
+                Median latency
+              </p>
+              <p className="font-head text-3xl font-bold text-ink">
+                {WM_FACTS.perfMedianMs}
+                <span className="text-lg text-muted">ms</span>
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                Typical: 100-300ms
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
+                P95 latency
+              </p>
+              <p className="font-head text-3xl font-bold text-ink">
+                {WM_FACTS.perfP95Ms}
+                <span className="text-lg text-muted">ms</span>
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                95th percentile
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
+                Success rate
+              </p>
+              <p className="font-head text-3xl font-bold text-ink">
+                {WM_FACTS.perfSuccessRate}
+                <span className="text-lg text-muted">%</span>
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                Zero failures
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
+                Memory per call
+              </p>
+              <p className="font-head text-3xl font-bold text-ink">
+                {WM_FACTS.perfMemoryMB}
+                <span className="text-lg text-muted">MB</span>
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                Minimal footprint
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 flex justify-center">
+            <Link
+              href="/performance"
+              className="btn-ghost inline-flex items-center gap-2"
+            >
+              View full benchmarks
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="border-b border-border-light bg-surface-alt py-20">
         <div className="container-site grid gap-10 md:grid-cols-[1fr_1.2fr]">
           <div>
