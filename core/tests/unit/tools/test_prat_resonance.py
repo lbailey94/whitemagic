@@ -412,5 +412,63 @@ class TestPRATRouterResonanceIntegration(unittest.TestCase):
         self.assertIn("lunar_amplification", result["details"])
 
 
+class TestResonanceVerbosity(unittest.TestCase):
+    """Test WM_RESONANCE projection — lean agent responses by default."""
+
+    def setUp(self):
+        import whitemagic.tools.prat_resonance as mod
+        mod._state = PratResonanceState()
+
+    def _route(self):
+        from whitemagic.tools.prat_router import route_prat_call
+        return route_prat_call("gana_ghost", operation="search")
+
+    @patch("whitemagic.tools.prat_resonance._get_harmony_snapshot")
+    @patch("whitemagic.tools.prat_resonance._get_lunar_phase")
+    def test_compact_is_default(self, mock_lunar, mock_harmony):
+        mock_lunar.return_value = (0.5, 8)
+        mock_harmony.return_value = {
+            "harmony_score": 0.9, "guna_dominant": "rajasic",
+            "energy": 1.0, "error_rate": 1.0, "dharma": 1.0,
+        }
+        # Empty / unset WM_RESONANCE maps to the compact default.
+        with patch.dict("os.environ", {"WM_RESONANCE": ""}):
+            res = self._route()["details"]["_resonance"]
+        # Navigation-relevant keys retained
+        self.assertEqual(res["gana"], "gana_ghost")
+        self.assertIn("successor_hint", res)
+        self.assertIn("chain_position", res)
+        # Mystique / overhead keys dropped by default
+        self.assertNotIn("lunar_phase", res)
+        self.assertNotIn("garden", res)
+        self.assertNotIn("_prat_economics", res)
+
+    @patch("whitemagic.tools.prat_resonance._get_harmony_snapshot")
+    @patch("whitemagic.tools.prat_resonance._get_lunar_phase")
+    def test_full_restores_complete_block(self, mock_lunar, mock_harmony):
+        mock_lunar.return_value = (0.5, 8)
+        mock_harmony.return_value = {
+            "harmony_score": 0.9, "guna_dominant": "rajasic",
+            "energy": 1.0, "error_rate": 1.0, "dharma": 1.0,
+        }
+        with patch.dict("os.environ", {"WM_RESONANCE": "full"}):
+            res = self._route()["details"]["_resonance"]
+        self.assertIn("lunar_phase", res)
+        self.assertIn("garden", res)
+        self.assertIn("_prat_economics", res)
+
+    @patch("whitemagic.tools.prat_resonance._get_harmony_snapshot")
+    @patch("whitemagic.tools.prat_resonance._get_lunar_phase")
+    def test_off_omits_resonance(self, mock_lunar, mock_harmony):
+        mock_lunar.return_value = (0.5, 8)
+        mock_harmony.return_value = {
+            "harmony_score": 0.9, "guna_dominant": "rajasic",
+            "energy": 1.0, "error_rate": 1.0, "dharma": 1.0,
+        }
+        with patch.dict("os.environ", {"WM_RESONANCE": "off"}):
+            details = self._route()["details"]
+        self.assertFalse(details.get("_resonance"))
+
+
 if __name__ == "__main__":
     unittest.main()

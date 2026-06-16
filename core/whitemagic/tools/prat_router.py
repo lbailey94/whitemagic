@@ -47,6 +47,49 @@ def _is_quiet_internal_benchmark(kwargs: dict[str, Any] | None = None, args: dic
     return bool(kwargs.get("_internal_benchmark") or args.get("_internal_benchmark"))
 
 
+# ──────────────────────────────────────────────────────────
+# Resonance verbosity — keep agent responses lean by default
+# ──────────────────────────────────────────────────────────
+# The full resonance block (lunar phase, garden, guna, zodiac, economics)
+# can roughly double the token weight of a small tool response. External
+# agents pay for that on every call. We therefore project the metadata to a
+# lean, agent-useful subset by default and let callers opt back into the full
+# block. The complete metadata is always recorded in session state regardless
+# of what is surfaced in the response.
+#
+# WM_RESONANCE:
+#   "compact" (default) — only navigation-relevant keys
+#   "full" / "verbose"  — the complete resonance block
+#   "off" / "none" / "0" — omit the _resonance block entirely
+_RESONANCE_COMPACT_KEYS = ("gana", "chain_position", "successor_hint", "vitality_warning")
+
+
+def _resonance_verbosity() -> str:
+    v = os.getenv("WM_RESONANCE", "").strip().lower()
+    if v in ("full", "verbose"):
+        return "full"
+    if v in ("off", "none", "0"):
+        return "off"
+    return "compact"
+
+
+def _project_resonance(meta: dict[str, Any]) -> dict[str, Any]:
+    """Project resonance metadata to the configured verbosity.
+
+    ``record_resonance`` always returns the complete block; this trims it to
+    what an external agent actually benefits from unless verbose mode is set.
+    Returns an empty dict (treated as "no resonance" by callers) when off.
+    """
+    if not meta:
+        return meta
+    mode = _resonance_verbosity()
+    if mode == "full":
+        return meta
+    if mode == "off":
+        return {}
+    return {k: meta[k] for k in _RESONANCE_COMPACT_KEYS if k in meta}
+
+
 def _normalize_gana_native_result(gana_name: str, raw: dict[str, Any]) -> dict[str, Any]:
     details = build_native_gana_details(
         gana_name,
@@ -191,7 +234,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
     _koka_result = try_koka_handler(gana_name, tool, args)
     if _koka_result is not None:
         # Record resonance for Koka path too
-        resonance_meta = {} if quiet_internal_benchmark else record_resonance(gana_name, tool, "koka_dispatch", _koka_result)
+        resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, tool, "koka_dispatch", _koka_result))
         if isinstance(_koka_result, dict):
             _koka_result["_resonance"] = resonance_meta
             _koka_result["_koka_path"] = True
@@ -302,7 +345,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
             return {"status": "error", "error": f"Tool execution failed: {type(e).__name__}", "tool": tool}
 
         # ── Step 3: Record resonance state ──
-        resonance_meta = {} if quiet_internal_benchmark else record_resonance(gana_name, tool, None, result)
+        resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, tool, None, result))
 
         # ── Fusion: Resonance → Emotion/Drive ──
         try:
@@ -397,7 +440,7 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         native_result["lunar_amplification"] = resonance_ctx["lunar_amplification"]
 
     # Record resonance for native operations too
-    resonance_meta = {} if quiet_internal_benchmark else record_resonance(gana_name, None, operation, native_result)
+    resonance_meta = {} if quiet_internal_benchmark else _project_resonance(record_resonance(gana_name, None, operation, native_result))
     if resonance_meta:
         native_result["_resonance"] = resonance_meta
 
