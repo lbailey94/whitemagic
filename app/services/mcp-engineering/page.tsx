@@ -119,16 +119,14 @@ export default function Page() {
               At a glance
             </div>
             <dl className="space-y-3 text-sm">
-              <Row label="Hourly" value="$100–150/hr" />
-              <Row label="Fixed sprint" value="$15–40k" />
-              <Row label="Retainer" value="$8–15k/mo" />
+              <Row label="Engagement" value="Research collaboration" />
               <Row label="Stack" value="Python, TypeScript" />
             </dl>
             <Link
               href="/contact"
               className="btn-primary mt-6 w-full justify-center"
             >
-              Book a call
+              Start a conversation
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

@@ -25,7 +25,7 @@ export async function GET() {
     // ---- A2A required identity fields ----
     name: "WhiteMagic Labs",
     description:
-      "Cognitive substrate for AI agents. 479 callable tools across 28 " +
+      "Cognitive substrate for AI agents. 490 callable tools across 28 " +
       "Gana meta-tools, with Dharma ethical governance, Karma audit " +
       "ledger, 5D holographic memory, bicameral reasoning, prescience " +
       "forecasting, and gratitude economics. MIT-licensed research lab.",
@@ -97,7 +97,7 @@ export async function GET() {
         examples: [
           "What does the WhiteMagic Karma Ledger track?",
           "Show me the Dharma rule profiles available.",
-          "How does PRAT compression collapse 479 tools to 28 Ganas?",
+          "How does PRAT compression collapse 490 tools to 28 Ganas?",
         ],
         inputModes: ["text/plain"],
         outputModes: ["text/plain"],
@@ -120,7 +120,7 @@ export async function GET() {
         name: "MCP discovery manifest",
         description:
           "Canonical MCP discovery manifest at /api/manifest.json. " +
-          "Lists 479 callable tools, 28 Gana meta-tools, polyglot backends, " +
+          "Lists 490 callable tools, 28 Gana meta-tools, polyglot backends, " +
           "and event bus. Fetch once at startup to model the surface.",
         tags: ["mcp", "discovery", "manifest"],
         examples: ["Fetch GET /api/manifest.json"],

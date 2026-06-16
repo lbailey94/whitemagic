@@ -211,7 +211,7 @@ export default function LadderPage() {
             <strong className="text-fg">How to use this:</strong> Click the
             tier that best describes where you are today. You&rsquo;ll see
             what&rsquo;s possible at that level and the exact next step to
-            climb — whether that&rsquo;s a $79 workshop, a $299 done-with-you
+            climb — whether that&rsquo;s a group workshop, a 1:1 done-with-you
             session, or a 15-minute call to figure it out.
           </p>
         </div>
@@ -443,14 +443,14 @@ function TierRow({
 }
 
 function NextStepPanel({ tier }: { tier: Tier }) {
-  const WORKSHOPS: Record<number, { title: string; price: string; format: string; cta: string } | null> = {
-    0: { title: "AI Basics for Busy People", price: "$79", format: "2-hour group workshop", cta: "Reserve a seat" },
-    1: { title: "Prompt Engineering & Workflow Design", price: "$79", format: "2-hour group workshop", cta: "Reserve a seat" },
-    2: { title: "AI in Your Daily Tools", price: "$119", format: "3-hour hands-on session", cta: "Reserve a seat" },
-    3: { title: "Power User Setup Sprint", price: "$299", format: "1:1 done-with-you (2 hours)", cta: "Book a sprint" },
-    4: { title: "Agent Builder Intensive", price: "$499", format: "1:1 done-with-you (half day)", cta: "Book intensive" },
-    5: { title: "Private AI Infrastructure", price: "$2,500+", format: "Custom engagement", cta: "Request proposal" },
-    6: { title: "Governance Architecture", price: "$2,500+", format: "Custom engagement", cta: "Request proposal" },
+  const WORKSHOPS: Record<number, { title: string; format: string; cta: string } | null> = {
+    0: { title: "AI Basics for Busy People", format: "2-hour group workshop", cta: "Reserve a seat" },
+    1: { title: "Prompt Engineering & Workflow Design", format: "2-hour group workshop", cta: "Reserve a seat" },
+    2: { title: "AI in Your Daily Tools", format: "3-hour hands-on session", cta: "Reserve a seat" },
+    3: { title: "Power User Setup Sprint", format: "1:1 done-with-you (2 hours)", cta: "Book a sprint" },
+    4: { title: "Agent Builder Intensive", format: "1:1 done-with-you (half day)", cta: "Book intensive" },
+    5: { title: "Private AI Infrastructure", format: "Custom engagement", cta: "Request proposal" },
+    6: { title: "Governance Architecture", format: "Custom engagement", cta: "Request proposal" },
     7: null,
   };
 
@@ -472,7 +472,7 @@ function NextStepPanel({ tier }: { tier: Tier }) {
               {workshop.title}
             </h3>
             <p className="text-muted">
-              {workshop.format} · {workshop.price}
+              {workshop.format} · research collaboration
             </p>
             <p className="mt-3 text-sm leading-relaxed text-muted">
               {tier.climbTo}

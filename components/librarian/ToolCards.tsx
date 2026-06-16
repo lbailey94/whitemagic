@@ -148,7 +148,7 @@ function ServiceCard({ service }: { service: Service | null }) {
         </div>
         <div className="flex items-center gap-1.5">
           <Tag className="h-3.5 w-3.5" />
-          <span>{service.startingPrice}</span>
+          <span>{service.engagementType}</span>
         </div>
       </div>
       <p className="mb-1 text-xs font-medium text-fg">What you get:</p>

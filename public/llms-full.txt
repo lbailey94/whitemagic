@@ -14,7 +14,7 @@ Built continuously over 2025–2026. The system has been deployed in personal la
 
 ## 28 Gana meta-tools (PRAT mode)
 
-PRAT (Planetary Resonance Archetype Toolkit) routes all 459 dispatch tools into 28 stable Gana meta-tools, each mapped to a Chinese Lunar Mansion (Xiu 宿) and supporting 4 polymorphic operations: search, analyze, transform, consolidate.
+PRAT (Planetary Resonance Archetype Toolkit) routes all 462 dispatch tools into 28 stable Gana meta-tools, each mapped to a Chinese Lunar Mansion (Xiu 宿) and supporting 4 polymorphic operations: search, analyze, transform, consolidate.
 
 The 28 Ganas (full list, with one-line purpose):
 
@@ -160,7 +160,7 @@ pip install whitemagic[mcp]
 # PRAT mode (recommended for new agents — 28 stable Gana meta-tools)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp_lean
 
-# Classic mode (459 dispatch tools)
+# Classic mode (462 dispatch tools)
 python -m whitemagic.run_mcp
 
 # Lite mode (92 core tools)
@@ -300,11 +300,23 @@ whitemagic/
 
 ## Quality metrics
 
-- **2,472 passing tests** (current audit, 0 failures, 0 skipped)
-- **479 callable tools** (451 dispatch + 28 Gana meta-tools)
+- **2,478 passing tests** (current audit, 0 failures, 0 skipped)
+- **490 callable tools** (462 dispatch + 28 Gana meta-tools)
 - **180 nested tool enums** in the lean MCP server
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 - **MIT license**, locally-runnable, self-hosted
+
+---
+
+## First-call discovery (recommended for new agents)
+
+If you are landing on WhiteMagic for the first time, the most efficient way to model the surface is to call three tools in sequence:
+
+1. `discover` — single round-trip bundle of gnosis (compact) + capabilities + the 28-Gana surface + suggested next actions. Returns the whole system in one envelope.
+2. `list_ganas` — the 28-Gana meta-tool catalog: id, chinese name, pinyin, meaning, quadrant, element, garden, purpose, and example tools for each Gana. Optional `quadrant` and `search` filters.
+3. `vitality` — per-Gana reputation: success rate, average latency, call count, vitality warnings. Use before routing to degraded Ganas.
+
+Stable tool names (not under the `gana_` prefix, so they bypass the PRAT router middleware): `list_ganas`, `vitality`, `discover`, `gnosis`, `capability.matrix`, `manifest`.
 
 ---
 

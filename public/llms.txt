@@ -1,12 +1,12 @@
 # WhiteMagic Labs
 
-> Cognitive substrate for AI agents — governance, metacognition, memory, and a validated prescience track record. MIT-licensed. Local-first. 479 callable tools across 28 Gana meta-tools.
+> Cognitive substrate for AI agents — governance, metacognition, memory, and a validated prescience track record. MIT-licensed. Local-first. 490 callable tools across 28 Gana meta-tools.
 
 WhiteMagic is an open-source MCP (Model Context Protocol) substrate for AI agents — a unified set of governance, metacognition, and memory primitives that no other system ships together. Built over 2025–2026, ahead of comparable systems at Microsoft AGT (Apr 2026), Anthropic's model-welfare audit (Apr 2026), and Cloudflare Project Think (Apr 2026).
 
 ## Capabilities
 
-- **28 Gana meta-tools** (PRAT mode) — compress 479 dispatch tools into a stable, model-friendly surface. Solves the documented tool-selection-accuracy cliff past ~50 tools.
+- **28 Gana meta-tools** (PRAT mode) — compress 490 dispatch tools into a stable, model-friendly surface. Solves the documented tool-selection-accuracy cliff past ~50 tools.
 - **Dharma Engine** — runtime ethical governance with 3 profiles (Default, Strict, Violet-Security) and 5 graduated actions (LOG, TAG, WARN, THROTTLE, BLOCK).
 - **Karma Ledger** — append-only, hash-chained audit of declared-vs-actual side effects, with Merkle anchoring and on-chain verification (XRPL, Base L2).
 - **Voice Audit** — hallucination detection at the tool-selection layer, with session-isolated quarantine.
@@ -40,7 +40,7 @@ Tool contract: every tool returns a stable JSON envelope with `status`, `tool`, 
 
 - **Polyglot accelerators** — Rust + Go in production; Koka, Zig, Mojo, Elixir, Haskell experimental. Sub-millisecond hot paths.
 - **8-stage dispatch pipeline** — Input Sanitizer → Circuit Breaker → Rate Limiter → RBAC → Maturity Gate → Governor → Handler → Compact Response.
-- **2,472 passing tests**, **479 callable tools**, MIT-licensed, locally-runnable.
+- **2,478 passing tests**, **490 callable tools**, MIT-licensed, locally-runnable.
 
 ## Prescience
 

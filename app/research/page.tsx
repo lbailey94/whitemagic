@@ -104,9 +104,9 @@ export default function ResearchPage() {
             <div>
               <p className="leading-relaxed text-muted">
                 On the engineering side, WhiteMagic ships working code: a
-                cognitive OS with 487 callable tools, 28 Gana meta-tools,
+                cognitive OS with 490 callable tools, 28 Gana meta-tools,
                 persistent holographic memory, and an 8-stage governance
-                pipeline — all MIT-licensed with 2,423 passing tests. Every
+                pipeline — all MIT-licensed with 2,478 passing tests. Every
                 technique deployed for clients has been pressure-tested inside
                 that codebase first.
               </p>

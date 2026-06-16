@@ -3,12 +3,10 @@
  *
  * Canonical directory entry for agents, crawlers, and any automated
  * caller discovering WhiteMagic Labs. Single JSON doc containing
- * identity, endpoints, payment rails, pricing pointers, and
- * machine-readable ToS.
+ * identity, endpoints, payment rails, and machine-readable ToS.
  *
  * Spec: @docs/spec/AGENT_ECONOMY_JSON.md
  */
-import { PRICING_TIERS_LIST } from "@/lib/data/pricing";
 import { SERVICES_LIST } from "@/lib/data/services";
 
 export const runtime = "nodejs";
@@ -16,13 +14,6 @@ export const runtime = "nodejs";
 export const revalidate = 300;
 
 const BASE = "https://whitemagic.dev";
-
-function normalizePriceUsd(price: string): number | null {
-  const digits = price.replace(/[^0-9.]/g, "");
-  if (!digits) return null;
-  const n = Number(digits);
-  return Number.isFinite(n) ? n : null;
-}
 
 export async function GET() {
   const body = {
@@ -96,22 +87,9 @@ export async function GET() {
       name: s.name,
       url: `${BASE}${s.path}`,
       one_liner: s.oneLiner,
-      starting_price_usd: normalizePriceUsd(s.startingPrice),
+      engagement: s.engagementType,
       typical_duration: s.typicalDuration,
-    })),
-
-    pricing: PRICING_TIERS_LIST.map((t) => ({
-      slug: t.slug,
-      name: t.name,
-      price_usd: normalizePriceUsd(t.price),
-      price_note: t.priceNote,
-      turnaround: t.turnaround,
-      checkout_url: t.stripeEnvVar
-        ? (process.env[t.stripeEnvVar] ?? `${BASE}${t.fallbackPath}`)
-        : `${BASE}${t.fallbackPath}`,
-      checkout_kind: t.stripeEnvVar && process.env[t.stripeEnvVar]
-        ? "stripe"
-        : "contact-form",
+      contact: `${BASE}/contact`,
     })),
 
     // Where an agent should read before calling anything billable.

@@ -17,7 +17,7 @@ export interface Service {
   whoThisIsFor: string[];
   whatYouGet: string[];
   typicalDuration: string;
-  startingPrice: string;
+  engagementType: string;
   path: string;
   relatedCapabilities: string[];
 }
@@ -41,7 +41,7 @@ export const SERVICES: Record<ServiceSlug, Service> = {
       "Runbooks, monitoring, and handoff documentation",
     ],
     typicalDuration: "4–6 weeks",
-    startingPrice: "From $35,000",
+    engagementType: "Research collaboration",
     path: "/services/private-ai-deployment",
     relatedCapabilities: ["harmony-vector", "circuit-breaker", "galaxy-backup"],
   },
@@ -65,7 +65,7 @@ export const SERVICES: Record<ServiceSlug, Service> = {
       "Mapping document: each control → OWASP / EU AI Act reference",
     ],
     typicalDuration: "3–5 weeks",
-    startingPrice: "From $35,000",
+    engagementType: "Research collaboration",
     path: "/services/agent-governance",
     relatedCapabilities: [
       "dharma-rules",
@@ -93,7 +93,7 @@ export const SERVICES: Record<ServiceSlug, Service> = {
       "Client wiring examples for Claude Desktop / Cursor / Windsurf",
     ],
     typicalDuration: "2–4 weeks",
-    startingPrice: "From $35,000",
+    engagementType: "Research collaboration",
     path: "/services/mcp-engineering",
     relatedCapabilities: ["gana-mcp-compression", "gnosis-portal"],
   },

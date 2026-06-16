@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-29T15:51:33.811707+00:00",
+  "generated_at": "2026-06-16T15:35:38.444535+00:00",
   "system": {
     "name": "WhiteMagic",
     "version": "22.2.0",
@@ -9,15 +9,15 @@
     "license": "MIT"
   },
   "counts": {
-    "authored_tools": 180,
-    "callable_tools": 479,
+    "authored_tools": 183,
+    "callable_tools": 490,
     "gana_tools": 28,
-    "dispatch_tools": 451,
-    "nested_unique_tools": 451,
+    "dispatch_tools": 462,
+    "nested_unique_tools": 459,
     "by_stability": {
       "stable": 28,
-      "optional": 451,
-      "experimental": 0
+      "optional": 459,
+      "experimental": 3
     }
   },
   "ganas": {
@@ -157,6 +157,7 @@
         "capability.status",
         "capability.suggest",
         "capability_harness",
+        "discover",
         "drive.event",
         "drive.snapshot",
         "explain_this",
@@ -164,12 +165,14 @@
         "get_telemetry_summary",
         "gnosis",
         "graph_topology",
+        "list_ganas",
         "manifest",
         "repo.summary",
         "research_topic",
         "selfmodel.alerts",
         "selfmodel.forecast",
         "surprise_stats",
+        "vitality",
         "watcher_add",
         "watcher_list",
         "watcher_recent_events",
@@ -280,6 +283,10 @@
         "archaeology_scan_directory",
         "archaeology_search",
         "archaeology_stats",
+        "codegenome.fork",
+        "codegenome.generate",
+        "codegenome.list",
+        "codegenome.status",
         "embedding.daemon_process",
         "embedding.daemon_start",
         "embedding.daemon_status",
@@ -404,6 +411,7 @@
         "karma.anchor",
         "karma.anchor_status",
         "karma.verify_anchor",
+        "karma_record",
         "karma_report",
         "karmic_trace",
         "otel",
@@ -3047,6 +3055,142 @@
       "permissions": []
     },
     {
+      "name": "codegenome.fork",
+      "description": "Dispatch-routable WhiteMagic tool 'codegenome.fork'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
+      "name": "codegenome.generate",
+      "description": "Dispatch-routable WhiteMagic tool 'codegenome.generate'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
+      "name": "codegenome.list",
+      "description": "Dispatch-routable WhiteMagic tool 'codegenome.list'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
+      "name": "codegenome.status",
+      "description": "Dispatch-routable WhiteMagic tool 'codegenome.status'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
       "name": "cognitive.hints",
       "description": "Get tool selection hints for the current cognitive mode — which tools are preferred/avoided.",
       "category": "system",
@@ -3804,6 +3948,40 @@
     {
       "name": "dharma_rules",
       "description": "Dispatch-routable WhiteMagic tool 'dharma_rules'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
+      "name": "discover",
+      "description": "Dispatch-routable WhiteMagic tool 'discover'.",
       "category": "system",
       "safety": "read",
       "stability": "optional",
@@ -10691,6 +10869,40 @@
       "permissions": []
     },
     {
+      "name": "karma_record",
+      "description": "Dispatch-routable WhiteMagic tool 'karma_record'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
       "name": "karma_report",
       "description": "Dispatch-routable WhiteMagic tool 'karma_report'.",
       "category": "system",
@@ -11170,6 +11382,40 @@
             "type": "string",
             "description": "Filter by tag"
           },
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
+      "name": "list_ganas",
+      "description": "Dispatch-routable WhiteMagic tool 'list_ganas'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
           "request_id": {
             "type": "string",
             "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
@@ -13477,6 +13723,195 @@
       "garden": null,
       "quadrant": null,
       "element": null,
+      "permissions": []
+    },
+    {
+      "name": "polyglot.memory_query",
+      "description": "Execute a holographic memory query through an available polyglot backend (Julia, Elixir, Haskell, or Rust). Supports encode, nearest_neighbors, constellation_detect, and coherence_score. Falls back through backends automatically if one is unavailable.",
+      "category": "memory",
+      "safety": "read",
+      "stability": "experimental",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "encode",
+              "nearest_neighbors",
+              "constellation_detect",
+              "coherence_score"
+            ],
+            "description": "Holographic memory operation to execute"
+          },
+          "text": {
+            "type": "string",
+            "description": "Text to encode (for encode operation)"
+          },
+          "query": {
+            "type": "string",
+            "description": "Query text (for nearest_neighbors)"
+          },
+          "texts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of texts to search against (for nearest_neighbors)"
+          },
+          "coords": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "description": "List of 5D coordinates (for constellation_detect, coherence_score)"
+          },
+          "k": {
+            "type": "integer",
+            "default": 5,
+            "description": "Number of nearest neighbors to return"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "julia",
+              "elixir",
+              "haskell",
+              "rust"
+            ],
+            "default": "auto",
+            "description": "Backend to use (auto = first available)"
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "gana": "Mound",
+      "garden": "metrics",
+      "quadrant": "western",
+      "element": "metal",
+      "permissions": []
+    },
+    {
+      "name": "polyglot.search",
+      "description": "Convenience tool: encode a query text and find its nearest neighbors among a pool of texts in a single call. Routes through polyglot backend.",
+      "category": "memory",
+      "safety": "read",
+      "stability": "experimental",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Query text to encode"
+          },
+          "texts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Pool of texts to search against"
+          },
+          "k": {
+            "type": "integer",
+            "default": 5,
+            "description": "Number of results"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "julia",
+              "elixir",
+              "haskell",
+              "rust"
+            ],
+            "default": "auto",
+            "description": "Backend to use"
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        },
+        "required": [
+          "query",
+          "texts"
+        ]
+      },
+      "gana": "WinnowingBasket",
+      "garden": "metrics",
+      "quadrant": "western",
+      "element": "metal",
+      "permissions": []
+    },
+    {
+      "name": "polyglot.status",
+      "description": "Check availability and health of all polyglot holographic memory backends. Returns per-backend ping results and an overall health score.",
+      "category": "introspection",
+      "safety": "read",
+      "stability": "experimental",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": "Ghost",
+      "garden": "introspection",
+      "quadrant": "southern",
+      "element": "fire",
       "permissions": []
     },
     {
@@ -17663,6 +18098,40 @@
     {
       "name": "view_hologram",
       "description": "Dispatch-routable WhiteMagic tool 'view_hologram'.",
+      "category": "system",
+      "safety": "read",
+      "stability": "optional",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "description": "Optional caller-provided request id for tracing. If omitted, a UUID is generated."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Optional idempotency key. For write tools, retries with the same key will replay prior results."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "If true, do not perform writes; return an execution preview when possible.",
+            "default": false
+          },
+          "now": {
+            "type": "string",
+            "description": "Optional ISO timestamp override for deterministic evaluation/replay (best-effort)."
+          }
+        }
+      },
+      "gana": null,
+      "garden": null,
+      "quadrant": null,
+      "element": null,
+      "permissions": []
+    },
+    {
+      "name": "vitality",
+      "description": "Dispatch-routable WhiteMagic tool 'vitality'.",
       "category": "system",
       "safety": "read",
       "stability": "optional",

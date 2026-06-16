@@ -26,13 +26,13 @@ export async function GET() {
     },
     counts: {
       authored_tools: 180,
-      callable_tools: 479,
+      callable_tools: 490,
       gana_tools: 28,
-      dispatch_tools: 451,
-      nested_unique_tools: 451,
+      dispatch_tools: 462,
+      nested_unique_tools: 462,
       by_stability: {
         stable: 28,
-        optional: 451,
+        optional: 462,
         experimental: 0,
       },
     },

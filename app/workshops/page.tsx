@@ -5,13 +5,12 @@ import { ArrowRight, Users, User, Wrench, Building2 } from "lucide-react";
 export const metadata = {
   title: "Workshops — WhiteMagic Labs",
   description:
-    "Hands-on AI literacy workshops and done-with-you sessions. From $79 group classes to custom private deployments.",
+    "Hands-on AI literacy workshops and done-with-you sessions. Group classes to custom private engagements.",
 };
 
 interface Workshop {
   tier: string;
   title: string;
-  price: string;
   format: string;
   audience: string;
   outcomes: string[];
@@ -22,7 +21,6 @@ const WORKSHOPS: Workshop[] = [
   {
     tier: "Tiers 0–1",
     title: "AI Basics for Busy People",
-    price: "$79",
     format: "2-hour group workshop (online or Savannah, GA)",
     audience: "Small business owners, professionals, students",
     outcomes: [
@@ -36,7 +34,6 @@ const WORKSHOPS: Workshop[] = [
   {
     tier: "Tiers 1–2",
     title: "Prompt Engineering & Workflow Design",
-    price: "$79",
     format: "2-hour group workshop",
     audience: "Knowledge workers, marketers, writers, analysts",
     outcomes: [
@@ -50,7 +47,6 @@ const WORKSHOPS: Workshop[] = [
   {
     tier: "Tier 2–3",
     title: "AI in Your Daily Tools",
-    price: "$119",
     format: "3-hour hands-on session",
     audience: "Power users, developers, designers",
     outcomes: [
@@ -64,7 +60,6 @@ const WORKSHOPS: Workshop[] = [
   {
     tier: "Tier 3–4",
     title: "Power User Setup Sprint",
-    price: "$299",
     format: "1:1 done-with-you (2 hours, online)",
     audience: "Solo operators, founders, technical professionals",
     outcomes: [
@@ -78,7 +73,6 @@ const WORKSHOPS: Workshop[] = [
   {
     tier: "Tier 4–5",
     title: "Agent Builder Intensive",
-    price: "$499",
     format: "1:1 done-with-you (half day, online)",
     audience: "Developers, technical founders, AI-curious engineers",
     outcomes: [
@@ -92,7 +86,6 @@ const WORKSHOPS: Workshop[] = [
   {
     tier: "Tiers 5–7",
     title: "Custom AI Infrastructure",
-    price: "$2,500+",
     format: "Custom engagement (scoping call → proposal → delivery)",
     audience: "Regulated teams, product companies, research labs",
     outcomes: [
@@ -126,8 +119,8 @@ export default function WorkshopsPage() {
           <p className="leading-relaxed">
             Every workshop is grounded in what I&apos;ve built and validated in
             the open-source WhiteMagic project —{" "}
-            <strong className="text-fg">2,243 passing tests</strong>,{" "}
-            <strong className="text-fg">18 prescience-validated claims</strong>,
+            <strong className="text-fg">2,478 passing tests</strong>,{" "}
+            <strong className="text-fg">21 prescience-validated claims</strong>,
             and a year of living inside this technology full-time. You get a
             guide who has already made the expensive mistakes on his own time.
           </p>
@@ -156,7 +149,7 @@ export default function WorkshopsPage() {
                       {w.title}
                     </h3>
                     <p className="mt-1 text-muted">
-                      {w.format} · {w.price}
+                      {w.format} · research collaboration
                     </p>
                   </div>
                 </div>

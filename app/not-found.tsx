@@ -90,14 +90,21 @@ export default function NotFound() {
           >
             /llms.txt
           </a>{" "}
-          for context, or{" "}
+          for context,{" "}
           <a
             href="/.well-known/agent.json"
             className="text-lavender hover:text-lavender-dark"
           >
             /.well-known/agent.json
           </a>{" "}
-          for our A2A card.
+          for our A2A card, or{" "}
+          <a
+            href="/api/manifest.json"
+            className="text-lavender hover:text-lavender-dark"
+          >
+            /api/manifest.json
+          </a>{" "}
+          for the live tool surface (490 tools, 28 Ganas).
         </p>
       </div>
     </section>
