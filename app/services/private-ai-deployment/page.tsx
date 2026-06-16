@@ -106,7 +106,7 @@ export default function Page() {
               At a glance
             </div>
             <dl className="space-y-3 text-sm">
-              <Row label="Typical engagement" value="$25–50k" />
+              <Row label="Typical engagement" value="Scoped per project" />
               <Row label="Timeline" value="4–8 weeks" />
               <Row label="Hands-on support" value="30 days post-launch" />
               <Row label="Deployment" value="On-prem or your VPC" />

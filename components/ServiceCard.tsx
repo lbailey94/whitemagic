@@ -5,7 +5,7 @@ export interface ServiceCardProps {
   icon: LucideIcon;
   title: string;
   blurb: string;
-  priceHint: string;
+  priceHint?: string;
   href: string;
 }
 
@@ -31,9 +31,15 @@ export function ServiceCard({
         <p className="mb-6 text-sm leading-relaxed text-muted">{blurb}</p>
       </div>
       <div className="flex items-center justify-between border-t border-border-light pt-4">
-        <span className="font-mono text-xs uppercase tracking-wider text-dim">
-          {priceHint}
-        </span>
+        {priceHint ? (
+          <span className="font-mono text-xs uppercase tracking-wider text-dim">
+            {priceHint}
+          </span>
+        ) : (
+          <span className="font-mono text-xs uppercase tracking-wider text-dim">
+            Research collaboration
+          </span>
+        )}
         <ArrowUpRight className="h-4 w-4 text-muted transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-lavender" />
       </div>
     </Link>

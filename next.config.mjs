@@ -167,16 +167,17 @@ const nextConfig = {
         source: "/.well-known/agent",
         destination: "/api/well-known/agent",
       },
-      // WhiteMagic Core API proxy
-      {
-        source: "/api/wm/:path*",
-        destination: "http://127.0.0.1:8770/:path*",
-      },
-      // WebSocket sync proxy
-      {
-        source: "/sync",
-        destination: "http://127.0.0.1:8770/sync",
-      },
+      // WhiteMagic Core API proxy — disabled until Hetzner VPS is up.
+      // Re-enable with the public Hetzner URL when ready:
+      //   destination: "https://api.whitemagic.dev/:path*",
+      // {
+      //   source: "/api/wm/:path*",
+      //   destination: "http://127.0.0.1:8770/:path*",
+      // },
+      // {
+      //   source: "/sync",
+      //   destination: "http://127.0.0.1:8770/sync",
+      // },
     ];
   },
 };

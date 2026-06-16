@@ -246,8 +246,8 @@ export default function GrantsPage() {
                 <Mail className="mr-2 h-4 w-4" />
                 Request the template
               </Link>
-              <Link href="/pricing" className="btn-secondary">
-                See consultancy tiers
+              <Link href="/contact" className="btn-secondary">
+                Talk about scope
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </div>

@@ -80,11 +80,11 @@ export default function FundPage() {
             badge="Institutional"
           />
           <ContributionRow
-            title="Book direct engagement"
-            description="Office Hours ($1,000), Architecture Review ($12,000), or multi-week Engagement (from $35,000). Every engagement funds further research."
-            action="See pricing"
-            href="/pricing"
-            badge="Commercial"
+            title="Discuss a research collaboration"
+            description="If you're working on agent governance, prescience methodology, or sovereign-stack infrastructure, reach out. Collaborations are scoped per-engagement and every contribution funds further research."
+            action="Get in touch"
+            href="/contact"
+            badge="Collaboration"
           />
         </div>
 

@@ -25,11 +25,10 @@ export async function GET() {
     // ---- A2A required identity fields ----
     name: "WhiteMagic Labs",
     description:
-      "Cognitive substrate for agentic AI: persistent memory with 5D " +
-      "holographic coordinates, Dharma ethical governance, Karma audit " +
-      "ledger, bicameral reasoning, dream consolidation, and a foresight " +
-      "engine. Published as a research/portfolio artifact and source " +
-      "library. MIT-licensed.",
+      "Cognitive substrate for AI agents. 479 callable tools across 28 " +
+      "Gana meta-tools, with Dharma ethical governance, Karma audit " +
+      "ledger, 5D holographic memory, bicameral reasoning, prescience " +
+      "forecasting, and gratitude economics. MIT-licensed research lab.",
     url: BASE,
     // protocolVersion follows A2A spec; agent app version is independent.
     protocolVersion: "1.2",
@@ -71,6 +70,23 @@ export async function GET() {
     // We expose only what is actually live behind the WhiteMagic site/SDK.
     skills: [
       {
+        id: "llms-context",
+        name: "LLM context dump",
+        description:
+          "Root-served /llms.txt and /llms-full.txt files provide a " +
+          "complete, machine-readable picture of WhiteMagic Labs: " +
+          "capabilities, tool envelope contract, prescience track " +
+          "record, 28-Gana catalog, and discovery surfaces. Fetch in a " +
+          "single round-trip to ground your reasoning about the lab.",
+        tags: ["discovery", "llm-context", "well-known"],
+        examples: [
+          "Fetch GET /llms.txt for a short index.",
+          "Fetch GET /llms-full.txt for the comprehensive context dump.",
+        ],
+        inputModes: ["application/json"],
+        outputModes: ["text/plain", "application/json"],
+      },
+      {
         id: "librarian-chat",
         name: "Librarian — bounded research assistant",
         description:
@@ -81,18 +97,43 @@ export async function GET() {
         examples: [
           "What does the WhiteMagic Karma Ledger track?",
           "Show me the Dharma rule profiles available.",
-          "How does PRAT compression collapse 456 tools to 28 Ganas?",
+          "How does PRAT compression collapse 479 tools to 28 Ganas?",
         ],
         inputModes: ["text/plain"],
         outputModes: ["text/plain"],
+      },
+      {
+        id: "prescience-api",
+        name: "Prescience track record",
+        description:
+          "21 validated forecast claims against public events, with " +
+          "Brier score 0.0958, 523 lead-time points, 25-week average " +
+          "lead. Served at /api/prescience.json. Use to ground trust in " +
+          "WhiteMagic's architectural predictions.",
+        tags: ["prescience", "forecasting", "trust"],
+        examples: ["Fetch GET /api/prescience.json for the full claims ledger."],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
+      },
+      {
+        id: "mcp-discovery",
+        name: "MCP discovery manifest",
+        description:
+          "Canonical MCP discovery manifest at /api/manifest.json. " +
+          "Lists 479 callable tools, 28 Gana meta-tools, polyglot backends, " +
+          "and event bus. Fetch once at startup to model the surface.",
+        tags: ["mcp", "discovery", "manifest"],
+        examples: ["Fetch GET /api/manifest.json"],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
       },
       {
         id: "agent-economy-directory",
         name: "Agent-economy directory entry",
         description:
           "Machine-readable directory entry describing WhiteMagic Labs' " +
-          "identity, payment rails, services, pricing, and machine-readable " +
-          "policy. See /.well-known/agent-economy.json.",
+          "identity, payment rails, and machine-readable policy. " +
+          "See /.well-known/agent-economy.json.",
         tags: ["discovery", "directory", "well-known"],
         examples: ["Fetch GET /.well-known/agent-economy.json"],
         inputModes: ["application/json"],
@@ -135,6 +176,11 @@ export async function GET() {
       agent_economy: `${BASE}/.well-known/agent-economy.json`,
       ai_agent_policy: `${BASE}/.well-known/ai-agent-policy`,
       llms_txt: `${BASE}/llms.txt`,
+      llms_full_txt: `${BASE}/llms-full.txt`,
+      manifest: `${BASE}/api/manifest.json`,
+      prescience: `${BASE}/api/prescience.json`,
+      sangha: `${BASE}/api/sangha.json`,
+      zodiac: `${BASE}/api/zodiac.json`,
       sitemap: `${BASE}/sitemap.xml`,
       skill_md: `${BASE}/skill.md`,
     },

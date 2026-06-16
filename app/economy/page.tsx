@@ -354,7 +354,7 @@ export default function EconomyPage() {
         {/* CTAs */}
         <div className="mt-16 grid gap-4 md:grid-cols-2">
           <Link
-            href="/pricing"
+            href="/contact"
             className="group rounded-2xl border border-border bg-surface p-6 transition hover:border-lavender hover:bg-lavender-bg"
           >
             <h3 className="mb-1 font-head text-lg font-semibold text-ink">

@@ -28,15 +28,15 @@ const CAPABILITIES = [
 const FORMATS = [
   {
     title: "Time-and-materials",
-    body: "$100–150/hr, typical 10–30 hr/week. Good for teams with an existing backlog who need senior MCP expertise without full-time cost.",
+    body: "Senior MCP expertise, part-time, on your existing backlog. For teams who need capacity without full-time cost.",
   },
   {
     title: "Fixed-scope sprint",
-    body: "$15–40k for a defined deliverable — a production MCP server, a gateway migration, a governance retrofit. 2–6 week window.",
+    body: "For a defined deliverable — a production MCP server, a gateway migration, a governance retrofit. 2–6 week window.",
   },
   {
     title: "Retainer",
-    body: "$8–15k/month for ongoing architecture review, escalation support, and PR review. Best once a relationship is established.",
+    body: "For ongoing architecture review, escalation support, and PR review. Best once a relationship is established.",
   },
 ];
 

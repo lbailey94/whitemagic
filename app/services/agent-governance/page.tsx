@@ -145,7 +145,7 @@ export default function Page() {
               At a glance
             </div>
             <dl className="space-y-3 text-sm">
-              <Row label="Typical engagement" value="$12–35k" />
+              <Row label="Typical engagement" value="Scoped per project" />
               <Row label="Timeline" value="3–6 weeks" />
               <Row label="Framework" value="LangChain, CrewAI, ADK, custom" />
               <Row label="Deployment" value="Your infra or ours" />

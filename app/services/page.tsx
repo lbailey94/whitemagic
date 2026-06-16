@@ -16,7 +16,6 @@ const SERVICES = [
     title: "Private AI Deployment",
     blurb:
       "Local or on-prem AI with persistent memory, tool use, and multi-tenant isolation. Your data stays on your hardware, under your compliance regime.",
-    priceHint: "Engagement · $15–50k",
     href: "/services/private-ai-deployment",
   },
   {
@@ -24,7 +23,6 @@ const SERVICES = [
     title: "Agent Governance",
     blurb:
       "Runtime guardrails for autonomous agents: policy enforcement, identity, audit, approval workflows. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI).",
-    priceHint: "Engagement · $12–35k",
     href: "/services/agent-governance",
   },
   {
@@ -32,7 +30,6 @@ const SERVICES = [
     title: "MCP Governance & Scale",
     blurb:
       "MCP governance, tool compression, and observability at scale. For teams with 10+ servers who need audit, compression, and middleware — not another tutorial.",
-    priceHint: "Contract · $100–150/hr",
     href: "/services/mcp-engineering",
   },
 ];

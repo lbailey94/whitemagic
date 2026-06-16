@@ -21,7 +21,6 @@ const ROUTES = [
     changeFrequency: "monthly" as const,
   },
   { path: "/ladder", priority: 0.9, changeFrequency: "monthly" as const },
-  { path: "/pricing", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/governance", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/prescience", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/timeline", priority: 0.9, changeFrequency: "monthly" as const },
