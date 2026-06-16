@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { ContactForm } from "@/components/ContactForm";
-import { Mail, Calendar, Github } from "lucide-react";
+import Link from "next/link";
+import { Mail, Calendar, Boxes } from "lucide-react";
 
 export const metadata = {
   title: "Contact — WhiteMagic Labs",
@@ -11,7 +12,6 @@ export const metadata = {
 // Cal.com to be configured — for now, direct email booking.
 const BOOKING_URL = "mailto:whitemagicdev@proton.me?subject=WhiteMagic%20Discovery%20Call&body=Hi%20there%2C%0A%0AI'd%20like%20to%20schedule%20a%2030-minute%20discovery%20call.%0A%0AHere's%20what%20I'm%20working%20on%3A%0A%0A";
 const EMAIL = "whitemagicdev@proton.me";
-const GITHUB = "https://github.com/whitemagic-ai";
 
 export default function ContactPage() {
   return (
@@ -53,22 +53,22 @@ export default function ContactPage() {
 
         <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-border bg-surface-alt p-8">
           <div className="flex items-start gap-4">
-            <Github className="mt-1 h-5 w-5 shrink-0 text-lavender" />
+            <Boxes className="mt-1 h-5 w-5 shrink-0 text-lavender" />
             <div>
               <h3 className="mb-1 font-head text-lg font-semibold text-ink">
                 Want to see the work first?
               </h3>
               <p className="mb-3 text-muted">
-                WhiteMagic is MIT-licensed and public. If you&apos;d like
-                to read the code before reaching out — that&apos;s
+                WhiteMagic is MIT-licensed. Explore the open-source work and
+                research right here on the site before reaching out — that&apos;s
                 encouraged.
               </p>
-              <a
-                href={GITHUB}
+              <Link
+                href="/open-source"
                 className="inline-flex items-center gap-2 text-sm font-medium text-lavender hover:text-lavender-dark"
               >
-                github.com/whitemagic-ai →
-              </a>
+                Explore the open source →
+              </Link>
             </div>
           </div>
         </div>

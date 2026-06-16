@@ -23,10 +23,6 @@ export function organizationLd(): Record<string, unknown> {
     logo: `${SITE_URL}/opengraph-image`,
     description:
       "Private AI deployment, agent governance, and MCP engineering for regulated enterprises.",
-    sameAs: [
-      "https://github.com/whitemagic-ai",
-      "https://github.com/whitemagicdev",
-    ],
   };
 }
 

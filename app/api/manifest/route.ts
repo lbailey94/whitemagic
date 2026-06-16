@@ -21,7 +21,7 @@ export async function GET() {
       name: "WhiteMagic",
       version: "22.2.0",
       url: "https://whitemagic.dev",
-      repository: "https://github.com/whitemagic-ai/whitemagic",
+      repository: "https://whitemagic.dev",
       license: "MIT",
     },
     counts: {

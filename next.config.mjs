@@ -137,6 +137,9 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
+  // Pin file-tracing root to this project to silence the multi-lockfile
+  // workspace-root inference warning (a stray package-lock.json exists in $HOME).
+  outputFileTracingRoot: process.cwd(),
   experimental: {
     mdxRs: true,
   },

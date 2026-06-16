@@ -44,7 +44,6 @@ const PUBLICATIONS: Publication[] = [
       "We introduce Karma Ledger, a runtime substrate for measuring declaration-actual fidelity in multi-agent tool use. For each tool call, the benchmark compares the agent's declared state diff against the empirical state diff, with fidelity scored as 1 - normalized edit distance. Planned validation will compare scores against human judgment and downstream task outcomes across file, browser, API, database, and shell operations.",
     links: [
       { label: "arXiv (coming)", href: "#" },
-      { label: "GitHub", href: "https://github.com/whitemagic-ai/whitemagic" },
     ],
     tags: ["agent safety", "evaluation", "benchmark", "MCP"],
   },
@@ -62,7 +61,7 @@ const BENCHMARKS: Benchmark[] = [
       { label: "Model families", value: "3" },
       { label: "License", value: "MIT" },
     ],
-    href: "https://github.com/whitemagic-ai/whitemagic",
+    href: "/open-source",
   },
 ];
 
@@ -105,9 +104,9 @@ export default function ResearchPage() {
             <div>
               <p className="leading-relaxed text-muted">
                 On the engineering side, WhiteMagic ships working code: a
-                cognitive OS with 484 callable tools, 28 Gana meta-tools,
+                cognitive OS with 487 callable tools, 28 Gana meta-tools,
                 persistent holographic memory, and an 8-stage governance
-                pipeline — all MIT-licensed with 2,379 passing tests. Every
+                pipeline — all MIT-licensed with 2,423 passing tests. Every
                 technique deployed for clients has been pressure-tested inside
                 that codebase first.
               </p>
@@ -131,7 +130,7 @@ export default function ResearchPage() {
             <StatBlock label="Research Domains" value="18" />
             <StatBlock label="Source Files" value="371" />
             <StatBlock label="Semantic Nodes" value="10.8K" />
-            <StatBlock label="Test Suite" value="2,243" />
+            <StatBlock label="Test Suite" value="2,423" />
           </div>
         </div>
 
@@ -178,15 +177,10 @@ export default function ResearchPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a
-                href="https://github.com/whitemagic-ai/whitemagic"
-                target="_blank"
-                rel="noreferrer"
-                className="btn-primary"
-              >
+              <Link href="/open-source" className="btn-primary">
                 <ExternalLink className="mr-2 h-4 w-4" />
-                View code
-              </a>
+                Explore the source
+              </Link>
               <span className="inline-flex items-center rounded-full bg-surface-alt px-3 py-1.5 text-sm text-muted">
                 <FileText className="mr-2 h-4 w-4" />
                 arXiv preprint in preparation

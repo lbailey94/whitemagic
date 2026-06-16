@@ -121,10 +121,10 @@ const WATCHLIST = [
     check_frequency_hours: 168,
   },
   {
-    name: "WhiteMagic GitHub Issues",
-    url: "https://github.com/anomalyco/whitemagic",
+    name: "WhiteMagic Labs Site",
+    url: "https://whitemagic.dev",
     category: "Internal",
-    focus: "Community issues, PRs, stars",
+    focus: "Releases, research updates, prescience log",
     check_frequency_hours: 72,
   },
   {

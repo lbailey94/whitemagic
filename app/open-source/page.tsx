@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
 import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
-import { Github, ExternalLink } from "lucide-react";
+import { Boxes, ArrowRight } from "lucide-react";
 
 export const metadata = {
   title: "Open Source — WhiteMagic Labs",
@@ -33,21 +33,21 @@ const PROJECTS: Project[] = [
       { label: "Languages", value: WM_FACTS.languages },
     ],
     status: "Active",
-    href: "https://github.com/whitemagic-ai/whitemagic",
+    href: "/contact",
     license: "MIT",
   },
   {
     name: "agent-guardrails",
     tagline: "Runtime governance middleware for AI agents",
     description:
-      "A planned extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI) with deterministic, sub-millisecond policy evaluation. Not yet extracted; track progress in the main repo.",
+      "A planned extraction of the governance layer from WhiteMagic. Policy engine, append-only audit ledger, RBAC, approval workflows, kill switch. Framework-agnostic — drops into LangChain, CrewAI, Google ADK, or custom stacks. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI) with deterministic, sub-millisecond policy evaluation. Not yet extracted — get in touch to follow progress.",
     stats: [
       { label: "Target size", value: "~2K lines" },
       { label: "OWASP Top 10", value: "10/10" },
       { label: "Language", value: "Python" },
     ],
     status: "Planned",
-    href: "https://github.com/whitemagic-ai/whitemagic",
+    href: "/contact",
     license: "MIT",
   },
 ];
@@ -123,7 +123,7 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <article className="rounded-2xl border border-border bg-surface p-6 md:p-8">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Github className="h-5 w-5 text-muted" />
+        <Boxes className="h-5 w-5 text-muted" />
         <h3 className="font-head text-2xl font-semibold text-ink">
           {project.name}
         </h3>
@@ -152,15 +152,13 @@ function ProjectCard({ project }: { project: Project }) {
         ))}
       </dl>
 
-      <a
+      <Link
         href={project.href}
-        target="_blank"
-        rel="noreferrer"
         className="inline-flex items-center gap-2 text-sm font-medium text-lavender hover:text-lavender-dark"
       >
-        View on GitHub
-        <ExternalLink className="h-3.5 w-3.5" />
-      </a>
+        Use this in your stack
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
     </article>
   );
 }

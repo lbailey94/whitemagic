@@ -143,13 +143,8 @@ export default function HomePage() {
               <a href="/timeline" className="btn-primary">
                 See the timeline →
               </a>
-              <a
-                href="https://github.com/whitemagic-ai/whitemagic"
-                className="btn-ghost"
-                target="_blank"
-                rel="noreferrer"
-              >
-                View on GitHub
+              <a href="/open-source" className="btn-ghost">
+                Explore the source →
               </a>
             </div>
           </div>

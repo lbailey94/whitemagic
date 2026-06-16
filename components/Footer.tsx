@@ -45,7 +45,7 @@ export function Footer() {
             <li><Link href="/about" className="hover:text-fg">About</Link></li>
             <li><Link href="/becoming" className="hover:text-fg">Becoming</Link></li>
             <li><Link href="/contact" className="hover:text-fg">Contact</Link></li>
-            <li><a href="https://github.com/whitemagic-ai" className="hover:text-fg">GitHub</a></li>
+            <li><Link href="/fund" className="hover:text-fg">Fund</Link></li>
           </ul>
         </div>
       </div>

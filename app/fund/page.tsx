@@ -171,15 +171,6 @@ export default function FundPage() {
             <Link href="/contact" className="btn-secondary">
               Get in touch
             </Link>
-            <a
-              href="https://github.com/whitemagic-ai/whitemagic"
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost"
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              GitHub
-            </a>
           </div>
         </div>
       </section>

@@ -145,10 +145,10 @@ export default function Page() {
               passing suite (0 failures).
             </p>
             <Link
-              href="https://github.com/whitemagic-ai/whitemagic"
+              href="/open-source"
               className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-lavender hover:text-lavender-dark"
             >
-              GitHub →
+              Explore the source →
             </Link>
           </div>
         </aside>

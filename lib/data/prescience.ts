@@ -145,8 +145,7 @@ export const EVIDENCE_SOURCES = {
   liveWeb: "Cross-referenced against competitor public releases and press",
 };
 
-export const METHODOLOGY_URL =
-  "https://github.com/whitemagic-ai/whitemagic/blob/main/docs/message_board/PRESCIENCE_METHODOLOGY_2026-06-08.md";
+export const METHODOLOGY_URL = "/prescience";
 
 export const STATED_BRIER_INDEX = 69.0;
 export const BEHAVIORAL_BRIER_INDEX = 77.5;

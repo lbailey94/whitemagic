@@ -149,7 +149,7 @@ export async function GET() {
       production_endpoint_count: 1, // librarian_http
       planned_endpoint_count: 2, // a2a_jsonrpc, mcp_http
       license: "MIT",
-      source: "https://github.com/whitemagic-ai/whitemagic",
+      source: "https://whitemagic.dev",
     },
 
     // ---- Generation metadata ----
