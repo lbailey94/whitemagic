@@ -1,15 +1,15 @@
 export const WM_FACTS = {
   version: "22.2.0",
-  verifiedDate: "June 05, 2026",
+  verifiedDate: "June 15, 2026",
   linesShort: "178K",
   linesLong: "178,000",
-  callableTools: "487",
-  dispatchTools: "459",
+  callableTools: "479",
+  dispatchTools: "451",
   ganaTools: "28",
-  testsPassing: "2423",
+  testsPassing: "2472",
   testsSkipped: "0",
   testsFailing: "0",
-  languages: "7",
+  languages: "8",
 } as const;
 
 export const WM_FACT_TEXT = {

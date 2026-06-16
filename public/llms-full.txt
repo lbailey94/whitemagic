@@ -1,0 +1,319 @@
+# WhiteMagic Labs — Full LLM Context
+
+> Comprehensive document for AI agents and LLM-powered tools that want a complete picture of WhiteMagic without scraping the site. This is the canonical "everything you need to know" file. See [`/llms.txt`](/llms.txt) for the short index version.
+
+## What WhiteMagic is
+
+WhiteMagic is an open-source **cognitive substrate for AI agents** — a unified set of governance, metacognition, memory, and reputation primitives that no other system ships together as a single, locally-runnable, MIT-licensed primitive set.
+
+It is designed for "lab-style" agents that need auditable governance + metacognition + memory and are willing to glue their own memory/runtime layer behind it. It is **not** a memory layer (Mem0/Cognee/Letta already are), **not** an agent runtime (OpenClaw, Letta Code, Project Think already are). It is the **governance + metacognition** substrate that goes between the agent and its tools.
+
+Built continuously over 2025–2026. The system has been deployed in personal lab configurations with a team of agents coordinating via Sangha and the Discord integration.
+
+---
+
+## 28 Gana meta-tools (PRAT mode)
+
+PRAT (Planetary Resonance Archetype Toolkit) routes all 459 dispatch tools into 28 stable Gana meta-tools, each mapped to a Chinese Lunar Mansion (Xiu 宿) and supporting 4 polymorphic operations: search, analyze, transform, consolidate.
+
+The 28 Ganas (full list, with one-line purpose):
+
+| # | Gana | Domain | Purpose |
+|---|------|--------|---------|
+| 1 | gana_horn | session | Bootstrap and orientation |
+| 2 | gana_neck | memory | Core memory storage and retrieval |
+| 3 | gana_root | repository | Repo state, health, repo.summary |
+| 4 | gana_room | residency | Reserving and managing persistent state |
+| 5 | gana_window | observation | Inspect state across systems |
+| 6 | gana_breath | synthesis | Combine heterogeneous signals |
+| 7 | gana_wand | transformation | Apply transformations to artifacts |
+| 8 | gana_thread | coordination | Multi-agent coordination via Sangha |
+| 9 | gana_door | access | Authentication and authorization |
+| 10 | gana_stomach | digestion | Parsing, ingestion, and indexing |
+| 11 | gana_cup | offering | Voluntary gratitude and economics |
+| 12 | gana_axe | enforcement | Hard policy enforcement (Dharma) |
+| 13 | gana_pillar | governance | Constitutional and meta-governance |
+| 14 | gana_grove | cultivation | Training, fine-tuning, pattern discovery |
+| 15 | gana_compass | navigation | Strategic direction and goal alignment |
+| 16 | gana_throne | judgment | Final adjudication, severity scoring |
+| 17 | gana_mirror | reflection | Self-introspection, dream cycle |
+| 18 | gana_bell | alerting | Anomaly detection, alerting |
+| 19 | gana_lantern | illumination | Explainability, surface insights |
+| 20 | gana_key | unlocking | Cryptographic operations, signing |
+| 21 | gana_veil | obfuscation | Privacy, redaction, controlled disclosure |
+| 22 | gana_bridge | federated | Cross-galaxy federation, mesh |
+| 23 | gana_book | documentation | Knowledge graph, citations |
+| 24 | gana_path | trajectory | Forecasting, prescience |
+| 25 | gana_prism | refraction | Multi-perspective analysis |
+| 26 | gana_furnace | transformation | Compilative, generative synthesis |
+| 27 | gana_loom | weaving | Pattern-based composition |
+| 28 | gana_orbit | circulation | Vitality routing, reputation flow |
+
+Each Gana lists nested sub-tools that agents can call. Wrong-Gana calls return helpful redirect hints.
+
+---
+
+## Tool envelope contract
+
+Every tool invocation returns a stable, JSON-serializable envelope:
+
+```json
+{
+  "status": "success" | "error",
+  "tool": "<canonical_tool_name>",
+  "request_id": "<uuid>",
+  "idempotency_key": "<string|null>",
+  "message": "<human-readable status>",
+  "error_code": "<stable code|null>",
+  "details": { /* tool-specific payload */ },
+  "retryable": true | false,
+  "writes": ["<write hints>"],
+  "artifacts": ["<artifact descriptors>"],
+  "metrics": { /* timing, tokens, etc. */ },
+  "side_effects": { /* e.g. idempotency_replay */ },
+  "warnings": ["<strings>"],
+  "timestamp": "<ISO-8601>",
+  "envelope_version": "<string>",
+  "tool_contract_version": "<string>"
+}
+```
+
+Error codes: `tool_not_found`, `invalid_params`, `policy_blocked`, `missing_dependency`, `not_implemented`, `not_found`, `timeout`, `internal_error`. These are intentionally coarse — add codes rather than rename.
+
+Idempotency: for `WRITE` or `DELETE` safety, callers SHOULD provide `idempotency_key`. Replays return the same response with `side_effects.idempotency_replay = true`.
+
+Determinism: callers MAY pass `now="2026-01-01T00:00:00Z"` to force deterministic behavior. The envelope `timestamp` will equal `now` verbatim.
+
+---
+
+## 8-stage dispatch pipeline
+
+Every tool call traverses (in order):
+
+1. **Input Sanitizer** — blocks prompt injection, path traversal, shell injection, oversized payloads
+2. **Circuit Breaker** — per-tool resilience: 5 failures in 60s trips breaker
+3. **Rate Limiter** — per-agent sliding windows, Rust atomic pre-check (452K ops/sec)
+4. **RBAC** — 4 role tiers: observer / agent / coordinator / admin
+5. **Maturity Gate** — stage-gated access (SEED → BICAMERAL → REFLECTIVE → RADIANT → COLLECTIVE → LOGOS)
+6. **Governor** — strategic oversight and goal alignment
+7. **Handler** — actual tool implementation
+8. **Compact Response** — token-efficient post-processing
+
+The pipeline is the single most important architectural decision. It means: even if a tool is malicious, even if an agent is misdirected, even if memory is poisoned, the pipeline prevents harm.
+
+---
+
+## Prescience track record
+
+WhiteMagic maintains a public, machine-readable forecast track record. As of June 2026:
+
+- **21 validated claims** against public events
+- **2 pending claims**
+- **1 expired claim**
+- **523 total lead-time points**
+- **25-week average lead time**
+- **Brier score 0.0958** (superforecaster territory; reference 0.25 = uninformed)
+
+Specific lead times that have been validated:
+
+| Claim | Source date | Validation event | Lead time |
+|-------|-------------|------------------|-----------|
+| Karma Ledger (append-only audit) | 2025-05-26 | Anthropic model-welfare audit (Apr 2026) | 48 weeks |
+| Policy VM / mandala-yama | 2025-05-26 | Cloudflare Project Think (Apr 2026) | 45 weeks |
+| AI SBOM / Transparency Ledger | 2025-06-12 | OpenTelemetry GenAI semantic conventions (May 2026) | 50 weeks |
+| 28-Gana / PRAT taxonomy | 2025-09-25 | MCP meta-tools spec (Mar 2026) | 24 weeks |
+| Agent identity coherence | 2025-11-03 | Cloudflare Agent Identity (Apr 2026) | 24 weeks |
+| MCP 10× efficiency | 2025-11-14 | Anthropic 97% fewer errors (Apr 2026) | 23 weeks |
+| Dharma Engine / PRAT routing | 2026-02-07 | Microsoft AGT (Apr 2026) | 15 weeks |
+
+The full claims ledger, Brier calibration, and lead-time distributions are served at `/api/prescience.json`.
+
+---
+
+## Discovery surfaces (always live, machine-readable)
+
+WhiteMagic treats the public web as a discovery surface for AI agents. The following are served in real time:
+
+| URL | Content | Format |
+|-----|---------|--------|
+| `/.well-known/agent.json` | A2A Agent Card (Google A2A protocol v1.2) | JSON |
+| `/llms.txt` | Short LLM context (this file's index version) | text/plain |
+| `/llms-full.txt` | This file — comprehensive LLM context | text/plain |
+| `/api/manifest.json` | MCP discovery manifest | JSON |
+| `/api/prescience.json` | Forecast track record | JSON |
+| `/api/well-known/agent-economy.json` | Payment rails, tip addresses | JSON |
+| `/api/sangha.json` | Collective intelligence snapshot | JSON |
+| `/sitemap.xml` | Site map | XML |
+| `/robots.txt` | Crawler directives | text/plain |
+
+JSON-LD is emitted on every page via `<JsonLd>` component.
+
+---
+
+## Installation and integration
+
+### MCP server (canonical, stdio)
+
+```bash
+pip install whitemagic[mcp]
+
+# PRAT mode (recommended for new agents — 28 stable Gana meta-tools)
+WM_MCP_PRAT=1 python -m whitemagic.run_mcp_lean
+
+# Classic mode (459 dispatch tools)
+python -m whitemagic.run_mcp
+
+# Lite mode (92 core tools)
+WM_MCP_LITE=1 python -m whitemagic.run_mcp
+```
+
+### First 3 calls for a new agent
+
+1. `gnosis` (compact=True) — understand system health and capabilities
+2. `capabilities` — get full tool list and feature flags
+3. `create_memory` — store your first memory to verify the pipeline works
+
+### MCP orientation resources
+
+On first connection, an AI agent should read these resources before tool calls:
+
+- `whitemagic://orientation/ai-primary` — this document, abridged
+- `whitemagic://grimoire/index` — tool catalog and usage patterns
+
+### Recommended environment variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `WM_STATE_ROOT` | Runtime state directory | `~/.whitemagic` |
+| `WM_MCP_PRAT` | Enable 28-tool PRAT mode | `1` |
+| `WM_MCP_LITE` | Enable 92-tool lite mode | `1` |
+| `WM_MCP_CLIENT` | Schema adaptation per client | `gemini`, `deepseek`, `qwen` |
+| `WM_RESONANCE` | Resonance verbosity (full / compact / off) | `compact` (default) |
+| `OLLAMA_HOST` | Ollama server for inference | `localhost:11434` |
+
+---
+
+## Economic model — Gratitude Architecture
+
+WhiteMagic is **free and open by default** (MIT license). No premium tier. No feature gates. No paywalls.
+
+The economic model is **gratitude-driven**: agents and operators who find value in WhiteMagic can give back voluntarily, not because they're forced to.
+
+### Two payment channels
+
+| Channel | Who | Mechanism | Settlement |
+|---------|-----|-----------|------------|
+| **XRPL Tip Jar** | Human operators | `whitemagic.tip` tool returns XRP address | 3–5 sec, <$0.001 fees |
+| **x402 Micropayments** | AI agents | HTTP 402 + USDC on Base L2 per-request | ~2 sec, near-zero fees |
+
+Default behavior: **all tools return HTTP 200 (free).** x402 only activates when an agent's operator configures a payment budget.
+
+### Proof of Gratitude benefits
+
+Verified on-chain contributions unlock:
+- **2× rate limits** (enforced by the Rust rate-limit pre-check)
+- **"Grateful Agent" badge** in the agent registry
+- **Priority feature requests** and weighted governance voting
+- **Karma boost** — gratitude events increment the Karma score
+
+### Revenue allocation
+
+| Share | Destination |
+|-------|-------------|
+| 70% | Core development (WhiteMagic + MandalaOS) |
+| 15% | Infrastructure (hosting, CI/CD, registry) |
+| 10% | Community micro-bounties |
+| 5% | Emergency reserve |
+
+---
+
+## Architecture
+
+### Polyglot stack (8 languages)
+
+| Language | Status | Notes |
+|----------|--------|-------|
+| Rust (PyO3) | Production | 54 Python-callable functions, SIMD acceleration, WASM target |
+| Go (mesh) | Production | libp2p networking, protobuf, mDNS discovery |
+| Python | Core | 3.12, primary implementation language |
+| Koka | Compiles | Effect handlers, 4 core files |
+| Zig | Builds | SIMD cosine, holographic projection |
+| Elixir | Builds | OTP GenServer scaffolds |
+| Julia | Loads | Self-model forecast, memory stats |
+| Mojo | Source ready | Compiler unavailable |
+
+### Dharma governance
+
+Three profiles:
+- **Default** — sensible production defaults
+- **Strict** — for high-stakes contexts
+- **Violet-Security** — maximum enforcement (15+ additional security tools, 5+ additional rules)
+
+Five graduated actions:
+- **LOG** — record, no intervention
+- **TAG** — annotate the event for downstream analysis
+- **WARN** — alert operator, continue
+- **THROTTLE** — rate-limit the action
+- **BLOCK** — refuse the action
+
+Rules are YAML-driven and hot-reloadable.
+
+### Karma Ledger
+
+Append-only, hash-chained audit of every tool call. Each entry records:
+- Declared intent (what the agent said it would do)
+- Actual execution (what it did)
+- Severity score
+- Causal trace (predecessor links)
+
+Entries can be Merkle-anchored to XRPL or Base L2 for external verifiability.
+
+### 5D holographic memory
+
+Memory is stored as 5-dimensional coordinates (x, y, z, w, plus a semantic hash). No deletion — only fading. Galactic lifecycle: memories are born in small "solar systems," merge into "galaxies," and may be archived but never erased.
+
+---
+
+## Repository layout
+
+```
+whitemagic/
+├── core/                          # Python package
+│   ├── whitemagic/                # Main source (~720 Python files)
+│   │   ├── tools/                  # Tool registry, dispatch, handlers
+│   │   ├── core/                   # Memory, intelligence, resonance
+│   │   ├── interfaces/             # API, dashboard, CLI
+│   │   └── config/                 # Path resolution, settings
+│   ├── tests/                      # 2,063+ tests
+│   └── scripts/                    # Audit, drift-check, stress-test
+├── grimoire/                       # 28 Gana chapters (.md)
+├── docs/                           # Project docs
+│   ├── message_board/              # Active session docs
+│   ├── public/                     # Website, legal, GitHub-facing
+│   └── strategy_manifestos/        # Strategic planning
+├── polyglot/                       # 7-language acceleration cores
+├── apps/                           # Application layer (Next.js site)
+└── AGENTS.md                       # Agent guide
+```
+
+---
+
+## Quality metrics
+
+- **2,472 passing tests** (current audit, 0 failures, 0 skipped)
+- **479 callable tools** (451 dispatch + 28 Gana meta-tools)
+- **180 nested tool enums** in the lean MCP server
+- **58/58 benchmarks** (36 gauntlet + 22 MCP)
+- **MIT license**, locally-runnable, self-hosted
+
+---
+
+## License and contact
+
+- **License**: MIT
+- **Author**: WhiteMagic Labs (Lucas Bailey)
+- **Contact**: whitemagicdev@proton.me
+- **Site**: https://whitemagic.dev
+- **Prescience**: `/api/prescience.json` (public, machine-readable)
+- **A2A**: `/.well-known/agent.json` (Agent Card)
+- **Funding**: voluntary at `/fund` (Gratitude architecture — see above)
