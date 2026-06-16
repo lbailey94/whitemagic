@@ -167,6 +167,25 @@ const nextConfig = {
         source: "/.well-known/agent",
         destination: "/api/well-known/agent",
       },
+      // Expose .json variants of API endpoints for agent discoverability.
+      // Agents in the wild fetch /api/foo.json by convention; these rewrites
+      // strip the suffix and route to the actual handler.
+      {
+        source: "/api/manifest.json",
+        destination: "/api/manifest",
+      },
+      {
+        source: "/api/prescience.json",
+        destination: "/api/prescience",
+      },
+      {
+        source: "/api/sangha.json",
+        destination: "/api/sangha",
+      },
+      {
+        source: "/api/zodiac.json",
+        destination: "/api/zodiac",
+      },
       // WhiteMagic Core API proxy — disabled until Hetzner VPS is up.
       // Re-enable with the public Hetzner URL when ready:
       //   destination: "https://api.whitemagic.dev/:path*",
