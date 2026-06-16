@@ -804,6 +804,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
 async def main_stdio() -> None:
     """Run as stdio MCP server (default, for IDE integration)."""
     import anyio
+    import signal
     from mcp.shared.message import SessionMessage
 
     from whitemagic.runtime_status import get_runtime_status
@@ -828,37 +829,96 @@ async def main_stdio() -> None:
     read_stream_writer, read_stream = anyio.create_memory_object_stream[SessionMessage | Exception](0)
     write_stream, write_stream_reader = anyio.create_memory_object_stream[SessionMessage](0)
 
+    # Graceful shutdown mechanism
+    shutdown_event = asyncio.Event()
+    
+    def signal_handler(signum, frame):
+        """Handle SIGTERM/SIGINT for graceful shutdown."""
+        sig_name = signal.Signals(signum).name
+        logger.warning(f"Received {sig_name}, initiating graceful shutdown...")
+        shutdown_event.set()
+    
+    # Register signal handlers
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     async def stdin_reader() -> None:
         """Read newline-delimited JSON-RPC from stdin and forward to MCP stream."""
         async with read_stream_writer:
-            while True:
-                raw = await asyncio.to_thread(sys.stdin.buffer.readline)
-                if not raw:
-                    break
+            while not shutdown_event.is_set():
                 try:
+                    raw = await asyncio.to_thread(sys.stdin.buffer.readline)
+                    if not raw:
+                        logger.info("stdin closed, shutting down")
+                        shutdown_event.set()
+                        break
                     line = raw.decode("utf-8")
                     message = types.JSONRPCMessage.model_validate_json(line)
+                    await read_stream_writer.send(SessionMessage(message))
                 except Exception as exc:
-                    await read_stream_writer.send(exc)
+                    if not shutdown_event.is_set():
+                        logger.error(f"stdin_reader error: {exc}")
+                        await read_stream_writer.send(exc)
                     continue
-                await read_stream_writer.send(SessionMessage(message))
 
     async def stdout_writer() -> None:
         """Write MCP session messages as newline-delimited JSON-RPC to stdout."""
         async with write_stream_reader:
             async for session_message in write_stream_reader:
-                payload = session_message.message.model_dump_json(by_alias=True, exclude_none=True)
-                sys.stdout.write(payload + "\n")
-                sys.stdout.flush()
+                if shutdown_event.is_set():
+                    break
+                try:
+                    payload = session_message.message.model_dump_json(by_alias=True, exclude_none=True)
+                    sys.stdout.write(payload + "\n")
+                    sys.stdout.flush()
+                except Exception as exc:
+                    logger.error(f"stdout_writer error: {exc}")
+                    if shutdown_event.is_set():
+                        break
+
+    async def shutdown_watcher() -> None:
+        """Monitor shutdown event and cancel tasks when triggered."""
+        await shutdown_event.wait()
+        logger.info("Shutdown event triggered, closing streams...")
+        # Close streams to unblock any pending reads/writes
+        try:
+            await read_stream_writer.aclose()
+        except Exception:
+            pass
+        try:
+            await write_stream.aclose()
+        except Exception:
+            pass
+        # Cancel the main server task to force exit
+        current_task = asyncio.current_task()
+        for task in asyncio.all_tasks():
+            if task != current_task and task not in (stdin_task, stdout_task, shutdown_task):
+                task.cancel()
 
     stdin_task = asyncio.create_task(stdin_reader())
     stdout_task = asyncio.create_task(stdout_writer())
+    shutdown_task = asyncio.create_task(shutdown_watcher())
+    
     try:
+        # Run server - it will exit when stdin closes or on error
         await server.run(read_stream, write_stream, server.create_initialization_options())
+    except asyncio.CancelledError:
+        logger.info("Server task cancelled during shutdown")
+    except Exception as exc:
+        logger.error(f"Server run error: {exc}")
+        raise
     finally:
+        logger.info("Cleaning up MCP server tasks...")
+        shutdown_event.set()
         stdin_task.cancel()
         stdout_task.cancel()
-        await asyncio.gather(stdin_task, stdout_task, return_exceptions=True)
+        shutdown_task.cancel()
+        # Give tasks a moment to clean up
+        await asyncio.gather(
+            stdin_task, stdout_task, shutdown_task,
+            return_exceptions=True
+        )
+        logger.info("MCP server shutdown complete")
 
 
 async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
