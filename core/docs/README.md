@@ -6,7 +6,7 @@
 
 | Document | Description |
 |----------|-------------|
-| [QUICKSTART.md](./QUICKSTART.md) | Getting started guide |
+| [QUICKSTART.md](./QUICKSTART.md) | Getting started guide (→ redirects to root [`/QUICKSTART.md`](../../QUICKSTART.md)) |
 | [API_REFERENCE.md](./API_REFERENCE.md) | Core engine API documentation |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture overview |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |

@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0
-**Last Updated**: June 8, 2026 (evening — exception sweep complete, STATE_REPORT, competitive landscape analysis, NSA MCP self-assessment, prescience update, methodology, Dharma spec, 8 new docs)
+**Last Updated**: June 17, 2026 (documentation sprint — QUICKSTART consolidation, INDEX update)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -42,7 +42,7 @@ These files live at the repository root. They are the **public face** of the pro
 | `CODE_OF_CONDUCT.md` | Community standards | — |
 | `CONTRIBUTING.md` | How to contribute | — |
 | `DEPLOY.md` | Deployment overview | — |
-| `QUICKSTART.md` | 5-minute getting-started guide | `test_release_readiness.py` |
+| `QUICKSTART.md` | 5-minute getting-started guide (**canonical** — `docs/guides/` and `core/docs/` are redirects) | `test_release_readiness.py` |
 | `SYSTEM_MAP.md` | **Canonical repo map** — architecture, modules, quick start | `run_mcp_lean.py` (MCP resource) |
 | `AI_PRIMARY.md` | **AI agent onboarding** — primary instruction doc for AI collaborators | `run_mcp_lean.py`, `version_bump.py`, `generate_llms_txt.py` |
 | `AGENTS.md` | **AI agent operations** — coding conventions, testing protocol, change patterns | — |
@@ -264,6 +264,21 @@ Docs published to the website, GitHub, or legal pages.
 | File | Topic |
 |------|-------|
 | `README.md` | Misc folder README |
+
+---
+
+## Guides: `docs/guides/`
+
+Focused how-to guides for specific tasks and audiences.
+
+| File | Topic |
+|------|-------|
+| `QUICKSTART.md` | Getting started guide (**redirect** → canonical at root `QUICKSTART.md`) |
+| `EXAMPLE_WORKFLOWS.md` | 6 real-world workflow patterns (Research Assistant, Code Reviewer, Data Analysis, Multi-Agent Coordination, Ethical Decision Making, Performance Monitoring) |
+| `MCP_CONFIG_EXAMPLES.md` | Ready-to-use MCP config templates (PRAT/classic/lite) |
+| `GALAXY_PER_CLIENT_GUIDE.md` | Multi-galaxy project-scoped databases |
+| `LITE_VS_HEAVY.md` | Lite vs Heavy deployment comparison |
+| `ENCRYPTION_AT_REST.md` | Encryption at rest specifications |
 
 ---
 
@@ -646,6 +661,7 @@ Language-specific docs for the polyglot core matrix.
 | `docs/operations/` | Runbooks, config, operational guides | No |
 | `docs/plans/` | Roadmaps, planning docs | No |
 | `docs/public/` | Website, legal, GitHub-facing | No |
+| `docs/guides/` | Focused how-to guides and workflows | No |
 | `docs/reports/` | Audits, evaluations, post-mortems | No |
 | `docs/spec/` | Technical specifications | No |
 | `docs/strategy_manifestos/` | Strategic vision & market analysis | No |
@@ -657,4 +673,4 @@ Language-specific docs for the polyglot core matrix.
 
 ---
 
-*This index is a living document. Last updated: 2026-05-30 by session agent.*
+*This index is a living document. Last updated: 2026-06-17 by session agent.*

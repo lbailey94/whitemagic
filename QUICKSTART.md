@@ -2,6 +2,8 @@
 
 Get from zero to productive in 5 minutes.
 
+**Performance**: 29-33ms median latency (3-10x faster than typical MCP implementations). See [benchmarks](https://whitemagic.dev/performance).
+
 ---
 
 ## 1. Install
@@ -38,7 +40,7 @@ Expected output:
 ```
 ✅ Core: OK
 ✅ Memory DB: OK
-✅ Tools: ~420 registered (see mcp-registry.json)
+✅ Tools: 490 registered (462 dispatch + 28 Gana meta-tools)
 ✅ MCP: fastmcp available
 ```
 
@@ -107,7 +109,7 @@ wm doctor           # Full diagnostics
 
 ### Option A: PRAT Mode (Recommended)
 
-28 Gana meta-tools — each a consciousness lens that groups related tools:
+28 Gana meta-tools — each a consciousness lens that groups related tools. Compresses 490 tools into a stable, model-friendly surface:
 
 ```bash
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
@@ -132,7 +134,7 @@ Add to your `.mcp.json`:
 
 ### Option B: Classic Mode
 
-All 313 individual tools:
+All 490 individual tools:
 
 ```bash
 python -m whitemagic.run_mcp
@@ -180,13 +182,25 @@ call_tool("dream_status")  # Check phase: CONSOLIDATION → SERENDIPITY → KAIZ
 call_tool("dream_stop")    # Stop
 ```
 
-## 10. Next Steps
+## 10. Performance
+
+WhiteMagic delivers **3-10x faster response times** than typical MCP implementations:
+
+- **Median latency**: 29-33ms
+- **P95 latency**: 36-55ms
+- **Success rate**: 100%
+- **Memory per call**: 0-0.18MB
+
+See full benchmarks at [whitemagic.dev/performance](https://whitemagic.dev/performance).
+
+## 11. Next Steps
 
 - **[API Reference](../reference/API_REFERENCE.md)** — Full tool documentation
 - **[Architecture](../reference/ARCHITECTURE.md)** — System diagrams and data flow
 - **[MCP Config Examples](./MCP_CONFIG_EXAMPLES.md)** — Client-specific configs
+- **[Example Workflows](./docs/guides/EXAMPLE_WORKFLOWS.md)** — Real-world usage patterns
 - **[Contributing](../../CONTRIBUTING.md)** — How to add tools and accelerators
-- **[Use Cases](../design/USE_CASES.md)** — Real-world usage patterns
+- **[Use Cases](../design/USE_CASES.md)** — Detailed usage scenarios
 
 ---
 
