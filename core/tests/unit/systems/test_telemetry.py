@@ -1,6 +1,5 @@
 """Regression tests for tool telemetry accounting."""
 
-import unittest
 import pytest
 
 

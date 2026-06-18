@@ -1,6 +1,5 @@
 """Tests for Corpus Callosum Bus."""
 
-import pytest
 
 from whitemagic.core.intelligence.corpus_callosum import (
     CorpusCallosumBus,

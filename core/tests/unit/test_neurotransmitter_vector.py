@@ -1,9 +1,7 @@
 """Tests for Neurotransmitter Vector."""
 
-import pytest
 
 from whitemagic.core.monitoring.neurotransmitter_vector import (
-    NeurotransmitterSnapshot,
     NeurotransmitterVector,
 )
 

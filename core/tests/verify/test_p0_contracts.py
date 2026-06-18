@@ -242,7 +242,6 @@ class TestAPIResponseContract:
         assert response["status"] in ("success", "error"), f"Invalid status: {response['status']}"
         
         # Ensure full envelope keys are present
-        from whitemagic.tools.envelope import _RESERVED_KEYS
         missing = {"envelope_version", "tool", "request_id", "timestamp"}.difference(response.keys())
         assert not missing, f"Missing envelope keys: {sorted(missing)}"
 

@@ -1,6 +1,5 @@
 """Tests for Jaynes Voice Audit and Quarantine."""
 
-from unittest.mock import patch
 
 import pytest
 

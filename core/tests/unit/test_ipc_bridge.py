@@ -13,9 +13,7 @@ Note: cross-process subscriber testing requires two real processes.
 This test exercises the in-process path which is sufficient for
 verifying the publisher side and the API surface.
 """
-import json
 import os
-import shutil
 import time
 
 import pytest
@@ -63,7 +61,7 @@ def test_publish_then_status_increments_counter():
 
 def test_publish_json_helper_round_trip():
     """publish_json must serialize dicts and accept the json helper back via try_receive_json."""
-    from whitemagic.core.ipc_bridge import init_ipc, publish_json, try_receive_json, shutdown_ipc
+    from whitemagic.core.ipc_bridge import init_ipc, publish_json
     node = f"test_pub_json_{os.getpid()}_{int(time.time())}"
     init_ipc(node)
 

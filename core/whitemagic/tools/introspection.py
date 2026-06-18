@@ -15,7 +15,6 @@ They are designed to be safe to run in automated contexts:
 
 from __future__ import annotations
 
-import logging
 import os
 import platform
 import re

@@ -1,16 +1,12 @@
-import logging
 import os
 import sys
-from typing import Any
 import sys
 import sys
-from unittest.mock import MagicMock
 
 # No more sys.modules hacking - using empty dummy files instead!
 
 import importlib
 import tempfile
-from enum import auto
 
 import pytest
 try:
@@ -28,7 +24,7 @@ except ImportError:
 
 # Check if Rust backend is available
 try:
-    import whitemagic_rust
+    import whitemagic_rust  # noqa: F401 — sentinel for RUST_AVAILABLE
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False

@@ -22,7 +22,6 @@ import logging
 import random
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 

@@ -16,7 +16,6 @@ Covers:
 import json
 import unittest
 
-import pytest
 
 
 # ---------------------------------------------------------------------------

@@ -15,7 +15,7 @@ try:
     import whitemagic.core.governor
     import whitemagic.core.acceleration.simd
     import whitemagic.agents.swarm
-    import whitemagic.tools.sandbox
+    import whitemagic.tools.sandbox  # noqa: F401 — sentinel for SANDBOX_AVAILABLE
 except ImportError:
     pass
 

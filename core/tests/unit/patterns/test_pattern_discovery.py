@@ -9,8 +9,6 @@ class TestPatternDiscovery:
             DiscoveryReport,
             PatternDiscovery,
             PatternSource,
-            get_discovery,
-            run_full_discovery,
         )
         assert PatternSource is not None
         assert DiscoveryReport is not None

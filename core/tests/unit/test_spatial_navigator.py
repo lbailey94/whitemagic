@@ -1,5 +1,4 @@
 """Tests for spatial_navigator module."""
-import pytest
 
 from whitemagic.tools.spatial_navigator import (
     discover_related,

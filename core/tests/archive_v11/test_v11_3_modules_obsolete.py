@@ -7,8 +7,6 @@ These tests validated APIs that have been completely rewritten:
 
 Preserved for historical reference. Not expected to pass on v22.
 """
-import json
-import time
 
 import pytest
 

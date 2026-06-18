@@ -170,7 +170,6 @@ class TestCreativeStudio:
         """Creations should be saved to disk and reloadable."""
         from whitemagic.gardens.play.creative_studio import (
             CreativeStudio,
-            Creation,
         )
 
         with tempfile.TemporaryDirectory() as tmp:

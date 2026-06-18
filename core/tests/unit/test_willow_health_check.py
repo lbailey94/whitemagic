@@ -1,5 +1,4 @@
 """Tests for willow_health_check module."""
-import asyncio
 
 import pytest
 

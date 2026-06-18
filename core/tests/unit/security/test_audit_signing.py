@@ -1,6 +1,5 @@
 """Tests for audit_signing Ed25519 module."""
 
-from pathlib import Path
 
 import pytest
 

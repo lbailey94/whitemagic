@@ -1,5 +1,4 @@
 """Tests for stable_contract module."""
-import pytest
 
 from whitemagic.tools.stable_contract import (
     STABLE_TOOLS,

@@ -10,7 +10,6 @@ Regression tests for v11.3 modules:
 import json
 import time
 
-import pytest
 
 # from tests.conftest import assert_envelope_shape  # not available in this test runner
 assert_envelope_shape = None  # placeholder

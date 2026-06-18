@@ -2,7 +2,6 @@
 
 PSR-014: Test coverage for _rust_fallbacks module.
 """
-import pytest
 
 from whitemagic.optimization._rust_fallbacks import (
     PythonSpatialIndex5D,

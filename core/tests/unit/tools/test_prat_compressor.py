@@ -10,7 +10,6 @@ Covers:
 """
 
 import os
-import pytest
 from whitemagic.tools.prat_compressor import (
     PratCompressor,
     get_prat_compressor,
