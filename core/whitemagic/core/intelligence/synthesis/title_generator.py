@@ -6,7 +6,6 @@ key phrases, and content analysis.
 
 from __future__ import annotations
 
-import importlib
 import logging
 import re
 import sqlite3
@@ -61,40 +60,17 @@ class TitleGenerator:
         return "Untitled"
 
     def _generate_evocative_name(self, content: str) -> str | None:
-        """Use LLM to generate an evocative, thematic name."""
-        try:
-            # Check for a configured LLM client in the integration hub
-            from whitemagic.integration import get_hub
-            hub = get_hub()
+        """Use LLM to generate an evocative, thematic name.
 
-            # If hub has an active LLM client, use it
-            if hasattr(hub, "llm") and hub.llm:
-                llm_mod = importlib.import_module("whitemagic._archived.local_models.llm.llm_bridge")
-                LLMBridge = getattr(llm_mod, "LLMBridge", None)
-                if not callable(LLMBridge):
-                    return None
-                bridge = LLMBridge(hub.llm)
-
-                prompt = f"""
-                Generate a short, evocative, and thematic title (2-5 words) for the following content.
-                The title should sound like a 'Knowledge Sector' or 'Ancient Grimoire Chapter'.
-
-                CONTENT:
-                {content[:1000]}
-
-                OUTPUT:
-                Just the title string, no quotes or prefix.
-                """
-
-                response = bridge.chat(prompt, context_k=0, remember=False)
-                response_text = str(response).strip() if response is not None else ""
-                if len(response_text) > 3:
-                    return response_text
-
-            return None
-        except Exception as e:
-            logger.debug(f"Title generation via LLM bridge failed: {e}")
-            return None
+        Note: The legacy v15 LLM bridge (``whitemagic._archived.local_models.llm.llm_bridge``)
+        was removed during the cognitive-OS pivot. As of v22.2.0, no LLM
+        bridge is wired into the integration hub, so this function returns
+        ``None`` and ``generate()`` falls through to the deterministic
+        strategies below (markdown header → key phrases → first line).
+        To re-enable LLM-driven titles, implement an ``LLMBridge`` adapter
+        in the integration hub and wire it here.
+        """
+        return None
 
     def _extract_header(self, content: str) -> str | None:
         """Extract markdown header."""
