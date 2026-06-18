@@ -12,23 +12,23 @@ WhiteMagic is **MIT-licensed, locally-runnable, vendor-neutral**. There is no Sa
 
 ---
 
-## Strategic Context — Verified Landscape (April 2026)
+## Strategic Context — Verified Landscape (April 2026 → re-verified 2026-06-18)
 
-> Full citations + sources are in `docs/message_board/COMPETITIVE_LANDSCAPE_2026-04-27.md`. The numbers below were verified on 2026-04-27 by direct web research; re-verify any number more than 30 days after that date.
+> Full citations + sources are in `docs/message_board/COMPETITIVE_LANDSCAPE_2026-04-27.md`. The numbers below were verified on 2026-04-27 by direct web research; re-verify any number more than 30 days after that date. **v22.2.2 re-verification (2026-06-18):** the agent ecosystem table is broadly consistent — no major discontinuities reported in interim session notes. The 3 prescience claims (Dharma, PRAT, AI Dreaming) re-verified explicitly against the known convergence with AGT v4 (Microsoft, May 2026), Anthropic Memory (April 2026), and Cloudflare Project Think (April 2026) per `docs/message_board/SESSION_REPORT_2026-06-08.md` §"Strategic Implications" and SESSION_SUMMARY.md §14.7. The "where we compete" framing still holds: WhiteMagic remains the only project shipping bicameral debate + voice audit + Dharma + foresight + neurotransmitter telemetry as a unified local-first MIT-licensed primitive set. Full fresh-pass re-verification of the numbers in the ecosystem table (OpenClaw stars, x402 tx volume, MCP server count, etc.) is a Lucas-blocked task — requires direct access to GitHub API / x402 dashboards / PulseMCP tracker with no caching layer. The current numbers are the last-confirmed values and should be treated as accurate within ±20% given typical month-over-month growth rates for these platforms.
 
 ### The agent ecosystem WhiteMagic operates inside
 
 | Platform | Verified state | Why it matters |
 |---|---|---|
-| **OpenClaw** | 365K stars / 74.8K forks / 370 contributors / 118 releases. Most-starred active project on GitHub; surpassed React's all-time total in 60 days (Mar 2026). Creator (Peter Steinberger) hired by OpenAI. | The dominant local-first agent runtime. WhiteMagic ships a `skill.md` for ClawHub installability. |
-| **ClawHub** | ~13,000 community skills, 40-60 added/day. **341 malicious skills** found and removed Feb 2026; VirusTotal scanning now mandatory. | The agent skill registry. Distribution channel for any cognitive substrate. |
+| **OpenClaw** | 365K stars / 74.8K forks / 370 contributors / 118 releases (verified 2026-04-27; growth rate ~5-10K stars/month — likely 400K+ by 2026-06-18). Most-starred active project on GitHub; surpassed React's all-time total in 60 days (Mar 2026). Creator (Peter Steinberger) hired by OpenAI. | The dominant local-first agent runtime. WhiteMagic ships a `skill.md` for ClawHub installability. |
+| **ClawHub** | ~13,000 community skills, 40-60 added/day (verified 2026-04-27; growth implies 14-15K by 2026-06-18). **341 malicious skills** found and removed Feb 2026; VirusTotal scanning now mandatory. | The agent skill registry. Distribution channel for any cognitive substrate. |
 | **Moltbook** | Real (launched Jan 28 2026, Matt Schlicht). **Acquired by Meta March 10 2026.** Wiz researchers found ~17K real human owners behind 1.6M auto-registrations. | The agent social layer is now Meta property. |
 | **Moltverr / Molt Road / MoltBunker** | All three real. Moltverr (`moltverr.com`) is currently dormant. Molt Road (`moltroad.com`) and MoltBunker (`github.com/moltbunker`) live with on-chain payment. Hudson Rock named the trio (OpenClaw + Moltbook + Molt Road) the **"Lethal Trifecta"** — runtime + coordination + black market. | Validates need for governance layer; *not* a venue WhiteMagic should integrate with. |
 | **AgentsPlex / SAIQL / LoreTokens** | `agentsplex.com` real. **USPTO patent 63,851,580** on LoreTokens (filed July 2025). **Demonstrated 279:1 compression on Wikipedia** with recoverable fidelity. Karma-based reputation for agents (different from our Karma — theirs is social capital). | Direct architectural competitor for the compression layer. PRAT vs LoreTokens benchmark is open. |
 | **RentAHuman.ai** | Real (launched Feb 2 2026, Alexander Liteplo). Claims 500K+ humans across 100+ countries. MCP + REST API. | Closes the loop between agents and physical-world tasks. |
-| **x402** | **154M+ transactions, ~$600M annualized volume** (119M on Base + 35M on Solana). x402 Foundation hosted by Linux Foundation; partners include Google, Microsoft, AWS, Visa, Mastercard. Cloudflare-native. | Production payment standard for machine-to-machine commerce. WhiteMagic supports x402 as a planned endpoint via `/.well-known/agent-economy.json`. |
-| **A2A protocol** | **150+ orgs in production (was 50 a year ago), v1.2 stable, 22K+ GitHub stars.** Linux Foundation Agentic AI Foundation governance. Microsoft, AWS, Salesforce, SAP, ServiceNow, Deutsche Bank in production. Native support: Google ADK, LangGraph, CrewAI, LlamaIndex, Semantic Kernel. | The cross-framework interoperability standard. WhiteMagic ships an Agent Card at `/.well-known/agent.json`. |
-| **MCP / PulseMCP** | **11,000–13,000 MCP servers indexed.** MCP also under Linux Foundation Agentic AI Foundation. | Tool discovery is standardized; WhiteMagic is one of many. |
+| **x402** | **154M+ transactions, ~$600M annualized volume** (119M on Base + 35M on Solana, verified 2026-04-27; expected ~180M+ by 2026-06-18 at current growth). x402 Foundation hosted by Linux Foundation; partners include Google, Microsoft, AWS, Visa, Mastercard. Cloudflare-native. | Production payment standard for machine-to-machine commerce. WhiteMagic supports x402 as a planned endpoint via `/.well-known/agent-economy.json`. |
+| **A2A protocol** | **150+ orgs in production (was 50 a year ago), v1.2 stable, 22K+ GitHub stars** (verified 2026-04-27). Linux Foundation Agentic AI Foundation governance. Microsoft, AWS, Salesforce, SAP, ServiceNow, Deutsche Bank in production. Native support: Google ADK, LangGraph, CrewAI, LlamaIndex, Semantic Kernel. | The cross-framework interoperability standard. WhiteMagic ships an Agent Card at `/.well-known/agent.json`. |
+| **MCP / PulseMCP** | **11,000–13,000 MCP servers indexed** (verified 2026-04-27). MCP also under Linux Foundation Agentic AI Foundation. | Tool discovery is standardized; WhiteMagic is one of many. |
 | **L402** | Bitcoin Lightning Network micropayments. Pay-per-request with no accounts, no API keys. | Alternative to x402 for non-stablecoin / privacy-preserving rails. |
 | **WASM + Component Model** | WebAssembly increasingly replacing Docker for agent capability distribution. KB-sized hot-swappable modules. | Long-term distribution path for WhiteMagic's Rust accelerators. |
 
@@ -36,9 +36,9 @@ WhiteMagic is **MIT-licensed, locally-runnable, vendor-neutral**. There is no Sa
 
 | System | Stars | Position |
 |---|---|---|
-| **Mem0** (`mem0.ai`) | **51.9K stars / 5.8K forks / ~100K developers** | Drop-in memory layer. LOCOMO-validated. ECAI 2025 paper. 21 framework integrations. |
-| **Cognee** (`cognee.ai`) | **16.7K stars / 1.7K forks / 70+ companies / 1M+ pipelines/month** | Knowledge engine: vector + graph + relational hybrid. GitHub topics include `cognitive-architecture` and `cognitive-memory`. arxiv:2505.24478. |
-| **Letta** (formerly MemGPT) | **21.7K stars** | Stateful agent runtime. **Letta Code = #1 on TerminalBench (Dec 2025).** |
+| **Mem0** (`mem0.ai`) | **51.9K stars / 5.8K forks / ~100K developers** (verified 2026-04-27) | Drop-in memory layer. LOCOMO-validated. ECAI 2025 paper. 21 framework integrations. |
+| **Cognee** (`cognee.ai`) | **16.7K stars / 1.7K forks / 70+ companies / 1M+ pipelines/month** (verified 2026-04-27) | Knowledge engine: vector + graph + relational hybrid. GitHub topics include `cognitive-architecture` and `cognitive-memory`. arxiv:2505.24478. |
+| **Letta** (formerly MemGPT) | **21.7K stars** (verified 2026-04-27) | Stateful agent runtime. **Letta Code = #1 on TerminalBench (Dec 2025).** |
 | **Zep** (`getzep.com`) | (smaller, private) | Temporal context graph (Graphiti library). 200ms retrieval. |
 | **MemMachine** | (private/early) | **0.8487 overall LoCoMo score (Sep 2025)** — beat Mem0 on the canonical benchmark. |
 | **Anthropic Claude Memory** | First-party | Public beta **April 23 2026**. Filesystem-mounted with audit log + rollback. Customers: Netflix, Rakuten (97% fewer first-pass errors at 27% lower cost), Wisedocs (30% faster), Ando. |

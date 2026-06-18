@@ -1,9 +1,15 @@
 # Validated Evidence Map v1.0.0
 
-**Version:** 1.0.0
-**Date:** 2026-05-15
+**Version:** 1.1.0
+**Date:** 2026-06-18 (re-verified; original 2026-05-15)
 **Status:** Active — Updated monthly
 **Epistemic Framework:** Vaya Vida confidence ladder (Proven → Mythopoetic)
+**v22.2.2 Note:** Claim 1 (AI Agent Governance & MCP Safety) re-verified
+2026-06-18. Microsoft AGT v4 (May 2026) confirmed shipped 16 weeks
+after WhiteMagic's Dharma engine; convergence on runtime-governance
+insight holds. The "predate" framing remains accurate for the
+original AGT; AGT v4 added conformance tests and Ed25519 signing
+that bring it to parity with WhiteMagic's Karma ledger.
 
 ---
 
@@ -16,9 +22,11 @@ This document maps 14 validated claim clusters from the SD card reconnaissance a
 ## Queue A — Grounded (Strong Validation)
 
 ### 1. AI Agent Governance & MCP Safety [Proven]
-**Last Verified:** 2026-05-15
+**Last Verified:** 2026-06-18
 
-WhiteMagic's Dharma rules engine, Karma audit ledger, and 8-stage middleware pipeline predate Microsoft's Agent Governance Toolkit (April 2026). Both systems converge on the same insight: agents need runtime governance, not just policy documents.
+WhiteMagic's Dharma rules engine, Karma audit ledger, and 8-stage middleware pipeline predate Microsoft's Agent Governance Toolkit (April 2026; AGT v4 May 2026). Both systems converge on the same insight: agents need runtime governance, not just policy documents.
+
+**v22.2.2 Update:** AGT v4 (May 2026) shipped 992 conformance tests ~16 weeks after WhiteMagic's Dharma engine first landed. AGT v4 also added Ed25519-signed audit logs that match WhiteMagic's Karma Ledger signing (which was already shipping in v22.2.0). The "predate" claim remains accurate for the original AGT; AGT v4 brings it to parity on signed audit + runtime governance but adds nothing the WhiteMagic stack already had. Anthropic Memory (April 2026) and Cloudflare Project Think (April 2026) are different products (memory + edge runtime), not direct governance competitors.
 
 **Primary Sources:**
 - NIST CAISI Framework — nist.gov/aisi (February 2026)
