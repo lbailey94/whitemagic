@@ -2,12 +2,14 @@ import sqlite3
 import re
 from dataclasses import dataclass
 
+from whitemagic.config.paths import DB_PATH
+
 @dataclass
 class Coords:
     x: float; y: float; z: float; w: float; v: float
 
 def absolute_truth_sql():
-    db_path = "/home/lucas/.whitemagic/memory/whitemagic.db"
+    db_path = str(DB_PATH)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     

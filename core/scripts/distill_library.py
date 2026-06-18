@@ -13,17 +13,41 @@ Usage:
     python scripts/distill_library.py --scan      # Phase 1: extract concept index
     python scripts/distill_library.py --extract    # Extract all concepts with previews
     python scripts/distill_library.py --bootstrap  # Create LIBRARY2/ skeleton with best candidates
+
+Environment:
+    WHITEMAGIC_LIBRARY_ROOT: path to the LIBRARY source directory.
+        Default: ~/Desktop/whitemagic-codex/00_source/LIBRARY
+    WHITEMAGIC_LIBRARY2_ROOT: path to write distilled concepts.
+        Default: ~/Desktop/LIBRARY2
 """
 
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
-LIBRARY_ROOT = Path("/home/lucas/Desktop/whitemagic-codex/00_source/LIBRARY")
-LIBRARY2_ROOT = Path("/home/lucas/Desktop/LIBRARY2")
+
+def _resolve_library_root() -> Path:
+    """Resolve the LIBRARY root from env or a sensible default."""
+    return Path(
+        os.environ.get("WHITEMAGIC_LIBRARY_ROOT")
+        or (str(Path.home() / "Desktop" / "whitemagic-codex" / "00_source" / "LIBRARY"))
+    ).expanduser()
+
+
+def _resolve_library2_root() -> Path:
+    """Resolve the LIBRARY2 output root from env or a sensible default."""
+    return Path(
+        os.environ.get("WHITEMAGIC_LIBRARY2_ROOT")
+        or (str(Path.home() / "Desktop" / "LIBRARY2"))
+    ).expanduser()
+
+
+LIBRARY_ROOT = _resolve_library_root()
+LIBRARY2_ROOT = _resolve_library2_root()
 INDEX_OUTPUT = Path("scripts/library_concepts_index.json")
 
 # Signals of a distinct concept/idea in the text

@@ -107,7 +107,7 @@ class TestBashHeuristics:
         assert "dangerous command" in reason.lower()
 
     def test_rm_rf_home(self):
-        allowed, reason = _evaluate_bash_heuristics("bash", {"command": "rm -rf /home/user"})
+        allowed, reason = _evaluate_bash_heuristics("bash", {"command": "rm -rf /var/users/sample"})
         assert not allowed
         assert "protected path" in reason.lower()
 

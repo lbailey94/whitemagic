@@ -1,7 +1,12 @@
+import os
 import sqlite3
 import sys
+from pathlib import Path
 
-sys.path.insert(0, '/home/lucas/Desktop/whitemagicdev')
+# Make the WhiteMagic package importable regardless of CWD.
+_REPO_ROOT = Path(__file__).resolve().parents[3]  # core/scripts/maintenance/fixes -> core
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 from whitemagic.config.paths import DB_PATH
 
 

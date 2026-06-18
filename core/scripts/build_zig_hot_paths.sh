@@ -5,8 +5,15 @@ set -euo pipefail
 
 set -e
 
-ZIG_DIR="/home/lucas/Desktop/whitemagicdev/whitemagic-zig"
+# Resolve Zig source dir from env or default to the local dev checkout.
+ZIG_DIR="${WHITEMAGIC_ZIG_DIR:-$HOME/Desktop/whitemagicdev/whitemagic-zig}"
 OUT_DIR="$ZIG_DIR/zig-out/lib"
+
+if [ ! -d "$ZIG_DIR" ]; then
+    echo "ERROR: ZIG_DIR does not exist: $ZIG_DIR" >&2
+    echo "Set WHITEMAGIC_ZIG_DIR to the path of the whitemagic-zig checkout." >&2
+    exit 1
+fi
 
 echo "=== Building Zig Hot Path Modules ==="
 

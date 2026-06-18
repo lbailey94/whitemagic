@@ -105,7 +105,9 @@ def generate_report(stats: dict) -> str:
     return '\n'.join(lines)
 
 if __name__ == '__main__':
-    root = Path('/home/lucas/Desktop/whitemagicdev')
+    import os
+    root = Path(os.environ.get("WHITEMAGIC_DEV_ROOT")
+                or (str(Path.home() / "Desktop" / "whitemagicdev"))).expanduser()
     stats = count_loc(root)
     report = generate_report(stats)
     print(report)

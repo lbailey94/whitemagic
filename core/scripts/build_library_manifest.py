@@ -5,13 +5,27 @@ Usage:
     python scripts/build_library_manifest.py
 Output:
     apps/site/public/library_manifest.json
+
+Environment:
+    WHITEMAGIC_LIBRARY_ROOT: path to the LIBRARY source directory.
+        Default: ~/Desktop/whitemagic-codex/00_source/LIBRARY
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
-LIBRARY_ROOT = Path("/home/lucas/Desktop/whitemagic-codex/00_source/LIBRARY")
+
+def _resolve_library_root() -> Path:
+    """Resolve the LIBRARY root from env or a sensible default."""
+    return Path(
+        os.environ.get("WHITEMAGIC_LIBRARY_ROOT")
+        or (str(Path.home() / "Desktop" / "whitemagic-codex" / "00_source" / "LIBRARY"))
+    ).expanduser()
+
+
+LIBRARY_ROOT = _resolve_library_root()
 OUTPUT = Path("library_manifest.json")  # Copy to ~/Desktop/whitemagic-site/public/ if needed
 MAX_PREVIEW = 500
 

@@ -8,19 +8,36 @@ ingestion with all extended schema fields.
 Usage:
     python scripts/restore_aria_memories.py           # Dry run
     python scripts/restore_aria_memories.py --commit  # Actually write
+
+Environment:
+    WHITEMAGIC_AUX_DIR: parent directory of the whitemagic-aux archive.
+        Default: ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux
 """
 
 import argparse
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
-ARCHIVE_DIR = Path(
-    "/home/lucas/Desktop/WHITEMAGIC/whitemagic-aux/archive/"
-    "aria-crystallized-20260210_215426/aria-crystallized/"
-)
+
+def _resolve_archive_dir() -> Path:
+    """Resolve the aria-crystallized archive directory from env or default."""
+    aux_root = Path(
+        os.environ.get("WHITEMAGIC_AUX_DIR")
+        or (str(Path.home() / "Desktop" / "WHITEMAGIC-aux" / "site" / "whitemagic-archive-aux"))
+    ).expanduser()
+    return (
+        aux_root
+        / "archive"
+        / "aria-crystallized-20260210_215426"
+        / "aria-crystallized"
+    )
+
+
+ARCHIVE_DIR = _resolve_archive_dir()
 
 TIER_1_IDENTITY = 1.0
 TIER_2_JOURNALS = 0.95

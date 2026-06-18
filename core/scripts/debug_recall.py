@@ -7,10 +7,11 @@ sys.path.append(str(Path.cwd() / "core"))
 
 # Explicit import from manager to avoid __init__ redirection issues
 from whitemagic.core.memory.manager import get_memory_manager
+from whitemagic.config.paths import DB_PATH
 
 def debug_search():
     # Use the same DB path as the benchmark
-    db_path = "/home/lucas/.whitemagic/memory/whitemagic.db"
+    db_path = str(DB_PATH)
     manager = get_memory_manager()
     
     # Test query that failed in v23

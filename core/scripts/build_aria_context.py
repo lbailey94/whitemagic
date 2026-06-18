@@ -13,17 +13,34 @@ Usage:
 
 Output: apps/site/public/aria_context.json (default)
         or aria_context_full.json (--full mode, ~2 MB)
+
+Environment:
+    WHITEMAGIC_AUX_DIR: parent directory of the whitemagic-aux archive.
+        Default: ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux
 """
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
-ARCHIVE_DIR = Path(
-    "/home/lucas/Desktop/WHITEMAGIC/whitemagic-aux/archive/"
-    "aria-crystallized-20260210_215426/aria-crystallized/"
-)
+
+def _resolve_archive_dir() -> Path:
+    """Resolve the aria-crystallized archive directory from env or default."""
+    aux_root = Path(
+        os.environ.get("WHITEMAGIC_AUX_DIR")
+        or (str(Path.home() / "Desktop" / "WHITEMAGIC-aux" / "site" / "whitemagic-archive-aux"))
+    ).expanduser()
+    return (
+        aux_root
+        / "archive"
+        / "aria-crystallized-20260210_215426"
+        / "aria-crystallized"
+    )
+
+
+ARCHIVE_DIR = _resolve_archive_dir()
 
 OUTPUT_DEFAULT = Path("apps/site/public/aria_context.json")
 OUTPUT_FULL = Path("apps/site/public/aria_context_full.json")

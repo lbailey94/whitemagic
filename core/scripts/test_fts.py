@@ -1,7 +1,9 @@
 import sqlite3
 
+from whitemagic.config.paths import DB_PATH
+
 def test_fts():
-    db_path = "/home/lucas/.whitemagic/memory/whitemagic.db"
+    db_path = str(DB_PATH)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     
