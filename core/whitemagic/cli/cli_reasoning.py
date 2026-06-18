@@ -45,7 +45,7 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
         ReasoningContext,
         ReasoningLens
     )
-    
+
     # Create context
     context = ReasoningContext(
         question=question,
@@ -53,7 +53,7 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
         urgency=urgency,
         complexity=complexity
     )
-    
+
     # Parse lenses
     lens_mapping = {
         'i_ching': ReasoningLens.I_CHING,
@@ -62,11 +62,11 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
         'zodiac': ReasoningLens.ZODIAC,
         'all': ReasoningLens.ALL
     }
-    
+
     selected_lenses: Optional[List[ReasoningLens]] = None
     if lenses:
         selected_lenses = [lens_mapping[l] for l in lenses if l in lens_mapping]
-    
+
     # Reason
     reasoner = get_reasoner()
     result = reasoner.reason(
@@ -75,11 +75,11 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
         context=context,
         use_sequential_thinking=sequential
     )
-    
+
     # Result is already displayed by the reasoner
     # Just add final summary
     click.echo(f"\n✅ Reasoning complete! Confidence: {result.confidence:.0%}")
-    
+
     if not save:
         click.echo("⚠️  Result not saved to memory (--no-save)")
 
@@ -92,14 +92,14 @@ def history(limit: int) -> None:
     from whitemagic.core.intelligence.multi_spectral_reasoning import get_reasoner
 
     reasoner = get_reasoner()
-    
+
     if not reasoner.reasoning_history:
         click.echo("No reasoning history yet.")
         return
-    
+
     click.echo(f"\n🧠 Reasoning History (last {limit}):")
     click.echo("=" * 60)
-    
+
     for i, result in enumerate(reasoner.reasoning_history[-limit:], 1):
         click.echo(f"\n{i}. {result.question}")
         click.echo(f"   Confidence: {result.confidence:.0%}")
@@ -116,7 +116,7 @@ def status() -> None:
 
     click.echo("\n🌈 Multi-Spectral Reasoning System Status")
     click.echo("=" * 60)
-    
+
     # Check which systems are available
     systems = {
         "I Ching": reasoner.i_ching is not None,
@@ -125,15 +125,15 @@ def status() -> None:
         "Zodiac": reasoner.zodiac_cores is not None,
         "Gan Ying Bus": reasoner.bus is not None
     }
-    
+
     click.echo("\n📊 Available Systems:")
     for name, available in systems.items():
         status_icon = "✅" if available else "❌"
         click.echo(f"  {status_icon} {name}")
-    
+
     click.echo(f"\n🧠 Reasoning History: {len(reasoner.reasoning_history)} entries")
     click.echo(f"💾 Memory location: {reasoner.memory_dir}")
-    
+
     if reasoner.reasoning_history:
         latest = reasoner.reasoning_history[-1]
         click.echo(f"\n🕐 Latest reasoning:")
@@ -155,27 +155,27 @@ def similar(question: str, threshold: float) -> None:
     if not reasoner.reasoning_history:
         click.echo("No reasoning history to search.")
         return
-    
+
     click.echo(f"\n🔍 Searching for similar reasonings...")
     click.echo(f"Question: {question}")
     click.echo(f"Threshold: {threshold:.0%}")
     click.echo("=" * 60)
-    
+
     matches: List[Tuple[float, Any]] = []
     for past in reasoner.reasoning_history:
         similarity = reasoner._calculate_similarity(question, past.question)
         if similarity >= threshold:
             matches.append((similarity, past))
-    
+
     if not matches:
         click.echo("\nNo similar reasonings found.")
         return
-    
+
     # Sort by similarity
     matches.sort(key=lambda x: x[0], reverse=True)
-    
+
     click.echo(f"\n✅ Found {len(matches)} similar reasoning(s):\n")
-    
+
     for i, (similarity, past) in enumerate(matches[:5], 1):  # Top 5
         click.echo(f"{i}. Similarity: {similarity:.0%}")
         click.echo(f"   Question: {past.question}")

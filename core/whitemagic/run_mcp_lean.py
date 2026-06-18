@@ -850,13 +850,13 @@ async def main_stdio() -> None:
 
     # Graceful shutdown mechanism
     shutdown_event = asyncio.Event()
-    
+
     def signal_handler(signum, frame):
         """Handle SIGTERM/SIGINT for graceful shutdown."""
         sig_name = signal.Signals(signum).name
         logger.warning(f"Received {sig_name}, initiating graceful shutdown...")
         shutdown_event.set()
-    
+
     # Register signal handlers
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -917,7 +917,7 @@ async def main_stdio() -> None:
     stdin_task = asyncio.create_task(stdin_reader())
     stdout_task = asyncio.create_task(stdout_writer())
     shutdown_task = asyncio.create_task(shutdown_watcher())
-    
+
     try:
         # Run server - it will exit when stdin closes or on error
         await server.run(read_stream, write_stream, server.create_initialization_options())

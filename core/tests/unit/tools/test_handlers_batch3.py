@@ -38,8 +38,12 @@ class TestMiscHandlers(unittest.TestCase):
     def test_stub(self):
         from whitemagic.tools.handlers.misc import _stub
         result = _stub("fake_tool", preview_key="val")
-        self.assertEqual(result["status"], "success")
+        # v22.2.2: _stub now correctly reports status="error" for
+        # not-implemented tools (was "success" before, which was an
+        # AI-safety bug — agents would assume the tool ran).
+        self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_code"], "not_implemented")
+        self.assertEqual(result["retryable"], False)
         self.assertIn("fake_tool", result["message"])
         self.assertEqual(result["preview_key"], "val")
 
