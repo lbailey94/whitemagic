@@ -184,6 +184,7 @@ def log_function_call(
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator to log function calls"""
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        """Build a wrapper that logs entry/exit and re-raises exceptions with stack info."""
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             log = logger or get_logger(func.__module__)
@@ -206,6 +207,7 @@ def log_performance(
     import time
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        """Build a wrapper that times the wrapped call and logs the duration in seconds."""
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             log = logger or get_logger(func.__module__)
@@ -274,10 +276,12 @@ if __name__ == "__main__":
     # Use decorators
     @log_function_call()
     def test_function(x: int) -> int:
+        """Demo function used in __main__ to exercise the log_function_call decorator."""
         return x * 2
 
     @log_performance()
     def slow_function() -> str:
+        """Demo function used in __main__ to exercise the log_performance decorator."""
         import time
         time.sleep(0.1)
         return "done"

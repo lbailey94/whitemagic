@@ -37,6 +37,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SeenEntry:
+    """Record of a single file/resource observation by the SeenRegistry."""
+
     path: str
     last_seen: str
     file_type: str
@@ -68,6 +70,7 @@ class SeenRegistry:
             atomic_write(self.storage_path, _json_dumps(data, indent=2))
 
     def mark_seen(self, path: str, content_hash: str | None = None, context: str | None = None) -> None:
+        """Record an observation of a path, incrementing times_seen and updating last_seen."""
         now = datetime.now(UTC).isoformat()
         if path in self._entries:
             entry = self._entries[path]
@@ -82,24 +85,38 @@ class SeenRegistry:
         if context: self._entries[path].metadata["last_context"] = context
         self._save()
 
-    def have_seen(self, path: str) -> bool: return path in self._entries
-    def stats(self) -> dict[str, Any]: return {"total_seen": len(self._entries)}
+    def have_seen(self, path: str) -> bool:
+        """Check whether a path has been observed at least once."""
+        return path in self._entries
+
+    def stats(self) -> dict[str, Any]:
+        """Return aggregate statistics about the seen registry."""
+        return {"total_seen": len(self._entries)}
+
     def get_recent(self, limit: int = 10) -> list[SeenEntry]:
+        """Return the most recently observed entries, newest first."""
         return sorted(self._entries.values(), key=lambda e: e.last_seen, reverse=True)[:limit]
 
 # --- COMPONENT: TIMELINE ---
 
 @dataclass
 class TimelineEvent:
+    """A single event in the chronological timeline."""
+
     id: str
     timestamp: str
     event_type: str
     data: dict[str, Any] = field(default_factory=dict)
     tags: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict: return asdict(self)
+    def to_dict(self) -> dict:
+        """Serialize the event to a plain dict."""
+        return asdict(self)
+
     @classmethod
-    def from_dict(cls, data: dict) -> TimelineEvent: return cls(**data)
+    def from_dict(cls, data: dict) -> TimelineEvent:
+        """Deserialize a TimelineEvent from a plain dict."""
+        return cls(**data)
 
 class ChronologicalTimeline:
     """Time-based memory organization."""
@@ -132,6 +149,7 @@ class ChronologicalTimeline:
             atomic_write(self.storage_path, _json_dumps(data, indent=2))
 
     def add_event(self, event_type: str, data: dict[str, Any] | None = None, tags: list[str] | None = None, timestamp: str | None = None) -> TimelineEvent:
+        """Append a new event to the timeline and persist; returns the stored event."""
         self._event_counter += 1
         event = TimelineEvent(
             id=f"evt_{self._event_counter}",
@@ -145,8 +163,12 @@ class ChronologicalTimeline:
         return event
 
     def get_by_tag(self, tag: str) -> list[TimelineEvent]:
+        """Return all events that include the given tag (preserves insertion order)."""
         return [e for e in self._events if tag in e.tags]
-    def stats(self) -> dict[str, Any]: return {"total_events": len(self._events)}
+
+    def stats(self) -> dict[str, Any]:
+        """Return aggregate statistics about the chronological timeline."""
+        return {"total_events": len(self._events)}
 
 # --- COMPONENT: EMBEDDING INDEX (Simplified) ---
 
@@ -166,7 +188,10 @@ class SimpleEmbeddingIndex:
             except Exception as e:
                 logger.debug("Embedding index load failed: %s", e)
 
-    def stats(self) -> dict[str, Any]: return {"total_embeddings": len(self._index)}
+    def stats(self) -> dict[str, Any]:
+        """Return aggregate statistics about the embedding index."""
+        return {"total_embeddings": len(self._index)}
+
     def search(self, query: str, limit: int = 10) -> list[tuple[str, float, str]]:
         """Search memory matrix — not yet implemented."""
         raise NotImplementedError("MemoryMatrix search is not yet implemented.")
@@ -175,6 +200,8 @@ class SimpleEmbeddingIndex:
 
 @dataclass
 class SessionContext:
+    """Per-session counters for the current MemoryMatrix session."""
+
     session_id: str
     started: str
     last_activity: str
@@ -228,6 +255,7 @@ class MemoryMatrix:
                 atomic_write(session_file, _json_dumps(data, indent=2))
 
     def record_interaction(self, interaction_type: str, target: str, data: dict[str, Any] | None = None, context: str | None = None) -> None:
+        """Record an interaction: updates session counters, timeline, and (if a file read) seen registry."""
         now = datetime.now(UTC).isoformat()
         if self._session:
             self._session.last_activity = now
@@ -239,6 +267,7 @@ class MemoryMatrix:
         self._save_session()
 
     def stats(self) -> dict[str, Any]:
+        """Return aggregate statistics from seen, embeddings, timeline, and current session."""
         return {
             "seen_registry": self.seen.stats(),
             "embedding_index": self.embeddings.stats(),
@@ -251,6 +280,7 @@ _matrix_instance: MemoryMatrix | None = None
 _matrix_lock = Lock()
 
 def get_matrix() -> MemoryMatrix:
+    """Return the process-wide MemoryMatrix singleton, creating it on first call."""
     global _matrix_instance
     with _matrix_lock:
         if _matrix_instance is None: _matrix_instance = MemoryMatrix()

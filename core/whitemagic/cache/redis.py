@@ -145,7 +145,10 @@ class RedisCache:
             import pickle
 
             class RestrictedUnpickler(pickle.Unpickler):
+                """Restricted unpickler that only allows safe built-in types."""
+
                 def find_class(self, module: str, name: str) -> type:  # type: ignore[override]
+                    """Resolve a class name to its type, allowing only safe built-in modules."""
                     # Only allow safe classes
                     if module == "builtins" and name in ("dict", "list", "str", "int", "float", "bool", "None"):
                         return type(getattr(__builtins__, name))
@@ -322,8 +325,10 @@ class RedisCache:
     def cache(self, ttl: int | None = None, key_prefix: str = "") -> Callable:
         """Decorator to cache function results."""
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
+            """Build a cached wrapper for the given function."""
             @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> T:
+                """Cached proxy: read-through to Redis with TTL, populate on miss."""
                 # Generate cache key from function name and arguments
                 key_parts = [key_prefix, func.__name__]
                 key_parts.extend(str(arg) for arg in args)

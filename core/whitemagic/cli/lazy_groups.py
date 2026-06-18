@@ -98,6 +98,7 @@ def _create_missing_dep_command(error_msg: str) -> click.Command:
     @click.command(name="unavailable")
     @click.pass_context
     def unavailable_cmd(ctx):
+        """Click command that prints a missing-dependency error and exits with code 1."""
         click.echo("ERROR: This command requires additional dependencies.", err=True)
         click.echo(f"Details: {error_msg}", err=True)
         click.echo("Install with: pip install whitemagic[<extra>]", err=True)
@@ -109,6 +110,7 @@ def _create_missing_dep_command(error_msg: str) -> click.Command:
 def _make_missing_dep_callback(error_msg: str) -> Callable:
     """Create a callback function that shows missing dependency error."""
     def callback(*args, **kwargs):
+        """Print a missing-dependency error to stderr and raise ClickException."""
         click.echo("ERROR: This command requires additional dependencies.", err=True)
         click.echo(f"Details: {error_msg}", err=True)
         click.echo("Install with: pip install whitemagic[<extra>]", err=True)
@@ -132,6 +134,7 @@ def optional_command(name: str, extra: str | None = None):
             app.run()
     """
     def decorator(func: Callable) -> click.Command:
+        """Wrap func in a Click command that converts ImportError into a friendly hint."""
         @click.command(name=name)
         @click.pass_context
         def wrapper(ctx, *args, **kwargs):
