@@ -510,7 +510,13 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "UP"]
+select = ["E", "F", "I", "W", "UP", "BLE"]
+# BLE = blind-except: catches `except Exception:` and bare `except:`
+# blocks without re-raise / log / specific exception class. The June
+# 8 exception sweep (see docs/message_board/
+# SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md) eliminated 537 of
+# these across 145 files; the rule is here so a re-introduction
+# fails CI.
 ignore = ["E501"]  # Line too long (handled by formatter)
 
 [tool.strata]

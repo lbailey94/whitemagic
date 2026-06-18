@@ -68,6 +68,21 @@ jobs:
       - name: Ruff Check (high-signal rules)
         run: ruff check whitemagic/ --select F821,F601,F401 --ignore E501
 
+      # Blind-except check: added in v22.2.2. Currently 1,329
+      # pre-existing violations remain (the June 8 sweep eliminated
+      # 537 across 145 files; the remaining count is a separate
+      # baseline that needs a dedicated Phase 5 pass). The job is
+      # marked continue-on-error so it serves as a visible metric
+      # (count of remaining BLE violations) without failing CI; once
+      # the count drops below a threshold this can be promoted to a
+      # blocking check.
+      - name: Ruff Blind-Except (BLE001) — metric only
+        continue-on-error: true
+        run: |
+          echo "Counting remaining blind-except (BLE001) violations..."
+          ruff check whitemagic/ --select BLE001 --ignore E501 --output-format=concise 2>&1 | tail -1 || true
+          echo "(See docs/message_board/SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md for the sweep history.)"
+
       # Mypy: strict enforcement for public surface (tools, interfaces)
       - name: Mypy (public surface — strict)
         continue-on-error: true
