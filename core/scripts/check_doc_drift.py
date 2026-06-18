@@ -264,9 +264,9 @@ def check_test_count_consistency() -> None:
     )
 
     release_baseline = 2216
-    current_audit_baseline = 2423
+    current_audit_baseline = 1470
     release_markers = ("release baseline", "v22.2.0 release", "v22.2 release")
-    current_markers = ("current local audit", "current audit baseline", "live audit baseline")
+    current_markers = ("current local audit", "current audit baseline", "live audit baseline", "v22.2.1 release")
     seen: dict[str, list[tuple[str, int, str]]] = {}
     for doc in docs:
         if not doc.exists():

@@ -104,8 +104,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.
 
 | Baseline | Result |
 |----------|--------|
-| **v22.2.0 release baseline** | 2,216 passing tests, 67 skipped, 0 failed |
-| **Current local audit baseline** | 2,423 passing tests, 0 skipped, 0 failed as of 2026-06-05 |
+| **v22.2.1 release baseline** | 1,470 passing tests, 2 skipped, 0 failed (as of 2026-06-18) |
+| **Current local audit baseline** | 1,470 passing tests, 2 skipped, 0 failed (as of 2026-06-18) |
 
 ## Documentation
 

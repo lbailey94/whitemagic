@@ -1,7 +1,7 @@
 # WhiteMagic Ship Surface Manifest
 
-**Version**: 22.2.0  
-**Last Updated**: 2026-04-07  
+**Version**: 22.2.1  
+**Last Updated**: 2026-06-18  
 **Status**: Active Implementation
 
 ---

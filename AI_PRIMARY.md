@@ -1,4 +1,4 @@
-# AI Primary Spec (Whitemagic v22.2.0)
+# AI Primary Spec (Whitemagic v22.2.1)
 
 This document is the **contract** between Whitemagic and the AI agents that integrate with it. WhiteMagic Labs publishes WhiteMagic as a **research / lab / portfolio artifact and source library**, not a hosted product. Read this for the technical contract, the canonical interfaces, and an honest account of where WhiteMagic sits in the broader agent landscape.
 
@@ -682,7 +682,7 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **490 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped (as of 2026-05-05)
-- **Current local audit baseline:** 2,423 tests passing, 0 failures, 0 skipped (as of 2026-06-05)
+- **Current local audit baseline:** 1,470 tests passing, 0 failures, 2 skipped (as of 2026-06-18)
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 
 ---
