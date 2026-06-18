@@ -15,6 +15,16 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 class Phase(Enum):
+    """Phase: phase.
+    
+    Enumeration.
+    
+    Members:
+        WOOD
+        FIRE
+        EARTH
+        METAL
+        WATER"""
     WOOD = "wood"   # Expansion, brainstorming, creation
     FIRE = "fire"   # Execution, parallel processing, action
     EARTH = "earth" # Integration, stabilization, testing
@@ -23,6 +33,9 @@ class Phase(Enum):
 
 @dataclass
 class PhaseState:
+    """PhaseState: phase state.
+    
+    Value object: equality and repr are field-based."""
     current: Phase
     start_time: datetime
     duration_minutes: float = 0.0

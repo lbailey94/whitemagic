@@ -43,6 +43,9 @@ def _record_path(tool: str, key: str) -> Path:
 
 @dataclass(frozen=True)
 class IdempotencyRecord:
+    """IdempotencyRecord: idempotency record.
+    
+    Value object: equality and repr are field-based."""
     tool: str
     key: str
     stored_at: str

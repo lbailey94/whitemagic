@@ -3,6 +3,19 @@ from enum import Enum
 
 
 class DreamPhase(Enum):
+    """DreamPhase: dream phase.
+    
+    Enumeration.
+    
+    Members:
+        TRIAGE
+        CONSOLIDATION
+        SERENDIPITY
+        GOVERNANCE
+        NARRATIVE
+        KAIZEN
+        ORACLE
+        DECAY"""
     TRIAGE = "triage"
     CONSOLIDATION = "consolidation"
     SERENDIPITY = "serendipity"

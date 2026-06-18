@@ -14,6 +14,9 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 @dataclass
 class UserProfile:
+    """UserProfile: user profile.
+    
+    Value object: equality and repr are field-based."""
     name: str = "User"
     preferences: dict[str, Any] = field(default_factory=dict)
     learning_style: str = "visual" # visual, textual, practical
@@ -22,6 +25,7 @@ class UserProfile:
     last_active: str = ""
 
 class UserManager:
+    """UserManager: user manager."""
     def __init__(self) -> None:
         self.profile_path = USER_PROFILE_PATH
         self.profile_path.parent.mkdir(parents=True, exist_ok=True)

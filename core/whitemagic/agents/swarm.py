@@ -28,6 +28,16 @@ logger = logging.getLogger(__name__)
 
 
 class TaskStatus(str, Enum):
+    """TaskStatus: task status.
+    
+    Enumeration.
+    
+    Members:
+        PENDING
+        ASSIGNED
+        RUNNING
+        COMPLETED
+        FAILED"""
     PENDING = "pending"
     ASSIGNED = "assigned"
     RUNNING = "running"
@@ -36,6 +46,16 @@ class TaskStatus(str, Enum):
 
 
 class ConsensusStrategy(str, Enum):
+    """ConsensusStrategy: consensus strategy.
+    
+    Enumeration.
+    
+    Members:
+        MAJORITY
+        UNANIMOUS
+        FIRST_WINS
+        WEIGHTED
+        TRICAMERAL"""
     MAJORITY = "majority"
     UNANIMOUS = "unanimous"
     FIRST_WINS = "first_wins"
@@ -45,6 +65,9 @@ class ConsensusStrategy(str, Enum):
 
 @dataclass
 class SubTask:
+    """SubTask: sub task.
+    
+    Value object: equality and repr are field-based."""
     id: str
     description: str
     required_capabilities: list[str] = field(default_factory=list)
@@ -75,6 +98,9 @@ class SubTask:
 
 @dataclass
 class SwarmPlan:
+    """SwarmPlan: swarm plan.
+    
+    Value object: equality and repr are field-based."""
     id: str
     goal: str
     subtasks: list[SubTask] = field(default_factory=list)
@@ -101,6 +127,9 @@ class SwarmPlan:
 
 @dataclass
 class Vote:
+    """Vote: vote.
+    
+    Value object: equality and repr are field-based."""
     agent_id: str
     value: Any
     confidence: float = 1.0

@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SearchResult:
+    """SearchResult: search result.
+    
+    Value object: equality and repr are field-based."""
     memory_id: str
     title: str
     content: str

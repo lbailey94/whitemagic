@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HolographicCoord:
+    """HolographicCoord: holographic coord.
+    
+    Value object: equality and repr are field-based."""
     x: float
     y: float
     z: float

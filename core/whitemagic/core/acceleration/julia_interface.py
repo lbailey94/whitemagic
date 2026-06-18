@@ -10,6 +10,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger("julia_bridge")
 
 class JuliaBridge:
+    """JuliaBridge: julia bridge."""
     def __init__(self, julia_bin_path: str | None = None):
         if not julia_bin_path:
             # Auto-discover from system path

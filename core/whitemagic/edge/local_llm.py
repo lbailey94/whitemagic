@@ -21,6 +21,9 @@ def _disabled_error() -> RuntimeError:
 
 @dataclass
 class CascadeResult:  # pragma: no cover - legacy shim
+    """CascadeResult: cascade result.
+    
+    Value object: equality and repr are field-based."""
     query: str
     answer: str
     method: str
@@ -30,11 +33,13 @@ class CascadeResult:  # pragma: no cover - legacy shim
 
 
 class LocalLLM:  # pragma: no cover - legacy shim
+    """LocalLLM: local llm."""
     def __init__(self, *_: Any, **__: Any) -> None:
         raise _disabled_error()
 
 
 class CascadingInference:  # pragma: no cover - legacy shim
+    """CascadingInference: cascading inference."""
     def __init__(self, *_: Any, **__: Any) -> None:
         raise _disabled_error()
 

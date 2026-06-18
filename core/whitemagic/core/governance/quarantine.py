@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class QuarantineEntry:
+    """QuarantineEntry: quarantine entry.
+    
+    Value object: equality and repr are field-based."""
     session_id: str
     reason: str
     quarantined_at: datetime

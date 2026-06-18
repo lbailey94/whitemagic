@@ -19,6 +19,7 @@ def _disabled_error() -> RuntimeError:
 
 
 class LocalModelAgent:  # pragma: no cover - legacy shim
+    """LocalModelAgent: local model agent."""
     def __init__(self, *_: Any, **__: Any) -> None:
         raise _disabled_error()
 

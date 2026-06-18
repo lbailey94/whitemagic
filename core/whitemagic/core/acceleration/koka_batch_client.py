@@ -45,6 +45,13 @@ _DEFAULT_BATCH_READ_TIMEOUT_S = 5.0
 
 
 class BatchMode(Enum):
+    """BatchMode: batch mode.
+    
+    Enumeration.
+    
+    Members:
+        SEQUENTIAL
+        PARALLEL"""
     SEQUENTIAL = "sequential"
     PARALLEL = "parallel"
 

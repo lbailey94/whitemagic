@@ -3,6 +3,16 @@ from enum import Enum
 
 
 class ConsolidationStrategy(Enum):
+    """ConsolidationStrategy: consolidation strategy.
+    
+    Enumeration.
+    
+    Members:
+        SIMILARITY
+        TEMPORAL
+        IMPORTANCE
+        CONSTELLATION
+        NARRATIVE"""
     SIMILARITY = "similarity"
     TEMPORAL = "temporal"
     IMPORTANCE = "importance"

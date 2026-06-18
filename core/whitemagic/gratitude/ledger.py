@@ -23,6 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 class GratitudeChannel(str, Enum):
+    """GratitudeChannel: gratitude channel.
+    
+    Enumeration.
+    
+    Members:
+        XRPL
+        X402
+        MANUAL"""
     XRPL = "xrpl"
     X402 = "x402"
     MANUAL = "manual"

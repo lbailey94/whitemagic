@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SystemState:
+    """SystemState: system state.
+    
+    Value object: equality and repr are field-based."""
     timestamp_utc: str
     timestamp_local: str
     unix_time: float
@@ -33,6 +36,7 @@ class SystemState:
     python_version: str
 
 class GroundingSystem:
+    """GroundingSystem: grounding system."""
     def __init__(self, storage_dir: str = "PROJECT_ROOT/whitemagic/memory/continuity"):
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)

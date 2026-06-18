@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SpecialistResult:
+    """SpecialistResult: specialist result.
+    
+    Value object: equality and repr are field-based."""
     specialist: str
     language: str
     success: bool

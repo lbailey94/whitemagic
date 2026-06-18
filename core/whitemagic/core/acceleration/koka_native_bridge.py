@@ -51,6 +51,7 @@ _MODULE_BINS = {
 
 
 class KokaCircuitBreaker:
+    """KokaCircuitBreaker: koka circuit breaker."""
     def __init__(self, failure_threshold: int = 3, reset_timeout: float = 30.0):
         self.failures = 0
         self.failure_threshold = failure_threshold

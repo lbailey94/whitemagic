@@ -194,6 +194,7 @@ def register_commands(cli_group: Any) -> None:
                             None
                         """
                         class Args:
+                            """Args: args."""
                             pass
                         parsed_args = Args()
                         # This is very basic and won't handle named args well without proper parsing

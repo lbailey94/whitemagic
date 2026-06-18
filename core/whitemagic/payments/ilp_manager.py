@@ -37,6 +37,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class PaymentState(Enum):
+    """PaymentState: payment state.
+    
+    Enumeration.
+    
+    Members:
+        PENDING
+        STREAMING
+        COMPLETED
+        FAILED
+        EXPIRED"""
     PENDING = "pending"
     STREAMING = "streaming"
     COMPLETED = "completed"

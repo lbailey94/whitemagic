@@ -28,6 +28,7 @@ CAPACITY_EDGES = 3_000_000
 SEGMENT_SIZE = HEADER_SIZE + (CAPACITY_EDGES * SLOT_SIZE)
 
 class SHMGraphTopology:
+    """SHMGraphTopology: shm graph topology."""
     def __init__(self, name: str = "/whitemagic_graph_bridge"):
         self.name = name
         self._lock = threading.Lock()

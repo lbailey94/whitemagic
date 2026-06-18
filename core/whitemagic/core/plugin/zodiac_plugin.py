@@ -10,6 +10,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 class ZodiacPlugin:
+    """ZodiacPlugin: zodiac plugin."""
     name = "zodiac"
     version = "1.0.0"
     description = "Unified Progression Daemon — The system heartbeat governing 12 phases and Wu Xing transitions"

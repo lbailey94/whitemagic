@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Vote:
+    """Vote: vote.
+    
+    Value object: equality and repr are field-based."""
     agent: str
     decision: str # "APPROVE", "BLOCK", "ABSTAIN"
     reason: str

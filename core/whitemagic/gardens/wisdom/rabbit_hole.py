@@ -307,6 +307,9 @@ class SourceComparator:
 
     @dataclass
     class SourceInfo:
+        """SourceInfo: source info.
+    
+    Value object: equality and repr are field-based."""
         url: str
         content: str
         key_points: list[str] = field(default_factory=list)

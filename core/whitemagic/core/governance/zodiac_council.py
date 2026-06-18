@@ -8,6 +8,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Proposal:
+    """Proposal: proposal.
+    
+    Value object: equality and repr are field-based."""
     id: str
     title: str
     description: str
@@ -18,6 +21,9 @@ class Proposal:
 
 @dataclass
 class VoteSpectrum:
+    """VoteSpectrum: vote spectrum.
+    
+    Value object: equality and repr are field-based."""
     logic: float = 0.5 # 0.0 (intuitive) to 1.0 (analytical)
     micro: float = 0.5 # 0.0 (macro/global) to 1.0 (precise/local)
     time: float = 0.5  # 0.0 (historical) to 1.0 (future-vision)

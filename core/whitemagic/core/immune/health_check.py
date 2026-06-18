@@ -10,6 +10,15 @@ from typing import Any
 
 
 class HealthStatus(Enum):
+    """HealthStatus: health status.
+    
+    Enumeration.
+    
+    Members:
+        HEALTHY
+        DEGRADED
+        CRITICAL
+        UNKNOWN"""
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     CRITICAL = "critical"

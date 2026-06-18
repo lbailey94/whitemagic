@@ -10,6 +10,32 @@ from typing import Any
 
 
 class ToolCategory(str, Enum):
+    """ToolCategory: tool category.
+    
+    Enumeration.
+    
+    Members:
+        MEMORY
+        SESSION
+        GARDEN
+        METRICS
+        EDGE
+        INTROSPECTION
+        SYSTEM
+        ARCHAEOLOGY
+        GOVERNOR
+        WATCHER
+        BROWSER
+        INFERENCE
+        SYNTHESIS
+        DHARMA
+        GANA
+        BROKER
+        TASK
+        VOTING
+        AGENT
+        GOVERNANCE
+        SECURITY"""
     MEMORY = "memory"
     SESSION = "session"
     GARDEN = "garden"
@@ -34,6 +60,14 @@ class ToolCategory(str, Enum):
 
 
 class ToolSafety(str, Enum):
+    """ToolSafety: tool safety.
+    
+    Enumeration.
+    
+    Members:
+        READ
+        WRITE
+        DELETE"""
     READ = "read"
     WRITE = "write"
     DELETE = "delete"

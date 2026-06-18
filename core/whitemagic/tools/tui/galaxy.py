@@ -15,6 +15,7 @@ from rich.text import Text
 
 
 class GalaxyExplorer:
+    """GalaxyExplorer: galaxy explorer."""
     def __init__(self, memories: list[dict[str, Any]]):
         self.memories = memories
         self.console = Console()

@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EmergenceInsight:
+    """EmergenceInsight: emergence insight.
+    
+    Value object: equality and repr are field-based."""
     id: str
     title: str
     description: str

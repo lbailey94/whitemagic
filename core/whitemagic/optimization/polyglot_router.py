@@ -760,6 +760,7 @@ class PolyglotRouter:
             root = Path(root_path)
             files = list(root.rglob("*"))
             class MockResult:
+                """MockResult: mock result."""
                 def __init__(self, count: int) -> None:
                     self.total_files = count
                     self.skipped_files = 0

@@ -35,6 +35,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Entity:
+    """Entity: entity.
+    
+    Value object: equality and repr are field-based."""
     name: str
     entity_type: str
     confidence: float
@@ -42,6 +45,9 @@ class Entity:
 
 @dataclass
 class Relation:
+    """Relation: relation.
+    
+    Value object: equality and repr are field-based."""
     subject: str
     predicate: str
     object: str
@@ -50,6 +56,9 @@ class Relation:
 
 @dataclass
 class ExtractionResult:
+    """ExtractionResult: extraction result.
+    
+    Value object: equality and repr are field-based."""
     entities: list[Entity]
     relations: list[Relation]
     method: str = "regex"

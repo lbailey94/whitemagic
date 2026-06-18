@@ -15,6 +15,18 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 class OrganType(Enum):
+    """OrganType: organ type.
+    
+    Enumeration.
+    
+    Members:
+        IMMUNE
+        GENETICS
+        DREAM
+        METABOLISM
+        CONSCIOUSNESS
+        RESONANCE
+        EMERGENCE"""
     IMMUNE = "immune"
     GENETICS = "genetics"
     DREAM = "dream"

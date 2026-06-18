@@ -18,6 +18,16 @@ from typing import Any
 
 
 class Element(Enum):
+    """Element: element.
+    
+    Enumeration.
+    
+    Members:
+        FIRE
+        EARTH
+        METAL
+        WATER
+        WOOD"""
     FIRE = "Fire"
     EARTH = "Earth"
     METAL = "Metal"
@@ -25,6 +35,15 @@ class Element(Enum):
     WOOD = "Wood"
 
 class Quadrant(Enum):
+    """Quadrant: quadrant.
+    
+    Enumeration.
+    
+    Members:
+        EASTERN
+        SOUTHERN
+        WESTERN
+        NORTHERN"""
     EASTERN = "Eastern (Azure Dragon)"   # Wood - Spring
     SOUTHERN = "Southern (Vermilion Bird)" # Fire - Summer
     WESTERN = "Western (White Tiger)"     # Metal - Autumn

@@ -17,6 +17,19 @@ logger = logging.getLogger(__name__)
 
 
 class PatternType(Enum):
+    """PatternType: pattern type.
+    
+    Enumeration.
+    
+    Members:
+        SOLUTION
+        ANTI_PATTERN
+        HEURISTIC
+        OPTIMIZATION
+        DENSITY
+        FLOW
+        QUERY_RULE
+        TOOL_CHAIN"""
     SOLUTION = "solution"
     ANTI_PATTERN = "anti_pattern"
     HEURISTIC = "heuristic"

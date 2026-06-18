@@ -16,6 +16,7 @@ except ImportError:
         return None
 
 class RapidCognition:
+    """RapidCognition: rapid cognition."""
     def __init__(
         self,
         memory_dir: Path = Path("memory"),

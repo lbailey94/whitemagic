@@ -38,12 +38,30 @@ logger = logging.getLogger(__name__)
 
 
 class ArmyTier(str, Enum):
+    """ArmyTier: army tier.
+    
+    Enumeration.
+    
+    Members:
+        ALPHA
+        BETA
+        GAMMA"""
     ALPHA = "alpha"    # 10K clones — consensus voting
     BETA = "beta"      # 70K clones — map-reduce
     GAMMA = "gamma"    # 240K+ clones — brute-force search
 
 
 class ObjectiveStatus(str, Enum):
+    """ObjectiveStatus: objective status.
+    
+    Enumeration.
+    
+    Members:
+        PENDING
+        RUNNING
+        COMPLETED
+        FAILED
+        SKIPPED"""
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -52,6 +70,16 @@ class ObjectiveStatus(str, Enum):
 
 
 class FindingSeverity(str, Enum):
+    """FindingSeverity: finding severity.
+    
+    Enumeration.
+    
+    Members:
+        CRITICAL
+        HIGH
+        MEDIUM
+        LOW
+        INFO"""
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -61,6 +89,9 @@ class FindingSeverity(str, Enum):
 
 @dataclass
 class Finding:
+    """Finding: finding.
+    
+    Value object: equality and repr are field-based."""
     description: str
     severity: FindingSeverity = FindingSeverity.INFO
     category: str = ""

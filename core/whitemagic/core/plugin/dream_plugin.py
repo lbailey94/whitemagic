@@ -10,6 +10,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 class DreamPlugin:
+    """DreamPlugin: dream plugin."""
     name = "dream"
     version = "1.0.0"
     description = "Dream Synthesizer — Automated memory consolidation and cache catharsis during Yin phases"

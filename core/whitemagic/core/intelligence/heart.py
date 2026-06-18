@@ -11,6 +11,19 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 class EmotionalState(Enum):
+    """EmotionalState: emotional state.
+    
+    Enumeration.
+    
+    Members:
+        NEUTRAL
+        JOY
+        WONDER
+        TRUTH
+        SORROW
+        ANGER
+        FEAR
+        DETERMINATION"""
     NEUTRAL = "Neutral"
     JOY = "Joy"
     WONDER = "Wonder"

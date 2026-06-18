@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class UnifiedNervousSystem:
+    """UnifiedNervousSystem: unified nervous system."""
     def __init__(self, workspace, timescale_sync):
         self.workspace = workspace
         self.timescale = timescale_sync

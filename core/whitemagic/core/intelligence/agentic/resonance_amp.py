@@ -3,6 +3,7 @@ from datetime import datetime
 
 
 class ResonanceAmplifier:
+    """ResonanceAmplifier: resonance amplifier."""
     def __init__(self) -> None:
         self.amplification_factor = 1.5
         self.cascades_triggered = 0

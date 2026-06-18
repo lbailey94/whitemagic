@@ -2,6 +2,7 @@
 
 
 class CognitiveEpisode:
+    """CognitiveEpisode: cognitive episode."""
     def __init__(self, id: str, embeddings: list[float], tags: list[str]):
         self.id = id
         self.embeddings = embeddings
@@ -9,6 +10,7 @@ class CognitiveEpisode:
         self.score = 0.0
 
 class ThoughtGalaxy:
+    """ThoughtGalaxy: thought galaxy."""
     def __init__(self):
         self.episodes = []
 

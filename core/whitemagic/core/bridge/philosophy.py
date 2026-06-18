@@ -60,6 +60,7 @@ def get_dharma_guidance(situation: str) -> dict[str, Any]:
 # --- SUTRA (Kernel) ---
 
 class SutraKernelBridge:
+    """SutraKernelBridge: sutra kernel bridge."""
     def evaluate_action(self, action_type: str) -> str:
         """
         Perform the evaluate action operation.

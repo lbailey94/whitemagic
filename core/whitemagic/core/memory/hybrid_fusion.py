@@ -8,6 +8,9 @@ from dataclasses import dataclass
 
 @dataclass
 class RetrievalCandidate:
+    """RetrievalCandidate: retrieval candidate.
+    
+    Value object: equality and repr are field-based."""
     memory_id: str
     title: str
     content: str

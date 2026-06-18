@@ -38,6 +38,7 @@ _HAS_ZIG = False
 
 # TopKResult structure for wm_vector_top_k
 class TopKResult(ctypes.Structure):
+    """TopKResult: top k result."""
     _fields_ = [("index", ctypes.c_uint32), ("score", ctypes.c_float)]
 
 # Pre-allocated buffer pool to avoid repeated allocations

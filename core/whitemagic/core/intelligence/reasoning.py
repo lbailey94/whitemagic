@@ -37,6 +37,17 @@ logger = logging.getLogger(__name__)
 # --- TYPES & ENUMS ---
 
 class ReasoningLens(Enum):
+    """ReasoningLens: reasoning lens.
+    
+    Enumeration.
+    
+    Members:
+        OBJ_RECOVERY
+        WU_XING
+        ART_OF_WAR
+        STOICISM
+        FIRST_PRINCIPLES
+        S026_COHERENCE"""
     OBJ_RECOVERY = "objective_recovery"
     WU_XING = "wu_xing"
     ART_OF_WAR = "art_of_war"
@@ -46,6 +57,9 @@ class ReasoningLens(Enum):
 
 @dataclass
 class ReasoningContext:
+    """ReasoningContext: reasoning context.
+    
+    Value object: equality and repr are field-based."""
     question: str
     task_type: str = "analysis"
     stakes: str = "medium"
@@ -54,6 +68,9 @@ class ReasoningContext:
 
 @dataclass
 class LensPerspective:
+    """LensPerspective: lens perspective.
+    
+    Value object: equality and repr are field-based."""
     lens: ReasoningLens
     analysis: str
     guidance: str
@@ -62,6 +79,9 @@ class LensPerspective:
 
 @dataclass
 class ReasoningResult:
+    """ReasoningResult: reasoning result.
+    
+    Value object: equality and repr are field-based."""
     question: str
     perspectives: list[LensPerspective]
     synthesis: str
@@ -73,6 +93,9 @@ class ReasoningResult:
 
 @dataclass(frozen=True)
 class ScratchpadAnalysis:
+    """ScratchpadAnalysis: scratchpad analysis.
+    
+    Value object: equality and repr are field-based."""
     synthesis: str
     wisdom: str
     confidence: float

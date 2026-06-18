@@ -59,6 +59,9 @@ except ImportError:
 
 @dataclass
 class HolographicCoordinate:
+    """HolographicCoordinate: holographic coordinate.
+    
+    Value object: equality and repr are field-based."""
     x: float  # Logic <-> Emotion
     y: float  # Micro <-> Macro
     z: float  # Time

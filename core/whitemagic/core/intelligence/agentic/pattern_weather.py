@@ -5,6 +5,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 
 class PatternWeather:
+    """PatternWeather: pattern weather."""
     def __init__(self) -> None:
         from whitemagic.config import PROJECT_ROOT
         self.patterns_file = PROJECT_ROOT / "pattern_database_MEGA.json"

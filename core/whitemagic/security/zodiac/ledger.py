@@ -23,6 +23,9 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 @dataclass
 class ZodiacEntry:
+    """ZodiacEntry: zodiac entry.
+    
+    Value object: equality and repr are field-based."""
     entry_id: str
     timestamp: float
     actor_id: str          # e.g., "clone_alpha_01" or "user"

@@ -13,6 +13,9 @@ from whitemagic.config.paths import WM_ROOT
 logger = logging.getLogger(__name__)
 
 class APIKeyMetadata(BaseModel):
+    """APIKeyMetadata: api key metadata.
+    
+    Pydantic data model: validation and serialization via Pydantic v2."""
     key_id: str
     name: str
     owner: str

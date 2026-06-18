@@ -29,6 +29,14 @@ _DEFAULT_HYBRID_PROCESS_TIMEOUT_S = 5.0
 
 
 class DispatchMode(Enum):
+    """DispatchMode: dispatch mode.
+    
+    Enumeration.
+    
+    Members:
+        SPEED
+        SAFETY
+        ADAPTIVE"""
     SPEED = "speed"      # Python in-memory only
     SAFETY = "safety"    # Koka IPC only
     ADAPTIVE = "adaptive"  # Choose based on complexity

@@ -10,6 +10,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 class CachePlugin:
+    """CachePlugin: cache plugin."""
     name = "cache"
     version = "1.0.0"
     description = "Cache Registry — Centralized control for all system caches and buffers"

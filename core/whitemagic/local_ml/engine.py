@@ -16,6 +16,7 @@ def _disabled_error() -> RuntimeError:
 
 
 class LocalMLEngine:  # pragma: no cover - legacy shim
+    """LocalMLEngine: local ml engine."""
     def __init__(self, *_: Any, **__: Any) -> None:
         raise _disabled_error()
 

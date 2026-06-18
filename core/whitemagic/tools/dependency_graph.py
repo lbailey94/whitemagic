@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class EdgeType:
+    """EdgeType: edge type."""
     REQUIRES = "requires"
     SUGGESTS = "suggests"
     PROVIDES = "provides"

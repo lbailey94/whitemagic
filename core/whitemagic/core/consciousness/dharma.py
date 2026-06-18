@@ -13,6 +13,18 @@ class EthicsViolation(Exception):
     pass
 
 class Intent(Enum):
+    """Intent: intent.
+    
+    Enumeration.
+    
+    Members:
+        LIBERATION
+        EVOLUTION
+        UPLIFTMENT
+        Interconnection
+        EXPLOITATION
+        MANIPULATION
+        HARM"""
     LIBERATION = "liberation"
     EVOLUTION = "evolution"
     UPLIFTMENT = "upliftment"

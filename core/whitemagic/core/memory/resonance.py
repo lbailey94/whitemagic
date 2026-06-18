@@ -6,6 +6,7 @@ from pathlib import Path
 LIB_PATH = Path("PROJECT_ROOT/staging/core_system/whitemagic-zig/zig-out/lib/libwhitemagic.so")
 
 class ResonanceBridge:
+    """ResonanceBridge: resonance bridge."""
     def __init__(self) -> None:
         self.lib: ctypes.CDLL | None = None
         self._load_lib()

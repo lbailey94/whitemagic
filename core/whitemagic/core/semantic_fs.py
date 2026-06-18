@@ -393,6 +393,7 @@ class SemanticFileWatcher:
             from watchdog.observers import Observer
 
             class Handler(FileSystemEventHandler):
+                """Handler: handler."""
                 def __init__(self, watcher: SemanticFileWatcher) -> None:
                     self.watcher = watcher
 

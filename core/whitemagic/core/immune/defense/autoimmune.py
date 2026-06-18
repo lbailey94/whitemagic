@@ -30,6 +30,9 @@ except ImportError:
 
 @dataclass
 class AntiPattern:
+    """AntiPattern: anti pattern.
+    
+    Value object: equality and repr are field-based."""
     pattern_id: str
     title: str
     confidence: float
@@ -49,6 +52,9 @@ class AntiPattern:
 
 @dataclass
 class PatternViolation:
+    """PatternViolation: pattern violation.
+    
+    Value object: equality and repr are field-based."""
     file_path: Path
     line_number: int
     pattern: AntiPattern
@@ -187,6 +193,7 @@ def detect_autoimmune() -> list[dict]:
 
 # Move auto_heal into class
 class AutoimmuneSystemExtended(AutoimmuneSystem):
+    """AutoimmuneSystemExtended: autoimmune system extended."""
     def auto_heal(self, violations: list[PatternViolation]) -> int:
         """Auto-fix high-confidence violations. Returns count of fixes."""
         fixed = 0

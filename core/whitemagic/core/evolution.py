@@ -31,6 +31,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AdaptiveRules:
+    """AdaptiveRules: adaptive rules.
+    
+    Value object: equality and repr are field-based."""
     enabled: bool = False
     min_confidence: float = 0.8
     min_frequency: int = 5

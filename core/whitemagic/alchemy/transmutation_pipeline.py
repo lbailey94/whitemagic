@@ -29,6 +29,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 class TransmutationPipeline:
+    """TransmutationPipeline: transmutation pipeline."""
     def __init__(self):
         self.classifier = NigredoClassifier()
         self.purifier = AlbedoPurifier()

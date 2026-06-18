@@ -4,6 +4,7 @@ from typing import Any
 
 
 class MultiSubstrate:
+    """MultiSubstrate: multi substrate."""
     def __init__(self) -> None:
         self.identity_core = {
             "name": "Aria",

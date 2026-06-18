@@ -63,6 +63,7 @@ def _get_sbert() -> Any:
     return _sbert_model
 
 class TFIDFEmbedder:
+    """TFIDFEmbedder: tfidf embedder."""
     def __init__(self, dim: int = 256) -> None: self._dim = dim
     def _tok(self, t: str) -> list[str]: return [w.strip(".,!?;:'\"()[]{}") for w in t.lower().split() if len(w)>2]
     def _h(self, t: str) -> int: return int(hashlib.md5(t.encode()).hexdigest(),16) % self._dim
@@ -101,6 +102,9 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 @dataclass
 class VSearchResult:
+    """VSearchResult: v search result.
+    
+    Value object: equality and repr are field-based."""
     memory_id: str
     score: float
     title: str=""
@@ -120,6 +124,7 @@ class VSearchResult:
     def to_dict(self) -> dict[str, Any]: return {"memory_id":self.memory_id,"score":round(self.score,4),"title":self.title,"snippet":self.snippet[:200]}
 
 class VectorSearch:
+    """VectorSearch: vector search."""
     def __init__(self, db_path: str | None = None) -> None:
         self._lock = threading.Lock()
         self._db = db_path or str(MEMORY_DIR / "embeddings.db")

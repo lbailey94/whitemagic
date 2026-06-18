@@ -6,6 +6,7 @@ Refactored to use the canonical zodiac_cores from gardens/connection.
 
 
 class ZodiacConsultant:
+    """ZodiacConsultant: zodiac consultant."""
     def __init__(self):
         # Try to load from canonical source, fall back to static if unavailable
         self.cores = self._load_cores()

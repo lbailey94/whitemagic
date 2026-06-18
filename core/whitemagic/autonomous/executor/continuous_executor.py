@@ -21,20 +21,32 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FileCreateAction:
+    """FileCreateAction: file create action.
+    
+    Value object: equality and repr are field-based."""
     path: str
     content: str
 
 @dataclass
 class FileEditAction:
+    """FileEditAction: file edit action.
+    
+    Value object: equality and repr are field-based."""
     path: str
     changes: str
 
 @dataclass
 class ShellCommandAction:
+    """ShellCommandAction: shell command action.
+    
+    Value object: equality and repr are field-based."""
     command: str
 
 @dataclass
 class ComplexTaskAction:
+    """ComplexTaskAction: complex task action.
+    
+    Value object: equality and repr are field-based."""
     description: str
 
 

@@ -44,6 +44,14 @@ logger = logging.getLogger(__name__)
 
 
 class BreakerState(str, Enum):
+    """BreakerState: breaker state.
+    
+    Enumeration.
+    
+    Members:
+        CLOSED
+        OPEN
+        HALF_OPEN"""
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"

@@ -21,6 +21,7 @@ logger = logging.getLogger("Chariot")
 
 # --- ANCIENT KNOWLEDGE: GRIMOIRE CHAPTERS ---
 class Grimoire:
+    """Grimoire: grimoire."""
     CHAPTERS = {
         0: {"title": "Introduction", "keywords": ["intro", "welcome", "begin"]},
         1: {"title": "Getting Started", "keywords": ["setup", "start", "init", "configure"]},
@@ -70,6 +71,7 @@ class Grimoire:
 class Ganas:
     # Simplified mapping based on registry.py
     # This maps keywords/paths to Gana Names
+    """Ganas: ganas."""
     MAPPING = {
         "Horn": ["session", "init", "boot"],
         "Neck": ["create_memory", "memory_create"],
@@ -115,6 +117,7 @@ class Ganas:
         return best_gana if best_score > 0 else None
 
 class ChariotArchaeologist:
+    """ChariotArchaeologist: chariot archaeologist."""
     def __init__(self, root_path: str, output_path: str):
         self.root_path = Path(root_path)
         self.output_path = Path(output_path)

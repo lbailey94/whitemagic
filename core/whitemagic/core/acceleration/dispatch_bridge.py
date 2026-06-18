@@ -64,6 +64,15 @@ class ToolId(IntEnum):
 
 # Maturity levels for Python fallback
 class Maturity(IntEnum):
+    """Maturity: maturity.
+    
+    Enumeration.
+    
+    Members:
+        EXPERIMENTAL
+        BETA
+        STABLE
+        MATURE"""
     EXPERIMENTAL = 0
     BETA = 1
     STABLE = 2

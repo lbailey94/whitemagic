@@ -32,6 +32,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class HologramEngine:
+    """HologramEngine: hologram engine."""
     def __init__(self) -> None:
         self.encoder = get_mojo_encoder()
         # Use the unified HolographicMemory wrapper instead of direct Rust SpatialIndex

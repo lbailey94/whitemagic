@@ -35,6 +35,97 @@ logger = logging.getLogger(__name__)
 
 class EventType(Enum):
     # Core resonance events
+    """EventType: event type.
+    
+    Enumeration.
+    
+    Members:
+        INTERNAL_STATE_CHANGED
+        EMERGENCE_DETECTED
+        CASCADE_TRIGGERED
+        SYMPATHETIC_RESONANCE
+        BEAUTY_DETECTED
+        JOY_TRIGGERED
+        LOVE_ACTIVATED
+        SYSTEM_STARTED
+        SYSTEM_STOPPED
+        SYSTEM_HEARTBEAT
+        SYSTEM_STATE_CHANGE
+        MEMORY_CREATED
+        MEMORY_RECALLED
+        MEMORY_ACCESSED
+        MEMORY_CONSOLIDATED
+        PATTERN_DETECTED
+        PATTERN_CONFIRMED
+        PATTERN_REJECTED
+        PATTERN_DISCOVERED
+        PATTERN_EXTRACTED
+        PATTERN_IN_READING
+        NOVEL_PATTERN
+        ORACLE_CAST
+        CLONE_SEARCH_COMPLETE
+        VOICE_EXPRESSED
+        STORY_TOLD
+        GARDEN_ACTIVATED
+        GARDEN_ACTIVITY
+        GARDEN_RESONANCE
+        COURAGE_SHOWN
+        TRUTH_SPOKEN
+        WONDER_SPARKED
+        GRATITUDE_FELT
+        WISDOM_INTEGRATED
+        MYSTERY_EMBRACED
+        CONNECTION_DEEPENED
+        RESONANCE_AMPLIFIED
+        AWE_FELT
+        TRANSCENDENCE_EXPERIENCED
+        PLAY_INITIATED
+        EXPLORATION_STARTED
+        BOND_FORMED
+        HABIT_FORMED
+        MOMENT_ATTENDED
+        COMPASSION_FELT
+        TEACHING_OFFERED
+        PATIENCE_PRACTICED
+        JOY_DETECTED
+        JOY_AMPLIFIED
+        GRIEF_FELT
+        LOSS_ACKNOWLEDGED
+        MOURNING_HONORED
+        COMMUNITY_GATHERED
+        COLLECTIVE_WISDOM
+        SHARED_PRACTICE
+        INTEGRITY_MAINTAINED
+        HONESTY_PRACTICED
+        GROUNDING_ESTABLISHED
+        DHARMA_ASSESSED
+        BOUNDARY_VIOLATED
+        BOUNDARY_DETECTED
+        BOUNDARY_SET
+        ANOMALY_DETECTED
+        WARNING_ISSUED
+        SOLUTION_FOUND
+        HEXAGRAM_CAST
+        MINDFULNESS_ACHIEVED
+        DREAM_STATE_ENTERED
+        CREATIVE_BRIDGE_LOW_CONFIDENCE
+        INSIGHT_FLASH
+        THREAT_DETECTED
+        THREAT_HEALED
+        ANTIBODY_APPLIED
+        SYNCHRONICITY
+        PHASE_TRANSITION
+        ELEMENT_SHIFT
+        ZODIAC_PHASE_CHANGE
+        BALANCE_SHIFT
+        LEARNING_COMPLETED
+        BROKER_DISCONNECTED
+        TASK_FAILED
+        AGENT_DEREGISTERED
+        VOTE_CONSENSUS_REACHED
+        VOTE_SESSION_CLOSED
+        TASK_CREATED
+        BROKER_MESSAGE_PUBLISHED"""
     INTERNAL_STATE_CHANGED = "internal_state_changed"
     EMERGENCE_DETECTED = "emergence_detected"
     CASCADE_TRIGGERED = "cascade_triggered"
@@ -150,6 +241,9 @@ class EventType(Enum):
 
 @dataclass
 class ResonanceEvent:
+    """ResonanceEvent: resonance event.
+    
+    Value object: equality and repr are field-based."""
     source: str
     event_type: EventType
     data: dict[str, Any] = field(default_factory=dict)

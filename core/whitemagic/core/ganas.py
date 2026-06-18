@@ -31,6 +31,39 @@ logger = logging.getLogger(__name__)
 # --- TYPES ---
 
 class LunarMansion(Enum):
+    """LunarMansion: lunar mansion.
+    
+    Enumeration.
+    
+    Members:
+        HORN
+        NECK
+        ROOT
+        ROOM
+        HEART
+        TAIL
+        BASKET
+        GHOST
+        WILLOW
+        STAR
+        NET_EXT
+        WINGS
+        CHARIOT
+        ABUNDANCE
+        STRADDLING
+        MOUND
+        STOMACH
+        HAIRY
+        NET
+        TURTLE
+        THREE_STARS
+        DIPPER
+        OX
+        GIRL
+        VOID
+        ROOF
+        ENCAMPMENT
+        WALL"""
     HORN = "horn"
     NECK = "neck"
     ROOT = "root"
@@ -62,12 +95,18 @@ class LunarMansion(Enum):
 
 @dataclass
 class GanaCall:
+    """GanaCall: gana call.
+    
+    Value object: equality and repr are field-based."""
     task: str
     state_vector: dict[str, Any] = field(default_factory=dict)
     resonance_hints: Any = None
 
 @dataclass
 class GanaResult:
+    """GanaResult: gana result.
+    
+    Value object: equality and repr are field-based."""
     mansion: LunarMansion
     output: Any
     successor_hint: str | None = None
@@ -96,10 +135,21 @@ class BaseGana:
 
 # --- QUADRANT CLASSES (Stubs for consolidation) ---
 
-class EasternGana(BaseGana): pass
-class SouthernGana(BaseGana): pass
-class WesternGana(BaseGana): pass
-class NorthernGana(BaseGana): pass
+class EasternGana(BaseGana):
+    """Eastern quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+    pass
+
+class SouthernGana(BaseGana):
+    """Southern quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+    pass
+
+class WesternGana(BaseGana):
+    """Western quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+    pass
+
+class NorthernGana(BaseGana):
+    """Northern quadrant gana (placeholder stub pending consolidation into GanaChain)."""
+    pass
 
 # --- CHAIN & REGISTRY ---
 

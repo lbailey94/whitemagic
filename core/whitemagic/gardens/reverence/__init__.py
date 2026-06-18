@@ -4,6 +4,7 @@ from whitemagic.gardens.base_garden import BaseGarden
 
 
 class ReverenceGarden(BaseGarden):
+    """ReverenceGarden: reverence garden."""
     def get_name(self) -> str:
         """
         Get the name.

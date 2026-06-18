@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
+    """MemoryManager: memory manager."""
     def __init__(self, base_dir: str | Path = ".") -> None:
         self.base_path = Path(base_dir)
         if str(base_dir) != ".":

@@ -31,6 +31,7 @@ _HAS_HNSW = False
 
 
 class Connection(ctypes.Structure):
+    """Connection: connection."""
     _fields_ = [("node_id", ctypes.c_uint32), ("distance", ctypes.c_float)]
 
 

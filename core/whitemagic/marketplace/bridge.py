@@ -34,6 +34,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class ListingState(Enum):
+    """ListingState: listing state.
+    
+    Enumeration.
+    
+    Members:
+        ACTIVE
+        PAUSED
+        SOLD
+        EXPIRED"""
     ACTIVE = "active"
     PAUSED = "paused"
     SOLD = "sold"
@@ -41,6 +50,16 @@ class ListingState(Enum):
 
 
 class NegotiationState(Enum):
+    """NegotiationState: negotiation state.
+    
+    Enumeration.
+    
+    Members:
+        OFFERED
+        ACCEPTED
+        REJECTED
+        COMPLETED
+        CANCELLED"""
     OFFERED = "offered"
     ACCEPTED = "accepted"
     REJECTED = "rejected"

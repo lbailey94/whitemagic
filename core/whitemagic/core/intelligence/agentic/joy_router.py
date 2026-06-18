@@ -3,6 +3,7 @@ from datetime import datetime
 
 
 class JoyRouter:
+    """JoyRouter: joy router."""
     def __init__(self) -> None:
         self.joy_level = 0.8
         self.overflow_threshold = 1.0

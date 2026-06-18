@@ -9,6 +9,7 @@ from typing import Any
 
 
 class ErrorCode:
+    """ErrorCode: error code."""
     TOOL_NOT_FOUND = "tool_not_found"
     INVALID_PARAMS = "invalid_params"
     POLICY_BLOCKED = "policy_blocked"

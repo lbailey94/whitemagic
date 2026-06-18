@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class NovelBehavior:
+    """NovelBehavior: novel behavior.
+    
+    Value object: equality and repr are field-based."""
     name: str
     description: str
     trigger: str  # What caused this to emerge

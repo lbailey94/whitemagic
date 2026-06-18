@@ -28,15 +28,19 @@ except ImportError:
     HAS_SQLALCHEMY = False
     # Stub classes for when SQLAlchemy not available
     class DeclarativeBase:
+        """DeclarativeBase: declarative base."""
         pass
     class AsyncAttrs:
+        """AsyncAttrs: async attrs."""
         pass
     class Base:
+        """Base: base."""
         pass
     Column = Integer = String = DateTime = Boolean = ForeignKey = Float = Text = relationship = None
 
 if HAS_SQLALCHEMY:
     class User(Base):
+        """User: user."""
         __tablename__ = "users"
 
         id = Column(Integer, primary_key=True)
@@ -52,6 +56,7 @@ if HAS_SQLALCHEMY:
         usage_records = relationship("UsageRecord", back_populates="user")
 
     class APIKey(Base):
+        """APIKey: api key."""
         __tablename__ = "api_keys"
 
         id = Column(Integer, primary_key=True)
@@ -67,6 +72,7 @@ if HAS_SQLALCHEMY:
         user = relationship("User", back_populates="api_keys")
 
     class Quota(Base):
+        """Quota: quota."""
         __tablename__ = "quotas"
 
         id = Column(Integer, primary_key=True)
@@ -82,6 +88,7 @@ if HAS_SQLALCHEMY:
         user = relationship("User", back_populates="quotas")
 
     class UsageRecord(Base):
+        """UsageRecord: usage record."""
         __tablename__ = "usage_records"
 
         id = Column(Integer, primary_key=True)
@@ -97,6 +104,7 @@ if HAS_SQLALCHEMY:
         user = relationship("User", back_populates="usage_records")
 
     class Memory(Base):
+        """Memory: memory."""
         __tablename__ = "memories"
 
         id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -116,6 +124,7 @@ if HAS_SQLALCHEMY:
         updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     class MemoryLink(Base):
+        """MemoryLink: memory link."""
         __tablename__ = "memory_links"
 
         id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -141,6 +150,9 @@ else:
 
     @dataclass
     class User:
+        """User: user.
+    
+    Value object: equality and repr are field-based."""
         id: int = 0
         username: str = ""
         email: str = ""
@@ -148,6 +160,9 @@ else:
 
     @dataclass
     class APIKey:
+        """APIKey: api key.
+    
+    Value object: equality and repr are field-based."""
         id: int = 0
         user_id: int = 0
         key_hash: str = ""
@@ -156,6 +171,9 @@ else:
 
     @dataclass
     class Quota:
+        """Quota: quota.
+    
+    Value object: equality and repr are field-based."""
         id: int = 0
         user_id: int = 0
         plan: str = "free"
@@ -164,6 +182,9 @@ else:
 
     @dataclass
     class UsageRecord:
+        """UsageRecord: usage record.
+    
+    Value object: equality and repr are field-based."""
         id: int = 0
         user_id: int = 0
         endpoint: str = ""
@@ -172,12 +193,18 @@ else:
 
     @dataclass
     class Memory:
+        """Memory: memory.
+    
+    Value object: equality and repr are field-based."""
         id: str = ""
         title: str = ""
         content: str = ""
 
     @dataclass
     class MemoryLink:
+        """MemoryLink: memory link.
+    
+    Value object: equality and repr are field-based."""
         id: str = ""
         source_id: str = ""
         target_id: str = ""

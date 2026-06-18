@@ -94,6 +94,7 @@ def stats(scan_disk: bool = False) -> dict[str, Any]:
 
 # Bridge for WisdomExtractor — delegates to ChariotArchaeologist
 class WisdomExtractor:
+    """WisdomExtractor: wisdom extractor."""
     def __init__(self):
         self.arch = get_archaeologist()
 

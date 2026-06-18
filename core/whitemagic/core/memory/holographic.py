@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HolographicResult:
+    """HolographicResult: holographic result.
+    
+    Value object: equality and repr are field-based."""
     memory_id: str
     distance: float
     # coordinates: Optional[List[float]] = None # Rust index might not return coords query results yet

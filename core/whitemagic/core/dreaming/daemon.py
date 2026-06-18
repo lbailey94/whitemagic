@@ -30,6 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger("dream_daemon")
 
 class DreamDaemon:
+    """DreamDaemon: dream daemon."""
     def __init__(self, interval_seconds: int = 600) -> None:
         self.interval = interval_seconds
         self.running = False

@@ -11,6 +11,7 @@ from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
 
 class LazyToolRegistry(list[ToolDefinition]):
+    """LazyToolRegistry: lazy tool registry."""
     def __init__(self, loader: Callable[[], list[ToolDefinition]]) -> None:
         super().__init__()
         self._loader = loader

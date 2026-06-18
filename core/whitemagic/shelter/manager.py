@@ -46,6 +46,16 @@ class ShelterTier(Enum):
 
 
 class ShelterState(Enum):
+    """ShelterState: shelter state.
+    
+    Enumeration.
+    
+    Members:
+        CREATED
+        RUNNING
+        COMPLETED
+        ERROR
+        DESTROYED"""
     CREATED = "created"
     RUNNING = "running"
     COMPLETED = "completed"

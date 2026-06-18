@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ExtractedEntity:
+    """ExtractedEntity: extracted entity.
+    
+    Value object: equality and repr are field-based."""
     name: str
     entity_type: str
     normalized_name: str
@@ -40,6 +43,9 @@ class ExtractedEntity:
 
 @dataclass
 class ExtractedRelation:
+    """ExtractedRelation: extracted relation.
+    
+    Value object: equality and repr are field-based."""
     subject: str
     predicate: str
     obj: str

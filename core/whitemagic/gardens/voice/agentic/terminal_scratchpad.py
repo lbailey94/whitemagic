@@ -13,6 +13,7 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 # Colors for terminal output
 class Colors:
+    """Colors: colors."""
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     CYAN = "\033[96m"

@@ -25,6 +25,9 @@ TOOL_CONTRACT_VERSION = "11.0.0"
 
 @dataclass(frozen=True)
 class EnvVar:
+    """EnvVar: env var.
+    
+    Value object: equality and repr are field-based."""
     name: str
     purpose: str
     example: str | None = None
