@@ -117,7 +117,7 @@ class SurpriseGate:
             engine = get_embedding_engine()
             if not engine.available():
                 raise RuntimeError("Embeddings unavailable")
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError, RuntimeError):
             # No embeddings → pass through as normal create
             with self._lock:
                 self._total_evaluations += 1
