@@ -144,6 +144,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI/AGI/ASI audience (NOT humans) — 16 sections, YAML frontmatter, file:line evidence, self-describing structure | Jun 18 |
 | `SESSION_REPORT_2026-06-18.md` | Session report — comprehensive documentation sweep: 888 docstrings added (1,270→40 undocumented public functions), polyglot survey of 8 cores, standalone paper, 4 reverted files for manual fix | Jun 18 |
 | `WHATS_NEXT_2026-06-18.md` | What's-next recommendation: ship v22.3.0 with this session's wins, then start v23.0.0 work on multi-user + WASM runtime per the strategic roadmap | Jun 18 |
+| `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 PATCH scope proposal — Tier 1 (version drift guardrail fix) + Tier 2 (roadmap polish items) recommended; ~6 hours; discoverable from a real test failure (TestH1_VersionDrift) caught by the release_readiness guardrail | Jun 18 |
 
 ---
 
