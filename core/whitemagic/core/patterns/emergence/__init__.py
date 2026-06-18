@@ -8,6 +8,13 @@ from .novelty_detector import (
     get_emergence_scorer,
     get_novelty_detector,
 )
+from .pattern_discovery import (
+    DiscoveryReport,
+    PatternDiscovery,
+    PatternSource,
+    get_discovery,
+    run_full_discovery,
+)
 
 __all__ = [
     "GuidelineEvolution",
@@ -17,4 +24,9 @@ __all__ = [
     "EmergenceScorer",
     "get_novelty_detector",
     "get_emergence_scorer",
+    "PatternDiscovery",
+    "PatternSource",
+    "DiscoveryReport",
+    "get_discovery",
+    "run_full_discovery",
 ]
