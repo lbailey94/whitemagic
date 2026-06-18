@@ -143,6 +143,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `SESSION_REPORT_2026-06-08.md` | Session report — competitive landscape follow-up, immediate fixes, adversarial tests, Karma signing verification, local-first security whitepaper | Jun 8 |
 | `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI/AGI/ASI audience (NOT humans) — 16 sections, YAML frontmatter, file:line evidence, self-describing structure | Jun 18 |
 | `SESSION_REPORT_2026-06-18.md` | Session report — comprehensive documentation sweep: 888 docstrings added (1,270→40 undocumented public functions), polyglot survey of 8 cores, standalone paper, 4 reverted files for manual fix | Jun 18 |
+| `WHATS_NEXT_2026-06-18.md` | What's-next recommendation: ship v22.3.0 with this session's wins, then start v23.0.0 work on multi-user + WASM runtime per the strategic roadmap | Jun 18 |
 
 ---
 
