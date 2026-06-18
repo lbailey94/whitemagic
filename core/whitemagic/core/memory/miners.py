@@ -463,7 +463,7 @@ class AssociationMiner:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Association mining: could not get memory system: {e}")
+            logger.error("Association mining: could not get memory system: %s", e, exc_info=True)
             return report
 
         # Sample diverse memories: mix of zones
@@ -640,7 +640,7 @@ class AssociationMiner:
                             except Exception as e:
                                 logger.debug("Association link insert failed: %s", e)
             except Exception as e:
-                logger.error(f"Association mining: persistence failed: {e}")
+                logger.error("Association mining: persistence failed: %s", e, exc_info=True)
 
         # Gap A3 synthesis: Feed strong associations into the Knowledge Graph
         self._feed_knowledge_graph(proposals)
@@ -732,7 +732,7 @@ class AssociationMiner:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Semantic mining: embedding engine unavailable: {e}")
+            logger.error("Semantic mining: embedding engine unavailable: %s", e, exc_info=True)
             return report
 
         if not engine.available():
@@ -845,7 +845,7 @@ class AssociationMiner:
                             except Exception as e:
                                 logger.debug("Semantic link insert failed: %s", e)
             except Exception as e:
-                logger.error(f"Semantic mining: persistence failed: {e}")
+                logger.error("Semantic mining: persistence failed: %s", e, exc_info=True)
 
         # Feed strong links to Knowledge Graph
         strong_proposals = [p for p in proposals if p.overlap_score >= strong_threshold]
@@ -1129,7 +1129,7 @@ class CausalMiner:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Causal mining: memory system unavailable: {e}")
+            logger.error("Causal mining: memory system unavailable: %s", e, exc_info=True)
             return report
 
         # Temporal fallback: sample recent memories and pair by proximity + tags
@@ -1276,7 +1276,7 @@ class CausalMiner:
                             except Exception as e:
                                 logger.debug("Causal edge insert failed: %s", e)
             except Exception as e:
-                logger.error(f"Causal mining: persistence failed: {e}")
+                logger.error("Causal mining: persistence failed: %s", e, exc_info=True)
 
         elapsed = (time.perf_counter() - start) * 1000
         report.duration_ms = elapsed

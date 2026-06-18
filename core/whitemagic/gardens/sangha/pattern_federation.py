@@ -270,10 +270,10 @@ class PatternFederation:
                     last_used=parse_datetime(data["last_used"]),
                 )
         except json.JSONDecodeError as e:
-            logger.error(f"Error loading pattern {pattern_id} from {pattern_file}: {e}")
+            logger.error("Error loading pattern %s from %s: %s", pattern_id, pattern_file, e, exc_info=True)
             return None
         except Exception as e:
-            logger.error(f"Unexpected error loading pattern {pattern_id} from {pattern_file}: {e}")
+            logger.error("Unexpected error loading pattern %s from %s: %s", pattern_id, pattern_file, e, exc_info=True)
             return None
 
     def _load_all_patterns(self) -> list[FederatedPattern]:
@@ -294,10 +294,10 @@ class PatternFederation:
                 with open(self.index_file) as f:
                     index = json.load(f)
             except json.JSONDecodeError as e:
-                logger.error(f"Error loading index from {self.index_file}: {e}")
+                logger.error("Error loading index from %s: %s", self.index_file, e, exc_info=True)
                 index = {}
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.error(f"Unexpected error loading index from {self.index_file}: {e}")
+                logger.error("Unexpected error loading index from %s: %s", self.index_file, e, exc_info=True)
                 index = {}
 
         index[pattern.pattern_id] = {

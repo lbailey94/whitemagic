@@ -83,7 +83,7 @@ class LocalLLM:
             res = data.get("response", "")
             return str(res)
         except Exception as e:
-            logger.error(f"Local LLM inference failed: {e}")
+            logger.error("Local LLM inference failed: %s", e, exc_info=True)
             return f"Error: {e}"
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.7) -> str:
@@ -108,7 +108,7 @@ class LocalLLM:
             res = data.get("message", {}).get("content", "")
             return str(res)
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.error(f"Local LLM chat failed: {e}")
+            logger.error("Local LLM chat failed: %s", e, exc_info=True)
             return f"Error: {e}"
 
     def classify(self, text: str, categories: list[str]) -> str:

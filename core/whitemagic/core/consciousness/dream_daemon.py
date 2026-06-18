@@ -178,7 +178,7 @@ class DreamDaemon:
                 return float(min(data.get("total_resonance", 0.0) / 10000.0, 1.0))
             return 0.5
         except Exception as e:
-            logger.error(f"Resonance calc failed: {e}")
+            logger.error("Resonance calc failed: %s", e, exc_info=True)
             return 0.5
 
 # Singleton instance

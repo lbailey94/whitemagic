@@ -487,7 +487,7 @@ class HolographicIntake:
                         break
                     time.sleep(1)
             except Exception as e:
-                logger.error(f"Monitor loop error: {e}")
+                logger.error("Monitor loop error: %s", e, exc_info=True)
                 time.sleep(60)
 
     def start(self) -> bool:

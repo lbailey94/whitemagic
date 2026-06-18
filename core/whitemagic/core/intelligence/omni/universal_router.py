@@ -225,7 +225,7 @@ class UniversalRouter:
                     logger.info(f"    ✅ Result type: {type(result)}")
 
                 except Exception as e:
-                    logger.error(f"    ❌ Execution Failed: {e}")
+                    logger.error("    ❌ Execution Failed: %s", e, exc_info=True)
                     context[f"error_{i}"] = str(e)
             else:
                 logger.warning(f"    ⚠️ Gana not found for {tool_name}. Skipping.")

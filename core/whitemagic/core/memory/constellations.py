@@ -190,7 +190,7 @@ class ConstellationDetector:
             um = get_unified_memory()
             backend = um.backend
         except Exception as e:
-            logger.error(f"Constellation detection: backend unavailable: {e}")
+            logger.error("Constellation detection: backend unavailable: %s", e, exc_info=True)
             return report
 
         # Load coordinates + metadata

@@ -169,7 +169,7 @@ class UMAPProjector:
             engine = get_embedding_engine()
             ids, vectors = engine._load_vec_cache()
         except Exception as e:
-            logger.error(f"UMAP projection: could not load vectors: {e}")
+            logger.error("UMAP projection: could not load vectors: %s", e, exc_info=True)
             return ProjectionResult(umap_params={"error": str(e)})
 
         if not ids or not hasattr(vectors, 'shape') or vectors.shape[0] < 5:
@@ -201,7 +201,7 @@ class UMAPProjector:
         try:
             coords = reducer.fit_transform(vectors)
         except Exception as e:
-            logger.error(f"UMAP fit_transform failed: {e}")
+            logger.error("UMAP fit_transform failed: %s", e, exc_info=True)
             return ProjectionResult(umap_params={"error": str(e)})
 
         # Hydrate metadata if requested

@@ -219,7 +219,7 @@ class GraphEngine:
                 self._total_rebuilds += 1
             return {"status": "success", "nodes": G.number_of_nodes(), "edges": G.number_of_edges()}
         except Exception as e:
-            logger.error(f"Graph rebuild failed: {e}")
+            logger.error("Graph rebuild failed: %s", e, exc_info=True)
             return {"status": "error", "message": str(e)}
 
     def pagerank(self, alpha: float = 0.85) -> dict[str, float]:

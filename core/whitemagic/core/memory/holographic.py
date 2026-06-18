@@ -58,7 +58,7 @@ class HolographicMemory:
                     else:
                         logger.warning("Rust module loaded but no spatial index class found.")
                 except Exception as e:
-                    logger.error(f"❌ Failed to initialize Rust HolographicIndex: {e}")
+                    logger.error("❌ Failed to initialize Rust HolographicIndex: %s", e, exc_info=True)
         else:
             if not os.getenv("WM_SILENT_INIT"):
                 logger.info("Rust Holographic Core not found. Using Python fallback implementation.")
@@ -103,7 +103,7 @@ class HolographicMemory:
             # Return 5D coords regardless of Rust index availability
             return (coord.x, coord.y, coord.z, coord.w, coord.v)
         except Exception as e:
-            logger.error(f"Failed to index memory {memory_id}: {e}")
+            logger.error("Failed to index memory %s: %s", memory_id, e, exc_info=True)
             print(f"❌ HOLOGRAPHIC ERROR: {e}")
             import traceback
             traceback.print_exc()
@@ -123,7 +123,7 @@ class HolographicMemory:
                 self._index.add(memory_id, x, y, z, w)
             return True
         except Exception as e:
-            logger.error(f"Failed to add memory {memory_id} with coords: {e}")
+            logger.error("Failed to add memory %s with coords: %s", memory_id, e, exc_info=True)
             return False
 
     def query_nearest(self, query_data: dict[str, Any], k: int = 5, weights: dict[str, float] | None = None) -> list[HolographicResult]:
@@ -165,7 +165,7 @@ class HolographicMemory:
 
             return [HolographicResult(mid, dist) for mid, dist in results]
         except Exception as e:
-            logger.error(f"Holographic query failed: {e}")
+            logger.error("Holographic query failed: %s", e, exc_info=True)
             return []
 
     def query_by_vector(self, vector: list[float], k: int = 5) -> list[HolographicResult]:
@@ -194,7 +194,7 @@ class HolographicMemory:
 
             return [HolographicResult(mid, dist) for mid, dist in results]
         except Exception as e:
-            logger.error(f"Holographic vector query failed: {e}")
+            logger.error("Holographic vector query failed: %s", e, exc_info=True)
             return []
 
     def query_radius(self, query_data: dict[str, Any], radius: float = 1.0, weights: dict[str, float] | None = None) -> list[HolographicResult]:
@@ -226,7 +226,7 @@ class HolographicMemory:
                 results = self._index.query_radius(vector[0], vector[1], vector[2], vector[3], radius)
                 return [HolographicResult(mid, dist) for mid, dist in results]
         except Exception as e:
-            logger.error(f"Holographic radius query failed: {e}")
+            logger.error("Holographic radius query failed: %s", e, exc_info=True)
             return []
 
     def get_stats(self) -> dict[str, Any]:
@@ -271,7 +271,7 @@ class HolographicMemory:
                     result.append((center_tuple, mem_ids))
             return result
         except Exception as e:
-            logger.error(f"Rust clustering failed: {e}")
+            logger.error("Rust clustering failed: %s", e, exc_info=True)
             return []
 
 # Singleton

@@ -115,7 +115,7 @@ class WorkerDaemon:
                     logger.info("Worker stopped by user")
                     break
                 except Exception as e:
-                    logger.error(f"Worker loop error: {e}")
+                    logger.error("Worker loop error: %s", e, exc_info=True)
                     time.sleep(self.poll_interval * 2)
         finally:
             self._running = False
@@ -272,7 +272,7 @@ class WorkerDaemon:
         try:
             path.write_text(_json_dumps(task, indent=2, default=str), encoding="utf-8")
         except Exception as e:
-            logger.error(f"Failed to save task {task_id}: {e}")
+            logger.error("Failed to save task %s: %s", task_id, e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Agent registry integration

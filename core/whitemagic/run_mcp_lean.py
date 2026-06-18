@@ -891,7 +891,7 @@ async def main_stdio() -> None:
                     sys.stdout.write(payload + "\n")
                     sys.stdout.flush()
                 except Exception as exc:
-                    logger.error(f"stdout_writer error: {exc}")
+                    logger.error("stdout_writer error: %s", exc, exc_info=True)
                     if shutdown_event.is_set():
                         break
 
@@ -924,7 +924,7 @@ async def main_stdio() -> None:
     except asyncio.CancelledError:
         logger.info("Server task cancelled during shutdown")
     except Exception as exc:
-        logger.error(f"Server run error: {exc}")
+        logger.error("Server run error: %s", exc, exc_info=True)
         raise
     finally:
         logger.info("Cleaning up MCP server tasks...")

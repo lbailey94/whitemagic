@@ -232,7 +232,7 @@ class GalacticTelepathyEngine:
                         logger.debug("Failed to get memory %s during sync: %s", mid, e)
                 return memories
         except Exception as e:
-            logger.error(f"Failed to get modified memories: {e}")
+            logger.error("Failed to get modified memories: %s", e, exc_info=True)
             return []
 
     def _transfer_memory_with_fidelity(
@@ -310,7 +310,7 @@ class GalacticTelepathyEngine:
             }
 
         except Exception as e:
-            logger.error(f"Transfer failed for {mem.id}: {e}")
+            logger.error("Transfer failed for %s: %s", mem.id, e, exc_info=True)
             return {"status": "error", "error": str(e)}
 
     def _extract_embeddings(self, memory_id: str, um: Any) -> list[EmbeddingBundle]:

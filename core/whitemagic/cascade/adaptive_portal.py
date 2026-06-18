@@ -148,7 +148,7 @@ class AdaptiveToolPortal:
             else:
                 result = handler(params, context)
         except Exception as e:
-            logger.error(f"Error in {tool_name}:{morphology}: {e}")
+            logger.error("Error in %s:%s: %s", tool_name, morphology, e, exc_info=True)
             result = {"error": str(e)}
 
         if not isinstance(result, dict):

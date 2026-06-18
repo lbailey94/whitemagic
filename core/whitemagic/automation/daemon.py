@@ -373,7 +373,7 @@ class AutomationDaemon:
                 time.sleep(1)
 
             except Exception as e:
-                logger.error(f"Daemon loop error: {e}")
+                logger.error("Daemon loop error: %s", e, exc_info=True)
                 time.sleep(5)
 
     def _execute_task(self, task: AutomationTask) -> dict[str, Any]:

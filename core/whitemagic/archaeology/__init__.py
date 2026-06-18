@@ -171,7 +171,7 @@ def process_wisdom_archives(limit_files: int = 1000, memory_type: str = "long_te
                 )
                 processed += 1
             except Exception as e:
-                logger.error(f"Failed to process finding: {e}")
+                logger.error("Failed to process finding: %s", e, exc_info=True)
 
     return {"status": "success", "processed": processed}
 

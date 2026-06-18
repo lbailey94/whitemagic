@@ -92,7 +92,7 @@ class SharedMemoryBridge:
             self._header.last_read_ts = 0.0
             logger.info(f"Created shared memory: {self.name} ({SEGMENT_SIZE} bytes)")
         except Exception as e:
-            logger.error(f"Failed to create shared memory: {e}")
+            logger.error("Failed to create shared memory: %s", e, exc_info=True)
             raise
 
     def _open_segment(self) -> None:
@@ -106,7 +106,7 @@ class SharedMemoryBridge:
                 raise ValueError(f"Invalid segment magic: {hex(self._header.magic)}")
             logger.debug(f"Opened shared memory: {self.name}")
         except Exception as e:
-            logger.error(f"Failed to open shared memory: {e}")
+            logger.error("Failed to open shared memory: %s", e, exc_info=True)
             raise
 
     def write_embedding(self, memory_id: int, vector: list[float]) -> bool:

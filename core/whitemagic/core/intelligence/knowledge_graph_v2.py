@@ -141,7 +141,7 @@ class KnowledgeGraphV2:
             conn.execute("PRAGMA synchronous=NORMAL")
             return conn
         except Exception as e:
-            logger.error(f"DB connection failed: {e}")
+            logger.error("DB connection failed: %s", e, exc_info=True)
             return None
 
     def extract_from_text(self, text: str, source_id: str) -> tuple[list[ExtractedEntity], list[ExtractedRelation]]:
@@ -241,7 +241,7 @@ class KnowledgeGraphV2:
             return stored
 
         except Exception as e:
-            logger.error(f"Failed to store relations: {e}")
+            logger.error("Failed to store relations: %s", e, exc_info=True)
             return 0
         finally:
             if own_conn and conn:
@@ -376,7 +376,7 @@ class KnowledgeGraphV2:
             return self.batch_extract_and_store(memories)
 
         except Exception as e:
-            logger.error(f"Failed to process unextracted memories: {e}")
+            logger.error("Failed to process unextracted memories: %s", e, exc_info=True)
             return {"error": str(e), "processed": 0}
 
     def get_entity_graph(self, entity_name: str, depth: int = 2) -> dict[str, Any]:

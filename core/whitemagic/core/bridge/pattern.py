@@ -20,7 +20,7 @@ def detect_patterns(query: str = "", **kwargs: Any) -> dict[str, Any]:
             "count": len(patterns) if isinstance(patterns, list) else 0
         }
     except Exception as e:
-        logger.error(f"Pattern detection failed: {e}")
+        logger.error("Pattern detection failed: %s", e, exc_info=True)
         return {"status": "error", "error": str(e), "patterns": []}
 
 
@@ -34,5 +34,5 @@ def analyze_pattern(pattern_id: str, **kwargs: Any) -> dict[str, Any]:
 
         return {"status": "success", "analysis": analysis}
     except Exception as e:
-        logger.error(f"Pattern analysis failed: {e}")
+        logger.error("Pattern analysis failed: %s", e, exc_info=True)
         return {"status": "error", "error": str(e)}

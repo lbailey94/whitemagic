@@ -74,7 +74,7 @@ class MemoryMarket:
             with open(self._path, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(asdict(access)) + "\n")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Failed to persist rental: {e}")
+            logger.error("Failed to persist rental: %s", e, exc_info=True)
 
 _market: MemoryMarket | None = None
 

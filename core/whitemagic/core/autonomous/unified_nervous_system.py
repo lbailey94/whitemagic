@@ -139,7 +139,7 @@ class UnifiedNervousSystem:
             try:
                 handler(event)
             except Exception as e:
-                logger.error(f"Global handler error: {e}")
+                logger.error("Global handler error: %s", e, exc_info=True)
 
         # Targeted or broadcast
         if event.target:
@@ -166,7 +166,7 @@ class UnifiedNervousSystem:
             try:
                 handler(event)
             except Exception as e:
-                logger.error(f"Handler error for {registration.subsystem.value}: {e}")
+                logger.error("Handler error for %s: %s", registration.subsystem.value, e, exc_info=True)
 
     def add_global_handler(self, handler: Callable[[BiologicalEvent], Any]) -> None:
         """Add a global handler that receives all events."""
@@ -440,7 +440,7 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
                 dreamer = get_background_dreamer()
                 dreamer.trigger_dream_cycle()
             except Exception as e:
-                logger.error(f"Failed to trigger background dreamer: {e}")
+                logger.error("Failed to trigger background dreamer: %s", e, exc_info=True)
 
     uns.register_subsystem(
         BiologicalSubsystem.DREAM,

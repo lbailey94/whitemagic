@@ -46,7 +46,7 @@ class Supervisor:
                     # Default to enabled unless explicitly disabled
                     self.enabled_sops[name] = data.get("enabled_by_default", True)
             except Exception as e:
-                logger.error(f"Failed to load SOP {f}: {e}")
+                logger.error("Failed to load SOP %s: %s", f, e, exc_info=True)
 
     def _create_default_sops(self):
         """Create default SOPs if none exist."""

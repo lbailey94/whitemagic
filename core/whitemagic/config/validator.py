@@ -81,7 +81,7 @@ class ConfigValidator:
                 return secrets_data
 
             except Exception as e:
-                logger.error(f"Failed to load secrets: {e}")
+                logger.error("Failed to load secrets: %s", e, exc_info=True)
                 if not _silent_init():
                     logger.info("Regenerating secrets...")
                 secrets_data = self._generate_secrets()

@@ -52,7 +52,7 @@ def astro_shift(target_phase: str | None = None, **kwargs: Any) -> dict[str, Any
             "message": str(e)
         }
     except Exception as e:
-        logger.error(f"astro_shift: unexpected error: {e}")
+        logger.error("astro_shift: unexpected error: %s", e, exc_info=True)
         return {
             "status": "error",
             "message": f"Internal shift failure: {e}"

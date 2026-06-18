@@ -44,7 +44,7 @@ class AutonomousArmyManager:
                 # Ritual of Pruning: clean stale deployments
                 self.prune_stale_deployments()
             except Exception as e:
-                logger.error(f"Error in army patrol: {e}")
+                logger.error("Error in army patrol: %s", e, exc_info=True)
             await asyncio.sleep(interval_seconds)
 
     async def run_census(self):
@@ -62,7 +62,7 @@ class AutonomousArmyManager:
             else:
                 logger.error(f"❌ Census failed: {stderr.decode()}")
         except Exception as e:
-            logger.error(f"Error running census: {e}")
+            logger.error("Error running census: %s", e, exc_info=True)
 
     async def evaluate_and_deploy(self):
         """Evaluate system state and decide if a deployment is needed."""
@@ -115,7 +115,7 @@ class AutonomousArmyManager:
             return deployment_id
 
         except Exception as e:
-            logger.error(f"Failed to deploy army: {e}")
+            logger.error("Failed to deploy army: %s", e, exc_info=True)
             return None
 
     def prune_stale_deployments(self, max_age_seconds: float | None = None) -> dict[str, Any]:

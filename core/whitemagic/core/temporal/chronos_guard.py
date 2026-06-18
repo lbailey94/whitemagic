@@ -67,7 +67,7 @@ class ChronosGuard:
             if bias:
                 council_intent = bias
         except Exception as e:
-            logger.error(f"Failed to calculate council intent for pulse: {e}")
+            logger.error("Failed to calculate council intent for pulse: %s", e, exc_info=True)
 
         pulse = TemporalPulse(
             timestamp=sys_time_str,

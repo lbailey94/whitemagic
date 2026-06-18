@@ -118,7 +118,7 @@ class MemoryWorkflowOptimizer:
             return similar_ids
 
         except Exception as e:
-            logger.error(f"Error pre-computing semantic links: {e}")
+            logger.error("Error pre-computing semantic links: %s", e, exc_info=True)
             return None
 
     def pre_warm_consolidation(self, memory_id: str, memory_data: dict[str, Any]) -> bool:
@@ -158,7 +158,7 @@ class MemoryWorkflowOptimizer:
             return True
 
         except Exception as e:
-            logger.error(f"Error pre-warming consolidation: {e}")
+            logger.error("Error pre-warming consolidation: %s", e, exc_info=True)
             return False
 
     def get_consolidation_data(self, memory_id: str) -> dict[str, Any] | None:
@@ -248,7 +248,7 @@ class PatternLearningOptimizer:
             return True
 
         except Exception as e:
-            logger.error(f"Error pre-warming UI: {e}")
+            logger.error("Error pre-warming UI: %s", e, exc_info=True)
             return False
 
     def add_to_batch(self, pattern_id: str, pattern_data: dict[str, Any]):
@@ -292,7 +292,7 @@ class PatternLearningOptimizer:
             self.metrics.total_latency_saved_ms += elapsed_ms
 
         except Exception as e:
-            logger.error(f"Error processing batch: {e}")
+            logger.error("Error processing batch: %s", e, exc_info=True)
 
     def get_ui_data(self, pattern_id: str) -> dict[str, Any] | None:
         """Get pre-warmed UI data if available."""

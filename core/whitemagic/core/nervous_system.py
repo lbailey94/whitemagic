@@ -82,7 +82,7 @@ class NervousSystem:
                 try:
                     callback(data)
                 except Exception as e:
-                    logger.error(f"Error in signal handler for {signal_type}: {e}")
+                    logger.error("Error in signal handler for %s: %s", signal_type, e, exc_info=True)
 
     def health_dashboard(self) -> dict[str, str]:
         """Return status of all registered organs."""

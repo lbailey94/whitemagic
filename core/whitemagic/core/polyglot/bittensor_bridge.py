@@ -46,7 +46,7 @@ class BittensorBridge:
 
             return mock_data
         except Exception as e:
-            logger.error(f"Bittensor discovery failed: {e}")
+            logger.error("Bittensor discovery failed: %s", e, exc_info=True)
             return {"status": "offline", "error": str(e)}
 
     def get_resource_quote(self, requirement: str) -> dict[str, Any] | None:

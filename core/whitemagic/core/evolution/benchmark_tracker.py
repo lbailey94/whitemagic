@@ -58,7 +58,7 @@ class BenchmarkHistoryTracker:
                     self.history = json.load(f)
                 logger.info(f"📊 Loaded {len(self.history)} historical benchmark runs")
             except Exception as e:
-                logger.error(f"Failed to load history: {e}")
+                logger.error("Failed to load history: %s", e, exc_info=True)
                 self.history = []
         else:
             self.history = []
@@ -70,7 +70,7 @@ class BenchmarkHistoryTracker:
                 json.dump(self.history, f, indent=2)
             logger.info(f"💾 Saved benchmark history to {self.history_file}")
         except Exception as e:
-            logger.error(f"Failed to save history: {e}")
+            logger.error("Failed to save history: %s", e, exc_info=True)
 
     def record_run(self, results: list[BenchmarkResult], version: str = "unknown"):
         """Record a new benchmark run."""

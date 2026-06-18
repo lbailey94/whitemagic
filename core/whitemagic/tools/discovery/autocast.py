@@ -141,7 +141,7 @@ class ToolDiscovery:
             tools.sort(key=lambda x: x["usage_count"], reverse=True)
             return tools
         except Exception as e:
-            logger.error(f"Tool discovery failed: {e}")
+            logger.error("Tool discovery failed: %s", e, exc_info=True)
             return []
 
     def discover_by_search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -175,7 +175,7 @@ class ToolDiscovery:
             tools.sort(key=lambda x: x["score"], reverse=True)
             return tools[:limit]
         except Exception as e:
-            logger.error(f"Tool search failed: {e}")
+            logger.error("Tool search failed: %s", e, exc_info=True)
             return []
 
     def autocast_suggestions(

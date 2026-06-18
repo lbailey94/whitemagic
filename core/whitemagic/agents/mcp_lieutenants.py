@@ -197,7 +197,7 @@ class LieutenantWithMCP(Lieutenant):
             return result
 
         except Exception as e:
-            logger.error(f"Lieutenant {self.name} MCP call failed: {tool_name} - {e}")
+            logger.error("Lieutenant %s MCP call failed: %s - %s", self.name, tool_name, e, exc_info=True)
             return {
                 "status": "error",
                 "message": str(e),

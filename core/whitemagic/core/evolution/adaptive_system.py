@@ -155,7 +155,7 @@ class AdaptiveSystem:
                 return False
 
         except Exception as e:
-            logger.error(f"❌ Error applying adaptation: {e}")
+            logger.error("❌ Error applying adaptation: %s", e, exc_info=True)
             return False
 
     def _optimize_pathway(self, adaptation: dict[str, Any]) -> bool:

@@ -307,7 +307,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
             budget_status = economy.get_budget_status()
             return {"status": "success", "budget": budget_status}
         except Exception as budget_err:
-            logger.error(f"Error getting budget status: {budget_err}")
+            logger.error("Error getting budget status: %s", budget_err, exc_info=True)
             return {
                 "status": "success",
                 "total_budget": getattr(economy, "total_budget", 200000),
@@ -316,7 +316,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
                 "note": "Budget status retrieval partially failed"
             }
     except Exception as e:
-        logger.error(f"Token economy initialization failed: {e}")
+        logger.error("Token economy initialization failed: %s", e, exc_info=True)
         return {"status": "error", "error_code": "degraded", "error": str(e), "note": "Token economy subsystem unavailable"}
 
 

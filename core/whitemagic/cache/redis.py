@@ -102,7 +102,7 @@ class RedisCache:
             logger.info(f"Connected to Redis at {self.config.host}:{self.config.port}")
 
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+            logger.error("Failed to connect to Redis: %s", e, exc_info=True)
             self._connected = False
 
     def is_connected(self) -> bool:
@@ -183,7 +183,7 @@ class RedisCache:
             return self._deserialize(value)  # type: ignore[arg-type]
 
         except RedisError as e:
-            logger.error(f"Cache get error: {e}")
+            logger.error("Cache get error: %s", e, exc_info=True)
             return default
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
@@ -202,7 +202,7 @@ class RedisCache:
             return bool(self._client.setex(full_key, ttl, serialized))
 
         except RedisError as e:
-            logger.error(f"Cache set error: {e}")
+            logger.error("Cache set error: %s", e, exc_info=True)
             return False
 
     def delete(self, key: str) -> bool:
@@ -216,7 +216,7 @@ class RedisCache:
             return bool(self._client.delete(full_key))
 
         except RedisError as e:
-            logger.error(f"Cache delete error: {e}")
+            logger.error("Cache delete error: %s", e, exc_info=True)
             return False
 
     def exists(self, key: str) -> bool:
@@ -230,7 +230,7 @@ class RedisCache:
             return bool(self._client.exists(full_key))
 
         except RedisError as e:
-            logger.error(f"Cache exists error: {e}")
+            logger.error("Cache exists error: %s", e, exc_info=True)
             return False
 
     def expire(self, key: str, ttl: int) -> bool:
@@ -244,7 +244,7 @@ class RedisCache:
             return bool(self._client.expire(full_key, ttl))
 
         except RedisError as e:
-            logger.error(f"Cache expire error: {e}")
+            logger.error("Cache expire error: %s", e, exc_info=True)
             return False
 
     def ttl(self, key: str) -> int:
@@ -258,7 +258,7 @@ class RedisCache:
             return int(self._client.ttl(full_key))  # type: ignore[arg-type]
 
         except RedisError as e:
-            logger.error(f"Cache TTL error: {e}")
+            logger.error("Cache TTL error: %s", e, exc_info=True)
             return -1
 
     def clear(self, pattern: str | None = None) -> int:
@@ -282,7 +282,7 @@ class RedisCache:
             return 0
 
         except RedisError as e:
-            logger.error(f"Cache clear error: {e}")
+            logger.error("Cache clear error: %s", e, exc_info=True)
             return 0
 
     # Async methods
@@ -301,7 +301,7 @@ class RedisCache:
             return self._deserialize(value)
 
         except RedisError as e:
-            logger.error(f"Async cache get error: {e}")
+            logger.error("Async cache get error: %s", e, exc_info=True)
             return default
 
     async def aset(self, key: str, value: Any, ttl: int | None = None) -> bool:
@@ -319,7 +319,7 @@ class RedisCache:
             return bool(await self._async_client.setex(full_key, ttl, serialized))
 
         except RedisError as e:
-            logger.error(f"Async cache set error: {e}")
+            logger.error("Async cache set error: %s", e, exc_info=True)
             return False
 
     # Cache decorators

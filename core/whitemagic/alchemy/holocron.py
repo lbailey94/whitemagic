@@ -52,7 +52,7 @@ class Holocron:
             self.rules = data.get("rules", [])
             logger.info(f"Holocron loaded with {len(self.rules)} rules")
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.error(f"Failed to load Holocron: {e}")
+            logger.error("Failed to load Holocron: %s", e, exc_info=True)
 
     def get_all_rules(self) -> list[dict[str, Any]]:
         """

@@ -277,7 +277,7 @@ class MansionBridge:
 
             return result.stdout.strip()
         except Exception as e:
-            logger.error(f"Mojo execution error: {e}")
+            logger.error("Mojo execution error: %s", e, exc_info=True)
             return None
 
     def neuro_score(self, data: str) -> str | None:
@@ -306,7 +306,7 @@ class MansionBridge:
             if isinstance(result, dict):
                 return result
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Zig I Ching failed: {e}")
+            logger.error("Zig I Ching failed: %s", e, exc_info=True)
             return None
         return None
 
@@ -319,7 +319,7 @@ class MansionBridge:
             import whitemagic_rs
             return getattr(whitemagic_rs, "zig_py_holographic_project")(*args)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Zig holographic failed: {e}")
+            logger.error("Zig holographic failed: %s", e, exc_info=True)
             return None
 
     # === Rust Holographic Operations ===
@@ -340,7 +340,7 @@ class MansionBridge:
                 return whitemagic_rs.HolographicIndex()
             return None
         except Exception as e:
-            logger.error(f"Failed to create holographic index: {e}")
+            logger.error("Failed to create holographic index: %s", e, exc_info=True)
             return None
 
     # === Heaven's Net (Archaeology) ===
@@ -359,7 +359,7 @@ class MansionBridge:
             import whitemagic_rs
             return getattr(whitemagic_rs, "cast_heavens_net")(directory, limit)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Heaven's Net failed: {e}")
+            logger.error("Heaven's Net failed: %s", e, exc_info=True)
             return None
 
 

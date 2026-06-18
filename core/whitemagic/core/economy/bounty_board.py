@@ -134,7 +134,7 @@ class BountyBoard:
             with open(self._path, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(bounty.to_dict()) + "\n")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Failed to persist bounty: {e}")
+            logger.error("Failed to persist bounty: %s", e, exc_info=True)
 
     def get_bounty(self, bounty_id: str) -> Bounty | None:
         """

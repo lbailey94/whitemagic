@@ -162,7 +162,7 @@ class UnifiedNervousSystemV21:
                         subsystem.stop()
                     logger.info(f"⏹️ {name} subsystem stopped")
                 except Exception as e:
-                    logger.error(f"❌ Failed to stop {name}: {e}")
+                    logger.error("❌ Failed to stop %s: %s", name, e, exc_info=True)
 
         # Stop event bus
         if self.event_bus:
@@ -251,7 +251,7 @@ class UnifiedNervousSystemV21:
                 # Fallback to a simulated result if method not found but object exists
                 return {"status": "simulated", "message": "Dream cycle heartbeat active"}
             except Exception as e:
-                logger.error(f"Dream pulse execution failed: {e}")
+                logger.error("Dream pulse execution failed: %s", e, exc_info=True)
                 return {"status": "error", "error": str(e)}
         else:
             return {"status": "no_phase_method"}

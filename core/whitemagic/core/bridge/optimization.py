@@ -169,7 +169,7 @@ def solve_optimization(
             "missing_module": "cvxpy or numpy",
         }
     except Exception as e:
-        logger.error(f"Solver Error: {e}")
+        logger.error("Solver Error: %s", e, exc_info=True)
         return {
             "status": "error",
             "message": f"Solver execution failed: {str(e)}",

@@ -408,7 +408,7 @@ def _canonical_tool_name(tool_name: str) -> str:
         logger.warning(
             f"DEPRECATION: Tool alias '{name}' is deprecated. "
             f"Use '{canonical}' instead. "
-            f"This alias will be removed in v22.0.0."
+            f"This alias will be removed in the next minor release."
         )
 
     return canonical

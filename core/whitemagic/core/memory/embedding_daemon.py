@@ -173,7 +173,7 @@ class EmbeddingDaemon:
             conn.execute("PRAGMA synchronous=NORMAL")
             return conn
         except Exception as e:
-            logger.error(f"DB connection failed: {e}")
+            logger.error("DB connection failed: %s", e, exc_info=True)
             return None
 
     def _get_python_engine(self) -> Any:
@@ -183,7 +183,7 @@ class EmbeddingDaemon:
                 from whitemagic.core.memory.embeddings import get_embedding_engine
                 self._python_engine = get_embedding_engine()
             except Exception as e:
-                logger.error(f"Python embedding engine load failed: {e}")
+                logger.error("Python embedding engine load failed: %s", e, exc_info=True)
         return self._python_engine
 
     def start(self) -> None:
@@ -239,13 +239,13 @@ class EmbeddingDaemon:
                     try:
                         self.on_batch_complete(result)
                     except Exception as e:
-                        logger.error(f"on_batch_complete callback error: {e}")
+                        logger.error("on_batch_complete callback error: %s", e, exc_info=True)
 
                 # Record metrics
                 self._record_metrics(result)
 
             except Exception as e:
-                logger.error(f"EmbeddingDaemon cycle error: {e}")
+                logger.error("EmbeddingDaemon cycle error: %s", e, exc_info=True)
 
             # Wait for next poll or stop signal
             self._stop_event.wait(self.poll_interval)
@@ -384,7 +384,7 @@ class EmbeddingDaemon:
             return embedded, failed
 
         except Exception as e:
-            logger.error(f"Batch processing error: {e}")
+            logger.error("Batch processing error: %s", e, exc_info=True)
             return 0, len(batch)
 
     def _record_metrics(self, result: dict[str, Any]) -> None:

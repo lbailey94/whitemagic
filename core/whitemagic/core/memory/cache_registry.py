@@ -46,7 +46,7 @@ class CacheRegistry:
                 flush()
                 logger.debug(f"  Flushed: {name}")
             except Exception as e:
-                logger.error(f"  Failed to flush {name}: {e}")
+                logger.error("  Failed to flush %s: %s", name, e, exc_info=True)
 
     def get_status(self) -> dict[str, Any]:
         """Get the status of registered caches."""

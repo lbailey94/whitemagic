@@ -1,6 +1,9 @@
 """State Board Bridge — Shared memory state board for system monitoring.
 
-Stub implementation for v22.0.0.
+Provides the StateBoardBridge class for inter-process state
+broadcasting via the Rust board_* shim functions. The shared-
+memory state board holds counters, breakers, and resonance values
+that are read by the dashboard and GanYing event bus.
 """
 
 from __future__ import annotations

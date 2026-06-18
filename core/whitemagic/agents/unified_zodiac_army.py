@@ -362,7 +362,7 @@ class UnifiedZodiacCommander:
                 json.dumps(config)
             )
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.error(f"Rust deployment failed: {e}")
+            logger.error("Rust deployment failed: %s", e, exc_info=True)
             return await self._deploy_python(objective, armies, clones_per_army, True)
 
         data = json.loads(result)

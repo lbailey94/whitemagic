@@ -151,7 +151,7 @@ class GalaxyManager:
             _REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
             _REGISTRY_PATH.write_text(_json_dumps(data, indent=2, default=str), encoding="utf-8")
         except Exception as e:
-            logger.error(f"Failed to save galaxy registry: {e}")
+            logger.error("Failed to save galaxy registry: %s", e, exc_info=True)
 
     # ── Galaxy CRUD ─────────────────────────────────────────────────
 
@@ -532,7 +532,7 @@ class GalaxyManager:
             # Cache it locally too
             self._memory_instances[galaxy_name] = new_um
         except Exception as e:
-            logger.error(f"Failed to reset global memory to galaxy '{galaxy_name}': {e}")
+            logger.error("Failed to reset global memory to galaxy '%s': %s", galaxy_name, e, exc_info=True)
 
     # ── Galaxy status ───────────────────────────────────────────────
 

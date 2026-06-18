@@ -22,7 +22,7 @@ def send_response(data: dict[str, Any]):
         sys.stdout.write(b64_str + "\n")
         sys.stdout.flush()
     except (OSError, FileNotFoundError, PermissionError) as e:
-        logger.error(f"Error encoding response: {e}")
+        logger.error("Error encoding response: %s", e, exc_info=True)
 
 def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
     """

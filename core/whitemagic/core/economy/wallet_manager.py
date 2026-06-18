@@ -41,7 +41,7 @@ class WalletManager:
                 with open(self.config_path) as f:
                     return dict(json.load(f).get("beneficiaries", {}))
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.error(f"Failed to load beneficiaries: {e}")
+            logger.error("Failed to load beneficiaries: %s", e, exc_info=True)
         return {}
 
     def propose_gratitude_settlement(self, amount: float) -> dict[str, Any]:

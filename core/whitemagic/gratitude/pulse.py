@@ -45,7 +45,7 @@ class GratitudePulse:
             try:
                 await self.scan()
             except Exception as e:
-                logger.error(f"Gratitude Pulse scan failed: {e}")
+                logger.error("Gratitude Pulse scan failed: %s", e, exc_info=True)
 
             await asyncio.sleep(self.interval)
 

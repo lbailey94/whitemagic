@@ -116,7 +116,7 @@ class AsyncGanYingBus:
                 if not filter_func(event):
                     return
             except Exception as e:
-                logger.error(f"Filter error: {e}")
+                logger.error("Filter error: %s", e, exc_info=True)
 
         try:
             self._queue.put_nowait(event)
@@ -144,7 +144,7 @@ class AsyncGanYingBus:
             except TimeoutError:
                 continue
             except Exception as e:
-                logger.error(f"Error processing event: {e}")
+                logger.error("Error processing event: %s", e, exc_info=True)
                 self._metrics["errors"] += 1
 
     def on(self, event_type: str, handler: Callable[..., Any]) -> None:
@@ -192,7 +192,7 @@ class AsyncGanYingBus:
                         loop.run_in_executor(None, handler, event),
                     )
             except Exception as e:
-                logger.error(f"Error preparing handler: {e}")
+                logger.error("Error preparing handler: %s", e, exc_info=True)
                 self._metrics["errors"] += 1
 
         if tasks:

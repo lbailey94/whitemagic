@@ -45,7 +45,7 @@ class LocalEmbedder:
             logger.warning("fastembed not installed. Install with: pip install fastembed")
             self._available = False
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"Failed to load local embedding model: {e}")
+            logger.error("Failed to load local embedding model: %s", e, exc_info=True)
             self._available = False
 
     @property
@@ -77,7 +77,7 @@ class LocalEmbedder:
                 return np.array([])
             return np.array(embeddings)
         except Exception as e:
-            logger.error(f"Embedding failed: {e}")
+            logger.error("Embedding failed: %s", e, exc_info=True)
             return None
 
     def embed_query(self, query: str) -> np.ndarray | None:

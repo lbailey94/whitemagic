@@ -139,7 +139,7 @@ class ImmortalClone:
                     logger.debug(f"🔄 Immortal Clone {self.clone_id} iteration {self.iteration} failed, feeding error back")
 
             except Exception as e:
-                logger.error(f"❌ Immortal Clone {self.clone_id} exception at iteration {self.iteration}: {e}")
+                logger.error("❌ Immortal Clone %s exception at iteration %s: %s", self.clone_id, self.iteration, e, exc_info=True)
                 self.context.append({
                     'iteration': self.iteration,
                     'exception': str(e),

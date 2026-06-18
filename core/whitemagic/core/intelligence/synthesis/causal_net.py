@@ -162,7 +162,7 @@ class CausalNet:
             logger.info(f"Julia Gan Ying verification: {len(edges)} -> {len(pruned)} edges.")
             return pruned, resonance_scores
         except Exception as e:
-            logger.error(f"Julia resonance verification failed: {e}")
+            logger.error("Julia resonance verification failed: %s", e, exc_info=True)
             return edges, {}
 
 CausalNetMiner = CausalNet

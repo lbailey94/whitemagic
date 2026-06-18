@@ -98,7 +98,7 @@ class ZodiacalClock:
             with open(self.state_file, "w") as f:
                 json.dump(self._state, f, indent=2)
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.error(f"ZodiacalClock: failed to save state: {e}")
+            logger.error("ZodiacalClock: failed to save state: %s", e, exc_info=True)
 
     @property
     def current_phase(self) -> str:

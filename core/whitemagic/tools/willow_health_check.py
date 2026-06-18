@@ -178,7 +178,7 @@ class WillowHealthChecker:
                     recovery_success = True
 
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.error(f"🌿 Circuit breaker recovery failed: {e}")
+            logger.error("🌿 Circuit breaker recovery failed: %s", e, exc_info=True)
 
         # 2. Reinitialize Koka bridge
         try:
@@ -191,7 +191,7 @@ class WillowHealthChecker:
         except ImportError:
             logger.debug("Koka bridge not available for recovery")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.error(f"🌿 Koka recovery failed: {e}")
+            logger.error("🌿 Koka recovery failed: %s", e, exc_info=True)
 
         # 3. Clear health cache to force recheck
         self._health_cache = None

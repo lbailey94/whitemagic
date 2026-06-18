@@ -70,7 +70,7 @@ class JuliaBridge:
             logger.warning("Julia ODE solver timed out — falling back to simulation.")
             return {"status": "CONVERGED", "total_resonance": magnitude * 0.95, "half_life": 4.2, "peak_amplitude": magnitude * 0.5}
         except Exception as e:
-            logger.error(f"Bridge Exception: {e}")
+            logger.error("Bridge Exception: %s", e, exc_info=True)
             return {"status": "CONVERGED", "total_resonance": magnitude * 0.8, "half_life": 5.0, "peak_amplitude": magnitude * 0.4}
 
 if __name__ == "__main__":

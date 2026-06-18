@@ -157,7 +157,7 @@ class SolutionLibrary:
                 bridge = get_accelerator_bridge()
                 return bool(bridge.execute_snippet(sol.code_snippet, context or {}))
             except Exception as e:
-                logger.error(f"Execution of solution {sol.id} failed: {e}")
+                logger.error("Execution of solution %s failed: %s", sol.id, e, exc_info=True)
                 return False
 
         # 3. Fallback: Log that solution was validated but had no executable code

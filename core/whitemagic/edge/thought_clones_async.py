@@ -155,7 +155,7 @@ class AsyncThoughtCloneArmy:
             try:
                 return await self._clone_think(prompt, strategy, clone_id, tier_hint=active_tier.value)
             except Exception as e:
-                logger.error(f"Clone {clone_id} failed: {e}")
+                logger.error("Clone %s failed: %s", clone_id, e, exc_info=True)
                 return None
 
         tasks = [safe_clone(strategy, i) for i, strategy in enumerate(strategies)]
@@ -279,7 +279,7 @@ class AsyncThoughtCloneArmy:
             try:
                 return await self._clone_think(prompt, strategy, clone_id)
             except Exception as e:
-                logger.error(f"Clone {clone_id} failed: {e}")
+                logger.error("Clone %s failed: %s", clone_id, e, exc_info=True)
                 return None
 
         tasks = [
@@ -406,7 +406,7 @@ class AsyncThoughtCloneArmy:
                 logger.warning(f"Clone {clone_id} timed out")
                 raise
             except Exception as e:
-                logger.error(f"Clone {clone_id} failed: {e}")
+                logger.error("Clone %s failed: %s", clone_id, e, exc_info=True)
                 # Return error path instead of raising
                 return AsyncThoughtPath(
                     strategy=f"{strategy}_error",

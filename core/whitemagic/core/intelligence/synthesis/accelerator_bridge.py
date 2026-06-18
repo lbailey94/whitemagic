@@ -132,7 +132,7 @@ class AcceleratorBridge:
         try:
             payload = _json_loads(snippet)
         except (json.JSONDecodeError, ValueError) as e:
-            logger.error(f"Snippet rejected: expected JSON declarative format ({e})")
+            logger.error("Snippet rejected: expected JSON declarative format (%s)", e, exc_info=True)
             return False
 
         operations = payload if isinstance(payload, list) else [payload]
@@ -161,7 +161,7 @@ class AcceleratorBridge:
             logger.info(f"  Action executed successfully: {task_type}")
             return True
         except Exception as e:
-            logger.error(f"  Action execution failed: {e}")
+            logger.error("  Action execution failed: %s", e, exc_info=True)
     def execute_council_decision(self, consensus: dict[str, Any]) -> Any:
         """Execute a decision from the Zodiac Council.
         Uses the multi-dimensional spectrum to determine the mode and energy of the action.

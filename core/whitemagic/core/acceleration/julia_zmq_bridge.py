@@ -103,7 +103,7 @@ class JuliaZMQClient:
             logger.error("Julia not found in PATH. Install Julia from julialang.org")
             return False
         except Exception as e:
-            logger.error(f"Failed to start Julia server: {e}")
+            logger.error("Failed to start Julia server: %s", e, exc_info=True)
             return False
 
     def _send_request(self, request: dict[str, Any]) -> dict[str, Any]:

@@ -72,7 +72,7 @@ class HaskellBridge:
             result["status"] = "OK"
             return result
         except Exception as e:
-            logger.error(f"Haskell bridge error: {e}")
+            logger.error("Haskell bridge error: %s", e, exc_info=True)
             return {
                 "status": "ERROR",
                 "error": str(e),

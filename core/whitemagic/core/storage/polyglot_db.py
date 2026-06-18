@@ -105,7 +105,7 @@ class PolyglotDB:
                 self.sqlite_pool = sqlite3.connect(str(db_path), check_same_thread=False)
                 logger.debug("SQLite direct connection initialized")
             except Exception as e2:
-                logger.error(f"SQLite backend unavailable: {e2}")
+                logger.error("SQLite backend unavailable: %s", e2, exc_info=True)
 
     def _init_blackboard(self):
         """Initialize blackboard for cross-tool communication."""
@@ -177,7 +177,7 @@ class PolyglotDB:
                 return {"status": "error", "error": "No backend available"}
 
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.error(f"Store failed: {e}")
+            logger.error("Store failed: %s", e, exc_info=True)
             return {"status": "error", "error": str(e)}
 
     def get(self, memory_id: str) -> dict[str, Any]:
@@ -237,7 +237,7 @@ class PolyglotDB:
                 return {"status": "error", "error": "No backend available"}
 
         except Exception as e:
-            logger.error(f"Get failed: {e}")
+            logger.error("Get failed: %s", e, exc_info=True)
             return {"status": "error", "error": str(e)}
 
     def batch_write(self, memories: list[dict[str, Any]]) -> dict[str, Any]:
@@ -293,7 +293,7 @@ class PolyglotDB:
                 return {"status": "error", "error": "No backend available"}
 
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.error(f"Batch write failed: {e}")
+            logger.error("Batch write failed: %s", e, exc_info=True)
             return {"status": "error", "error": str(e)}
 
     def stats(self) -> dict[str, Any]:
@@ -332,7 +332,7 @@ class PolyglotDB:
                 return {"status": "error", "error": "No backend available"}
 
         except Exception as e:
-            logger.error(f"Stats failed: {e}")
+            logger.error("Stats failed: %s", e, exc_info=True)
             return {"status": "error", "error": str(e)}
 
 

@@ -98,7 +98,7 @@ class InMemoryStorage:
 
 
 def _get_default_storage() -> MemoryStorage:
-    """Try to wire to v22's MemoryManager; fall back to in-memory."""
+    """Try to wire to MemoryManager (whitemagic.core.memory.manager); fall back to in-memory."""
     try:
         from whitemagic.core.memory.manager import get_memory_manager  # type: ignore
 

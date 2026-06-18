@@ -260,7 +260,7 @@ class GraphEngine:
             um = get_unified_memory()
             pool = um.backend.pool
         except Exception as e:
-            logger.error(f"GraphEngine: could not access memory system: {e}")
+            logger.error("GraphEngine: could not access memory system: %s", e, exc_info=True)
             return {"status": "error", "message": str(e)}
 
         G = nx.DiGraph()
@@ -325,7 +325,7 @@ class GraphEngine:
                     pass  # KG table may not exist
 
         except Exception as e:
-            logger.error(f"GraphEngine: failed to load edges: {e}")
+            logger.error("GraphEngine: failed to load edges: %s", e, exc_info=True)
             return {"status": "error", "message": str(e)}
 
         with self._lock:

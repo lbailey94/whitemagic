@@ -81,7 +81,7 @@ class HologramEngine:
                 logger.debug(f"Encoded memory {mem_id} to {coords}")
 
         except Exception as e:
-            logger.error(f"Error processing memory event in Hologram: {e}")
+            logger.error("Error processing memory event in Hologram: %s", e, exc_info=True)
 
     def add_memory(self, memory_id: str, vector: list[float]) -> Any:
         """Add a memory vector to the spatial index directly."""

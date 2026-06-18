@@ -83,7 +83,7 @@ class LLMMetaHarness:
             else:
                 logger.warning(f"LLM not available: {self.model_name}")
         except Exception as e:
-            logger.error(f"Failed to load meta-harness: {e}")
+            logger.error("Failed to load meta-harness: %s", e, exc_info=True)
             self._available = False
 
     @property

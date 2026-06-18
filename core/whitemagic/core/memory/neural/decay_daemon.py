@@ -60,7 +60,7 @@ class DecayDaemon:
             try:
                 self.process_decay()
             except Exception as e:
-                logger.error(f"Decay processing error: {e}")
+                logger.error("Decay processing error: %s", e, exc_info=True)
 
             # Sleep until next run
             sleep_seconds = self.interval_hours * 3600

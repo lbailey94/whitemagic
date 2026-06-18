@@ -145,7 +145,7 @@ class ResonanceOrchestrator:
                 try:
                     action(data)
                 except Exception as e:
-                    logger.error(f"❌ Action failed: {e}")
+                    logger.error("❌ Action failed: %s", e, exc_info=True)
 
     def amplify(self, strength: float) -> None:
         """Increase resonance strength for future cascades."""

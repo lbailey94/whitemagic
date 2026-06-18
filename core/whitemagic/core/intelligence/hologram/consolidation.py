@@ -242,7 +242,7 @@ class HolographicConsolidator:
                     summary = await self.create_summary(c)
                     return summary
                 except Exception as e:
-                    logger.error(f"Synthesis failed for cluster: {e}")
+                    logger.error("Synthesis failed for cluster: %s", e, exc_info=True)
                     return None
 
         batch_size = 10

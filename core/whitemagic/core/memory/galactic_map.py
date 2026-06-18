@@ -193,7 +193,7 @@ class GalacticMap:
             from whitemagic.core.memory.mindful_forgetting import get_retention_engine
             retention = get_retention_engine()
         except Exception as exc:
-            logger.error(f"GalacticMap sweep: RetentionEngine unavailable: {exc}")
+            logger.error("GalacticMap sweep: RetentionEngine unavailable: %s", exc, exc_info=True)
             return report
 
         # Get backend
@@ -202,7 +202,7 @@ class GalacticMap:
             um = get_unified_memory()
             backend = um.backend
         except Exception as exc:
-            logger.error(f"GalacticMap sweep: UnifiedMemory unavailable: {exc}")
+            logger.error("GalacticMap sweep: UnifiedMemory unavailable: %s", exc, exc_info=True)
             return report
 
         # Paginate through ALL memories (no cap)
@@ -342,7 +342,7 @@ class GalacticMap:
             um = get_unified_memory()
             backend = um.backend
         except Exception as exc:
-            logger.error(f"Decay drift: backend unavailable: {exc}")
+            logger.error("Decay drift: backend unavailable: %s", exc, exc_info=True)
             return {"status": "error", "message": str(exc)}
 
         # Try Rust SQLite accelerator first (v13.1)
@@ -490,7 +490,7 @@ class GalacticMap:
             from whitemagic.core.memory.mindful_forgetting import get_retention_engine
             retention = get_retention_engine()
         except Exception as exc:
-            logger.error(f"GalacticMap sweep: RetentionEngine unavailable: {exc}")
+            logger.error("GalacticMap sweep: RetentionEngine unavailable: %s", exc, exc_info=True)
             return report
 
         # Get backend
@@ -499,7 +499,7 @@ class GalacticMap:
             um = get_unified_memory()
             backend = um.backend
         except Exception as exc:
-            logger.error(f"GalacticMap sweep: UnifiedMemory unavailable: {exc}")
+            logger.error("GalacticMap sweep: UnifiedMemory unavailable: %s", exc, exc_info=True)
             return report
 
         # Paginate through ALL memories (no cap)

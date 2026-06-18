@@ -28,7 +28,7 @@ def handle_art_of_war_chapter(**kwargs: Any) -> dict[str, Any]:
             ]
         }
     except Exception as e:
-        logger.error(f"Error in handle_art_of_war_chapter: {e}")
+        logger.error("Error in handle_art_of_war_chapter: %s", e, exc_info=True)
         return {"status": "error", "message": str(e)}
 
 def handle_art_of_war_wisdom(**kwargs: Any) -> dict[str, Any]:

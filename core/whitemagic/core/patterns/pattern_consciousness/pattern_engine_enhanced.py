@@ -126,7 +126,7 @@ class EnhancedPatternEngine:
                 })
 
         except Exception as e:
-            logger.error(f"Rust pattern extraction failed: {e}")
+            logger.error("Rust pattern extraction failed: %s", e, exc_info=True)
 
         return patterns
 

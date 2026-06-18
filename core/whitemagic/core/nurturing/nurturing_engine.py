@@ -329,7 +329,7 @@ class NurturingEngine:
                     json.dump(data, f, indent=2)
                 logger.info(f"Saved {len(data)} profiles")
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.error(f"Could not save profiles: {e}")
+                logger.error("Could not save profiles: %s", e, exc_info=True)
 
 
 # === Convenience Functions ===

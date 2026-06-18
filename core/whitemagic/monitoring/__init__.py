@@ -533,7 +533,7 @@ class AlertManager:
             try:
                 handler(alert)
             except Exception as e:
-                logger.error(f"Alert handler failed: {e}")
+                logger.error("Alert handler failed: %s", e, exc_info=True)
 
 
 # Global alert manager

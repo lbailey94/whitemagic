@@ -113,7 +113,7 @@ class UnifiedMemoryV2:
             results = self.engine.search_hybrid(query, limit)
             return cast(list[dict[str, Any]], results)
         except Exception as e:
-            logger.error(f"Rust search failed: {e}, falling back to Python")
+            logger.error("Rust search failed: %s, falling back to Python", e, exc_info=True)
             if hasattr(self, '_fallback'):
                 return cast(list[dict[str, Any]], self._fallback.hybrid_recall(query, final_limit=limit))
             raise

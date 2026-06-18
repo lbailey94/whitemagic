@@ -83,7 +83,7 @@ class GalaxyPatternMiner:
                 self.connections[path] = conn
                 logger.info(f"✓ Connected to: {Path(path).name}")
             except Exception as e:
-                logger.error(f"Failed to connect to {path}: {e}")
+                logger.error("Failed to connect to %s: %s", path, e, exc_info=True)
 
     def disconnect(self) -> None:
         """Close all database connections."""
@@ -164,7 +164,7 @@ class GalaxyPatternMiner:
                     logger.info(f"  Found {len(memory_ids)} frequently accessed memories in {Path(db_path).name}")
 
             except Exception as e:
-                logger.error(f"Error mining access patterns from {db_path}: {e}")
+                logger.error("Error mining access patterns from %s: %s", db_path, e, exc_info=True)
 
         self.patterns.extend(patterns)
         logger.info(f"✓ Discovered {len(patterns)} access patterns")
@@ -222,7 +222,7 @@ class GalaxyPatternMiner:
                     logger.info(f"  Found {len(co_access_pairs)} co-access pairs in {Path(db_path).name}")
 
             except Exception as e:
-                logger.error(f"Error mining co-access patterns from {db_path}: {e}")
+                logger.error("Error mining co-access patterns from %s: %s", db_path, e, exc_info=True)
 
         self.patterns.extend(patterns)
         logger.info(f"✓ Discovered {len(patterns)} co-access patterns")
@@ -304,7 +304,7 @@ class GalaxyPatternMiner:
                     logger.info(f"  Found {len(memory_ids)} cache candidates in {Path(db_path).name}")
 
             except Exception as e:
-                logger.error(f"Error mining cache candidates from {db_path}: {e}")
+                logger.error("Error mining cache candidates from %s: %s", db_path, e, exc_info=True)
 
         self.patterns.extend(patterns)
         logger.info(f"✓ Discovered {len(patterns)} cache candidate patterns")
@@ -373,7 +373,7 @@ class GalaxyPatternMiner:
                         tag_to_memories[tag].append((memory_id, Path(db_path).name, importance))
 
             except Exception as e:
-                logger.error(f"Error mining semantic clusters from {db_path}: {e}")
+                logger.error("Error mining semantic clusters from %s: %s", db_path, e, exc_info=True)
 
         # Create clusters from tags with enough members
         for tag, memories in tag_to_memories.items():

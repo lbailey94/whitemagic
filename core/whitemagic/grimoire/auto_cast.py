@@ -130,7 +130,7 @@ class AutoCaster:
                     outcome = SpellOutcome.FAILED
                     auto_cast = False
                 except Exception as e:
-                    logger.error(f"Spell {spell.name} failed: {e}")
+                    logger.error("Spell %s failed: %s", spell.name, e, exc_info=True)
                     outcome = SpellOutcome.FAILED
                     auto_cast = False
             else:

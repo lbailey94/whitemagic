@@ -381,7 +381,7 @@ class ImmortalClone:
                     logger.debug(f"🔄 Clone {self.clone_id} iteration {self.iteration} failed, feeding error back")
 
             except Exception as e:
-                logger.error(f"❌ Clone {self.clone_id} exception at iteration {self.iteration}: {e}")
+                logger.error("❌ Clone %s exception at iteration %s: %s", self.clone_id, self.iteration, e, exc_info=True)
                 self.context.append({
                     'iteration': self.iteration,
                     'exception': str(e),
@@ -855,7 +855,7 @@ class GasTownOrchestrator:
                             results.append(result)
                             logger.debug(f"✅ MEOW {meow.type}:{meow.target} completed by clone {clone.clone_id}")
                         except Exception as e:
-                            logger.error(f"❌ Clone {clone.clone_id} failed: {e}")
+                            logger.error("❌ Clone %s failed: %s", clone.clone_id, e, exc_info=True)
                             results.append(ActionResult(success=False, error=str(e)))
 
                     # Update dashboard
@@ -868,7 +868,7 @@ class GasTownOrchestrator:
         except KeyboardInterrupt:
             logger.warning("⚠️ Deployment interrupted by user")
         except Exception as e:
-            logger.error(f"❌ Deployment error: {e}")
+            logger.error("❌ Deployment error: %s", e, exc_info=True)
             import traceback
             logger.error(traceback.format_exc())
 

@@ -20,7 +20,7 @@ def sangha_lock_acquire(resource: str, reason: str = "", timeout: int = 3600, **
         acquired = rm.acquire_lock(resource, agent_id, reason, ttl_seconds=timeout)
         return {"status": "success", "lock_id": f"lock_{resource}", "resource": resource, "acquired": acquired}
     except Exception as e:
-        logger.error(f"Failed to acquire sangha lock: {e}")
+        logger.error("Failed to acquire sangha lock: %s", e, exc_info=True)
         return {"status": "error", "error": str(e), "acquired": False}
 
 
@@ -36,7 +36,7 @@ def sangha_lock_release(lock_id: str | None = None, resource: str | None = None,
         released = rm.release_lock(res_id, agent_id)
         return {"status": "success", "released": released, "resource": res_id}
     except Exception as e:
-        logger.error(f"Failed to release sangha lock: {e}")
+        logger.error("Failed to release sangha lock: %s", e, exc_info=True)
         return {"status": "error", "error": str(e), "released": False}
 
 
@@ -52,7 +52,7 @@ def sangha_lock_list(**kwargs: Any) -> dict[str, Any]:
             "count": len(locks),
         }
     except Exception as e:
-        logger.error(f"Failed to list sangha locks: {e}")
+        logger.error("Failed to list sangha locks: %s", e, exc_info=True)
         return {"status": "error", "error": str(e), "locks": [], "count": 0}
 
 
@@ -76,7 +76,7 @@ def sangha_chat_read(channel: str = "general", limit: int = 10, **kwargs: Any) -
             "count": len(messages),
         }
     except Exception as e:
-        logger.error(f"Failed to read sangha chat: {e}")
+        logger.error("Failed to read sangha chat: %s", e, exc_info=True)
         return {"status": "error", "error": str(e), "messages": [], "count": 0}
 
 
@@ -127,7 +127,7 @@ def sangha_chat_send(content: str, channel: str = "general", sender_id: str = "s
             "timestamp": msg.timestamp.isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to send sangha chat message: {e}")
+        logger.error("Failed to send sangha chat message: %s", e, exc_info=True)
         return {"status": "error", "error": str(e)}
 
 
@@ -150,7 +150,7 @@ def garden_sangha_workspace_info(**kwargs: Any) -> dict[str, Any]:
             "channels": list(channels) if channels is not None else [],
         }
     except Exception as e:
-        logger.error(f"Failed to read Sangha workspace info: {e}")
+        logger.error("Failed to read Sangha workspace info: %s", e, exc_info=True)
         return {"status": "error", "error": str(e)}
 
 
@@ -196,7 +196,7 @@ def windsurf_backup(**kwargs: Any) -> dict[str, Any]:
             "format": kwargs.get("format", "markdown"),
         }
     except Exception as e:
-        logger.error(f"Failed to back up Windsurf conversations: {e}")
+        logger.error("Failed to back up Windsurf conversations: %s", e, exc_info=True)
         return {"status": "error", "error": str(e)}
 
 

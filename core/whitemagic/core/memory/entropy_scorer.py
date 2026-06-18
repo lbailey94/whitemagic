@@ -249,7 +249,7 @@ class EntropyScorer:
             um = get_unified_memory()
             memories = um.list_recent(limit=limit)
         except Exception as e:
-            logger.error(f"Entropy sweep: could not load memories: {e}")
+            logger.error("Entropy sweep: could not load memories: %s", e, exc_info=True)
             return report
 
         backend = um.backend if persist else None

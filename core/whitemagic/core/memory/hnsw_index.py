@@ -269,7 +269,7 @@ class HNSWIndex:
             logger.info(f"HNSW index loaded: {len(self.nodes)} vectors")
             return True
         except Exception as e:
-            logger.error(f"Failed to load HNSW index: {e}")
+            logger.error("Failed to load HNSW index: %s", e, exc_info=True)
             return False
 
     def build_from_embeddings(self, embeddings_db_path: Path):

@@ -220,10 +220,10 @@ class SafeExecutor:
             logger.warning(f"Command timed out after {timeout}s: {' '.join(cmd_array)}")
             raise
         except subprocess.CalledProcessError as e:
-            logger.error(f"Command failed with code {e.returncode}: {' '.join(cmd_array)}")
+            logger.error("Command failed with code %s: {' '.join(cmd_array)}", e.returncode, exc_info=True)
             raise
         except Exception as e:
-            logger.error(f"Command execution error: {e}")
+            logger.error("Command execution error: %s", e, exc_info=True)
             raise
 
     def execute_async(

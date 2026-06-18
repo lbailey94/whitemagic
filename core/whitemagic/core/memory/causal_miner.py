@@ -228,7 +228,7 @@ class CausalMiner:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
         except Exception as e:
-            logger.error(f"Causal mining: memory system unavailable: {e}")
+            logger.error("Causal mining: memory system unavailable: %s", e, exc_info=True)
             return report
 
         # Temporal fallback: sample recent memories and pair by proximity + tags
@@ -377,7 +377,7 @@ class CausalMiner:
                                 logger.debug("Operation failed: %s", e)
                                 pass
             except Exception as e:
-                logger.error(f"Causal mining: persistence failed: {e}")
+                logger.error("Causal mining: persistence failed: %s", e, exc_info=True)
 
         elapsed = (time.perf_counter() - start) * 1000
         report.duration_ms = elapsed

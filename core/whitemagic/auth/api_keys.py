@@ -145,7 +145,7 @@ class APIKeySystem:
                 os.chmod(self.storage_path, 0o600)
 
         except Exception as e:
-            logger.error(f"Failed to save API keys: {e}")
+            logger.error("Failed to save API keys: %s", e, exc_info=True)
 
     def _load(self) -> None:
         """Load keys from disk."""
@@ -166,12 +166,12 @@ class APIKeySystem:
                     # Pydantic usually handles this if passed to constructor/parse_obj
                     self._metadata[k] = APIKeyMetadata.parse_obj(v)
                 except Exception as e:
-                    logger.error(f"Failed to parse metadata for key {k}: {e}")
+                    logger.error("Failed to parse metadata for key %s: %s", k, e, exc_info=True)
 
             logger.info(f"Loaded {len(self._metadata)} API keys from {self.storage_path}")
 
         except Exception as e:
-            logger.error(f"Failed to load API keys: {e}")
+            logger.error("Failed to load API keys: %s", e, exc_info=True)
 
 # Global instance for shared use
 api_key_system = APIKeySystem()

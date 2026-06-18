@@ -86,5 +86,5 @@ def check_proactive_dream() -> dict[str, Any]:
         return result
 
     except Exception as e:
-        logger.error(f"Proactive dream check failed: {e}")
+        logger.error("Proactive dream check failed: %s", e, exc_info=True)
         return {"triggered": False, "reason": f"error: {e}"}

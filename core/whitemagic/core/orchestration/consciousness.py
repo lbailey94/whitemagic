@@ -49,7 +49,7 @@ def initialize_zodiac_resonance() -> bool:
         logger.info("✅ Zodiac-Gan Ying resonance activated")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Zodiac-Gan Ying: {e}")
+        logger.error("❌ Failed to initialize Zodiac-Gan Ying: %s", e, exc_info=True)
         return False
 
 
@@ -64,7 +64,7 @@ def initialize_neural_resonance() -> bool:
         logger.info("✅ Neural Memory-Gan Ying resonance activated")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Neural-Gan Ying: {e}")
+        logger.error("❌ Failed to initialize Neural-Gan Ying: %s", e, exc_info=True)
         return False
 
 
@@ -82,7 +82,7 @@ def initialize_predictive_cache() -> bool:
             logger.warning("⚠️  Predictive Cache not available (optional)")
             return False
     except Exception as e:
-        logger.error(f"❌ Failed to check Predictive Cache: {e}")
+        logger.error("❌ Failed to check Predictive Cache: %s", e, exc_info=True)
         return False
 
 
@@ -95,7 +95,7 @@ def initialize_wu_xing() -> bool:
         logger.info("✅ Wu Xing five-phase system initialized")
         return True
     except (ImportError, ModuleNotFoundError) as e:
-        logger.error(f"❌ Failed to initialize Wu Xing: {e}")
+        logger.error("❌ Failed to initialize Wu Xing: %s", e, exc_info=True)
         return False
 
 
@@ -208,7 +208,7 @@ def shutdown_all(verbose: bool = True) -> None:
             if verbose:
                 logger.info("✅ Gan Ying async bus stopped")
     except (ImportError, ModuleNotFoundError) as e:
-        logger.error(f"Error stopping async bus: {e}")
+        logger.error("Error stopping async bus: %s", e, exc_info=True)
 
     # Reset initialization flags
     for key in _initialized:

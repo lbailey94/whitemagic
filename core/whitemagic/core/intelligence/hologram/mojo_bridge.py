@@ -137,7 +137,7 @@ class MojoEncoderBridge:
             return HolographicCoordinate(x=x, y=y, z=z, w=w)
 
         except Exception as e:
-            logger.error(f"❌ Mojo encoding failed, falling back: {e}")
+            logger.error("❌ Mojo encoding failed, falling back: %s", e, exc_info=True)
             return self.python_fallback.encode(memory)
 
 def get_mojo_encoder() -> Any:

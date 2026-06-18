@@ -304,7 +304,7 @@ class RetentionEngine:
                 um = get_unified_memory()
                 memories = um.list_recent(limit=5000)
             except Exception as exc:
-                logger.error(f"Retention sweep: could not load memories: {exc}")
+                logger.error("Retention sweep: could not load memories: %s", exc, exc_info=True)
                 return SweepReport()
 
         # Optionally get backend for persistence

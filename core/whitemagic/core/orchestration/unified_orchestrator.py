@@ -164,7 +164,7 @@ class UnifiedOrchestrator:
             return self.state
 
         except Exception as e:
-            logger.error(f"💥 AWAKENING FAILED: {e}")
+            logger.error("💥 AWAKENING FAILED: %s", e, exc_info=True)
             self.state = SystemState.DORMANT
             raise
 
@@ -359,7 +359,7 @@ class UnifiedOrchestrator:
                 else:
                     handler(event)
             except Exception as e:
-                logger.error(f"Handler error for {event.event_type}: {e}")
+                logger.error("Handler error for %s: %s", event.event_type, e, exc_info=True)
 
     # ═══════════════════════════════════════════════════════════════════
     # PHASE 3: EVENT HANDLERS (The Synthesis Logic)
@@ -620,7 +620,7 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
                 await asyncio.sleep(30)  # Check every 30 seconds
 
             except Exception as e:
-                logger.error(f"Harmony monitoring error: {e}")
+                logger.error("Harmony monitoring error: %s", e, exc_info=True)
                 await asyncio.sleep(60)
 
     def _calculate_coherence(self) -> float:
