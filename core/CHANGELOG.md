@@ -4,11 +4,22 @@
 
 ## Current Version
 
-**v22.2.0** — April 26, 2026
+**v22.2.1** — June 18, 2026
 
-- Phase 2: Surface completion — 451 dispatch tools, 479 callable tools, 23/28 fusions
-- Phase 3: Cognitive differentiation — Neurotransmitter Vectors, Grimoire MCP Resources (33), Memory Dreams YAML, Jaynes Voice Audit, Corpus Callosum Bus
-- Test suite: 2,216 passed, 67 skipped, 0 failed
+- Patch release — quality + cleanup, no schema or wire-format changes
+- New `ipc_try_receive` Python API (iceoryx2 subscriber side); closes
+  the wm/commands consumer gap from the polyglot survey
+- `surprise_gate` RuntimeError bug fix unblocks 4+6 tests in
+  `test_critical_paths.py`
+- `conftest` extraction to `tests/_envelope.py` unblocks 34 tests
+  across integration/unit suites
+- 14 pre-existing absolute_path_literals hits replaced with
+  env-var-overridable paths and canonical `DB_PATH`
+- 1,050 docstrings added (888 functions + 162 classes);
+  0.8% / 0.0% undocumented public functions/classes
+- Test baseline: 1,470 passed, 2 skipped, 0 failed
+- Omega test: ALL 8 suites pass, 1,967/1,967 checks
+- Doc drift check: 9/9 pass
 - See root `CHANGELOG.md` for detailed release notes.
 
 ---

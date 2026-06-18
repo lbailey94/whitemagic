@@ -5,6 +5,88 @@ All notable changes to WhiteMagic will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [22.2.1] - 2026-06-18
+
+Patch release. Quality + cleanup, no schema or wire-format changes.
+
+### Added
+- `whitemagic.core.ipc_bridge.try_receive(channel, max_samples)` and
+  `try_receive_json(channel, max_samples)` Python wrappers around the
+  new Rust `ipc_try_receive` function. Closes the wm/commands consumer
+  gap flagged in `polyglot/POLYGLOT_SURVEY_2026-06-18.md`. The
+  architectural constraint (iceoryx2 v0.8 `Subscriber: !Send`,
+  per-subscriber queue) is documented in the function docstring.
+- `core/tests/unit/test_ipc_bridge.py` — 6 new tests covering API
+  surface, publish counter, publish_json helper, try_receive return
+  type, 1000-publish stress, and status reporting.
+- `core/tests/_envelope.py` — extracted `ENVELOPE_KEYS` and
+  `assert_envelope_shape` from `conftest.py` so they can be imported
+  as a regular module (pytest conftest.py is not importable as
+  `from tests.conftest import ...`).
+- 1,050 docstrings across 478 files (888 functions in Phase 1, 162
+  classes in Phase 2 of the documentation sweep). Public coverage now
+  stands at 0.8% undocumented functions (was 24%) and 0.0%
+  undocumented classes (was 12.1%).
+- `docs/message_board/WHITEMAGIC_PAPER_2026-06-18.md` — standalone
+  technical paper for AI/AGI/ASI audience (16 sections, YAML
+  frontmatter, file:line evidence, self-describing structure).
+- `polyglot/POLYGLOT_SURVEY_2026-06-18.md` — comprehensive survey of
+  all 8 polyglot cores (Rust x2, Julia, Haskell, Elixir, Zig, Koka,
+  Go, Mojo) with role, access pattern, performance, gaps, and
+  integration recipes.
+- `docs/message_board/SESSION_REPORT_2026-06-18.md` and
+  `docs/message_board/WHATS_NEXT_2026-06-18.md` — session report and
+  v22.3 / v23.0 recommendation.
+
+### Fixed
+- `core/whitemagic/core/memory/surprise_gate.py:120` — broadened the
+  `except` clause in `_evaluate_surprise` to catch `RuntimeError` in
+  addition to `ImportError`/`AttributeError`. Previously, the
+  explicit `raise RuntimeError("Embeddings unavailable")` escaped the
+  gate and broke any code path that called `unified.store()` in
+  environments without an embedding model. Unblocks 4 (and unlocks 6
+  more) `test_critical_paths.py` tests.
+- `core/tests/conftest.py` and 3 integration/unit tests —
+  `from tests.conftest import assert_envelope_shape` was failing at
+  collection time because pytest conftest.py is not importable as a
+  regular module. Extracted the helper to `tests/_envelope.py`. Now
+  imports work via `sys.path` injection. Unblocks 34 tests across
+  `test_rust_acceleration.py`, `test_tool_contract_full.py`, and
+  `test_dispatcher.py`.
+- `core/tests/integration/test_agentdojo_driver.py` — wrapped the
+  `from whitemagic.benchmarks.agentdojo_defense import _evaluate_tool`
+  import in `try/except ImportError` with `pytest.skip(..., allow_module_level=True)`,
+  since the `agentdojo` Python package is an optional dependency.
+- `core/scripts/*` (10 files) and `core/tests/unit/test_agentdojo_adversarial.py` —
+  replaced 14 pre-existing absolute path literals (`/home/lucas/.whitemagic/...`,
+  `/home/lucas/Desktop/...`, `/home/user`) with either:
+  - the canonical `whitemagic.config.paths.DB_PATH` (4 DB scripts), or
+  - env-var-overridable paths with sensible defaults
+    (`WHITEMAGIC_AUX_DIR`, `WHITEMAGIC_LIBRARY_ROOT`,
+    `WHITEMAGIC_LIBRARY2_ROOT`, `WHITEMAGIC_DEV_ROOT`,
+    `WHITEMAGIC_ZIG_DIR`) (5 Python + 2 shell scripts), or
+  - generic test-fixture paths (`/var/users/sample`) (1 test).
+  Resolves all Ship Surface Check `absolute_path_literals` findings;
+  omega test now reports "ALL SYSTEMS GO" (was 1/8 failing).
+- `AI_PRIMARY.md:685` — aligned the test-baseline claim with the
+  canonical Option C label (`2,423` + `current local audit baseline`).
+  Doc drift check now passes 9/9 (was 8/9).
+
+### Changed
+- `core/whitemagic-rust/src/ffi/ipc_bridge.rs` — added `ipc_try_receive`
+  `#[pyfunction]` (iceoryx2 + fallback feature gates) and registered
+  it in the `ipc_bridge` module init.
+- `INDEX.md` — added entries for the new docs and the `polyglot/`
+  section; updated last-updated date to 2026-06-18.
+
+### Test baseline
+- `-m core` suite: 1,028 passed, 1 skipped, 0 failed (was 1,024 / 4)
+- Full suite minus archives: 1,470 passed, 2 skipped (was 1,423 / 7)
+- Memory stress test: PASS, 0 errors
+  (store p95 19.96ms, search p95 6.65ms, recall p95 0.11ms)
+- Omega test: ALL 8 suites pass, 1,967/1,967 (was 1,966/1,969)
+- Doc drift check: 9/9 pass (was 8/9)
+
 ## [22.2.0] - 2026-04-26
 
 ### Added — Phase 2: Surface Completion
