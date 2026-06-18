@@ -209,7 +209,7 @@ def lexical_rerank(
     reranked.sort(key=lambda x: x.combined_score, reverse=True)
     return reranked[:top_k]
 
-def _simple_bm25_rerank(query, results, top_k):
+def _simple_bm25_rerank(query: str, results: list[Any], top_k: int) -> list[Any]:
     # (Original BM25 logic as fallback)
     query_tokens = _tokenize(query)
     all_tokens = [_tokenize(r.get("content", "") + " " + r.get("title", "")) for r in results]

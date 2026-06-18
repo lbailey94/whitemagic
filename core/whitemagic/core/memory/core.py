@@ -52,11 +52,11 @@ class SQLiteBackend:
         self._conn = None
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript(SCHEMA)
 
-    def get_connection(self):
+    def get_connection(self) -> sqlite3.Connection:
         """
         Get the connection.
         """

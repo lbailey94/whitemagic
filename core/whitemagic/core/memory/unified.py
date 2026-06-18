@@ -130,7 +130,7 @@ class UnifiedMemory:
             logger.info(f"🧠 Unified Memory initialized: {stats['total_memories']} memories (SQLite)")
 
     @property
-    def holographic(self):
+    def holographic(self) -> Any:
         """Lazy-load holographic index on first access."""
         if self._skip_holo:
             return None

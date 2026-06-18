@@ -85,7 +85,7 @@ class EmbeddingDaemon:
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         max_per_run: int = DEFAULT_MAX_PER_RUN,
         on_batch_complete: Callable[[dict], None] | None = None,
-    ):
+    ) -> None:
         # Only init once (singleton)
         if hasattr(self, '_initialized') and self._initialized:
             return
@@ -250,7 +250,7 @@ class EmbeddingDaemon:
             # Wait for next poll or stop signal
             self._stop_event.wait(self.poll_interval)
 
-    def _process_cycle(self) -> dict:
+    def _process_cycle(self) -> dict[str, Any]:
         """Process one cycle of embedding."""
         t0 = time.perf_counter()
         result = {
@@ -387,7 +387,7 @@ class EmbeddingDaemon:
             logger.error(f"Batch processing error: {e}")
             return 0, len(batch)
 
-    def _record_metrics(self, result: dict) -> None:
+    def _record_metrics(self, result: dict[str, Any]) -> None:
         """Record metrics to Prometheus if available."""
         try:
             from prometheus_client import REGISTRY, Counter, Histogram
@@ -420,7 +420,7 @@ class EmbeddingDaemon:
         except Exception as e:
             logger.debug(f"Metrics recording failed: {e}")
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """Get daemon statistics."""
         return {
             "is_running": self._stats.is_running,
@@ -437,7 +437,7 @@ class EmbeddingDaemon:
             "poll_interval": self.poll_interval,
         }
 
-    def process_now(self, limit: int = 1000) -> dict:
+    def process_now(self, limit: int = 1000) -> dict[str, Any]:
         """Process embeddings immediately (blocking).
 
         Useful for initial indexing or manual triggers.

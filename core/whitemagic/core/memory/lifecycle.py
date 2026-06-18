@@ -100,7 +100,7 @@ class MemoryLifecycleManager:
 
     def _start_worker(self) -> None:
         """Start the background sweep worker thread."""
-        def worker_loop():
+        def worker_loop() -> None:
             """
             Perform the worker loop operation.
             """
@@ -361,7 +361,7 @@ class MemoryLifecycleManager:
         loop = asyncio.get_event_loop()
 
         # Phase 1: Retention sweep (run in executor)
-        def run_retention_sweep():
+        def run_retention_sweep() -> Any:
             """
             Run the retention sweep operation.
             """

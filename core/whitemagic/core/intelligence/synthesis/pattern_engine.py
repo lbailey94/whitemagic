@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 class PatternEngine:
     """Pattern detection and analysis engine — wires to real implementations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._unified = None
         self._holographic = None
         self._memory = None
 
-    def _get_unified(self):
+    def _get_unified(self) -> Any:
         if self._unified is None:
             try:
                 from whitemagic.core.intelligence.synthesis.unified_patterns import (
@@ -33,7 +33,7 @@ class PatternEngine:
                 self._unified = None
         return self._unified
 
-    def _get_holographic(self):
+    def _get_holographic(self) -> Any:
         if self._holographic is None:
             try:
                 from whitemagic.core.intelligence.hologram.patterns import (
@@ -45,7 +45,7 @@ class PatternEngine:
                 self._holographic = None
         return self._holographic
 
-    def _get_memory(self):
+    def _get_memory(self) -> Any:
         if self._memory is None:
             try:
                 from whitemagic.core.memory.pattern_engine import MemoryPatternEngine

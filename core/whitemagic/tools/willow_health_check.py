@@ -27,7 +27,7 @@ class WillowHealthStatus:
 class WillowHealthChecker:
     """Health monitoring and recovery for Gana Willow."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._last_check = 0
         self._health_cache: WillowHealthStatus | None = None
         self._check_interval = 30  # seconds
@@ -269,7 +269,7 @@ async def willow_pre_check(tool_name: str) -> bool:
     return True
 
 # Timeout wrapper for Koka operations
-async def koka_timeout_wrapper(operation, timeout_seconds: float = 5.0):
+async def koka_timeout_wrapper(operation: Any, timeout_seconds: float = 5.0) -> Any:
     """Wrap Koka operations with timeout and error handling."""
     try:
         result = await asyncio.wait_for(operation, timeout=timeout_seconds)

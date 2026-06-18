@@ -14,7 +14,7 @@ import numpy as np
 class QuantumEngine:
     """Simulates quantum algorithms for graph and search optimization."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.coherence_time = 1.0
         self.interference_threshold = 0.1
 

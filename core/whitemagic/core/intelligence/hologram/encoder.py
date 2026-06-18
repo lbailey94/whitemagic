@@ -202,7 +202,7 @@ class CoordinateEncoder:
         # Center the memory vector
         v = self._center_vector(mem_vec)
 
-        def dot_product(v1, v2):
+        def dot_product(v1: list[float], v2: list[float]) -> float:
             """
             Perform the dot product operation.
             
@@ -212,7 +212,7 @@ class CoordinateEncoder:
             """
             return sum(x * y for x, y in zip(v1, v2))
 
-        def vec_norm(v1):
+        def vec_norm(v1: list[float]) -> float:
             """
             Perform the vec norm operation.
             
@@ -221,7 +221,7 @@ class CoordinateEncoder:
             """
             return math.sqrt(sum(x * x for x in v1))
 
-        def vec_sub(v1, v2):
+        def vec_sub(v1: list[float], v2: list[float]) -> list[float]:
             """
             Perform the vec sub operation.
             

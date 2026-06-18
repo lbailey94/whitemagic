@@ -172,7 +172,7 @@ def get_query_cache() -> QueryCache:
     return _query_cache
 
 
-def cache_memory_query(func):
+def cache_memory_query(func: Any) -> Any:
     """Decorator to cache memory query results.
 
     Usage:
@@ -180,7 +180,7 @@ def cache_memory_query(func):
         def get_memory(memory_id: str) -> Optional[Memory]:
             # ... expensive query ...
     """
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         """
         Perform the wrapper operation.
         """
