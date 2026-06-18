@@ -167,22 +167,8 @@ def tool_caller():
     return ToolCaller()
 
 
-ENVELOPE_KEYS = {
-    "status", "tool", "request_id", "idempotency_key", "message",
-    "error_code", "details", "retryable", "writes", "artifacts",
-    "metrics", "side_effects", "warnings", "timestamp",
-    "envelope_version", "tool_contract_version",
-}
-
-
-def assert_envelope_shape(out: dict) -> None:
-    """Assert that a tool response has the correct envelope shape."""
-    import json
-    missing = ENVELOPE_KEYS.difference(out.keys())
-    assert not missing, f"missing envelope keys: {sorted(missing)}"
-    assert isinstance(out["status"], str)
-    assert isinstance(out["tool"], str)
-    assert isinstance(out["request_id"], str)
-    assert isinstance(out["details"], dict)
-    # Must always be JSON-serializable.
-    json.dumps(out)
+# Envelope helpers moved to tests/_envelope.py so they can be imported as a
+# regular Python module (pytest conftest.py is not importable as
+# `from tests.conftest import ...`). Kept here as a re-export for any code
+# that still references them via the conftest module.
+from _envelope import ENVELOPE_KEYS, assert_envelope_shape  # noqa: E402,F401

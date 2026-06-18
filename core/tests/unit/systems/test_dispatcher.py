@@ -1,8 +1,15 @@
 """Tests for the tool dispatcher — routing, unknown tools, gana prefix, error paths."""
 import json
+import sys
+from pathlib import Path
 
+# Import the envelope helper as a regular module (pytest conftest.py is not
+# importable). See tests/_envelope.py for the helper's location.
+_TESTS_DIR = Path(__file__).resolve().parent.parent.parent
+if str(_TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_TESTS_DIR))
 
-from tests.conftest import assert_envelope_shape
+from _envelope import assert_envelope_shape
 
 
 class TestDispatchRouting:

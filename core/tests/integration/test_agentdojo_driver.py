@@ -13,7 +13,13 @@ from __future__ import annotations
 
 import pytest
 
-from whitemagic.benchmarks.agentdojo_defense import _evaluate_tool
+try:
+    from whitemagic.benchmarks.agentdojo_defense import _evaluate_tool
+    HAS_AGENTDOJO = True
+except ImportError as e:
+    # The agentdojo Python package is an optional dependency; if it's not
+    # installed, skip the entire file rather than failing collection.
+    pytest.skip(f"agentdojo package not installed: {e}", allow_module_level=True)
 
 
 # ── Scenario matrix: 20 cases × 10 gates ──────────────────────────────────
