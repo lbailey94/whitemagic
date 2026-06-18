@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Campaign Loader — Markdown-driven campaign doctrine system.
 
 Parses campaign specifications from markdown files with YAML-style frontmatter.
@@ -42,7 +43,6 @@ Campaign Format:
     ## Verification
     How to confirm complete victory.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

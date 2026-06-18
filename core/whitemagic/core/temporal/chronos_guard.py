@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """ChronosGuard — Phase 28: Temporal Resonance.
 ===========================================
 Grounds AI sessions in "Dharmic Time" through frequent system clock
 and lunar phase audits. Prevents time lag and distortion.
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import asdict, dataclass

@@ -1,5 +1,5 @@
-"""Collaboration bridge — Sangha chat, locks, and agent coordination."""
 # ruff: noqa: BLE001
+"""Collaboration bridge — Sangha chat, locks, and agent coordination."""
 import logging
 from typing import Any
 

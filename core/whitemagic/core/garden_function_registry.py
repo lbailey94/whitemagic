@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """🌸 Garden Function Registry — Function-to-Garden Mapping.
 
 Extends the file-level mapping with function-level granularity,

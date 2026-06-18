@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Tool Security Gating - Per-tool authorization and path restriction.
 
 Provides:
@@ -6,7 +7,6 @@ Provides:
 - Deployment-mode aware restrictions
 - Error sanitization
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

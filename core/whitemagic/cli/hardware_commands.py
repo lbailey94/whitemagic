@@ -1,5 +1,5 @@
-"""Hardware CLI commands for adaptive inference."""
 # ruff: noqa: BLE001
+"""Hardware CLI commands for adaptive inference."""
 
 import click
 

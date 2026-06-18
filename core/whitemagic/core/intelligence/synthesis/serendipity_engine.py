@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """SerendipityEngine - Surface Dormant Knowledge.
 
 Surfaces rarely-accessed but valuable memories through intelligent random selection.
 Uses weighted sampling favoring high-gravity, low-access memories.
 """
-# ruff: noqa: BLE001
 
 import logging
 import random

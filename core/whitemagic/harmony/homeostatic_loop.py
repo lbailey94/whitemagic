@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Homeostatic Loop — Harmony-Driven Self-Regulation
 ===================================================
 Closes the feedback loop on the Harmony Vector: instead of just
@@ -24,7 +25,6 @@ Usage:
     loop = get_homeostatic_loop()
     loop.attach()  # hooks into temporal scheduler
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

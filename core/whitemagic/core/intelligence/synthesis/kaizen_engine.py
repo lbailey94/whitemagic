@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """KaizenEngine - Continuous Self-Improvement Discovery.
 
 改善 (Kaizen) - Change for the better through continuous small improvements.
 Analyzes memory system to find quality issues, gaps, and improvement opportunities.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

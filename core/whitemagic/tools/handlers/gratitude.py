@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Gratitude Handlers — MCP tool handlers for the Gratitude Architecture.
 ======================================================================
 Tools:
@@ -5,7 +6,6 @@ Tools:
   - gratitude.stats: Get gratitude ledger statistics
   - gratitude.benefits: Check an agent's gratitude benefits
 """
-# ruff: noqa: BLE001
 
 import logging
 import os

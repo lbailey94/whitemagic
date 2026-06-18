@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Dream Cycle — Background Processing During Idle Time.
 =====================================================
 Inspired by biological sleep: the brain consolidates memories, prunes
@@ -25,7 +26,6 @@ Usage:
     dc.stop()    # halt dreaming
     dc.status()  # introspection
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

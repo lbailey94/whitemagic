@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Rubedo: The Stage of Synthesis
 ==============================
@@ -9,7 +10,6 @@ Usage:
     synthesizer = RubedoSynthesizer()
     rules = synthesizer.synthesize(clusters)
 """
-# ruff: noqa: BLE001
 
 import logging
 from collections import Counter

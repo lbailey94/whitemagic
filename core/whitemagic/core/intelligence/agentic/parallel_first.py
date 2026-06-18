@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """Parallel-First Mode - Default to parallel, sequential requires justification
 BRAIN UPGRADE #5.
 
 Old: Sequential by default, parallel optional
 New: PARALLEL by default, sequential only when necessary
 """
-# ruff: noqa: BLE001
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime

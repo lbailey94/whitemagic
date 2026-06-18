@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """Batch Holographic Encoder v2.0.
 =============================
 Optimized Python batch encoder for mass memory ingestion.
@@ -6,7 +7,6 @@ Used as fallback when Mojo is unavailable, or as primary for robustness.
 
 Handles None values gracefully and processes batches efficiently.
 """
-# ruff: noqa: BLE001
 
 import logging
 import sys

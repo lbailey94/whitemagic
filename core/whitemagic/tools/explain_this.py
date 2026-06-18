@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Explain This — Pre-Execution Impact Preview.
 =============================================
 Before running a tool, an AI caller can ask "explain this" to get a
@@ -18,7 +19,6 @@ Usage::
 
 MCP tool: ``explain_this``
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

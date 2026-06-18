@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Cross-System Fusions — Emergent Capabilities from Subsystem Wiring.
 ===================================================================
 Each fusion connects two or more subsystems so that System A's output
@@ -11,7 +12,6 @@ Fusions implemented here:
 These are lightweight, safe, read-mostly wiring functions that can be
 called from the dispatch pipeline, PRAT router, or background loops.
 """
-# ruff: noqa: BLE001
 
 import logging
 import time

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """ILP Manager — Interledger Protocol Streaming Payments (v15.2).
 ================================================================
 Manages micro-payment flows between WhiteMagic agents using ILP/STREAM.
@@ -11,7 +12,6 @@ Environment variables:
     WM_ILP_CONNECTOR_URL — ILP connector URL (e.g., http://localhost:3001)
     WM_ILP_AUTH_TOKEN    — Bearer token for the connector
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

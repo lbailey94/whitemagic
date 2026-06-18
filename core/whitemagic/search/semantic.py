@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Semantic search implementation using embeddings and vector similarity.
 
@@ -6,7 +7,6 @@ Supports multiple search modes:
 - semantic: Vector similarity search using embeddings
 - hybrid: Combines keyword and semantic with RRF (Reciprocal Rank Fusion)
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass

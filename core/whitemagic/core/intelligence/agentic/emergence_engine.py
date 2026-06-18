@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Emergence Engine — Novel Pattern & Resonance Cascade Detection.
 
 Detects emergent phenomena in the memory system:
@@ -6,7 +7,6 @@ Detects emergent phenomena in the memory system:
 - Novelty spikes (sudden increases in previously rare tags)
 - Cross-domain bridges (memories connecting previously separate constellations)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

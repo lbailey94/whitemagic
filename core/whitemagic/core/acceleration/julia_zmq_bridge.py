@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Julia ZMQ Bridge - Persistent Server Client.
 
 Eliminates 3.7s JIT startup penalty by connecting to a running Julia server.
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

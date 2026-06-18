@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Prompt Template Engine
 ======================
@@ -24,7 +25,6 @@ Usage:
     engine = get_prompt_engine()
     text = engine.render("session_greeting", agent_name="WhiteMagic", wu_xing="fire")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

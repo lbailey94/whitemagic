@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Shelter Manager — Sovereign Sandbox Orchestration (v15.2).
 ============================================================
 Creates, manages, and tears down isolated execution environments
@@ -10,7 +11,6 @@ Environment variables:
     WM_SHELTER_MAX_CONCURRENT — Max simultaneous shelters (default: 4)
     WM_SHELTER_TIMEOUT_S      — Default timeout seconds (default: 300)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

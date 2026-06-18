@@ -1,5 +1,5 @@
-"""I Ching Advisor - Hexagram guidance for decisions."""
 # ruff: noqa: BLE001
+"""I Ching Advisor - Hexagram guidance for decisions."""
 from __future__ import annotations
 
 import json

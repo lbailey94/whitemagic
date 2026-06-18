@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """Karma Trace Logger.
 
 Persistent, append-only log of all Gana effects and outcomes.
 Serves as the memory of the living system, allowing it to learn from
 cause and effect (Karma) over time.
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import json

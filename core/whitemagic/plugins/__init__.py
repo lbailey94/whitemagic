@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """WhiteMagic Plugin System
 
 Allows community extensions to add:
@@ -15,7 +16,6 @@ Usage:
     # Get specific plugin
     my_plugin = get_plugin("my_plugin_name")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

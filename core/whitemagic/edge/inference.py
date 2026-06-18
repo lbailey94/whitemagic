@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Edge Inference Engine - Runs on any hardware.
 Version: 4.2.0
 
@@ -8,7 +9,6 @@ Designed to work on:
 - Microcontrollers (via compiled rules)
 - WebAssembly in browsers
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

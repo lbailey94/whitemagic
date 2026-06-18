@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Surprise-Gated Memory Ingestion (v14.0 Living Graph).
 ======================================================
 Balances plasticity (learning new concepts) vs stability (reinforcing
@@ -23,7 +24,6 @@ Usage:
     verdict = gate.evaluate(content="some new memory content")
     # verdict.action: 'create', 'reinforce', or 'create_boosted'
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

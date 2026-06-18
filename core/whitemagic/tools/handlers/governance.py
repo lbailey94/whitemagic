@@ -1,5 +1,5 @@
-"""Governance & lifecycle tool handlers — lifecycle, consolidation, homeostasis, maturity, dharma reload, tool graph."""
 # ruff: noqa: BLE001
+"""Governance & lifecycle tool handlers — lifecycle, consolidation, homeostasis, maturity, dharma reload, tool graph."""
 import logging
 from typing import Any, cast
 

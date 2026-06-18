@@ -1,5 +1,5 @@
-"""Galactic dashboard handler — real-time galactic map visualization data."""
 # ruff: noqa: BLE001
+"""Galactic dashboard handler — real-time galactic map visualization data."""
 import logging
 from typing import Any
 

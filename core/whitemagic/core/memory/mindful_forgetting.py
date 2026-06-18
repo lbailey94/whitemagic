@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Mindful Forgetting - Multi-Signal Memory Retention.
 ===================================================
 Inspired by CyberBrains' hippocampal model: memories expire unless
@@ -28,7 +29,6 @@ Usage:
     # Batch sweep (run periodically via slow-lane scheduler):
     report = engine.sweep()
 """
-# ruff: noqa: BLE001
 
 import logging
 import math

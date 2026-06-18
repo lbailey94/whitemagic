@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Zig SIMD Graph Transitions — Python Bridge.
 ===========================================
 Loads the compiled Zig shared library and exposes SIMD-accelerated
@@ -9,7 +10,6 @@ Usage:
     )
     probs = transition_batch(semantic, gravity, recency, staleness, weights)
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

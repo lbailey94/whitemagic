@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """WhiteMagic Dharma Defense for AgentDojo.
 
 Integrates WhiteMagic's policy gate (Karma Ledger + Dharma rules) into
@@ -14,7 +15,6 @@ The defense intercepts every tool call before execution, checks it against
 WhiteMagic's Dharma policy gate, logs the decision to the Karma Ledger,
 and blocks dangerous operations.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

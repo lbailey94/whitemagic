@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Scope-of-Engagement Tokens — Edgerunner Violet Security Layer
 ================================================================
 Cryptographic certificates that authorize time-bounded, scope-limited
@@ -21,7 +22,6 @@ Usage:
                        issuer="lucas", duration_minutes=60)
     result = mgr.validate(token["token_id"], tool="nmap_scan", target="10.0.0.1")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

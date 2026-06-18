@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Grimoire Plugin Manifest — Microkernel Mandala (Bridge 3).
 
 Wraps the GrimoireEngine in the WhiteMagic Plugin protocol so it can be
@@ -15,7 +16,6 @@ Usage (automatic via PluginDiscovery, or explicit):
     plugin = registry.get("grimoire")
     plugin.start()
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

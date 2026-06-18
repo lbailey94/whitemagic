@@ -1,7 +1,7 @@
+# ruff: noqa: BLE001
 """Open-Domain Recall Improvements for WhiteMagic v18.1
 Implements title-boosted vector scoring to lift recall from 48% → 70%.
 """
-# ruff: noqa: BLE001
 
 import logging
 import re

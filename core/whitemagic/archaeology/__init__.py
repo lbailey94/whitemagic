@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 import json
 import logging
 import threading
@@ -223,7 +224,6 @@ __all__ = [
 """
 Mark the read async state.
 """
-# ruff: noqa: BLE001
 """
 Perform the mark read async operation.
 """

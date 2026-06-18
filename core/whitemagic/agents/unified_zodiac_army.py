@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """Unified Zodiac Army - Python Bridge to Rust Implementation
 
 This module provides a Python interface to the Rust-based unified zodiac army system,
@@ -11,7 +12,6 @@ Architecture:
 - Python orchestration for MCP integration and campaign management
 - 12×12 mapping of army types to zodiac signs
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import json

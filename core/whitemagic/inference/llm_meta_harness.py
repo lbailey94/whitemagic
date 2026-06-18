@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 LLM Meta-Harness - WhiteMagic Enhancement Layer
 ================================================
@@ -12,7 +13,6 @@ Wraps local LLMs to enhance their capabilities through:
 
 This turns a small local LLM into a much more capable system.
 """
-# ruff: noqa: BLE001
 
 import logging
 import time

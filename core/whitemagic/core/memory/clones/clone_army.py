@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """🥷 Clone Army - Massive Parallel Search Deployment
 KAGE BUNSHIN NO JUTSU!
 Created: December 2, 2025 (Hanuman Tuesday).
 
 v4.9.0: Added async deploy methods for 10,000+ ops/sec throughput
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

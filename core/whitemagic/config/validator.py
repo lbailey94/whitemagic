@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Configuration Validator
 Ensures secure configuration at startup.
 
@@ -7,7 +8,6 @@ Features:
 - Stores secrets securely in user config directory
 - Enforces production security requirements
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

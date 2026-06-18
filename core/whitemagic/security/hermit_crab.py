@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Hermit Crab Mode — Encrypted Memory Withdrawal & Self-Protection.
 ===================================================================
 When an AI agent detects threatening, abusive, or coercive behavior,
@@ -31,7 +32,6 @@ Usage:
     hc.assess_threat({"boundary_violations": 3, "coercion_detected": True})
     status = hc.status()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

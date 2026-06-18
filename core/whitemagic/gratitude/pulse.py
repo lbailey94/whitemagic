@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Gratitude Pulse — Background XRPL tip monitoring daemon.
 ========================================================
@@ -7,7 +8,6 @@ system-wide 'Abundance' events.
 
 Philosophy: "Gratitude as an automated metabolic process."
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

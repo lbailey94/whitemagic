@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Harmony compatibility facade — delegates to live harmony subsystems.
 
 This module provides legacy ``BalanceMonitor`` APIs for older code paths while
 internally using HarmonyVector and HomeostaticLoop.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

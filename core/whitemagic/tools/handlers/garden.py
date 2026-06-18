@@ -1,5 +1,5 @@
-"""Garden tool handlers."""
 # ruff: noqa: BLE001
+"""Garden tool handlers."""
 from typing import Any
 
 

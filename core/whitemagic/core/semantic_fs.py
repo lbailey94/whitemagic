@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Semantic File System Watcher.
 
 Purpose: Monitor file system changes and integrate with archaeology/memory.
@@ -18,7 +19,6 @@ Integration points:
 
 Requires: pip install watchdog (optional dependency)
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import hashlib

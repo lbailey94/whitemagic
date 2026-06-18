@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Unified Cycle Engine — Orchestrates Yin-Yang, Wu Xing, and Zodiacal Round.
 
 Fuses the 10 scattered wisdom systems into a single coordinated loop:
@@ -21,7 +22,6 @@ Zodiacal phases trigger campaign actions:
   Capricorn → Structure, consolidation
   Pisces → Dissolution, cleanup
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

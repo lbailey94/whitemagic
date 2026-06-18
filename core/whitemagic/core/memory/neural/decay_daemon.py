@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """⏰ Decay Daemon - Background Memory Decay Processing
 Runs periodically to decay memories and archive weak ones.
 Created: December 2, 2025 (Hanuman Tuesday).
 """
-# ruff: noqa: BLE001
 
 import logging
 import threading

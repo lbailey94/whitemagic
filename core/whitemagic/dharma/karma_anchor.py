@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Karma XRPL Anchor — On-Chain Trust Attestation (Phase 4B2).
 =============================================================
 Anchors the Karma Ledger's Merkle root to the XRP Ledger as a
@@ -22,7 +23,6 @@ Usage:
     snapshot = compute_anchor()
     result = submit_anchor(snapshot["merkle_root"], wallet_seed="s...")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

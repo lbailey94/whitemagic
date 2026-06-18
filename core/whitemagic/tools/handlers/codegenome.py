@@ -1,5 +1,5 @@
-"""MCP handlers for the CodeGenome / God-Kit system."""
 # ruff: noqa: BLE001
+"""MCP handlers for the CodeGenome / God-Kit system."""
 
 from typing import Any
 

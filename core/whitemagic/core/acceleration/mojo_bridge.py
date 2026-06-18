@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Mojo Accelerator Bridge — Python ↔ Mojo via Subprocess (0.26.1 compatible).
 ========================================================
 Bridges to compiled Mojo executables for batch encoding, embedding
@@ -18,7 +19,6 @@ Usage:
         mojo_batch_encode, mojo_quantize, mojo_neuro_score, mojo_status
     )
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

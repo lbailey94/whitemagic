@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Bicameral Reasoning - Dual-Hemisphere Processing with Cross-Critique.
 ====================================================================
 Inspired by CyberBrains' bicameral mind architecture and Jaynes' theory:
@@ -28,7 +29,6 @@ Usage:
     print(result.right_analysis)
     print(result.cross_critique)
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """UnifiedPatternAPI - Single interface to all pattern engines.
 
 Provides unified access to search and correlate patterns across:
@@ -6,7 +7,6 @@ Provides unified access to search and correlate patterns across:
 - Edge Pattern Learning (query rules)
 - Cascade Patterns (tool chains)
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass, field

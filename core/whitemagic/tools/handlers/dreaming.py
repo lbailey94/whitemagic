@@ -1,5 +1,5 @@
-"""MCP handlers for Dream Cycle control."""
 # ruff: noqa: BLE001
+"""MCP handlers for Dream Cycle control."""
 
 import asyncio
 import logging

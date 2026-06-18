@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Ensemble Voting tool handlers — multi-LLM consensus orchestration.
 
 Extends the existing vote.* tools with the ability to actually *query*
@@ -11,7 +12,6 @@ MCP tools:
   - ensemble.status  — Check status of a running ensemble query
   - ensemble.history — List past ensemble results
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

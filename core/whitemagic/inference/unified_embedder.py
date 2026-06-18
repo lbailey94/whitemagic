@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Unified Polyglot Embedder - Routes to Rust ONNX or Mojo GPU
 
 This module provides a zero-copy Arrow-based embedding pipeline that routes
@@ -11,7 +12,6 @@ Usage:
     embedder = UnifiedEmbedder()
     embeddings = embedder.encode_batch(texts, batch_size=2048)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

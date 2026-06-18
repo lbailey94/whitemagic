@@ -1,5 +1,5 @@
-"""Introspection tool handlers — core system introspection + health report."""
 # ruff: noqa: BLE001
+"""Introspection tool handlers — core system introspection + health report."""
 import logging
 import shutil
 import sqlite3

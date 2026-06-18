@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """Immortal Clone v2 - Enhanced with Victory Tracking, Progress Dashboard, Auto-Completion
 
 Tier 1 Enhancements:
@@ -20,7 +21,6 @@ Tier 3 Integration:
 
 Based on Geoff Huntley's insights + WhiteMagic's existing clone army infrastructure.
 """
-# ruff: noqa: BLE001
 
 import logging
 import subprocess

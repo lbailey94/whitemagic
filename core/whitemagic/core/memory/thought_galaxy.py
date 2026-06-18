@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Thought Galaxy (G003)
 =====================
@@ -5,7 +6,6 @@ Thought Galaxy (G003)
 Manages the "Thought Galaxy" — a dedicated storage zone for Cognitive Episodes.
 Enables introspection, pattern mining, and retrieval of past reasoning strategies.
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

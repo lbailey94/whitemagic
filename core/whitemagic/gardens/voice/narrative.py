@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Narrative Engine - Story threading across time.
 
 Creates coherent narratives from discrete moments, maintaining continuity
 and threading themes across sessions.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Zig SIMD Distance Matrix — Python Bridge.
 ==========================================
 Loads the compiled Zig shared library and exposes SIMD-accelerated
@@ -19,7 +20,6 @@ Usage:
     matrix = pairwise_distance_matrix(vectors)
     sim = cosine_similarity_zig(vec_a, vec_b)
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

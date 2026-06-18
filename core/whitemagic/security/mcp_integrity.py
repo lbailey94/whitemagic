@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """MCP Integrity Checking — Edgerunner Violet Security Layer
 ============================================================
 Computes and verifies SHA-256 fingerprints of MCP tool definitions
@@ -13,7 +14,6 @@ Usage:
     integrity.snapshot()          # capture current tool fingerprints
     report = integrity.verify()   # detect drift since last snapshot
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

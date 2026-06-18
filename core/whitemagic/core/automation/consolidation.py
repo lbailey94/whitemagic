@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -36,7 +37,6 @@ Usage:
     if check["should_consolidate"]:
         results = await engine.auto_consolidate(dry_run=False)
 """
-# ruff: noqa: BLE001
 
 
 

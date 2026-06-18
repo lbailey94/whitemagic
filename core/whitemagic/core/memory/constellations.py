@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Constellation Detection — Named Clusters in 5D Holographic Space.
 ==================================================================
 Discovers dense clusters of semantically related memories in the 5D
@@ -21,7 +22,6 @@ Usage:
     detector = get_constellation_detector()
     report = detector.detect()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +19,6 @@ hnsw_index.py, and umap_projection.py.
 
 Part of Milestone 4.3 Singleton Reduction — updated to wire to real engines.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

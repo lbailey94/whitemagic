@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Dream Consolidator — Nightly promotion and expiration of dream artifacts.
 
 Scans the dreams directory and:
@@ -10,7 +11,6 @@ Usage:
     cons = DreamConsolidator()
     report = cons.consolidate()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

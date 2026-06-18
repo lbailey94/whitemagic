@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Enhanced Hybrid Adaptive Dispatcher with runtime adaptation, batching, and pooling.
 
 Features:
@@ -7,7 +8,6 @@ Features:
 - Warm start for pre-initializing Koka processes
 - Integration-ready API
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

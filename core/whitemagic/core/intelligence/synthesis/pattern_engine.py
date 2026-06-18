@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Pattern Engine - Pattern detection and analysis (v2.0 — Wired to Real Engines).
 ==================================================================================
 Delegates to real pattern engines:
@@ -5,7 +6,6 @@ Delegates to real pattern engines:
 - HolographicPatternEngine from hologram/patterns.py
 - Memory pattern engine from memory/pattern_engine.py
 """
-# ruff: noqa: BLE001
 
 import logging
 from typing import Any

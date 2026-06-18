@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Monitoring and observability infrastructure for WhiteMagic.
 
 Provides:
@@ -7,7 +8,6 @@ Provides:
 - Health checks
 - Alerting hooks
 """
-# ruff: noqa: BLE001
 
 import importlib.util
 import logging

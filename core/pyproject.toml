@@ -505,6 +505,8 @@ exclude = [
     "*.pyi",
     "_archives",
     "_archives/**/*",
+    "_archived",
+    "_archived/**/*",
     ".venv",
     "__pycache__",
 ]

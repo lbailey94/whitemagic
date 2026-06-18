@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Graph Topology Engine — Centrality, Communities, and Bridge Detection.
 =====================================================================
 Foundation for both dream cycle governance (echo chamber detection via
@@ -26,7 +27,6 @@ Usage:
     # Echo chamber detection (compare T_now vs T_prev)
     echo = engine.detect_echo_chambers(sigma_threshold=2.0)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

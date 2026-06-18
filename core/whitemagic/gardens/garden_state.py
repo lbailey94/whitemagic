@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Garden State Tracking System.
 
 Tracks which gardens are active, their activation counts, and last used times.
 Persists state to $WM_STATE_ROOT/garden_state.json (defaults to ~/.whitemagic/garden_state.json)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

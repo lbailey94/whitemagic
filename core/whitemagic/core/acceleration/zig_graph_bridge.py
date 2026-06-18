@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Zig Graph Bridge — Python ↔ Zig graph/search via ctypes FFI.
 ===============================================================
 Exposes Zig-compiled graph traversal and SIMD similarity functions
@@ -18,7 +19,6 @@ Usage:
         zig_graph_bridge_status
     )
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

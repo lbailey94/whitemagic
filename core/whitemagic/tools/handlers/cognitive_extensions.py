@@ -1,5 +1,5 @@
-"""Cognitive Extensions — Working Memory & Reconsolidation handlers."""
 # ruff: noqa: BLE001
+"""Cognitive Extensions — Working Memory & Reconsolidation handlers."""
 import logging
 from typing import Any
 

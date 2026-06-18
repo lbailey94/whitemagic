@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Hemisphere Agents — Event-driven left and right hemisphere listeners.
 
 These agents subscribe to the Gan Ying bus and can initiate or respond to
@@ -13,7 +14,6 @@ Usage:
     left.start_listening()
     right.start_listening()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

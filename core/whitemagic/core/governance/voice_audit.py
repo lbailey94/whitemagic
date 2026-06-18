@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Jaynes Voice Audit — Scan for hallucinated tool invocations.
 
 Named after Julian Jaynes' bicameral mind theory: the "voice" that commands
@@ -15,7 +16,6 @@ Usage:
     # ... later ...
     report = scanner.scan()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

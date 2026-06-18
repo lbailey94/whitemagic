@@ -1,5 +1,5 @@
-"""Dharmic Solver Engine — cvxpy-based constrained optimization."""
 # ruff: noqa: BLE001
+"""Dharmic Solver Engine — cvxpy-based constrained optimization."""
 from __future__ import annotations
 
 import logging

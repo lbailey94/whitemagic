@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """InsightPipeline — Proactive Intelligence Briefing System.
 =========================================================
 Orchestrates all four insight engines (Predictive, Kaizen, Serendipity,
@@ -20,7 +21,6 @@ Usage:
     briefing = pipeline.generate_briefing()
     print(briefing.to_dict())
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

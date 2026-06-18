@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """Acceleration modules — SIMD, FFI, and polyglot-accelerated operations.
 
 Note: Polyglot bridges (Elixir, Go, Haskell, Julia, Mojo) are optional dependencies.

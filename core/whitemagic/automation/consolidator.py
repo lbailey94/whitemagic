@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Automatic Memory Consolidation System
 
 Implements the Episodic → Semantic memory flow from the vision document.
@@ -5,7 +6,6 @@ Runs at session end to extract lasting knowledge from temporary experiences.
 
 Inspired by human sleep consolidation: noisy experiences → usable knowledge.
 """
-# ruff: noqa: BLE001
 
 import logging
 import re

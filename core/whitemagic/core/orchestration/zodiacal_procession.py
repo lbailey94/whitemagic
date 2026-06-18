@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """☯️ Zodiacal Procession - Yin/Yang Autonomous Cycle System v5.0.0-alpha.
 
 Implements the bidirectional zodiacal procession for autonomous operation:
@@ -8,7 +9,6 @@ Implements the bidirectional zodiacal procession for autonomous operation:
 Created: November 27, 2025 (Thanksgiving)
 Philosophy: "Like Finnegans Wake, it never actually ends, but curves back to begin again"
 """
-# ruff: noqa: BLE001
 
 import logging
 import random

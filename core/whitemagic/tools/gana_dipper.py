@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """🌌 Gana Dipper — Zodiacal Phase Shifting and Celestial Status.
 =========================================================
 Provides tools for manual progression through the 12 Zodiacal phases
@@ -5,7 +6,6 @@ and querying the current astrological state of the WhiteMagic engine.
 
 Part of the Milestone 3 (Zodiacal Synthesis) infrastructure.
 """
-# ruff: noqa: BLE001
 
 import logging
 from typing import Any

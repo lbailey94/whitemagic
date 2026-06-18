@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """WhiteMagic v5.1 "Polyglot Performance" - Smart Performance Router
 
 Routes operations to fastest available implementation:
@@ -7,7 +8,6 @@ Routes operations to fastest available implementation:
 3. Zig (Tier 5) - Deterministic/Low-level performance
 4. Python (Baseline) - Fallback
 """
-# ruff: noqa: BLE001
 
 import ctypes
 import logging

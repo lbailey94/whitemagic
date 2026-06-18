@@ -1,5 +1,5 @@
-"""Pattern bridge — Pattern detection and analysis."""
 # ruff: noqa: BLE001
+"""Pattern bridge — Pattern detection and analysis."""
 import logging
 from typing import Any
 

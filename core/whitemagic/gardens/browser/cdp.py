@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Chrome DevTools Protocol (CDP) Connection.
 
 WebSocket-based communication with Chrome/Chromium for browser automation.
@@ -7,7 +8,6 @@ Usage:
     async with CDPConnection("ws://localhost:9222/devtools/page/...") as cdp:
         result = await cdp.send("Page.navigate", {"url": "https://example.com"})
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

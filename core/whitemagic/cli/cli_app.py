@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 # mypy: disable-error-code=no-untyped-def
 """WhiteMagic CLI - Complete Implementation
 Phase 1: Core Commands for Production Readiness

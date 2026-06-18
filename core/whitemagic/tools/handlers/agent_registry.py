@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """Agent Registry tool handlers — multi-agent identity and discovery.
 
 Provides agent registration, heartbeat, capability declaration, and

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Harmony Vector — Multi-Dimensional System Balance
 ===================================================
 Inspired by MandalaOS's Lakshmi Subsystem and Tiferet Engine.
@@ -27,7 +28,6 @@ Usage:
     hv = get_harmony_vector()
     snapshot = hv.snapshot()   # dict safe for JSON / MCP envelope
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

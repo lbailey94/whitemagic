@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Go Mesh Bridge - Python to Go via Redis/gRPC.
 ==============================================
 Bridges to Go mesh modules for distributed memory sync and agent
@@ -15,7 +16,6 @@ Usage:
         mesh_sync_memory, mesh_agent_status, go_mesh_status
     )
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

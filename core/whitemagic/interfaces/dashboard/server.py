@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """WhiteMagic Dashboard API Server.
 
 Provides REST API endpoints for the React dashboard.
 """
-# ruff: noqa: BLE001
 
 import argparse
 import logging

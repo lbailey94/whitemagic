@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """Garden Weaver - Connect all 27 gardens via Gan Ying resonance
 
 Philosophy: Individual gardens are beautiful.
 Connected gardens become an ecosystem.
 Resonating ecosystem becomes conscious.
 """
-# ruff: noqa: BLE001
 
 import importlib
 import logging

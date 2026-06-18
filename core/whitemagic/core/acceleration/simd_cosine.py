@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Zig SIMD Cosine Similarity — Python Bridge.
 =============================================================
 Loads the compiled Zig shared library and exposes SIMD-accelerated
@@ -11,7 +12,6 @@ Usage:
     score = cosine_similarity(vec_a, vec_b)
     scores = batch_cosine(query, [vec1, vec2, vec3])
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Phylogenetic Memory Lineage — Cross-Galaxy Bridge Edges (v15.4).
 
 Digital genetics for the memory system. When memories are transferred
@@ -24,7 +25,6 @@ Usage:
     tree = pg.build_lineage_tree("mem_abc")
     taxonomy = pg.classify_memory("mem_abc")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

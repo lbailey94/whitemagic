@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """LLM-Driven Entity & Relation Extraction (v14.2).
 ===================================================
 Uses Ollama (local) to extract structured entities and relations
@@ -19,7 +20,6 @@ Usage:
     # result.entities = [("Lucas", "PERSON"), ("WhiteMagic", "PROJECT")]
     # result.relations = [("Lucas", "CREATED", "WhiteMagic")]
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

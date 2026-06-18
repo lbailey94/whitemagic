@@ -1,5 +1,5 @@
-"""Haskell Divination Bridge — wraps the FFI-based haskell_bridge.py."""
 # ruff: noqa: BLE001
+"""Haskell Divination Bridge — wraps the FFI-based haskell_bridge.py."""
 
 import logging
 import sys

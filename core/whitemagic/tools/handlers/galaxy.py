@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Galaxy management tool handlers.
 
 Provides MCP tools for creating, switching, listing, and ingesting
 into project-scoped memory galaxies.
 """
-# ruff: noqa: BLE001
 
 import logging
 from typing import Any

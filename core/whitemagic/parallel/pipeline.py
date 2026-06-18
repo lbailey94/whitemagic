@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Parallel Pipeline - Multi-Stage Workflow Processing
 
 Provides composable multi-stage pipelines for complex parallel workflows.
@@ -11,7 +12,6 @@ Usage:
 
     results = await pipeline.execute(input_data)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

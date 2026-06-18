@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +19,6 @@ manual flushing, and automated "Dream Catharsis" (invalidation during REM).
 
 Part of Milestone 4.4: The Living System.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

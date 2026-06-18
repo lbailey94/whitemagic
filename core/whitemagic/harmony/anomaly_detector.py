@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Anomaly Detection on Harmony Vector
 =====================================
 Statistical anomaly detector using z-score on the 7 Harmony dimensions
@@ -10,7 +11,6 @@ Usage:
     detector.ingest(harmony_snapshot)
     alerts = detector.check()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Maturity Gates - Gated Developmental Milestones.
 ================================================
 Inspired by CyberBrains' Jaynes x Bailey developmental progression:
@@ -26,7 +27,6 @@ Usage:
     print(report.unlocked_capabilities)
     print(report.next_gate)
 """
-# ruff: noqa: BLE001
 
 import logging
 import threading

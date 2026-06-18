@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Rust Accelerator Bridge — Try Rust, Fall Back to Python
 ========================================================
 Provides unified access to the Rust accelerators with
@@ -21,7 +22,6 @@ Usage:
         get_spatial_index_5d,
     )
 """
-# ruff: noqa: BLE001
 
 import logging
 import sqlite3

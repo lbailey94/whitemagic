@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Plugin Registry for WhiteMagic
 
 Manages loaded plugins and their lifecycle.
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

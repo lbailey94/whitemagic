@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Local Reasoning Engine - Offload AI computation to local CPU/disk.
 Version: 4.2.0.
 
@@ -14,7 +15,6 @@ Token Savings:
 - After: Local search finds 5 relevant items → Send 2K tokens → Response
 - Result: 90%+ token reduction for many operations
 """
-# ruff: noqa: BLE001
 
 import logging
 import re

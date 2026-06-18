@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Cross-Session Memory Consolidation — Hippocampal Replay.
 =========================================================
 Inspired by how biological hippocampal replay strengthens memories
@@ -22,7 +23,6 @@ Usage:
     consolidator = get_consolidator()
     report = consolidator.consolidate()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

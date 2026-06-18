@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Agent Swarm Protocols — Task Decomposition, Capability Routing, Consensus
 ===========================================================================
 Enables multi-agent coordination within WhiteMagic:
@@ -14,7 +15,6 @@ Usage:
     assignments = swarm.route(plan)
     result = swarm.execute(assignments)
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

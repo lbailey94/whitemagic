@@ -1,5 +1,5 @@
-"""Adaptive bridge — Cascade pattern execution."""
 # ruff: noqa: BLE001
+"""Adaptive bridge — Cascade pattern execution."""
 import asyncio
 import logging
 from typing import Any

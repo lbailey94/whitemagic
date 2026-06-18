@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Automated wisdom text ingestion from sacred-texts.com.
 Version: 3.0.0.
 
 Graceful degradation: tries aiohttp, falls back to urllib.
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

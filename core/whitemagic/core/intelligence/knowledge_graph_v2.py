@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Knowledge Graph 2.0 (v16) - Batch NER with Typed Edge Storage.
 ================================================================
 Enhanced knowledge graph with:
@@ -14,7 +15,6 @@ Usage:
     result = kg.extract_and_store("memory_123", "WhiteMagic uses Rust for embeddings")
     # Creates typed edges: WhiteMagic --[USES]--> Rust
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

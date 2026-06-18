@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """🌌 Galaxy Pattern Miner - Extract Patterns from Archive DBs
 
 Mines patterns from holographic galaxy memory databases to feed the
@@ -8,7 +9,6 @@ recursive evolution engine. Analyzes 111K+ archived memories for:
 
 Part of Phase 3 Recursive Evolution - Data Lake Integration.
 """
-# ruff: noqa: BLE001
 
 import logging
 import sqlite3

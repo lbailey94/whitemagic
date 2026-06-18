@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Wu Xing Fusion — Elemental phase → Gana quadrant amplification.
 
 Check if the current Wu Xing elemental phase amplifies the given Gana's quadrant.
 Extracted from fusions.py for better separation of concerns.
 """
-# ruff: noqa: BLE001
 
 import logging
 from typing import Any

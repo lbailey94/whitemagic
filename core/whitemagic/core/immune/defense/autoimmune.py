@@ -1,5 +1,5 @@
-"""Autoimmune Defense System - Transform 229 anti-patterns into active defenses."""
 # ruff: noqa: BLE001
+"""Autoimmune Defense System - Transform 229 anti-patterns into active defenses."""
 
 from __future__ import annotations
 

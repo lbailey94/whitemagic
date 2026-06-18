@@ -1,5 +1,5 @@
-"""Foresight Engine handler — Logos Layer predictions."""
 # ruff: noqa: BLE001
+"""Foresight Engine handler — Logos Layer predictions."""
 
 from typing import Any
 

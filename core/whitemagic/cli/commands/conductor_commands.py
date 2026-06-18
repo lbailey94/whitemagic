@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Conductor CLI Commands
 Autonomous task orchestration with iterative deepening.
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import json

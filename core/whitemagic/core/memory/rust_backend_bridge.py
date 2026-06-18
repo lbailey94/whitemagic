@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """
 Rust Backend FFI Bridge
 Integrates the Rust memory backend with the existing Python SQLiteBackend
 """
-# ruff: noqa: BLE001
 
 import logging
 from pathlib import Path

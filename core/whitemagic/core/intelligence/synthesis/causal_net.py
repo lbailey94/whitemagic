@@ -1,7 +1,7 @@
+# ruff: noqa: BLE001
 """Causal Net — Layer 2: Constraint Detection
 Infers directed edges between memory clusters using 4D holographic coordinates.
 """
-# ruff: noqa: BLE001
 
 import logging
 import sqlite3

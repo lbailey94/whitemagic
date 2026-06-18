@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """
 Adaptive System - Full Recursive Evolution (Phase 3)
 =====================================================
 
 Enables the system to apply adaptations automatically with safety monitoring.
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass

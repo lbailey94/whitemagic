@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001, E402
 from __future__ import annotations
 
 """Pattern Extraction Engine - Week 3 of v2.3.1.
@@ -8,7 +9,6 @@ Analyzes long-term memories to extract:
 - Heuristics (if condition, then action)
 - Optimizations (proven approaches)
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

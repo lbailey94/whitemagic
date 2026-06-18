@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Unified Polyglot Accelerator - Smart Multi-Backend Routing.
 ================================================================
 Provides a single interface that automatically routes operations to the
@@ -21,7 +22,6 @@ Usage:
     # Memory operations
     duplicates = accel.find_duplicates(memories)
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

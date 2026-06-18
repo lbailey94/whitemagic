@@ -1,5 +1,5 @@
-"""Living Graph handlers — Graph topology and analysis."""
 # ruff: noqa: BLE001
+"""Living Graph handlers — Graph topology and analysis."""
 import logging
 from typing import Any
 

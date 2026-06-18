@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Token Optimizer - Strategies to minimize cloud AI token usage.
 Version: 4.3.0.
 
@@ -13,7 +14,6 @@ v4.3.0 Enhancement: Unified Resource Tracking
 - Circuit breaker integration for stuck detection
 - Session-aware budget management
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

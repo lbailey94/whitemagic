@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +17,6 @@
 Unified subsystem for tracking interactions, seen files, and session continuity.
 Consolidated from memory_matrix/ sub-package. Part of Milestone 4.3.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Vector Memory Search — Embedding-based similarity search.
 Uses sentence-transformers if available, TF-IDF fallback otherwise.
 Stores embeddings in SQLite. In-memory brute-force cosine search.
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import hashlib

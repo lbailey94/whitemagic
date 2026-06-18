@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """dispatch_core.py — Shared primitives for all dispatch domain slices.
 
 This module contains:
@@ -8,7 +9,6 @@ This module contains:
 All domain slice files (dispatch_memory.py, dispatch_agents.py, etc.)
 import from HERE, not from dispatch_table.py, to avoid circular imports.
 """
-# ruff: noqa: BLE001
 import importlib
 import logging
 from collections.abc import Callable

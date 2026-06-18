@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Adaptive Tool Portal - Polymorphic Resonant Adaptive Tools (PRAT)
 
 Single entry point that morphs tool behavior based on unified context.
@@ -12,7 +13,6 @@ Usage:
     # Result includes morphology metadata
     logger.info(result['_meta']['morphology'])  # e.g., "wisdom"
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

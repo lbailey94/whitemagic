@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Session, Matrix, Graph and Observe CLI commands.
 
 Extracted from cli_app.py as part of B1 decomposition (v22 roadmap).
 All commands were previously defined inline in the 786-line cli_app.py.
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import click

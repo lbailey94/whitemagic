@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Async Thought Clone Army - 16,000 concurrent agents.
 Replaces ProcessPoolExecutor with asyncio for massive scalability.
 v14.5: Rust Tokio fast-path (208× faster) with Python asyncio fallback.
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

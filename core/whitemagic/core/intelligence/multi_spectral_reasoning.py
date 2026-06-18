@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Multi-Spectral Reasoning Engine - Unified Wisdom System.
 
 Philosophy:
@@ -15,7 +16,6 @@ Together, these form a "Multi-Spectral Scientific Method":
 3. Reason step-by-step (scientific method)
 4. Synthesize into coherent decision (integration)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

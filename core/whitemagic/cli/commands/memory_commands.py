@@ -1,5 +1,5 @@
-"""Memory-related CLI commands."""
 # ruff: noqa: BLE001
+"""Memory-related CLI commands."""
 from typing import Any
 
 import click

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """CoreAccessLayer — Unified Read Interface to the Holographic Galactic Core.
 ==========================================================================
 Provides every insight engine a clean, shared API to query the full richness
@@ -27,7 +28,6 @@ Usage:
     # Hybrid recall: embedding similarity + association graph walk
     results = cal.hybrid_recall("memory consolidation architecture", k=10)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

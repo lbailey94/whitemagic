@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Dream Synthesizer - Unconscious Pattern Integration.
 
 Hooks into the Unified Progression Daemon to run during WATER (Reflection) and YIN phases.
 Like human REM sleep, synthesizes disparate patterns into unified insights.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

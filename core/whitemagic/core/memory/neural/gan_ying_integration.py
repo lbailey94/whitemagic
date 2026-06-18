@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """🔔 Gan Ying Integration - Neural Memory Events
 Wire the neural memory system to the Gan Ying resonance bus.
 Created: December 2, 2025 (Hanuman Tuesday).
 """
-# ruff: noqa: BLE001
 
 import logging
 from datetime import datetime

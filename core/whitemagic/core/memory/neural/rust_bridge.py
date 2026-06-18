@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """🦀 Rust Bridge - High-Performance Memory Operations.
 
 Wraps whitemagic_rs functions for use in the neural memory system.
@@ -5,7 +6,6 @@ Falls back to Python implementations if Rust is unavailable.
 
 Created: December 2, 2025 (Hanuman Tuesday)
 """
-# ruff: noqa: BLE001
 
 import logging
 from pathlib import Path

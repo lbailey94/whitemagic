@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Shared Memory Bridge for Zero-Copy Embedding Transfer (VC-05)
 
@@ -6,7 +7,6 @@ Supports 384-dim embedding vectors with ring buffer for streaming.
 
 Uses multiprocessing.shared_memory (Python 3.8+) for POSIX shm.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

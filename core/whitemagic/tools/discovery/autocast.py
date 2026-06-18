@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Tool Discovery & Autocast System - Context-Aware Tool Suggestions
 
 Analyzes tool usage patterns, context, and metrics to suggest next tools.
 Integrates with Gan Ying bus for real-time awareness.
 """
-# ruff: noqa: BLE001
 
 import logging
 import random

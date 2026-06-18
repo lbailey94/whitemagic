@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Centralized path configuration for Whitemagic.
 
 This module provides two distinct path concepts:
@@ -8,7 +9,6 @@ Policy (AI-first / OSS-friendly):
 - Whitemagic should not write runtime state into the repo by default.
 - Callers can explicitly set `WM_STATE_ROOT` to place state wherever they want.
 """
-# ruff: noqa: BLE001
 import logging
 import os
 import tempfile

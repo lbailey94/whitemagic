@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Unified Nervous System Event Bus
 
@@ -12,7 +13,6 @@ Connects the 7 biological subsystems of WhiteMagic:
 
 Plus the Apotheosis Engine for autonomous evolution.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

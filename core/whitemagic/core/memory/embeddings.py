@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Semantic Embedding Layer (v14.1).
 =================================
 Provides sentence-level semantic embeddings for memory search and
@@ -28,7 +29,6 @@ Usage:
     # Batch encode all LONG_TERM memories
     engine.index_memories(memory_type="LONG_TERM")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

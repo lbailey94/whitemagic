@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """OpenTelemetry Export — OTLP spans and metrics from WhiteMagic.
 ===============================================================
 Bridges the existing telemetry + Harmony Vector into OpenTelemetry
@@ -17,7 +18,6 @@ Usage:
     otel = get_otel()
     otel.record_tool_span("gnosis", 0.042, "success")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Cross-Encoder Reranking — Optional precision layer after hybrid search.
 
 Source: LIVING_MEMORY_GAP_ANALYSIS.md (Zep comparison)
@@ -12,7 +13,6 @@ Graceful degradation: if no cross-encoder model is available (no torch,
 no sentence-transformers), falls back to a lightweight lexical reranker
 using BM25-style term overlap scoring.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

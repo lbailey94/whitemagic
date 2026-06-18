@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """Voting tool handlers."""
 import logging
 

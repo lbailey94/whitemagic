@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001, E402
 """Redis Caching Layer for WhiteMagic
 
 Provides:
@@ -7,7 +8,6 @@ Provides:
 - Session storage
 - Rate limiting support
 """
-# ruff: noqa: BLE001
 
 import hashlib
 import json

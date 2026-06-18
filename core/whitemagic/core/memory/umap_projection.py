@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """UMAP Memory Visualization (v14.1).
 =====================================
 Projects high-dimensional memory embeddings (384-dim) into 2D or 3D
@@ -29,7 +30,6 @@ Usage:
     proj = get_umap_projector()
     result = proj.project(n_components=2)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

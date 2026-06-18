@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Haskell bridge — functional spatial core via ctypes FFI.
 
 Provides Python access to whitemagic-hs compiled shared library.
@@ -16,7 +17,6 @@ Override paths via environment:
     WM_GHC_LIB_DIR — GHC library directory (e.g. output of `ghc --print-libdir`)
     WM_HS_LIB      — Full path to libwhitemagic_hs.so
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

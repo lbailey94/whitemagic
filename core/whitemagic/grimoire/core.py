@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Grimoire 2.0 Core - The Living Spellbook
 
 "Free your mind and your ass will follow" - Funkadelic
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

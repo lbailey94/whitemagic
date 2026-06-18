@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Gana CLI Commands
 Interact with the 28 Lunar Mansion Ganas.
 """
-# ruff: noqa: BLE001
 
 import click
 

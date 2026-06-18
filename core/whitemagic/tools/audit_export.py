@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """MCP-Native Audit Export — Karmic Trace + Telemetry in Standard Format.
 =====================================================================
 Exports Whitemagic's internal audit trail (karmic trace, telemetry,
@@ -18,7 +19,6 @@ Usage:
 
     entries = export_audit_log(limit=100, since="2026-02-07T00:00:00")
 """
-# ruff: noqa: BLE001
 
 import logging
 from datetime import datetime

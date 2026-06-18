@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Parallel Test Runner - Run tests across 64+ worker threads
 
 Version: 2.6.6 "Ganapati Day"
@@ -8,7 +9,6 @@ Philosophy:
     Running them in parallel = expressing that love faster.
     Each test is a prayer that the code works.
 """
-# ruff: noqa: BLE001
 
 import subprocess
 import time

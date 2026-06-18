@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """MediaProcessor Protocol — Pluggable Multimodal Intake (v14.2).
 ================================================================
 Defines a Protocol for media-type-specific processors that extract
@@ -18,7 +19,6 @@ Usage:
     if result:
         print(result.text, result.metadata, result.holographic_bias)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

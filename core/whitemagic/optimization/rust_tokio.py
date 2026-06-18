@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """Rust Tokio Clone Army & IPC Bridge.
 
 Extracted from rust_accelerators.py for better separation of concerns.
 Provides massively parallel exploration via Tokio async runtime and
 Iceoryx2 shared memory IPC bridge with Rust acceleration.
 """
-# ruff: noqa: BLE001
 
 import logging
 from typing import Any, cast

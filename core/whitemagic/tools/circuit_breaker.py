@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Circuit Breaker — Stoic Resilience for Tool Dispatch.
 =====================================================
 Inspired by MandalaOS's Stoic Circuit-Breaker concept.
@@ -28,7 +29,6 @@ Usage:
     else:
         breaker.record_success()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

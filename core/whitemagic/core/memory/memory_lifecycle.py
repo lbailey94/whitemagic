@@ -1,10 +1,10 @@
+# ruff: noqa: BLE001
 """Memory Lifecycle Manager — Consolidation, decay, and maintenance operations.
 
 Handles memory consolidation, association decay, pruning, and other maintenance
 operations for the SQLite backend. Extracted from sqlite_backend.py for better
 separation of concerns.
 """
-# ruff: noqa: BLE001
 
 import logging
 import math

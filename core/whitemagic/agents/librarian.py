@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Multi-Agent Librarian System
 
 Three specialized agents for autonomous memory management:
@@ -13,7 +14,6 @@ Recovered 2026-06-18 from the legacy_reference_dump archive
   - Uses pluggable MemoryStorage protocol (defaults to in-memory)
   - No dependency on the removed `neural_system` module
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

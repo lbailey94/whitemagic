@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Windsurf Conversation Reader
 ============================
@@ -12,7 +13,6 @@ This module provides tools to:
 - Extract and index conversation data
 - Import conversations into WhiteMagic memory
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

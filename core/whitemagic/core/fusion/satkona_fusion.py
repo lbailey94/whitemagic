@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """Satkona Fusion Module — Phase 2 Integration.
 ============================================
 Wires three external systems into Satkona's multi-signal ranking:
@@ -16,7 +17,6 @@ Usage:
 Created: 2026-02-05
 Phase: 2 (Fusion Opportunities)
 """
-# ruff: noqa: BLE001
 
 import os
 import sqlite3

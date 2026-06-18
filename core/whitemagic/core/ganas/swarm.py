@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Gana Swarm - Parallel Batch Orchestrator v5.0.0-alpha.
 
 Thousands of parallel Gana invocations creating a living, breathing system.
@@ -5,7 +6,6 @@ Pulse (heartbeat) and breath (prana cycles) for organic flow.
 
 Phase 2C implementation.
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

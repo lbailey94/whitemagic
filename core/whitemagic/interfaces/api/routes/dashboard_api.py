@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Dashboard API - Live data endpoint for the WhiteMagic Dashboard.
 
 Provides:
@@ -7,7 +8,6 @@ Provides:
 - File tracking stats
 - Agentic module status
 """
-# ruff: noqa: BLE001
 
 import time
 from datetime import datetime

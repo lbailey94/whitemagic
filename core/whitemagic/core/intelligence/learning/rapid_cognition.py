@@ -1,5 +1,5 @@
-"""Rapid Cognition - Learn every 5 seconds."""
 # ruff: noqa: BLE001
+"""Rapid Cognition - Learn every 5 seconds."""
 
 import logging
 import threading

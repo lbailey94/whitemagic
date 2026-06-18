@@ -1,5 +1,5 @@
-"""CyberBrain module handlers — salience, bicameral reasoning, retention, drives, self-model, worker."""
 # ruff: noqa: BLE001
+"""CyberBrain module handlers — salience, bicameral reasoning, retention, drives, self-model, worker."""
 from typing import Any
 
 # ---------------------------------------------------------------------------

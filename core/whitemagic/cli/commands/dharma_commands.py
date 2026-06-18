@@ -1,5 +1,5 @@
-"""Dharma CLI commands — extracted from cli_app.py (PSR-028 decomposition)."""
 # ruff: noqa: BLE001
+"""Dharma CLI commands — extracted from cli_app.py (PSR-028 decomposition)."""
 from __future__ import annotations
 
 import click

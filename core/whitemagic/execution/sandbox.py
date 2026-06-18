@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Code-Mode Execution Sandbox
 
 Safe execution environment for model-written code snippets.
@@ -9,7 +10,6 @@ Security layers:
 - Memory limits
 - Namespace isolation
 """
-# ruff: noqa: BLE001
 
 import contextlib
 import io

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Pathway Optimizers - Implementations of Discovered Adaptations
 ===============================================================
@@ -5,7 +6,6 @@ Pathway Optimizers - Implementations of Discovered Adaptations
 Optimizers based on patterns discovered by the Recursive Intelligence Engine.
 Each optimizer implements specific workflow optimizations with measurable impact.
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass

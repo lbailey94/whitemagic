@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Incremental Embedding Daemon - Background Memory Embedding Pipeline (v16).
 ============================================================================
 Continuously processes memories without embeddings in the background.
@@ -22,7 +23,6 @@ Usage:
 
     daemon.stop()  # Graceful shutdown
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

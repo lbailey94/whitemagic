@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Grief Garden — Introspection & Shadow Work.
 
 Mansion: #8 Ghost (鬼 Gui)
@@ -16,7 +17,6 @@ Holographic Integration:
 - Reflects on the past (Z-axis -0.4) — learns from history
 - Important for healing (W-axis +0.25) — self-knowledge enables growth
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """🔄 Continuity System - Local State Sync (Phase 1).
 
 Implements the shared session state and event log for cross-interface continuity.
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

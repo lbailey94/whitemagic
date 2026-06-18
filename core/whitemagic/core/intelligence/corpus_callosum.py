@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Corpus Callosum Bus — Bidirectional critique channel between hemispheres.
 
 Not a one-shot reason() call — a living argument that resolves through synthesis.
@@ -9,7 +10,6 @@ Usage:
     print(result.synthesis)
     print(result.rounds)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

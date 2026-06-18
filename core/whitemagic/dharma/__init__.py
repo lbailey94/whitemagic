@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Dharma System - Ethical Reasoning and Boundaries
 
 The Dharma system provides ethical guidance, boundary enforcement,
@@ -6,7 +7,6 @@ align with compassionate principles.
 
 Created: January 6, 2026
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass

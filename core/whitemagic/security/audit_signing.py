@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Audit Signing — Ed25519 cryptographic signatures for tamper-evident records.
 
 Implements the IETF GAR (Governance Audit Record) non-suppressibility requirement
@@ -8,7 +9,6 @@ Key design: graceful degradation. If cryptography is unavailable or the key
 is missing, the system continues operating but emits a warning. No tool call
 should ever fail because signing failed.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

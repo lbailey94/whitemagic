@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Local Embedding Engine
 ======================
@@ -9,7 +10,6 @@ Usage:
     embedder = LocalEmbedder()
     vectors = embedder.embed(["hello world", "local ai is fast"])
 """
-# ruff: noqa: BLE001
 
 import logging
 import time

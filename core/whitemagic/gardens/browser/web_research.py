@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Web Research Engine — Fast-path web fetching, search, and deep research.
 
 Provides three tiers of web access:
@@ -13,7 +14,6 @@ Integration:
     Wired into the Browser Garden and Gan Ying Bus for resonance.
     Results can be stored as memories for future recall.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

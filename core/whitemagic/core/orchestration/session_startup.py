@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """☯️ Zodiacal Procession - Yin/Yang Autonomous Cycle System v5.0.0-alpha
 Activates all WhiteMagic background systems at session start.
 
@@ -12,7 +13,6 @@ v4.3.0 Enhancement: Memory Context Loading
 - Integrates with continuous execution mode
 - Circuit breaker initialization
 """
-# ruff: noqa: BLE001
 
 import logging
 import os

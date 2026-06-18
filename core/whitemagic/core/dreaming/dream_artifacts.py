@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001, E402
 """Dream Artifacts — YAML-structured imagination capture.
 
 When the Bicameral Reasoner emits a low-confidence creative bridge,
@@ -12,7 +13,6 @@ Usage:
     writer = DreamArtifactWriter()
     writer.start_listening()  # registers on Gan Ying bus
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

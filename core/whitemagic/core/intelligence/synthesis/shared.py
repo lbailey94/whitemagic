@@ -1,7 +1,7 @@
+# ruff: noqa: BLE001
 """Shared Synthesis Utilities - v12.3 Deduplication
 Unifies logic for velocity tracking, intent classification, and pattern bridging.
 """
-# ruff: noqa: BLE001
 
 import logging
 import sqlite3

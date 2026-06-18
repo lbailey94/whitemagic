@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001, E402
 """Broker tool handlers — async Redis message broker for AI agent coordination.
 
 Provides pub/sub messaging, history retrieval, and broker status via the
 Whitemagic tool contract.  Redis is an optional dependency (``whitemagic[cache]``).
 """
-# ruff: noqa: BLE001
 import asyncio
 import json
 import logging

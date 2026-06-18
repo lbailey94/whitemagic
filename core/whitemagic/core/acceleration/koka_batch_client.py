@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Koka Batch IPC Client — Multi-command batching for 10x latency reduction (VC-01)
 =============================================================================
 
@@ -24,7 +25,6 @@ Usage:
     ]
     results = client.execute_batch(batch)
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

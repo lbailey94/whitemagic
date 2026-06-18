@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Gnosis Portal — Unified Introspection Across All Subsystems.
 =============================================================
 Inspired by MandalaOS's Gnosis Portals: standardized, read-only APIs
@@ -26,7 +27,6 @@ Usage:
     from whitemagic.tools.gnosis import gnosis_snapshot
     snapshot = gnosis_snapshot()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

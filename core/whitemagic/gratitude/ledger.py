@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Gratitude Ledger — Track contributions from both XRPL and x402 channels.
 =========================================================================
@@ -7,7 +8,6 @@ rate-limit boosts.
 
 Storage: $WM_STATE_ROOT/gratitude/ledger.jsonl
 """
-# ruff: noqa: BLE001
 
 import logging
 import threading

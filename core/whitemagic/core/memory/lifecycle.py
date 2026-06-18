@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Memory Lifecycle Manager — Automatic Retention, Decay & Consolidation.
 ======================================================================
 Bridges the RetentionEngine (mindful forgetting) with the Temporal
@@ -20,7 +21,6 @@ Usage:
     # ... or run manually:
     report = mgr.run_sweep()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

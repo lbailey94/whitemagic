@@ -1,5 +1,5 @@
-"""Pattern Federation - Distributed pattern library across sessions."""
 # ruff: noqa: BLE001
+"""Pattern Federation - Distributed pattern library across sessions."""
 
 from __future__ import annotations
 

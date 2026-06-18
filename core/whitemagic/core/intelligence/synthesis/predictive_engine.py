@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """PredictiveEngine - Future-Forward Self-Improvement.
 
 Analyzes patterns, milestones, and roadmaps to predict what WhiteMagic
@@ -10,7 +11,6 @@ Knowledge Gaps Addressed:
 - Gap 1: Detail + Future (specific implementation plans)
 - Gap 4: High Future + High Importance (strategic vision)
 """
-# ruff: noqa: BLE001
 
 import logging
 import sqlite3

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Worker Daemon — Background Task Execution Agent
 =================================================
 Inspired by Tools(copy)/scripts/distributed/worker.py.
@@ -21,7 +22,6 @@ Usage:
     # As a script
     python -m whitemagic.agents.worker_daemon [--poll-interval 5]
 """
-# ruff: noqa: BLE001
 
 import logging
 import os

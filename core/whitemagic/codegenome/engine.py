@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """CodeGenome Template Engine
 ============================
 Loads YAML code templates from $WM_STATE_ROOT/codegenome/ and built-in defaults.
@@ -45,7 +46,6 @@ Usage:
     code = engine.render("fastapi_endpoint", path="/items", name="items",
                          tier="xianfeng")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

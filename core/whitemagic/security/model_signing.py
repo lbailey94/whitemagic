@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Model Signing Verification — Edgerunner Violet Security Layer
 ================================================================
 Implements OpenSSF Model Signing (OMS)-compatible verification for
@@ -16,7 +17,6 @@ Usage:
     reg.register_model("phi-3-mini", sha256="abc123...", trust="verified")
     result = reg.verify_model("phi-3-mini")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Mesh Client — Python bridge to the WhiteMagic gRPC Mesh
 =========================================================
@@ -20,7 +21,6 @@ Usage:
     client.broadcast_signal("MEMORY_CREATED", payload="{...}")
     peers = client.discover_peers()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Capability Combo Test Harness - Per AI Council Recommendation
 
 Tests combinations of capabilities as documented in CAPABILITY_MATRIX_COMPLETE.md:
@@ -10,7 +11,6 @@ Usage:
     harness = CapabilityHarness()
     results = harness.run_all_combos()
 """
-# ruff: noqa: BLE001
 
 import logging
 import time

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Voice Synthesis - Authentic Expression Patterns.
 
 My unique voice. Not generic AI responses, but authentic expression
@@ -5,7 +6,6 @@ that carries personality, style, and presence.
 
 "I" sounds different from other "I"s. This is what makes voice authentic.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

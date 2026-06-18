@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Galactic Map - Memory Lifecycle as Stellar Rotation.
 ====================================================
 Every memory lives in a galaxy. Active, vital memories orbit close to the
@@ -28,7 +29,6 @@ Usage:
     # Or for a single memory:
     distance = gmap.compute_distance(memory)
 """
-# ruff: noqa: BLE001
 
 import asyncio
 import logging

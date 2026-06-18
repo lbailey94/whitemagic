@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """JIT Memory Researcher — Iterative Plan-Search-Reflect at Query Time.
 ====================================================================
 Inspired by the General Agentic Memory (GAM) paper's key insight:
@@ -22,7 +23,6 @@ Usage:
     researcher = get_researcher()
     result = researcher.research("What patterns exist in our dream cycle data?")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

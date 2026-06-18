@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Northern Quadrant Ganas (Black Tortoise).
 
 Implementations for Lunar Mansions 22-28 (Winter/North).
 Theme: Resilience, Memory, Closure, Governance.
 """
-# ruff: noqa: BLE001
 
 from typing import Any
 

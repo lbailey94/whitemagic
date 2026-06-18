@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 """Immortal Clone - Shadow clone with persistent execution loops.
 
 Based on Geoff Huntley's insights on agent loops:
@@ -7,7 +8,6 @@ Based on Geoff Huntley's insights on agent loops:
 - Real subprocess execution (not simulated)
 - ~300 lines of code for the core loop
 """
-# ruff: noqa: BLE001
 
 import logging
 import subprocess

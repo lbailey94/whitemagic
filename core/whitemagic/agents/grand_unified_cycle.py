@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Grand Unified Cycle — Synthesis of All Cyclical Systems
 ==========================================================
 
@@ -19,7 +20,6 @@ Architecture:
 
 All connected via Gan Ying resonance cascade.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

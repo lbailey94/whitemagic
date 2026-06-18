@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Graph Walker Hot Path - Polyglot-Accelerated Implementation
 Backend priority: Zig SIMD > Rust > NumPy > Python
 Target: 10-50x speedup for multi-hop graph traversal semantic scoring
 """
-# ruff: noqa: BLE001
 import logging
 from dataclasses import dataclass
 from typing import Any

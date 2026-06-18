@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Galactic Telepathy & Horizontal Gene Transfer v2.0
 Q4 Cross-Database Synchronization — Complete Implementation
@@ -13,7 +14,6 @@ Named after biological concepts:
 - Telepathy: Direct mind-to-mind (memory-to-memory) transfer
 - Horizontal Gene Transfer: Cross-species (cross-galaxy) genetic (association) sharing
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
-"""Gan Ying event bus tool handlers."""
 # ruff: noqa: BLE001
+"""Gan Ying event bus tool handlers."""
 from typing import Any
 
 

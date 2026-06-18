@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Karma Ledger — Declared vs Actual Side-Effect Tracking
 ========================================================
 Inspired by MandalaOS's Karma/Effect system.
@@ -23,7 +24,6 @@ Usage:
     ledger.record(tool="create_memory", declared="WRITE", actual_writes=1, success=True)
     report = ledger.report()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

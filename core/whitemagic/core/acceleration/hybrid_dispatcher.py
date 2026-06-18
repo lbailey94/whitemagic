@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Hybrid Adaptive Dispatcher - Switches between Python in-memory and Koka IPC.
 
 Strategy:
@@ -10,7 +11,6 @@ Mode selection:
 - "safety": Always use Koka IPC
 - "adaptive": Choose based on operation complexity (default)
 """
-# ruff: noqa: BLE001
 
 import queue
 import subprocess

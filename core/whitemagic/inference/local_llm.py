@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Local LLM Bridge
 ================
@@ -12,7 +13,6 @@ Usage:
     llm = LocalLLM(model="phi3:mini")
     response = llm.complete("Why is the sky blue?")
 """
-# ruff: noqa: BLE001
 
 import logging
 import time

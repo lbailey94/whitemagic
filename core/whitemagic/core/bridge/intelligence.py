@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +21,6 @@ Consolidated from reasoning.py, wisdom.py, agent.py, pattern.py,
 adaptive.py, autonomous.py, and inference.py.
 Part of Milestone 4.3 Singleton Reduction.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Zodiac Ledger — Cryptographic Provenance System (MandalaOS Kernel).
 ======================================================================
 Implements an append-only, cryptographically verifiable ledger for all
@@ -7,7 +8,6 @@ This prevents 'black box' recursive drift by ensuring every action
 can be traced back to its parent context, the active Dharma tenets,
 and the human user's consent.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

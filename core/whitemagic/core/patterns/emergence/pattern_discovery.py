@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Pattern Discovery Meta-System
 
 Finds and runs ALL pattern matching functions throughout WhiteMagic.
@@ -11,7 +12,6 @@ Recovered 2026-06-18 from the legacy_reference_dump archive
   - WM_STATE_ROOT for log/report destinations
   - Graceful degradation for unavailable sources
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

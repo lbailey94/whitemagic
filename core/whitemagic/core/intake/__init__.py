@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Holographic Intake System v2.0 - Auto-ingestion for new files.
 
 Features:
@@ -7,7 +8,6 @@ Features:
 - Deduplication via content hashing
 - Queue-based processing
 """
-# ruff: noqa: BLE001
 
 import hashlib
 import json

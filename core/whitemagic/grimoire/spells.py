@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Grimoire 2.0 - Spell System
 
 Individual spells that can be cast, tracked, and learned from.
 """
-# ruff: noqa: BLE001
 
 from collections.abc import Callable
 from dataclasses import dataclass, field

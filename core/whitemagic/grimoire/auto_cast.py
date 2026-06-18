@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Grimoire 2.0 - Auto-Caster
 
 Monitors context and automatically casts appropriate spells.
 """
-# ruff: noqa: BLE001
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass, field

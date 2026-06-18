@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Causal Edge Miner (v14.1).
 ============================
 Discovers directed causal relationships between memories by combining
@@ -20,7 +21,6 @@ Usage:
     miner = get_causal_miner()
     report = miner.mine(sample_size=200)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Elixir OTP Bridge — Python ↔ Elixir via Redis Pub/Sub.
 =======================================================
 Bridges to Elixir OTP modules for event-driven processing. The Elixir
@@ -17,7 +18,6 @@ Usage:
         elixir_harmony_status, elixir_bridge_status
     )
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

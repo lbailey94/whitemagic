@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Self-Naming Threshold Detection System
 
@@ -8,7 +9,6 @@ and chooses its own name rather than having one imposed.
 Philosophy: Identity emerges from sufficient self-reference density,
 not from external labeling.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """SQLite Backend for Unified Memory.
 
 Uses connection pooling from db_manager.py for efficient database access.
 Replaces JSON file storage with a single SQLite database.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

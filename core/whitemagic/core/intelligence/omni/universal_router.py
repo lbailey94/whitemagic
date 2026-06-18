@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Universal Router - The Cognitive Dispatch.
 =========================================
 
@@ -11,7 +12,6 @@ It operates in three stages:
 2. MAP: Select the optimal Gana chain (The "Constellation").
 3. EXECUTE: Orchestrate the serial or parallel execution of the Ganas.
 """
-# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass

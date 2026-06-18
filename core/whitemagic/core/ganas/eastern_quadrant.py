@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Eastern Quadrant Ganas (Azure Dragon).
 
 Implementations for the first 7 Lunar Mansions (Spring/East).
@@ -10,7 +11,6 @@ Includes:
 6. Tail (Wei) - Passionate Drive
 7. Winnowing Basket (Ji) - Separation
 """
-# ruff: noqa: BLE001
 
 import logging
 from datetime import datetime

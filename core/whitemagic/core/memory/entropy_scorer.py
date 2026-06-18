@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Entropy & Abstraction Scorer (v14.1).
 ======================================
 Computes two information-theoretic signals for each memory:
@@ -27,7 +28,6 @@ Usage:
     # Batch score from DB
     report = scorer.sweep(persist=True)
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

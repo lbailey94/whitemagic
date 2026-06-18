@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 """Koka Bridge - Python interface to Koka binaries.
 
 Provides high-level Python API for all Koka runtime binaries.
 """
-# ruff: noqa: BLE001
 
 import json
 import logging

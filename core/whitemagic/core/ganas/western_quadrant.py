@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Western Quadrant Ganas (White Tiger).
 
 Implementations for Lunar Mansions 15-21 (Autumn/West).
 Theme: Completion, Ethics, Balance.
 """
-# ruff: noqa: BLE001
 
 from typing import Any
 

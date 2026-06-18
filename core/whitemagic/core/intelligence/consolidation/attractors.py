@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Black Hole Attractors - Intelligent Memory Consolidation.
 ========================================================
 
@@ -10,7 +11,6 @@ Concepts:
 - Event Horizon: Radius within which memories are captured.
 - Spaghettification: The process of compressing captured memories into the attractor.
 """
-# ruff: noqa: BLE001
 
 import logging
 import math

@@ -1,9 +1,9 @@
+# ruff: noqa: BLE001
 """Rust BM25 Search Bridge.
 
 Extracted from rust_accelerators.py for better separation of concerns.
 Provides BM25 full-text search engine with Rust acceleration.
 """
-# ruff: noqa: BLE001
 
 import logging
 from typing import Any

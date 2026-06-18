@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """Yin-Yang Balance Tracker - Prevent burnout, optimize productivity
 
 Philosophy:

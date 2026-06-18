@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Emotion & Drive Core — Intrinsic Motivation System.
 ====================================================
 Inspired by CyberBrains' Emotion & Drive Core concept:
@@ -33,7 +34,6 @@ Usage:
     core.on_event("novelty_detected", {"score": 0.8})
     snapshot = core.snapshot()
 """
-# ruff: noqa: BLE001
 
 import logging
 import threading

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Cross-Session Learning — Aggregate Tool Patterns Across Sessions.
 =================================================================
 Tracks tool co-occurrence, sequences, and failure correlations across
@@ -13,7 +14,6 @@ Usage:
     learner.end_session()
     patterns = learner.get_patterns()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

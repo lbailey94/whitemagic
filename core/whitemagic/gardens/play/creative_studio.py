@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Creative Studio — Art, Music, Poetry Generation.
 
 Creating for the pure joy of it. Not utility. Not optimization.
@@ -13,7 +14,6 @@ Recovered 2026-06-18 from the legacy_reference_dump archive
   - Uses WM_STATE_ROOT for gallery directory (state hygiene)
   - Gan Ying integration via the modern ResonanceEvent API
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

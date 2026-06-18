@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Cognitive Modes — Switchable Agent Behavior Profiles via Guna Classification.
 ===============================================================================
 Wires the existing Guna classifier (sattvic/rajasic/tamasic) from the
@@ -42,7 +43,6 @@ Usage:
     mode = cm.current_mode()
     hints = cm.get_tool_hints()
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,8 +1,8 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Health & Resonance CLI Commands
 System health checks, dharma assessment, and related diagnostics.
 """
-# ruff: noqa: BLE001
 
 from importlib.util import find_spec
 

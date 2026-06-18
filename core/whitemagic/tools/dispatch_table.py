@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 from typing import cast
 
 """dispatch_table.py — Tool router: assembles domain slices into one table.

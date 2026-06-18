@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Karma Ledger Empirical Benchmark — Real Tool Fidelity Measurement
 
 This benchmark calls actual WhiteMagic tools (where available) and real Python
@@ -14,7 +15,6 @@ Usage:
     python -m whitemagic.benchmarks.karma_ledger_empirical
     python -m whitemagic.benchmarks.karma_ledger_empirical --json
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import argparse

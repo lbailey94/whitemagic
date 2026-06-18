@@ -1,5 +1,5 @@
-"""Aspirational tool handlers — Grimoire auto-cast, session context, wisdom council."""
 # ruff: noqa: BLE001
+"""Aspirational tool handlers — Grimoire auto-cast, session context, wisdom council."""
 from typing import Any
 
 

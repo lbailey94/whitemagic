@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Marketplace Bridge — Agent Service Discovery & Trading (v15.2).
 ================================================================
 Local-first marketplace for agent service discovery and exchange.
@@ -11,7 +12,6 @@ The marketplace supports:
   - Rating completed exchanges
   - Importing/exporting .mem packages as tradeable goods
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

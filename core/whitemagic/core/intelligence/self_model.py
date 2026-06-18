@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Self-Model / Predictive Introspection.
 =======================================
 Inspired by CyberBrains' Self-Model / Introspection concept:
@@ -31,7 +32,6 @@ Usage:
     model.record("error_rate", 0.05)
     forecasts = model.forecast_all()
 """
-# ruff: noqa: BLE001
 
 import logging
 import threading

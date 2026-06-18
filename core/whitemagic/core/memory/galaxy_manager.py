@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Multi-Galaxy Memory Manager
 ================================
 Enables project-scoped memory databases ("galaxies") so WhiteMagic can
@@ -18,7 +19,6 @@ Usage via MCP:
   gana_void → tool: galaxy.status
   gana_void → tool: galaxy.ingest   args: {name, source_path, pattern}
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

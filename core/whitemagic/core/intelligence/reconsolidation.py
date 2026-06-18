@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Memory Reconsolidation — Labile state updates on retrieval.
 
 Source: LIVING_MEMORY_GAP_ANALYSIS.md (Neuroscience Mapping)
@@ -16,7 +17,6 @@ In WhiteMagic, this means:
 This enables memories to evolve with each retrieval rather than being
 static snapshots frozen at creation time.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

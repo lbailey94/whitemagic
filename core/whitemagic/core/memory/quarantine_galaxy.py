@@ -1,7 +1,7 @@
+# ruff: noqa: BLE001
 """Quarantine Galaxy Manager - Memory Deduplication System
 Moves noisy/duplicate memories from active DB to archival quarantine.
 """
-# ruff: noqa: BLE001
 
 import hashlib
 import os

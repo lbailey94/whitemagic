@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Dharma Financial Governance — Bounded Wallet Rules (Leap 9f + 10b).
 =====================================================================
 Declarative YAML-based financial governance for AI agent spending.
@@ -16,7 +17,6 @@ Usage:
     gov = get_wallet_governor()
     ok, reason = gov.check_spend("tip", 0.50, "XRP")
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

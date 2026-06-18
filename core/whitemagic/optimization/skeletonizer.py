@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """
 Skeletonization Engine — AST Context Compression (G002)
 =====================================================
@@ -8,7 +9,6 @@ LLMs with full architectural context at a fraction of the token cost.
 Replaces function bodies with `...` or pass, preserves signatures,
 classes, and docstrings (summarized).
 """
-# ruff: noqa: BLE001
 
 import ast
 from pathlib import Path

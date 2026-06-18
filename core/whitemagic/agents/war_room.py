@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """War Room — Strategic Command & Control for Shadow Clone Armies
 ================================================================
 The central command facility where Generals direct combined-arms operations
@@ -41,7 +42,6 @@ Usage:
         error_log="TypeError that makes no sense",
     )
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

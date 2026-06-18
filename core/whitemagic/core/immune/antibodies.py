@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Antibody Library - Pattern-Based Solutions.
 
 Inspired by biological antibodies that recognize and neutralize specific antigens,
@@ -5,7 +6,6 @@ this module provides a library of known issue patterns and their fixes.
 
 Each antibody is a reusable solution to a recurring problem.
 """
-# ruff: noqa: BLE001
 
 from __future__ import annotations
 

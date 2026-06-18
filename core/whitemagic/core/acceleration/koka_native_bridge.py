@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Koka Native Bridge — Python ↔ Koka via compiled binaries (S023)
 =============================================================
 High-performance bridge using compiled Koka native binaries.
@@ -10,7 +11,6 @@ Usage:
 
     result = koka_dispatch("prat", "route", {"tool": "memory.create"})
 """
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import json
