@@ -62,6 +62,12 @@ class FileEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "event_type": self.event_type.name,
             "path": self.path,
@@ -88,6 +94,12 @@ class WatchConfig:
     DEFAULT_IGNORE: ClassVar[tuple[str, ...]] = ("__pycache__", ".git", "node_modules", ".pytest_cache", "*.pyc")
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return asdict(self)
 
 
@@ -407,6 +419,15 @@ class SemanticFileWatcher:
                     return False
 
                 def on_created(self, event: FileSystemEvent) -> Any:
+                    """
+                    Handle a created event.
+                    
+                    Args:
+                        event: Parameter description.
+                    
+                    Returns:
+                        Any
+                    """
                     if event.is_directory or self._should_ignore(event.src_path):
                         return
                     if not self._should_include(event.src_path):
@@ -420,6 +441,15 @@ class SemanticFileWatcher:
                     self.watcher._handle_event(fe)
 
                 def on_modified(self, event: FileSystemEvent) -> Any:
+                    """
+                    Handle a modified event.
+                    
+                    Args:
+                        event: Parameter description.
+                    
+                    Returns:
+                        Any
+                    """
                     if event.is_directory or self._should_ignore(event.src_path):
                         return
                     if not self._should_include(event.src_path):
@@ -433,6 +463,15 @@ class SemanticFileWatcher:
                     self.watcher._handle_event(fe)
 
                 def on_deleted(self, event: FileSystemEvent) -> Any:
+                    """
+                    Handle a deleted event.
+                    
+                    Args:
+                        event: Parameter description.
+                    
+                    Returns:
+                        Any
+                    """
                     if event.is_directory or self._should_ignore(event.src_path):
                         return
                     if not self._should_include(event.src_path):
@@ -445,6 +484,15 @@ class SemanticFileWatcher:
                     self.watcher._handle_event(fe)
 
                 def on_moved(self, event: FileSystemEvent) -> Any:
+                    """
+                    Handle a moved event.
+                    
+                    Args:
+                        event: Parameter description.
+                    
+                    Returns:
+                        Any
+                    """
                     if event.is_directory or self._should_ignore(event.src_path):
                         return
                     if not self._should_include(event.dest_path):

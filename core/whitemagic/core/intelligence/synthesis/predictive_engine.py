@@ -72,10 +72,22 @@ class PredictiveReport:
 
     @property
     def high_confidence_predictions(self) -> list[Prediction]:
+        """
+        Perform the high confidence predictions operation.
+        
+        Returns:
+            list[Prediction]
+        """
         return [p for p in self.predictions if p.confidence == Confidence.HIGH]
 
     @property
     def by_type(self) -> dict[PredictionType, list[Prediction]]:
+        """
+        Perform the by type operation.
+        
+        Returns:
+            dict[PredictionType, list[Prediction]]
+        """
         result: dict[PredictionType, list[Prediction]] = {}
         for p in self.predictions:
             if p.prediction_type not in result:
@@ -85,6 +97,12 @@ class PredictiveReport:
 
     @property
     def by_horizon(self) -> dict[str, list[Prediction]]:
+        """
+        Perform the by horizon operation.
+        
+        Returns:
+            dict[str, list[Prediction]]
+        """
         result: dict[str, list[Prediction]] = {}
         for p in self.predictions:
             if p.time_horizon not in result:
@@ -940,6 +958,12 @@ class PredictiveEngine:
 _predictive_engine: PredictiveEngine | None = None
 
 def get_predictive_engine() -> PredictiveEngine:
+    """
+    Get the predictive engine.
+    
+    Returns:
+        PredictiveEngine
+    """
     global _predictive_engine
     if _predictive_engine is None:
         _predictive_engine = PredictiveEngine()

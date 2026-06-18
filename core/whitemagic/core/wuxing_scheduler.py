@@ -57,6 +57,12 @@ class WuXingScheduler:
         self.manual_override = False
 
     def get_current_phase(self) -> Phase:
+        """
+        Get the current phase.
+        
+        Returns:
+            Phase
+        """
         res = self.state.current
         if isinstance(res, Phase):
             return res

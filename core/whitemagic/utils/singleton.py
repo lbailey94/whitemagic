@@ -39,11 +39,26 @@ def singleton(var_name: str | None = None) -> Callable[[F], F]:
     for automated test cleanup via reset_all_singletons().
     """
     def decorator(func: F) -> F:
+        """
+        Perform the decorator operation.
+        
+        Args:
+            func: Parameter description.
+        
+        Returns:
+            F
+        """
         module_name = func.__module__
         tracked_var = var_name or f"_{func.__name__}"
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Perform the wrapper operation.
+            
+            Returns:
+                Any
+            """
             from typing import cast
             w = cast(Any, wrapper)
             if not hasattr(w, "_instance"):

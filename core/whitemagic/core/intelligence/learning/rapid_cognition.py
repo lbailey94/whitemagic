@@ -30,6 +30,12 @@ class RapidCognition:
         self.patterns_discovered = 0
 
     def start_continuous_learning(self) -> Any:
+        """
+        Perform the start continuous learning operation.
+        
+        Returns:
+            Any
+        """
         if self.running:
             return
         self.running = True
@@ -50,6 +56,12 @@ class RapidCognition:
                 time.sleep(self.learn_interval)
 
     def get_stats(self) -> dict:
+        """
+        Get the stats.
+        
+        Returns:
+            dict
+        """
         return {
             "running": self.running,
             "cycles": self.cycles_completed,
@@ -60,12 +72,27 @@ class RapidCognition:
 _instance = None
 
 def get_rapid_learner() -> RapidCognition:
+    """
+    Get the rapid learner.
+    
+    Returns:
+        RapidCognition
+    """
     global _instance
     if _instance is None:
         _instance = RapidCognition()
     return _instance
 
 def start_rapid_learning(interval_seconds: int = 5) -> Any:
+    """
+    Perform the start rapid learning operation.
+    
+    Args:
+        interval_seconds: Parameter description.
+    
+    Returns:
+        Any
+    """
     global _instance
     if not _instance:
         _instance = RapidCognition(scan_interval=interval_seconds)

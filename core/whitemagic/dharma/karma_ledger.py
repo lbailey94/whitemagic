@@ -82,6 +82,12 @@ class KarmaEntry:
     key_id: str = ""           # signing key fingerprint
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         d = {
             "tool": self.tool,
             "declared_safety": self.declared_safety,

@@ -61,6 +61,9 @@ class KokaProcess:
         return cast(dict[str, object], json.loads(response))
 
     def close(self):
+        """
+        Perform the close operation.
+        """
         try:
             self.send({"op": "quit"}, timeout=1.0)
         except Exception as e:

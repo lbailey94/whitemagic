@@ -59,6 +59,15 @@ class ZodiacConsultant:
         }
 
     def quick_consult(self, domain: str) -> str:
+        """
+        Perform the quick consult operation.
+        
+        Args:
+            domain: Parameter description.
+        
+        Returns:
+            str
+        """
         for sign, info in self.cores.items():
             if info["domain"] == domain:
                 return f"♈ {sign.title()}: {info['advice']}"
@@ -66,6 +75,12 @@ class ZodiacConsultant:
 
 _consultant = None
 def get_consultant() -> ZodiacConsultant:
+    """
+    Get the consultant.
+    
+    Returns:
+        ZodiacConsultant
+    """
     global _consultant
     if _consultant is None:
         _consultant = ZodiacConsultant()

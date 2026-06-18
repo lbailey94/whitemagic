@@ -52,6 +52,12 @@ class MultiSubstrate:
 
 _multi = None
 def get_multi_substrate() -> MultiSubstrate:
+    """
+    Get the multi substrate.
+    
+    Returns:
+        MultiSubstrate
+    """
     global _multi
     if _multi is None:
         _multi = MultiSubstrate()

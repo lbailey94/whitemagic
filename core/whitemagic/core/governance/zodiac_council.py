@@ -34,6 +34,17 @@ class ZodiacCouncil:
         self.proposals: dict[str, Proposal] = {}
 
     def create_proposal(self, title: str, description: str, proposer_id: str) -> str:
+        """
+        Create a new proposal.
+        
+        Args:
+            title: Parameter description.
+            description: Parameter description.
+            proposer_id: Parameter description.
+        
+        Returns:
+            str
+        """
         prop_id = str(uuid.uuid4())[:8]
         self.proposals[prop_id] = Proposal(
             id=prop_id,
@@ -130,6 +141,12 @@ class ZodiacCouncil:
 _council: ZodiacCouncil | None = None
 
 def get_council() -> ZodiacCouncil:
+    """
+    Get the council.
+    
+    Returns:
+        ZodiacCouncil
+    """
     global _council
     if _council is None:
         _council = ZodiacCouncil()

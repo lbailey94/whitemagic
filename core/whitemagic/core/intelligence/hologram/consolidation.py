@@ -227,6 +227,15 @@ class HolographicConsolidator:
         semaphore = asyncio.Semaphore(3)
 
         async def process_cluster(c: Any) -> Any:
+            """
+            Process cluster.
+            
+            Args:
+                c: Parameter description.
+            
+            Returns:
+                Any
+            """
             async with semaphore:
                 try:
                     summary = await self.create_summary(c)
@@ -263,6 +272,12 @@ class HolographicConsolidator:
         return result
 
 def get_consolidator() -> HolographicConsolidator:
+    """
+    Get the consolidator.
+    
+    Returns:
+        HolographicConsolidator
+    """
     return HolographicConsolidator()
 
 if __name__ == "__main__":

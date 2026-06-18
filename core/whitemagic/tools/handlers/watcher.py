@@ -9,6 +9,12 @@ _watchers: dict[str, dict[str, Any]] = {}
 
 
 def handle_watcher_add(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher add event.
+    
+    Returns:
+        dict[str, Any]
+    """
     path = kwargs.get("path", "")
     if not path:
         return {"status": "error", "error_code": "invalid_params", "message": "path is required"}
@@ -18,6 +24,12 @@ def handle_watcher_add(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_watcher_remove(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher remove event.
+    
+    Returns:
+        dict[str, Any]
+    """
     watcher_id = kwargs.get("watcher_id", "")
     if watcher_id in _watchers:
         del _watchers[watcher_id]
@@ -26,6 +38,12 @@ def handle_watcher_remove(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_watcher_start(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher start event.
+    
+    Returns:
+        dict[str, Any]
+    """
     watcher_id = kwargs.get("watcher_id", "")
     if watcher_id not in _watchers:
         return {"status": "error", "error_code": "not_found", "message": f"Watcher {watcher_id} not found"}
@@ -34,6 +52,12 @@ def handle_watcher_start(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_watcher_stop(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher stop event.
+    
+    Returns:
+        dict[str, Any]
+    """
     watcher_id = kwargs.get("watcher_id", "")
     if watcher_id not in _watchers:
         return {"status": "error", "error_code": "not_found", "message": f"Watcher {watcher_id} not found"}
@@ -42,6 +66,12 @@ def handle_watcher_stop(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_watcher_status(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher status event.
+    
+    Returns:
+        dict[str, Any]
+    """
     watcher_id = kwargs.get("watcher_id", "")
     if watcher_id:
         if watcher_id not in _watchers:
@@ -51,6 +81,12 @@ def handle_watcher_status(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_watcher_recent_events(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher recent events event.
+    
+    Returns:
+        dict[str, Any]
+    """
     watcher_id = kwargs.get("watcher_id", "")
     limit = int(kwargs.get("limit", 10))
     if watcher_id not in _watchers:
@@ -60,10 +96,22 @@ def handle_watcher_recent_events(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_watcher_stats(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher stats event.
+    
+    Returns:
+        dict[str, Any]
+    """
     total = len(_watchers)
     active = sum(1 for w in _watchers.values() if w.get("active"))
     return {"status": "success", "total_watchers": total, "active": active, "inactive": total - active}
 
 
 def handle_watcher_list(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a watcher list event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"status": "success", "watchers": [{"id": k, **v} for k, v in _watchers.items()]}

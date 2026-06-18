@@ -167,6 +167,12 @@ class FeedbackController:
 _controller = None
 
 def get_feedback_controller() -> FeedbackController:
+    """
+    Get the feedback controller.
+    
+    Returns:
+        FeedbackController
+    """
     global _controller
     if _controller is None:
         _controller = FeedbackController()

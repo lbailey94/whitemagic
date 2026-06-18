@@ -115,6 +115,16 @@ class VectorizedDispatcher:
         self.stats = {"encoded": 0, "decoded": 0, "bytes_saved": 0}
 
     def encode(self, tool_name: str, args: dict[str, Any] | None = None) -> str:
+        """
+        Perform the encode operation.
+        
+        Args:
+            tool_name: Parameter description.
+            args: Parameter description.
+        
+        Returns:
+            str
+        """
         glyph = _TOOL_CODEBOOK.get(tool_name, tool_name)
         if not args:
             return glyph
@@ -143,6 +153,15 @@ class VectorizedDispatcher:
         return str(v)
 
     def decode(self, glyph_str: str) -> tuple[str, dict[str, Any]]:
+        """
+        Perform the decode operation.
+        
+        Args:
+            glyph_str: Parameter description.
+        
+        Returns:
+            tuple[str, dict[str, Any]]
+        """
         if "[" in glyph_str and glyph_str.endswith("]"):
             tool_g, rest = glyph_str.split("[", 1)
             arg_block = rest[:-1]
@@ -198,6 +217,16 @@ class VectorizedDispatcher:
             return v
 
     def measure(self, tool_name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
+        """
+        Perform the measure operation.
+        
+        Args:
+            tool_name: Parameter description.
+            args: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         raw = json.dumps({"tool": tool_name, "args": args or {}}, separators=(",", ":"), sort_keys=True)
         encoded = self.encode(tool_name, args)
         raw_len = len(raw.encode())
@@ -211,6 +240,12 @@ _vectorized: VectorizedDispatcher | None = None
 
 
 def get_vectorized_dispatcher() -> VectorizedDispatcher:
+    """
+    Get the vectorized dispatcher.
+    
+    Returns:
+        VectorizedDispatcher
+    """
     global _vectorized
     if _vectorized is None:
         _vectorized = VectorizedDispatcher()
@@ -218,12 +253,37 @@ def get_vectorized_dispatcher() -> VectorizedDispatcher:
 
 
 def is_vectorized_mode() -> bool:
+    """
+    Check whether the vectorized mode condition holds.
+    
+    Returns:
+        bool
+    """
     return os.environ.get("WM_VECTORIZED", "").strip().lower() in ("1", "true", "yes")
 
 
 def encode_call(tool_name: str, args: dict[str, Any] | None = None) -> str:
+    """
+    Perform the encode call operation.
+    
+    Args:
+        tool_name: Parameter description.
+        args: Parameter description.
+    
+    Returns:
+        str
+    """
     return get_vectorized_dispatcher().encode(tool_name, args)
 
 
 def decode_call(glyph_str: str) -> tuple[str, dict[str, Any]]:
+    """
+    Perform the decode call operation.
+    
+    Args:
+        glyph_str: Parameter description.
+    
+    Returns:
+        tuple[str, dict[str, Any]]
+    """
     return get_vectorized_dispatcher().decode(glyph_str)

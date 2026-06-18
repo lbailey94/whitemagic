@@ -41,6 +41,12 @@ class KaizenReport:
 
     @property
     def by_category(self) -> dict[str, list[ImprovementProposal]]:
+        """
+        Perform the by category operation.
+        
+        Returns:
+            dict[str, list[ImprovementProposal]]
+        """
         result: dict[str, list[ImprovementProposal]] = {}
         for p in self.proposals:
             if p.category not in result:
@@ -622,6 +628,12 @@ _kaizen_engine = None
 
 
 def get_kaizen_engine() -> KaizenEngine:
+    """
+    Get the kaizen engine.
+    
+    Returns:
+        KaizenEngine
+    """
     global _kaizen_engine
     if _kaizen_engine is None:
         _kaizen_engine = KaizenEngine()

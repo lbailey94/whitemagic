@@ -58,6 +58,12 @@ class NarrativeCluster:
     size: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_count": self.size,
             "shared_tags": sorted(self.shared_tags)[:10],
@@ -78,6 +84,12 @@ class NarrativeResult:
     duration_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "clusters_found": self.clusters_found,
             "narratives_created": self.narratives_created,

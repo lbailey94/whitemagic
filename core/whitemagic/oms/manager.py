@@ -54,6 +54,12 @@ class OMSManifest:
     memory_content_hash: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "oms_version": self.oms_version,
             "format": self.format,
@@ -582,6 +588,12 @@ class OMSManager:
         return {"status": "ok", "packages": packages, "directory": search_dir}
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "total_exports": self._total_exports,

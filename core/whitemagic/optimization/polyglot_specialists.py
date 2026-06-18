@@ -36,6 +36,16 @@ class PolyglotSpecialists:
 
     # Specialist 1: Pattern Matching (Rust)
     def extract_patterns(self, content: str, limit: int = 50) -> SpecialistResult:
+        """
+        Mine or extract patterns.
+        
+        Args:
+            content: Parameter description.
+            limit: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         try:
             import whitemagic_rs
@@ -52,6 +62,15 @@ class PolyglotSpecialists:
 
     # Specialist 2: SIMD Operations (Zig)
     def distance_matrix(self, vectors: list[list[float]]) -> SpecialistResult:
+        """
+        Perform the distance matrix operation.
+        
+        Args:
+            vectors: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         try:
             # Cast list[list[float]] to list[Sequence[float]] for mypy
@@ -74,6 +93,16 @@ class PolyglotSpecialists:
 
     # Specialist 3: Tensor Operations (Mojo)
     def batch_encode(self, memories: list[dict], current_time: int) -> SpecialistResult:
+        """
+        Perform the batch encode operation.
+        
+        Args:
+            memories: Parameter description.
+            current_time: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         coords = self.router.encode_holographic_batch(memories, current_time)
         lang = "mojo" if self.router.metrics.mojo_calls > 0 else "python"
@@ -83,6 +112,16 @@ class PolyglotSpecialists:
 
     # Specialist 4: Type Safety (Haskell)
     def evaluate_rules(self, action: str, context: dict) -> SpecialistResult:
+        """
+        Perform the evaluate rules operation.
+        
+        Args:
+            action: Parameter description.
+            context: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         try:
             from haskell.haskell_bridge import dharma_evaluate
@@ -98,10 +137,28 @@ class PolyglotSpecialists:
 
     # Specialist 5: Concurrency (Elixir fallback to Python ThreadPool)
     def parallel_tasks(self, tasks: list[dict]) -> SpecialistResult:
+        """
+        Perform the parallel tasks operation.
+        
+        Args:
+            tasks: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         from concurrent.futures import ThreadPoolExecutor
 
         def run_task(task: dict) -> dict:
+            """
+            Run the task operation.
+            
+            Args:
+                task: Parameter description.
+            
+            Returns:
+                dict
+            """
             return {"task_id": task.get("id"), "status": "completed", "result": task.get("payload")}
 
         max_workers = min(len(tasks), 4)
@@ -113,6 +170,15 @@ class PolyglotSpecialists:
 
     # Specialist 6: Networking (Go fallback to Python)
     def mesh_discovery(self, seed_nodes: list[str] | None = None) -> SpecialistResult:
+        """
+        Perform the mesh discovery operation.
+        
+        Args:
+            seed_nodes: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         peers: list[dict[str, Any]] = [{"node": node, "status": "online"} for node in (seed_nodes or [])]
         self.stats["python"] += 1
@@ -121,6 +187,15 @@ class PolyglotSpecialists:
 
     # Specialist 7: Statistics (Julia)
     def statistical_analysis(self, data: list[float]) -> SpecialistResult:
+        """
+        Perform the statistical analysis operation.
+        
+        Args:
+            data: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         try:
             from whitemagic.core.acceleration.julia_bridge import (
@@ -139,6 +214,15 @@ class PolyglotSpecialists:
 
     # Specialist 8: Orchestration (Python)
     def orchestrate(self, workflow: dict) -> SpecialistResult:
+        """
+        Perform the orchestrate operation.
+        
+        Args:
+            workflow: Parameter description.
+        
+        Returns:
+            SpecialistResult
+        """
         start = time.time()
         result = {"workflow_id": workflow.get("id"), "status": "orchestrated"}
         self.stats["python"] += 1
@@ -146,6 +230,12 @@ class PolyglotSpecialists:
                                (time.time() - start) * 1000, False)
 
     def get_stats(self) -> dict:
+        """
+        Get the stats.
+        
+        Returns:
+            dict
+        """
         total = sum(self.stats.values())
         native = total - self.stats["python"]
         return {

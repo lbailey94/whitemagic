@@ -3,6 +3,12 @@ from typing import Any, cast
 
 
 def handle_record_yin_yang_activity(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a record yin yang activity event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.harmony.yin_yang_tracker import get_tracker
     activity = kwargs.get("activity", "READ")
     tracker = get_tracker()
@@ -18,6 +24,12 @@ def handle_record_yin_yang_activity(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_get_yin_yang_balance(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a get yin yang balance event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.harmony.yin_yang_tracker import get_tracker
     report = dict(cast("dict[str, Any]", get_tracker().get_report()))
     # Rename tracker's "status" to avoid collision with envelope "status"

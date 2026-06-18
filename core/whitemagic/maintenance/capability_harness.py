@@ -45,6 +45,12 @@ class HarnessReport:
     failed: int = 0
 
     def to_markdown(self) -> str:
+        """
+        Convert to/from markdown.
+        
+        Returns:
+            str
+        """
         lines = [
             "# Capability Combo Test Report",
             f"**Generated**: {self.timestamp.isoformat()}",
@@ -126,6 +132,15 @@ class CapabilityHarness:
         oracle_events = []
 
         def capture_oracle(event: Any) -> Any:
+            """
+            Perform the capture oracle operation.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                Any
+            """
             oracle_events.append(event)
 
         # Listen for oracle events
@@ -153,6 +168,15 @@ class CapabilityHarness:
         council_events = []
 
         def capture_council(event: Any) -> Any:
+            """
+            Perform the capture council operation.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                Any
+            """
             council_events.append(event)
 
         bus.listen(EventType.COUNCIL_CONVENED, capture_council)

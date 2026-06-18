@@ -179,6 +179,15 @@ class GardenVirtualFS:
         files = []
 
         def collect_files(node: VirtualNode) -> None:
+            """
+            Perform the collect files operation.
+            
+            Args:
+                node: Parameter description.
+            
+            Returns:
+                None
+            """
             if node.node_type == "file":
                 if file_type is None or file_type in node.virtual_path:
                     files.append(node)
@@ -201,6 +210,15 @@ class GardenVirtualFS:
                 continue
 
             def search_node(node: VirtualNode) -> None:
+                """
+                Find node matching the criteria.
+                
+                Args:
+                    node: Parameter description.
+                
+                Returns:
+                    None
+                """
                 if node.node_type == "file":
                     if query_lower in node.virtual_path.lower() or (node.physical_path and query_lower in node.physical_path.lower()):
                         results.append(node)
@@ -246,6 +264,15 @@ class GardenVirtualFS:
     def to_json(self) -> str:
         """Export the virtual filesystem as JSON."""
         def node_to_dict(node: VirtualNode) -> dict[str, Any]:
+            """
+            Perform the node to dict operation.
+            
+            Args:
+                node: Parameter description.
+            
+            Returns:
+                dict[str, Any]
+            """
             return {
                 "virtual_path": node.virtual_path,
                 "physical_path": node.physical_path,

@@ -28,6 +28,9 @@ class TelepathyMeshBridge:
         self.is_active = False
 
     async def start(self):
+        """
+        Perform the start operation.
+        """
         status = go_mesh_status()
         if status.get("has_go_mesh"):
             self.is_active = True
@@ -65,6 +68,9 @@ class TelepathyMeshBridge:
         # For now, we signal readiness for v22 telepathy features
 
 async def main():
+    """
+    Perform the main operation.
+    """
     bridge = TelepathyMeshBridge()
     await bridge.start()
 

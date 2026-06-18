@@ -33,18 +33,42 @@ class WuXingPhase(Enum):
 
     @property
     def element(self) -> str:
+        """
+        Perform the element operation.
+        
+        Returns:
+            str
+        """
         return self.value[0]
 
     @property
     def symbol(self) -> str:
+        """
+        Perform the symbol operation.
+        
+        Returns:
+            str
+        """
         return self.value[1]
 
     @property
     def quality(self) -> str:
+        """
+        Perform the quality operation.
+        
+        Returns:
+            str
+        """
         return self.value[2]
 
     @property
     def action(self) -> str:
+        """
+        Perform the action operation.
+        
+        Returns:
+            str
+        """
         return self.value[3]
 
 
@@ -69,6 +93,12 @@ class GrimoireContext:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "task": self.task,
             "emotional_state": self.emotional_state,

@@ -235,6 +235,12 @@ class OTelExporter:
             }
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "enabled": self._enabled,
             "has_otel": HAS_OTEL,
@@ -254,6 +260,12 @@ _otel_lock = threading.Lock()
 
 
 def get_otel() -> OTelExporter:
+    """
+    Get the otel.
+    
+    Returns:
+        OTelExporter
+    """
     global _otel
     if _otel is None:
         with _otel_lock:

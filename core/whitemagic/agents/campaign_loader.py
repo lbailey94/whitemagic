@@ -120,6 +120,12 @@ class Campaign:
 
     @property
     def victory_progress(self) -> str:
+        """
+        Perform the victory progress operation.
+        
+        Returns:
+            str
+        """
         if not self.victory_conditions:
             return "no conditions defined"
         met = sum(1 for vc in self.victory_conditions if vc.met)
@@ -128,6 +134,12 @@ class Campaign:
         return f"{met}/{total} ({pct}%)"
 
     def army_label(self) -> str:
+        """
+        Perform the army label operation.
+        
+        Returns:
+            str
+        """
         labels = {
             "alpha": "10K \u2014 Consensus",
             "beta": "50-100K \u2014 Map-Reduce",

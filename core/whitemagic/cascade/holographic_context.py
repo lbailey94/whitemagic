@@ -39,6 +39,12 @@ class HolographicContextInjector:
 
 _holographic_injector = None
 def get_holographic_injector() -> HolographicContextInjector:
+    """
+    Get the holographic injector.
+    
+    Returns:
+        HolographicContextInjector
+    """
     global _holographic_injector
     if _holographic_injector is None:
         _holographic_injector = HolographicContextInjector()

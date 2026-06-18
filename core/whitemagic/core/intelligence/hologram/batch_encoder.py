@@ -26,6 +26,12 @@ class HolographicCoord:
     w: float
 
     def to_dict(self) -> dict[str, float]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, float]
+        """
         return {"x": self.x, "y": self.y, "z": self.z, "w": self.w}
 
 

@@ -80,6 +80,12 @@ class Commander:
     active_campaigns: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "rank": self.rank.value,
             "name": self.name,
@@ -129,6 +135,12 @@ class CampaignRecord:
             self.created_at = datetime.now().isoformat()
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "campaign_id": self.campaign_id,
             "objective": self.objective,

@@ -89,21 +89,39 @@ class _LazyServer:
         """Return a decorator that records the callback for later replay."""
 
         def decorator(fn):
+            """
+            Perform the decorator operation.
+            
+            Args:
+                fn: Parameter description.
+            """
             self._deferred.setdefault(name, []).append(fn)
             return fn
 
         return decorator
 
     def list_tools(self):
+        """
+        List the tools.
+        """
         return self._capture("list_tools")
 
     def call_tool(self):
+        """
+        Perform the call tool operation.
+        """
         return self._capture("call_tool")
 
     def list_resources(self):
+        """
+        List the resources.
+        """
         return self._capture("list_resources")
 
     def read_resource(self):
+        """
+        Perform the read resource operation.
+        """
         return self._capture("read_resource")
 
 

@@ -313,6 +313,12 @@ class MaturityReport:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         caps = sorted(self.unlocked_capabilities)
         return {
             "current_stage": self.current_stage.name,
@@ -406,6 +412,12 @@ class MaturityEngine:
         return (self._last_report.current_stage if self._last_report else MaturityStage.SEED) >= minimum
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "assessment_count": self._assessment_count,
             "current_stage": self._last_report.current_stage.name if self._last_report else "NOT_ASSESSED",

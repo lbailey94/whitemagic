@@ -58,6 +58,12 @@ class ModelManifest:
     verification_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "model_name": self.model_name,
             "sha256": self.sha256[:16] + "..." if len(self.sha256) > 16 else self.sha256,

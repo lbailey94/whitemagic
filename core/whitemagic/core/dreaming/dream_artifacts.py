@@ -49,6 +49,12 @@ class DreamArtifact:
     promoted_to_memory_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "dream_id": self.dream_id,
             "created_at": self.created_at.isoformat(),
@@ -67,6 +73,16 @@ class DreamArtifact:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DreamArtifact:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            DreamArtifact
+        """
         return cls(
             dream_id=data["dream_id"],
             created_at=datetime.fromisoformat(data["created_at"]),

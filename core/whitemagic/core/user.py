@@ -37,6 +37,12 @@ class UserManager:
         return UserProfile()
 
     def save_profile(self) -> Any:
+        """
+        Save profile to storage.
+        
+        Returns:
+            Any
+        """
         with open(self.profile_path, "w") as f:
             # Convert dataclass to dict
             data = {
@@ -51,10 +57,30 @@ class UserManager:
             f.write(_json_dumps(data, indent=2))
 
     def update_preference(self, key: str, value: Any) -> Any:
+        """
+        Update the preference.
+        
+        Args:
+            key: Parameter description.
+            value: Parameter description.
+        
+        Returns:
+            Any
+        """
         self.profile.preferences[key] = value
         self.save_profile()
 
     def log_adaptation(self, adaptation: str, context: str) -> Any:
+        """
+        Perform the log adaptation operation.
+        
+        Args:
+            adaptation: Parameter description.
+            context: Parameter description.
+        
+        Returns:
+            Any
+        """
         self.profile.adaptation_history.append({
             "adaptation": adaptation,
             "context": context,
@@ -66,11 +92,27 @@ class UserManager:
         self.save_profile()
 
     def get_preference(self, key: str, default: Any = None) -> Any:
+        """
+        Get the preference.
+        
+        Args:
+            key: Parameter description.
+            default: Parameter description.
+        
+        Returns:
+            Any
+        """
         return self.profile.preferences.get(key, default)
 
 _user_manager = None
 
 def get_user_manager() -> UserManager:
+    """
+    Get the user manager.
+    
+    Returns:
+        UserManager
+    """
     global _user_manager
     if _user_manager is None:
         _user_manager = UserManager()

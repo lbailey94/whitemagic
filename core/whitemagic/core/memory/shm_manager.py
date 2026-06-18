@@ -167,13 +167,34 @@ class SharedMemoryManager:
             self._write_memory_item(query_id, 0, vector)
 
     def get_uuid(self, int_id: int) -> str | None:
+        """
+        Get the uuid.
+        
+        Args:
+            int_id: Parameter description.
+        
+        Returns:
+            str | None
+        """
         return self._id_to_uuid.get(int_id)
 
     def get_count(self) -> int:
+        """
+        Get the count.
+        
+        Returns:
+            int
+        """
         return self._count
 
 _global_shm_manager = None
 def get_shm_manager() -> SharedMemoryManager:
+    """
+    Get the shm manager.
+    
+    Returns:
+        SharedMemoryManager
+    """
     global _global_shm_manager
     if _global_shm_manager is None:
         _global_shm_manager = SharedMemoryManager()

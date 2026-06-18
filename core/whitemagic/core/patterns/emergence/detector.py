@@ -90,6 +90,12 @@ class EmergenceDetector:
 _detector: EmergenceDetector | None = None
 
 def get_detector() -> EmergenceDetector:
+    """
+    Get the detector.
+    
+    Returns:
+        EmergenceDetector
+    """
     global _detector
     if not _detector:
         _detector = EmergenceDetector()

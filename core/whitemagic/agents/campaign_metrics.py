@@ -72,6 +72,12 @@ class Finding:
             self.timestamp = time.time()
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "description": self.description,
             "severity": self.severity.value,
@@ -103,6 +109,12 @@ class ObjectiveMetrics:
 
     @property
     def elapsed_seconds(self) -> float:
+        """
+        Perform the elapsed seconds operation.
+        
+        Returns:
+            float
+        """
         if self.end_time and self.start_time:
             return self.end_time - self.start_time
         if self.start_time:
@@ -111,18 +123,40 @@ class ObjectiveMetrics:
 
     @property
     def clones_per_second(self) -> float:
+        """
+        Perform the clones per second operation.
+        
+        Returns:
+            float
+        """
         if self.clone_deploy_ms > 0:
             return self.clones_deployed / (self.clone_deploy_ms / 1000.0)
         return 0.0
 
     @property
     def findings_by_severity(self) -> dict[str, int]:
+        """
+        Perform the findings by severity operation.
+        
+        Returns:
+            dict[str, int]
+        """
         counts: dict[str, int] = {}
         for f in self.findings:
             counts[f.severity.value] = counts.get(f.severity.value, 0) + 1
         return counts
 
     def record_clones(self, count: int, deploy_ms: float = 0.0) -> None:
+        """
+        Perform the record clones operation.
+        
+        Args:
+            count: Parameter description.
+            deploy_ms: Parameter description.
+        
+        Returns:
+            None
+        """
         self.clones_deployed += count
         self.clone_deploy_ms += deploy_ms
         self.clone_batches += 1
@@ -134,6 +168,18 @@ class ObjectiveMetrics:
         category: str = "",
         details: dict[str, Any] | None = None,
     ) -> None:
+        """
+        Perform the record finding operation.
+        
+        Args:
+            description: Parameter description.
+            severity: Parameter description.
+            category: Parameter description.
+            details: Parameter description.
+        
+        Returns:
+            None
+        """
         self.findings.append(Finding(
             description=description,
             severity=FindingSeverity(severity),
@@ -142,6 +188,15 @@ class ObjectiveMetrics:
         ))
 
     def set_result(self, result: dict[str, Any]) -> None:
+        """
+        Perform the set result operation.
+        
+        Args:
+            result: Parameter description.
+        
+        Returns:
+            None
+        """
         self.result = result
         if "avg_confidence" in result:
             self.consensus_confidence = result["avg_confidence"]
@@ -149,6 +204,12 @@ class ObjectiveMetrics:
             self.winner_strategy = str(result["winner"])
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "army": self.army.value,
@@ -200,14 +261,32 @@ class ArmyMetrics:
 
     @property
     def total_clones(self) -> int:
+        """
+        Perform the total clones operation.
+        
+        Returns:
+            int
+        """
         return sum(o.clones_deployed for o in self.objectives)
 
     @property
     def total_findings(self) -> int:
+        """
+        Perform the total findings operation.
+        
+        Returns:
+            int
+        """
         return sum(len(o.findings) for o in self.objectives)
 
     @property
     def elapsed_seconds(self) -> float:
+        """
+        Perform the elapsed seconds operation.
+        
+        Returns:
+            float
+        """
         if self.end_time and self.start_time:
             return self.end_time - self.start_time
         if self.start_time:
@@ -216,13 +295,31 @@ class ArmyMetrics:
 
     @property
     def completed_count(self) -> int:
+        """
+        Perform the completed count operation.
+        
+        Returns:
+            int
+        """
         return sum(1 for o in self.objectives if o.status == ObjectiveStatus.COMPLETED)
 
     @property
     def failed_count(self) -> int:
+        """
+        Perform the failed count operation.
+        
+        Returns:
+            int
+        """
         return sum(1 for o in self.objectives if o.status == ObjectiveStatus.FAILED)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "tier": self.tier.value,
             "objectives_total": len(self.objectives),
@@ -255,14 +352,38 @@ class CampaignTracker:
         self._preflight: dict[str, Any] = {}
 
     def start_campaign(self, name: str = "Grand Army Deployment") -> None:
+        """
+        Perform the start campaign operation.
+        
+        Args:
+            name: Parameter description.
+        
+        Returns:
+            None
+        """
         self._campaign_start = time.time()
         self._campaign_name = name
         logger.info(f"Campaign '{name}' started")
 
     def end_campaign(self) -> None:
+        """
+        Perform the end campaign operation.
+        
+        Returns:
+            None
+        """
         self._campaign_end = time.time()
 
     def set_preflight(self, data: dict[str, Any]) -> None:
+        """
+        Perform the set preflight operation.
+        
+        Args:
+            data: Parameter description.
+        
+        Returns:
+            None
+        """
         self._preflight = data
 
     def track_objective(
@@ -291,10 +412,28 @@ class CampaignTracker:
         return ObjectiveContext(metrics)
 
     def start_army(self, army: str | ArmyTier) -> None:
+        """
+        Perform the start army operation.
+        
+        Args:
+            army: Parameter description.
+        
+        Returns:
+            None
+        """
         tier = ArmyTier(army) if isinstance(army, str) else army
         self._armies[tier].start_time = time.time()
 
     def end_army(self, army: str | ArmyTier) -> None:
+        """
+        Perform the end army operation.
+        
+        Args:
+            army: Parameter description.
+        
+        Returns:
+            None
+        """
         tier = ArmyTier(army) if isinstance(army, str) else army
         self._armies[tier].end_time = time.time()
 

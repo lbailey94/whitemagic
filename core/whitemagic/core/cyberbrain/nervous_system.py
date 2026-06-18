@@ -106,4 +106,7 @@ class UnifiedNervousSystem:
         self.subsystems["dream"]["status"] = "active"
 
     def get_system_health(self):
+        """
+        Get the system health.
+        """
         return {name: data["status"] for name, data in self.subsystems.items()}

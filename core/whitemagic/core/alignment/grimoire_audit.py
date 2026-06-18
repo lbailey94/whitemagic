@@ -94,6 +94,12 @@ def asdict(obj: Any) -> dict[str, Any]:
 _auditor = None
 
 def get_auditor() -> GrimoireAuditor:
+    """
+    Get the auditor.
+    
+    Returns:
+        GrimoireAuditor
+    """
     global _auditor
     if _auditor is None:
         _auditor = GrimoireAuditor()

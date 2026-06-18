@@ -105,10 +105,25 @@ class _RollingWindow:
         self._window = window_seconds
 
     def push(self, event: _ToolEvent) -> None:
+        """
+        Perform the push operation.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._events.append(event)
 
     def recent(self) -> list[_ToolEvent]:
+        """
+        Perform the recent operation.
+        
+        Returns:
+            list[_ToolEvent]
+        """
         cutoff = time.time() - self._window
         with self._lock:
             return [e for e in self._events if e.timestamp >= cutoff]
@@ -164,6 +179,12 @@ class HarmonySnapshot:
     timestamp: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return asdict(self)
 
 

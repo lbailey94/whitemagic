@@ -147,6 +147,15 @@ def setup_gan_ying_listeners() -> None:
 
         # 1. Reinforce patterns when user confirms/accepts them
         def on_pattern_confirmed(event: ResonanceEvent) -> None:
+            """
+            Handle a pattern confirmed event.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             memory_id_val = event.data.get("memory_id") or event.data.get("pattern_id")
             if memory_id_val and isinstance(memory_id_val, str):
                 try:
@@ -163,6 +172,15 @@ def setup_gan_ying_listeners() -> None:
 
         # 2. Weaken patterns when rejected
         def on_pattern_rejected(event: ResonanceEvent) -> None:
+            """
+            Handle a pattern rejected event.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             memory_id_val = event.data.get("memory_id") or event.data.get("pattern_id")
             if memory_id_val and isinstance(memory_id_val, str):
                 try:
@@ -179,6 +197,15 @@ def setup_gan_ying_listeners() -> None:
         # 3. Emotional resonance (Joy) boosts active memories
         def on_joy_triggered(event: ResonanceEvent) -> None:
             # Boost recent memories when joy is triggered
+            """
+            Handle a joy triggered event.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             try:
                 from whitemagic.core.memory.neural_system import get_neural_system
                 sys = get_neural_system()
@@ -216,6 +243,15 @@ def setup_gan_ying_listeners() -> None:
 
         # 4. Strengthen memories found in clone searches
         def on_clone_search_complete_listener(event: ResonanceEvent) -> None:
+            """
+            Handle a clone search complete listener event.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             query = str(event.data.get("query", ""))
             result_count = int(event.data.get("result_count", 0))
             top_score = float(event.data.get("top_score", 0.0))

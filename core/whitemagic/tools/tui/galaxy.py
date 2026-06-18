@@ -46,6 +46,12 @@ class GalaxyExplorer:
         return Text.from_markup("\n".join(lines))
 
     def get_layout(self) -> Layout:
+        """
+        Get the layout.
+        
+        Returns:
+            Layout
+        """
         layout = Layout()
         layout.split_row(
             Layout(name="map", ratio=2),
@@ -54,6 +60,12 @@ class GalaxyExplorer:
         return layout
 
     def render_details(self) -> Panel:
+        """
+        Render details.
+        
+        Returns:
+            Panel
+        """
         if not self.memories:
             return Panel("No data")
 

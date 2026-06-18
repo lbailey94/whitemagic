@@ -87,6 +87,12 @@ class LLMMetaHarness:
 
     @property
     def is_available(self) -> bool:
+        """
+        Check whether the available condition holds.
+        
+        Returns:
+            bool
+        """
         return self._available
 
     async def enhance(

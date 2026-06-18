@@ -95,6 +95,12 @@ def _load_cached_binary_status(binary_name: str, fallback_path: str) -> dict[str
     return cast('dict[str, Any]', _ttl_get(key, 60.0, _loader))
 
 def handle_capabilities(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a capabilities event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(
         "dict[str, Any]",
         _core.capabilities(
@@ -105,6 +111,12 @@ def handle_capabilities(**kwargs: Any) -> dict[str, Any]:
     )
 
 def handle_manifest(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a manifest event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(
         "dict[str, Any]",
         _core.manifest(
@@ -114,12 +126,30 @@ def handle_manifest(**kwargs: Any) -> dict[str, Any]:
     )
 
 def handle_state_paths(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a state paths event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast("dict[str, Any]", _core.state_paths())
 
 def handle_state_summary(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a state summary event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast("dict[str, Any]", _core.state_summary(include_sizes=bool(kwargs.get("include_sizes", True))))
 
 def handle_repo_summary(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a repo summary event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(
         "dict[str, Any]",
         _core.repo_summary(
@@ -129,6 +159,12 @@ def handle_repo_summary(**kwargs: Any) -> dict[str, Any]:
     )
 
 def handle_ship_check(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a ship check event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(
         "dict[str, Any]",
         _core.ship_check(
@@ -140,6 +176,12 @@ def handle_ship_check(**kwargs: Any) -> dict[str, Any]:
     )
 
 def handle_get_telemetry_summary(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a get telemetry summary event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast("dict[str, Any]", _core.telemetry_summary())
 
 

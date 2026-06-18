@@ -31,6 +31,15 @@ class ResonanceBridge:
             print(f"❌ Failed to load Zig library: {e}")
 
     def dump_memory_state(self, output_path: str) -> bool:
+        """
+        Perform the dump memory state operation.
+        
+        Args:
+            output_path: Parameter description.
+        
+        Returns:
+            bool
+        """
         if not self.lib:
             return False
 

@@ -69,6 +69,12 @@ class CentralitySnapshot:
     edge_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timestamp": self.timestamp,
             "node_count": self.node_count,
@@ -93,6 +99,12 @@ class EchoChamber:
     has_new_data: bool
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "node_id": self.node_id,
             "current_centrality": round(self.current_centrality, 6),
@@ -114,6 +126,12 @@ class Community:
     theme_tags: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "community_id": self.community_id,
             "size": self.size,
@@ -142,6 +160,12 @@ class GraphEngine:
 
     @property
     def available(self) -> bool:
+        """
+        Perform the available operation.
+        
+        Returns:
+            bool
+        """
         return _NX_AVAILABLE
 
     @property
@@ -733,6 +757,12 @@ class GraphEngine:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         G = self._graph
         stats: dict[str, Any] = {
             "available": _NX_AVAILABLE,

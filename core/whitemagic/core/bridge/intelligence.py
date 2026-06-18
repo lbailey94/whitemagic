@@ -45,6 +45,16 @@ def _emit_bridge_event(event_name: str, data: dict[str, Any]) -> None:
 # --- REASONING ---
 
 def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Perform the conduct reasoning operation.
+    
+    Args:
+        question: Parameter description.
+        context: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.intelligence.reasoning import get_reasoner
     res = get_reasoner().reason(question, context or {})
     return {"question": question, "synthesis": res.get("synthesis", ""), "confidence": res.get("confidence", 0.0)}
@@ -52,6 +62,16 @@ def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> d
 # --- WISDOM (I Ching) ---
 
 def consult_i_ching(question: str, method: str = "coins") -> dict[str, Any]:
+    """
+    Perform the consult i ching operation.
+    
+    Args:
+        question: Parameter description.
+        method: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.intelligence.wisdom import IchingEngine
     engine = IchingEngine()
     result = engine.consult(question, method=method)
@@ -61,11 +81,30 @@ def consult_i_ching(question: str, method: str = "coins") -> dict[str, Any]:
 
 def manage_agent_collaboration(operation: str = "list", **kwargs) -> dict[str, Any]:
     # Simplified collaboration logic for bridge
+    """
+    Perform the manage agent collaboration operation.
+    
+    Args:
+        operation: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"status": "ok", "operation": operation, "agents": []}
 
 # --- AUTONOMOUS INFERENCE ---
 
 def run_autonomous_inference(input_data: str, mode: str = "fast") -> dict[str, Any]:
+    """
+    Run the autonomous inference operation.
+    
+    Args:
+        input_data: Parameter description.
+        mode: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"status": "ok", "inference": "Simulation successful"}
 
 # --- PATTERN RECOGNITION ---

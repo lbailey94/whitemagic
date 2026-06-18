@@ -96,6 +96,12 @@ class EntropyResult:
         return round(0.6 * self.entropy + 0.4 * self.abstraction, 4)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "entropy": round(self.entropy, 4),
             "abstraction": round(self.abstraction, 4),
@@ -120,6 +126,12 @@ class EntropySweepReport:
     duration_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_scored": self.total_scored,
             "avg_entropy": round(self.avg_entropy, 4),
@@ -317,6 +329,12 @@ class EntropyScorer:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"total_scored": self._total_scored}
 
 

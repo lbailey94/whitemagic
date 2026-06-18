@@ -41,12 +41,39 @@ async def invoke_gana(gana_name: str, task: str, **kwargs) -> dict[str, Any]:
 # --- COLLABORATION & FEDERATION ---
 
 def manage_federation(operation: str = "status") -> dict[str, Any]:
+    """
+    Perform the manage federation operation.
+    
+    Args:
+        operation: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"status": "ok", "operation": operation, "peers": []}
 
 # --- EXTERNAL INTERFACES ---
 
 def search_web(query: str) -> dict[str, Any]:
+    """
+    Find web matching the criteria.
+    
+    Args:
+        query: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"query": query, "results": []}
 
 def process_voice(audio_data: Any) -> str:
+    """
+    Process voice.
+    
+    Args:
+        audio_data: Parameter description.
+    
+    Returns:
+        str
+    """
     return "Voice processing simulated"

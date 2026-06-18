@@ -39,6 +39,12 @@ class CastContext:
     keywords: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "task": self.task,
             "emotional_state": self.emotional_state,

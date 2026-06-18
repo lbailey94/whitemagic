@@ -136,6 +136,12 @@ class PrefetchCache:
                 self._cache.clear()
 
     def stats(self) -> dict[str, Any]:
+        """
+        Perform the stats operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "cached_items": len(self._cache),

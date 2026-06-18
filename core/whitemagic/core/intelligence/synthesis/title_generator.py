@@ -165,6 +165,12 @@ class TitleGenerator:
 _title_generator: TitleGenerator | None = None
 
 def get_title_generator() -> TitleGenerator:
+    """
+    Get the title generator.
+    
+    Returns:
+        TitleGenerator
+    """
     global _title_generator
     if _title_generator is None:
         _title_generator = TitleGenerator()

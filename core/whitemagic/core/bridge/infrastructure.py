@@ -32,6 +32,15 @@ logger = logging.getLogger(__name__)
 # --- SYSTEM HEALTH ---
 
 def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
+    """
+    Perform the check system health operation.
+    
+    Args:
+        deep_scan: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.health_monitor import HealthMonitor
     monitor = HealthMonitor()
     return monitor.check_system_health(deep_scan=deep_scan)
@@ -39,12 +48,28 @@ def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
 # --- SESSION MANAGEMENT ---
 
 def session_init(name: str = "default_session", goals: list = None) -> dict[str, Any]:
+    """
+    Perform the session init operation.
+    
+    Args:
+        name: Parameter description.
+        goals: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.sessions.manager import SessionManager
     manager = SessionManager()
     session = manager.create_session(name=name, goals=goals)
     return {"session_id": session.id, "name": session.name, "status": session.status.value}
 
 def session_get_active() -> dict[str, Any]:
+    """
+    Perform the session get active operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.sessions.manager import SessionManager
     manager = SessionManager()
     session = manager.get_active_session()
@@ -53,9 +78,24 @@ def session_get_active() -> dict[str, Any]:
 # --- METRICS & OPTIMIZATION ---
 
 def get_metrics_summary() -> dict[str, Any]:
+    """
+    Get the metrics summary.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"status": "ok", "metrics": {}}
 
 def run_benchmark(category: str = "all") -> dict[str, Any]:
+    """
+    Run the benchmark operation.
+    
+    Args:
+        category: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"category": category, "benchmark": "Simulation successful"}
 
 # --- GARDENS ---
@@ -71,4 +111,10 @@ def list_gardens() -> list[str]:
 # --- UTILS ---
 
 def get_timestamp() -> str:
+    """
+    Get the timestamp.
+    
+    Returns:
+        str
+    """
     return datetime.now().isoformat()

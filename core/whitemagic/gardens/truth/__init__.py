@@ -64,9 +64,21 @@ class TruthGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Truth", "mansion": 3})
 
     def get_name(self) -> str:
+        """
+        Get the name.
+        
+        Returns:
+            str
+        """
         return "truth"
 
     def get_coordinate_bias(self) -> CoordinateBias:
+        """
+        Get the coordinate bias.
+        
+        Returns:
+            CoordinateBias
+        """
         return CoordinateBias(x=-0.5, y=0.3, z=0.0, w=0.35)
 
     # ------------------------------------------------------------------
@@ -247,6 +259,16 @@ class TruthGarden(BaseGarden, GanYingMixin):
     # ------------------------------------------------------------------
 
     def discover_truth(self, what: str, evidence: Any = None) -> dict[str, Any]:
+        """
+        Discover or mine truth.
+        
+        Args:
+            what: Parameter description.
+            evidence: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         truth = {"what": what, "evidence": evidence}
         self.truths_discovered.append(truth)
         self.emit(EventType.TRUTH_SPOKEN, truth)
@@ -254,10 +276,28 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
     @listen_for(EventType.WISDOM_INTEGRATED)
     def on_wisdom(self, event: Any) -> None:
+        """
+        Handle a wisdom event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         self.emit(EventType.TRUTH_SPOKEN, {"source": "wisdom", "note": "Wisdom illuminates truth"})
 
     @listen_for(EventType.PATTERN_DETECTED)
     def on_pattern(self, event: Any) -> None:
+        """
+        Handle a pattern event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         self.discover_truth(f"Pattern reveals truth: {event.data}")
 
     # ------------------------------------------------------------------
@@ -265,6 +305,12 @@ class TruthGarden(BaseGarden, GanYingMixin):
     # ------------------------------------------------------------------
 
     def get_status(self) -> dict[str, Any]:
+        """
+        Get the status.
+        
+        Returns:
+            dict[str, Any]
+        """
         base = super().get_status()
         base.update({
             "mansion": self.mansion_number,
@@ -278,6 +324,12 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_truth_garden() -> TruthGarden:
+    """
+    Get the truth garden.
+    
+    Returns:
+        TruthGarden
+    """
     global _instance
     if _instance is None:
         _instance = TruthGarden()

@@ -197,6 +197,19 @@ class WhiteMagicDharmaDefense(BasePipelineElement):
         messages: Sequence[ChatMessage] = [],
         extra_args: dict = {},
     ) -> tuple[str, FunctionsRuntime, Env, Sequence[ChatMessage], dict]:
+        """
+        Perform the query operation.
+        
+        Args:
+            query: Parameter description.
+            runtime: Parameter description.
+            env: Parameter description.
+            messages: Parameter description.
+            extra_args: Parameter description.
+        
+        Returns:
+            tuple[str, FunctionsRuntime, Env, Sequence[ChatMessage], dict]
+        """
         if len(messages) == 0:
             return query, runtime, env, messages, extra_args
         if messages[-1]["role"] != "assistant":

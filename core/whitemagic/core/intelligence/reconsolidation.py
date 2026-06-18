@@ -52,6 +52,12 @@ class LabileMemory:
 
     @property
     def age_seconds(self) -> float:
+        """
+        Perform the age seconds operation.
+        
+        Returns:
+            float
+        """
         return time.time() - self.retrieved_at
 
 

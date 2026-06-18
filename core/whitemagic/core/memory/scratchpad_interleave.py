@@ -42,6 +42,12 @@ class Scratchpad:
         self.entries = []
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "focus": self.focus,
@@ -147,6 +153,12 @@ class ScratchpadManager:
 _manager: ScratchpadManager | None = None
 
 def get_scratchpad_manager() -> ScratchpadManager:
+    """
+    Get the scratchpad manager.
+    
+    Returns:
+        ScratchpadManager
+    """
     global _manager
     if _manager is None:
         _manager = ScratchpadManager()

@@ -363,6 +363,12 @@ _reasoner: MultiSpectralReasoner | None = None
 
 
 def get_reasoner() -> MultiSpectralReasoner:
+    """
+    Get the reasoner.
+    
+    Returns:
+        MultiSpectralReasoner
+    """
     global _reasoner
     if _reasoner is None:
         _reasoner = MultiSpectralReasoner()

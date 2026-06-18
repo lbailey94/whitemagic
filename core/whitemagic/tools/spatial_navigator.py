@@ -37,6 +37,15 @@ try:
     from whitemagic.tools.coordinate_explainer import interpret_memory
 except ImportError:
     def interpret_memory(_data: dict[str, Any]) -> dict[str, str]:  # type: ignore[misc]
+        """
+        Perform the interpret memory operation.
+        
+        Args:
+            _data: Parameter description.
+        
+        Returns:
+            dict[str, str]
+        """
         return {"summary": "", "zone": ""}
 
 

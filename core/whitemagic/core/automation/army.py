@@ -162,6 +162,12 @@ class AutonomousArmyManager:
 _manager = None
 
 def get_army_manager() -> AutonomousArmyManager:
+    """
+    Get the army manager.
+    
+    Returns:
+        AutonomousArmyManager
+    """
     global _manager
     if _manager is None:
         _manager = AutonomousArmyManager()

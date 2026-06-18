@@ -435,6 +435,12 @@ class EdgeInference:
 
     @property
     def stats(self) -> dict[str, Any]:
+        """
+        Perform the stats operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         hit_rate = (self._cache_hits / self._total_queries * 100) if self._total_queries > 0 else 0
         return {
             "total_queries": self._total_queries,

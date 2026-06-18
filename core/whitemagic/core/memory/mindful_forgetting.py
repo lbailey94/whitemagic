@@ -68,6 +68,12 @@ class RetentionVerdict:
     recommended_action: str    # "keep", "decay", "archive", "protect"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "retain": self.retain,
@@ -188,6 +194,12 @@ class SweepReport:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_evaluated": self.total_evaluated,
             "retained": self.retained,
@@ -346,10 +358,26 @@ class RetentionEngine:
         self._evaluators.append(evaluator)
 
     def set_thresholds(self, retain: float, archive: float) -> None:
+        """
+        Perform the set thresholds operation.
+        
+        Args:
+            retain: Parameter description.
+            archive: Parameter description.
+        
+        Returns:
+            None
+        """
         self._retain_threshold = retain
         self._archive_threshold = archive
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_evaluations": self._total_evaluations,
             "total_sweeps": self._total_sweeps,

@@ -61,6 +61,12 @@ class Forecast:
     threshold_eta: int | None  # Steps until threshold is crossed (None if safe)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "metric": self.metric,
             "current": round(self.current, 4),

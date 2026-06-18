@@ -24,6 +24,15 @@ class Council:
         self.agents = ["Logic (Root)", "Ethics (Dharma)", "Creative (Leo)"]
 
     def deliberate(self, action_description: str) -> bool:
+        """
+        Perform the deliberate operation.
+        
+        Args:
+            action_description: Parameter description.
+        
+        Returns:
+            bool
+        """
         logger.info(f"♎ LIBRA COUNCIL: Deliberating on '{action_description}'")
 
         votes = []

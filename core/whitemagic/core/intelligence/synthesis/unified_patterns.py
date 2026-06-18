@@ -377,6 +377,12 @@ class UnifiedPatternAPI:
 _pattern_api = None
 
 def get_pattern_api() -> UnifiedPatternAPI:
+    """
+    Get the pattern api.
+    
+    Returns:
+        UnifiedPatternAPI
+    """
     global _pattern_api
     if _pattern_api is None:
         _pattern_api = UnifiedPatternAPI()

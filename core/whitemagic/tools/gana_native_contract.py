@@ -47,6 +47,15 @@ def build_native_gana_details(
     koka_path: bool | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """
+    Generate native gana details.
+    
+    Args:
+        gana_name: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     details: dict[str, Any] = {
         "gana": gana_name,
         "operation": operation,
@@ -82,6 +91,15 @@ def normalize_native_gana_result(
     request_id: str,
     details: dict[str, Any],
 ) -> dict[str, Any]:
+    """
+    Perform the normalize native gana result operation.
+    
+    Args:
+        gana_name: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     ordered: dict[str, Any] = {}
     for key in STANDARD_NATIVE_DETAIL_ORDER:
         if key in details:

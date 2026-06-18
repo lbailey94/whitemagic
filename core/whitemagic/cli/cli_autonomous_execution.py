@@ -85,6 +85,9 @@ def benchmark(count, batch_size, max_concurrent):
     )
 
     async def run_benchmark():
+        """
+        Run the benchmark operation.
+        """
         config = ExecutorConfig(
             max_iterations=count * 2,
             max_time_seconds=600,

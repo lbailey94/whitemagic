@@ -73,9 +73,24 @@ class PDFProcessor:
     _available: bool | None = None
 
     def can_process(self, path: Path) -> bool:
+        """
+        Perform the can process operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            bool
+        """
         return path.suffix.lower() == ".pdf" and self._check_available()
 
     def supported_extensions(self) -> set[str]:
+        """
+        Perform the supported extensions operation.
+        
+        Returns:
+            set[str]
+        """
         return {".pdf"}
 
     def _check_available(self) -> bool:
@@ -90,6 +105,15 @@ class PDFProcessor:
         return self._available
 
     def extract(self, path: Path) -> ProcessedMedia | None:
+        """
+        Perform the extract operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            ProcessedMedia | None
+        """
         if not self.can_process(path):
             return None
         try:
@@ -142,9 +166,24 @@ class DocxProcessor:
     _available: bool | None = None
 
     def can_process(self, path: Path) -> bool:
+        """
+        Perform the can process operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            bool
+        """
         return path.suffix.lower() == ".docx" and self._check_available()
 
     def supported_extensions(self) -> set[str]:
+        """
+        Perform the supported extensions operation.
+        
+        Returns:
+            set[str]
+        """
         return {".docx"}
 
     def _check_available(self) -> bool:
@@ -159,6 +198,15 @@ class DocxProcessor:
         return self._available
 
     def extract(self, path: Path) -> ProcessedMedia | None:
+        """
+        Perform the extract operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            ProcessedMedia | None
+        """
         if not self.can_process(path):
             return None
         try:
@@ -198,9 +246,24 @@ class ImageProcessor:
     _available: bool | None = None
 
     def can_process(self, path: Path) -> bool:
+        """
+        Perform the can process operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            bool
+        """
         return path.suffix.lower() in self.supported_extensions() and self._check_available()
 
     def supported_extensions(self) -> set[str]:
+        """
+        Perform the supported extensions operation.
+        
+        Returns:
+            set[str]
+        """
         return {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff"}
 
     def _check_available(self) -> bool:
@@ -216,6 +279,15 @@ class ImageProcessor:
         return self._available
 
     def extract(self, path: Path) -> ProcessedMedia | None:
+        """
+        Perform the extract operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            ProcessedMedia | None
+        """
         if not self.can_process(path):
             return None
         try:
@@ -308,9 +380,24 @@ class AudioProcessor:
     _available: bool | None = None
 
     def can_process(self, path: Path) -> bool:
+        """
+        Perform the can process operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            bool
+        """
         return path.suffix.lower() in self.supported_extensions() and self._check_available()
 
     def supported_extensions(self) -> set[str]:
+        """
+        Perform the supported extensions operation.
+        
+        Returns:
+            set[str]
+        """
         return {".mp3", ".wav", ".flac", ".ogg", ".m4a", ".wma"}
 
     def _check_available(self) -> bool:
@@ -330,6 +417,15 @@ class AudioProcessor:
         return self._available
 
     def extract(self, path: Path) -> ProcessedMedia | None:
+        """
+        Perform the extract operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            ProcessedMedia | None
+        """
         if not self.can_process(path):
             return None
         try:
@@ -394,12 +490,27 @@ class SpreadsheetProcessor:
     _available: bool | None = None
 
     def can_process(self, path: Path) -> bool:
+        """
+        Perform the can process operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            bool
+        """
         ext = path.suffix.lower()
         if ext == ".csv":
             return True  # csv is stdlib
         return ext in {".xlsx", ".xls"} and self._check_available()
 
     def supported_extensions(self) -> set[str]:
+        """
+        Perform the supported extensions operation.
+        
+        Returns:
+            set[str]
+        """
         return {".csv", ".xlsx", ".xls"}
 
     def _check_available(self) -> bool:
@@ -414,6 +525,15 @@ class SpreadsheetProcessor:
         return self._available
 
     def extract(self, path: Path) -> ProcessedMedia | None:
+        """
+        Perform the extract operation.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            ProcessedMedia | None
+        """
         ext = path.suffix.lower()
         try:
             if ext == ".csv":

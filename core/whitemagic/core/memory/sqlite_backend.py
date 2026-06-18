@@ -180,9 +180,29 @@ class SQLiteBackend:
             return {"total_memories": total, "by_type": types}
 
     def list_recent(self, limit: int = 10, memory_type: MemoryType | None = None) -> list[Memory]:
+        """
+        List the recent.
+        
+        Args:
+            limit: Parameter description.
+            memory_type: Parameter description.
+        
+        Returns:
+            list[Memory]
+        """
         return self.search(memory_type=memory_type, limit=limit)
 
     def fetch_memory_contents(self, memory_type: str | None = None, limit: int = 10000) -> list[str]:
+        """
+        Perform the fetch memory contents operation.
+        
+        Args:
+            memory_type: Parameter description.
+            limit: Parameter description.
+        
+        Returns:
+            list[str]
+        """
         with self.pool.connection() as conn:
             sql = "SELECT content FROM memories"
             params: list[Any] = []
@@ -195,6 +215,15 @@ class SQLiteBackend:
             return [row[0] for row in rows if row[0]]
 
     def find_by_content_hash(self, content_hash: str) -> str | None:
+        """
+        Find by content hash matching the criteria.
+        
+        Args:
+            content_hash: Parameter description.
+        
+        Returns:
+            str | None
+        """
         with self.pool.connection() as conn:
             row = conn.execute(
                 "SELECT id FROM memories WHERE content_hash = ?", (content_hash,)
@@ -204,6 +233,20 @@ class SQLiteBackend:
     # --- Stubs for advanced features ---
 
     def store_coords(self, memory_id: str, x: float, y: float, z: float, w: float, v: float) -> None:
+        """
+        Perform the store coords operation.
+        
+        Args:
+            memory_id: Parameter description.
+            x: Parameter description.
+            y: Parameter description.
+            z: Parameter description.
+            w: Parameter description.
+            v: Parameter description.
+        
+        Returns:
+            None
+        """
         with self.pool.connection() as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO holographic_coords
@@ -213,6 +256,15 @@ class SQLiteBackend:
             conn.commit()
 
     def get_coords(self, memory_id: str) -> tuple[float, float, float, float, float] | None:
+        """
+        Get the coords.
+        
+        Args:
+            memory_id: Parameter description.
+        
+        Returns:
+            tuple[float, float, float, float, float] | None
+        """
         with self.pool.connection() as conn:
             row = conn.execute(
                 "SELECT x, y, z, w, v FROM holographic_coords WHERE memory_id = ?", (memory_id,)
@@ -220,6 +272,12 @@ class SQLiteBackend:
             return tuple(row) if row else None
 
     def get_all_coords(self) -> dict[str, tuple[float, float, float, float, float]]:
+        """
+        Get the all coords.
+        
+        Returns:
+            dict[str, tuple[float, float, float, float, float]]
+        """
         with self.pool.connection() as conn:
             return {
                 row[0]: (row[1], row[2], row[3], row[4], row[5])
@@ -227,6 +285,16 @@ class SQLiteBackend:
             }
 
     def update_galactic_distance(self, memory_id: str, distance: float) -> None:
+        """
+        Update the galactic distance.
+        
+        Args:
+            memory_id: Parameter description.
+            distance: Parameter description.
+        
+        Returns:
+            None
+        """
         with self.pool.connection() as conn:
             conn.execute(
                 "UPDATE memories SET galactic_distance = ? WHERE id = ?", (distance, memory_id)
@@ -234,9 +302,28 @@ class SQLiteBackend:
             conn.commit()
 
     def get_weakest_memories(self, limit: int = 100) -> list[Memory]:
+        """
+        Get the weakest memories.
+        
+        Args:
+            limit: Parameter description.
+        
+        Returns:
+            list[Memory]
+        """
         return self.search(limit=limit)
 
     def archive_to_edge(self, memory_id: str, galactic_distance: float = 0.95) -> None:
+        """
+        Perform the archive to edge operation.
+        
+        Args:
+            memory_id: Parameter description.
+            galactic_distance: Parameter description.
+        
+        Returns:
+            None
+        """
         self.update_galactic_distance(memory_id, galactic_distance)
 
     def list_all_paginated(self, batch_size: int = 500):

@@ -128,6 +128,12 @@ def _dir_size_bytes(path: Path, *, max_files: int = 10000) -> int:
 
 
 def state_paths() -> dict[str, Any]:
+    """
+    Perform the state paths operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {
         "wm_state_root": str(WM_ROOT),
         "paths": {
@@ -144,6 +150,12 @@ def state_paths() -> dict[str, Any]:
 
 def state_summary(*, include_sizes: bool = True) -> dict[str, Any]:
     # Intentionally avoid reading memory contents; only count files/bytes.
+    """
+    Perform the state summary operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     summary: dict[str, Any] = {
         "wm_state_root": str(WM_ROOT),
         "exists": WM_ROOT.exists(),
@@ -171,6 +183,12 @@ def state_summary(*, include_sizes: bool = True) -> dict[str, Any]:
 
 
 def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[str, Any]:
+    """
+    Perform the manifest operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.tools.errors import ErrorCode, ToolExecutionError
 
     valid_formats = {"summary", "whitemagic", "mcp", "openai"}
@@ -226,6 +244,12 @@ def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[
 
 
 def capabilities(*, include_tools: bool = True, include_schemas: bool = False, include_env: bool = True) -> dict[str, Any]:
+    """
+    Perform the capabilities operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     caps = _capabilities_base(include_env=include_env, include_schemas=include_schemas)
     if include_tools:
         caps["tools"] = _serialize_callable_tools(include_schemas=include_schemas)
@@ -307,6 +331,12 @@ def _iter_repo_files(*, max_files: int, skip_dirs: set[str] | None = None) -> It
 
 
 def repo_summary(*, max_files: int = 2500, max_matches: int = 25) -> dict[str, Any]:
+    """
+    Perform the repo summary operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     total_files = 0
     total_bytes = 0
     largest: list[tuple[str, int]] = []

@@ -37,6 +37,9 @@ except ImportError:
     HAS_SANGHA = False
 
 def get_memory():
+    """
+    Get the memory.
+    """
     from whitemagic.core.memory.unified import get_unified_memory
     return get_unified_memory()
 

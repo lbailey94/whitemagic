@@ -153,6 +153,12 @@ class GardenResonanceMatrix:
 _matrix = None
 
 def get_resonance_matrix() -> GardenResonanceMatrix:
+    """
+    Get the resonance matrix.
+    
+    Returns:
+        GardenResonanceMatrix
+    """
     global _matrix
     if _matrix is None:
         _matrix = GardenResonanceMatrix()

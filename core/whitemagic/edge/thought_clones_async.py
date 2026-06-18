@@ -141,6 +141,16 @@ class AsyncThoughtCloneArmy:
 
         # Launch clones
         async def safe_clone(strategy: str, clone_id: int) -> Any:
+            """
+            Perform the safe clone operation.
+            
+            Args:
+                strategy: Parameter description.
+                clone_id: Parameter description.
+            
+            Returns:
+                Any
+            """
             try:
                 return await self._clone_think(prompt, strategy, clone_id, tier_hint=active_tier.value)
             except Exception as e:
@@ -255,6 +265,16 @@ class AsyncThoughtCloneArmy:
 
         # Launch all clones concurrently with concurrency control
         async def safe_clone(strategy: str, clone_id: int) -> Any:
+            """
+            Perform the safe clone operation.
+            
+            Args:
+                strategy: Parameter description.
+                clone_id: Parameter description.
+            
+            Returns:
+                Any
+            """
             try:
                 return await self._clone_think(prompt, strategy, clone_id)
             except Exception as e:
@@ -320,6 +340,15 @@ class AsyncThoughtCloneArmy:
 
         """
         async def explore_prompt(prompt: Any) -> Any:
+            """
+            Perform the explore prompt operation.
+            
+            Args:
+                prompt: Parameter description.
+            
+            Returns:
+                Any
+            """
             return await self.parallel_explore(prompt, clones_per_prompt)
 
         return await batch_process(prompts, explore_prompt, batch_size=5)

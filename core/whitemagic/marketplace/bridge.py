@@ -69,6 +69,12 @@ class ServiceListing:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "listing_id": self.listing_id,
             "service_type": self.service_type,
@@ -118,6 +124,12 @@ class Negotiation:
     resolved_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "negotiation_id": self.negotiation_id,
             "listing_id": self.listing_id,

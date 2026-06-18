@@ -67,10 +67,22 @@ class UnifiedCycleState:
 
     @property
     def wu_xing(self) -> WuXingPhase:
+        """
+        Perform the wu xing operation.
+        
+        Returns:
+            WuXingPhase
+        """
         return PHASE_NATURE[self.current_phase][0]
 
     @property
     def yin_yang(self) -> YinYangPhase:
+        """
+        Perform the yin yang operation.
+        
+        Returns:
+            YinYangPhase
+        """
         return PHASE_NATURE[self.current_phase][1]
 
 
@@ -166,6 +178,12 @@ class UnifiedProgressionDaemon:
 _progression_daemon: UnifiedProgressionDaemon | None = None
 
 def get_progression_daemon() -> UnifiedProgressionDaemon:
+    """
+    Get the progression daemon.
+    
+    Returns:
+        UnifiedProgressionDaemon
+    """
     global _progression_daemon
     if _progression_daemon is None:
         _progression_daemon = UnifiedProgressionDaemon()

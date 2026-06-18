@@ -106,6 +106,12 @@ class NeuralMemoryStore:
 _store: NeuralMemoryStore | None = None
 
 def get_store() -> NeuralMemoryStore:
+    """
+    Get the store.
+    
+    Returns:
+        NeuralMemoryStore
+    """
     global _store
     if _store is None:
         _store = NeuralMemoryStore()

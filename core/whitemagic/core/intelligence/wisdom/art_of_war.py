@@ -243,6 +243,12 @@ class CampaignPlan:
             self.created_at = datetime.now().isoformat()
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "objective": self.objective,
             "terrain": {

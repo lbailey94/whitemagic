@@ -273,6 +273,15 @@ class EventSubscriber:
         future: asyncio.Future[AsyncEvent] = asyncio.Future()
 
         def handler(event: AsyncEvent) -> None:
+            """
+            Perform the handler operation.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             if not future.done():
                 future.set_result(event)
 

@@ -129,6 +129,12 @@ class AuditSigner:
             return True
 
     def is_available(self) -> bool:
+        """
+        Check whether the available condition holds.
+        
+        Returns:
+            bool
+        """
         return _CRYPTO_AVAILABLE and self._ensure_key()
 
     def sign(self, payload: str | bytes) -> dict[str, str] | None:

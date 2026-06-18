@@ -118,6 +118,16 @@ class PatternEngine:
 
         # Helper to convert string lists to Pattern objects
         def to_patterns(type_name: str, descriptions: list[str]) -> list[Pattern]:
+            """
+            Convert to/from patterns.
+            
+            Args:
+                type_name: Parameter description.
+                descriptions: Parameter description.
+            
+            Returns:
+                list[Pattern]
+            """
             return [
                 Pattern(
                     pattern_type=type_name,

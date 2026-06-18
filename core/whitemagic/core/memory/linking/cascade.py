@@ -16,6 +16,15 @@ class CascadeDiscovery:
         self._memory_store: dict[str, NeuralMemory] = {}
 
     def register_memory(self, memory: NeuralMemory) -> None:
+        """
+        Register a memory.
+        
+        Args:
+            memory: Parameter description.
+        
+        Returns:
+            None
+        """
         self._memory_store[memory.id] = memory
 
     def discover_cascades(self, memory: NeuralMemory) -> list[tuple]:
@@ -67,13 +76,37 @@ class CascadeDiscovery:
 _cascade: CascadeDiscovery | None = None
 
 def get_cascade() -> CascadeDiscovery:
+    """
+    Get the cascade.
+    
+    Returns:
+        CascadeDiscovery
+    """
     global _cascade
     if _cascade is None:
         _cascade = CascadeDiscovery()
     return _cascade
 
 def discover_cascade_links(memory: NeuralMemory) -> list[tuple]:
+    """
+    Discover or mine cascade links.
+    
+    Args:
+        memory: Parameter description.
+    
+    Returns:
+        list[tuple]
+    """
     return get_cascade().discover_cascades(memory)
 
 def create_cascade_link(memory: NeuralMemory) -> int:
+    """
+    Create a new cascade link.
+    
+    Args:
+        memory: Parameter description.
+    
+    Returns:
+        int
+    """
     return get_cascade().create_cascade_links(memory)

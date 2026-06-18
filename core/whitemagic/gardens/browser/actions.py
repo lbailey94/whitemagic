@@ -36,6 +36,12 @@ class ActionResult:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "success": self.success,
             "action": self.action,
@@ -131,6 +137,15 @@ class BrowserActions:
         loaded = asyncio.Event()
 
         async def on_load(event: Any) -> None:
+            """
+            Handle a load event.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             loaded.set()
 
         self.cdp.on("Page.loadEventFired", on_load)

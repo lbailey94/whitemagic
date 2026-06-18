@@ -60,6 +60,9 @@ class KokaCircuitBreaker:
         self.lock = threading.Lock()
 
     def record_failure(self):
+        """
+        Perform the record failure operation.
+        """
         with self.lock:
             self.failures += 1
             self.last_failure_time = time.time()
@@ -68,6 +71,9 @@ class KokaCircuitBreaker:
                 logger.warning(f"Koka circuit breaker OPENED after {self.failures} failures")
 
     def record_success(self):
+        """
+        Perform the record success operation.
+        """
         with self.lock:
             self.failures = 0
             if self.state != "CLOSED":
@@ -75,6 +81,12 @@ class KokaCircuitBreaker:
                 logger.info("Koka circuit breaker RESET to CLOSED")
 
     def allow_request(self) -> bool:
+        """
+        Perform the allow request operation.
+        
+        Returns:
+            bool
+        """
         with self.lock:
             if self.state == "CLOSED":
                 return True

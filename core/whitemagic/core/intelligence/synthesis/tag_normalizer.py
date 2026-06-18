@@ -247,6 +247,12 @@ class TagNormalizer:
 _tag_normalizer = None
 
 def get_tag_normalizer() -> TagNormalizer:
+    """
+    Get the tag normalizer.
+    
+    Returns:
+        TagNormalizer
+    """
     global _tag_normalizer
     if _tag_normalizer is None:
         _tag_normalizer = TagNormalizer()

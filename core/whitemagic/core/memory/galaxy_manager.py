@@ -60,10 +60,26 @@ class GalaxyInfo:
     is_core: bool = False
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return asdict(self)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> GalaxyInfo:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            d: Parameter description.
+        
+        Returns:
+            GalaxyInfo
+        """
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -85,6 +101,15 @@ class GalaxyManager:
 
     @classmethod
     def get_instance(cls) -> GalaxyManager:
+        """
+        Get the instance.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            GalaxyManager
+        """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:

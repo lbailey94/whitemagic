@@ -87,6 +87,12 @@ def prat_invoke(target_tool: str | None = None, query: str | None = None, params
             invoke_params["limit"] = limit
 
         async def do_invoke() -> Any:
+            """
+            Perform the do invoke operation.
+            
+            Returns:
+                Any
+            """
             return await portal.invoke(target_tool, invoke_params, force_morphology)
 
         result = asyncio.run(do_invoke())

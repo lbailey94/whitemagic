@@ -24,9 +24,27 @@ def send_response(data: dict[str, Any]):
         logger.error(f"Error encoding response: {e}")
 
 def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
+    """
+    Handle a ping event.
+    
+    Args:
+        args: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"status": "ok", "pong": True}
 
 def handle_consolidate(args: dict[str, Any]) -> dict[str, Any]:
+    """
+    Handle a consolidate event.
+    
+    Args:
+        args: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.memory.unified import consolidate
         count = consolidate()
@@ -35,6 +53,15 @@ def handle_consolidate(args: dict[str, Any]) -> dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
+    """
+    Handle a consult oracle event.
+    
+    Args:
+        args: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.grimoire.auto_cast import CastContext, get_auto_caster
         question = args.get("question", "")
@@ -60,6 +87,15 @@ def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
+    """
+    Handle a execute phase event.
+    
+    Args:
+        args: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
         phase = args.get("phase")
@@ -91,6 +127,9 @@ def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 def main():
+    """
+    Perform the main operation.
+    """
     logger.info("Brain Bridge active. Waiting for commands...")
 
     for line in sys.stdin:

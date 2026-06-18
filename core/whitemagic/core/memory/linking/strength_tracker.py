@@ -29,6 +29,15 @@ class StrengthTracker:
         self._memory_store: dict[str, NeuralMemory] = {}
 
     def register_memory(self, memory: NeuralMemory) -> None:
+        """
+        Register a memory.
+        
+        Args:
+            memory: Parameter description.
+        
+        Returns:
+            None
+        """
         self._memory_store[memory.id] = memory
 
     def record_access(self, memory_id: str) -> list[str]:
@@ -94,13 +103,37 @@ class StrengthTracker:
 _tracker: StrengthTracker | None = None
 
 def get_tracker() -> StrengthTracker:
+    """
+    Get the tracker.
+    
+    Returns:
+        StrengthTracker
+    """
     global _tracker
     if _tracker is None:
         _tracker = StrengthTracker()
     return _tracker
 
 def on_co_access(memory_id: str) -> list[str]:
+    """
+    Handle a co access event.
+    
+    Args:
+        memory_id: Parameter description.
+    
+    Returns:
+        list[str]
+    """
     return get_tracker().record_access(memory_id)
 
 def get_recent_accesses(minutes: float = 5.0) -> list[str]:
+    """
+    Get the recent accesses.
+    
+    Args:
+        minutes: Parameter description.
+    
+    Returns:
+        list[str]
+    """
     return get_tracker().get_recent_accesses(minutes)

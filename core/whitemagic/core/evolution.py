@@ -45,6 +45,12 @@ class AdaptiveSystem:
         self.pending_approvals = []
 
     def enable(self, require_approval: bool = True):
+        """
+        Perform the enable operation.
+        
+        Args:
+            require_approval: Parameter description.
+        """
         self.rules.enabled = True
         self.rules.require_approval = require_approval
 
@@ -64,15 +70,33 @@ _adaptive: AdaptiveSystem | None = None
 _galaxy: ThoughtGalaxy | None = None
 
 def get_adaptive_system() -> AdaptiveSystem:
+    """
+    Get the adaptive system.
+    
+    Returns:
+        AdaptiveSystem
+    """
     global _adaptive
     if _adaptive is None: _adaptive = AdaptiveSystem()
     return _adaptive
 
 def get_thought_galaxy() -> ThoughtGalaxy:
+    """
+    Get the thought galaxy.
+    
+    Returns:
+        ThoughtGalaxy
+    """
     global _galaxy
     if _galaxy is None: _galaxy = ThoughtGalaxy()
     return _galaxy
 
 def enable_full_recursion(require_approval: bool = True):
+    """
+    Perform the enable full recursion operation.
+    
+    Args:
+        require_approval: Parameter description.
+    """
     get_adaptive_system().enable(require_approval=require_approval)
     logger.warning("⚠️ FULL RECURSIVE EVOLUTION ENABLED")

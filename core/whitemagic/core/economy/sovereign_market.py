@@ -75,6 +75,12 @@ class SovereignMarket:
 _market: SovereignMarket | None = None
 
 def get_market() -> SovereignMarket:
+    """
+    Get the market.
+    
+    Returns:
+        SovereignMarket
+    """
     global _market
     if _market is None:
         _market = SovereignMarket()

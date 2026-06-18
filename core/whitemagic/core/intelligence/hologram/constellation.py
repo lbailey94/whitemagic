@@ -253,6 +253,12 @@ class ConstellationSearch:
         }
 
 def get_constellation() -> ConstellationSearch:
+    """
+    Get the constellation.
+    
+    Returns:
+        ConstellationSearch
+    """
     return ConstellationSearch()
 
 # CLI

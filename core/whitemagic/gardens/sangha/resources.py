@@ -213,6 +213,12 @@ class ResourceManager:
 _resources: ResourceManager | None = None
 
 def get_resources() -> ResourceManager:
+    """
+    Get the resources.
+    
+    Returns:
+        ResourceManager
+    """
     global _resources
     if _resources is None:
         _resources = ResourceManager()

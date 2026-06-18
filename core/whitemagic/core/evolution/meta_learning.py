@@ -32,6 +32,12 @@ class PatternMetrics:
 
     @property
     def success_rate(self) -> float:
+        """
+        Perform the success rate operation.
+        
+        Returns:
+            float
+        """
         if self.total_applications == 0:
             return 0.0
         return self.successful_applications / self.total_applications

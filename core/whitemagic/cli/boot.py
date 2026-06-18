@@ -217,6 +217,9 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     def local_group():
         """Local ML inference commands."""
         def loader():
+            """
+            Perform the loader operation.
+            """
             from whitemagic.cli.cli_local import local_cli
             return local_cli
         return loader()
@@ -281,6 +284,9 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     def rust_group():
         """Rust bridge commands (requires whitemagic-rust)."""
         def loader():
+            """
+            Perform the loader operation.
+            """
             from whitemagic.cli.cli_rust import register_rust_commands
             return register_rust_commands(main_group)
         return loader()

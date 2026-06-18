@@ -40,4 +40,10 @@ class AssociationMiner:
         return score, shared
 
     def get_stats(self) -> dict[str, object]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, object]
+        """
         return {"total_runs": self.total_runs, "persist": self.persist}

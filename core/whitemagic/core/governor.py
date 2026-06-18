@@ -46,6 +46,12 @@ class ValidationResult:
     suggestions: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "safe": self.safe,
             "reason": self.reason,
@@ -65,6 +71,12 @@ class DriftResult:
     explanation: str
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "drifted": self.drifted,
             "similarity": self.similarity,
@@ -517,6 +529,15 @@ class Governor:
         # Extract keywords (improved approach with stemming simulation)
         def extract_keywords(text: str) -> set[str]:
             # Remove common words and extract meaningful terms
+            """
+            Mine or extract keywords.
+            
+            Args:
+                text: Parameter description.
+            
+            Returns:
+                set[str]
+            """
             stop_words = {"the", "a", "an", "is", "are", "was", "were", "be", "been",
                          "to", "of", "in", "for", "on", "with", "at", "by", "from",
                          "this", "that", "it", "and", "or", "but", "if", "then",

@@ -215,12 +215,24 @@ _coherence: CoherenceMetric | None = None
 _smarana: SmaranaPractice | None = None
 
 def get_coherence_metric() -> CoherenceMetric:
+    """
+    Get the coherence metric.
+    
+    Returns:
+        CoherenceMetric
+    """
     global _coherence
     if _coherence is None:
         _coherence = CoherenceMetric()
     return _coherence
 
 def get_smarana_practice() -> SmaranaPractice:
+    """
+    Get the smarana practice.
+    
+    Returns:
+        SmaranaPractice
+    """
     global _smarana
     if _smarana is None:
         _smarana = SmaranaPractice()

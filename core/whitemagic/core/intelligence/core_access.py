@@ -56,6 +56,12 @@ class ConstellationContext:
     distance: float = 0.0  # Distance from query point (0 if tag-matched)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "size": self.size,
@@ -78,6 +84,12 @@ class AssociationNode:
     depth: int = 0  # Hop distance from seed
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "title": self.title,
@@ -96,6 +108,12 @@ class TemporalBucket:
     associations_created: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "period": self.period,
             "memories_created": self.memories_created,
@@ -114,6 +132,12 @@ class HolographicNeighbor:
     coords: tuple[float, float, float, float, float] | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "title": self.title,
@@ -132,6 +156,12 @@ class HybridResult:
     sources: list[str] = field(default_factory=list)  # "vector", "graph", "both"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "title": self.title,

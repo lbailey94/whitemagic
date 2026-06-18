@@ -106,6 +106,12 @@ def ok(
     side_effects: dict[str, Any] | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, Any]:
+    """
+    Perform the ok operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     env: dict[str, Any] = {
         "status": "success",
         "tool": tool,
@@ -143,6 +149,12 @@ def err(
     side_effects: dict[str, Any] | None = None,
     warnings: list[str] | None = None,
 ) -> dict[str, Any]:
+    """
+    Perform the err operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     env: dict[str, Any] = {
         "status": "error",
         "tool": tool,
@@ -165,6 +177,15 @@ def err(
 
 
 def is_enveloped(result: Any) -> bool:
+    """
+    Check whether the enveloped condition holds.
+    
+    Args:
+        result: Parameter description.
+    
+    Returns:
+        bool
+    """
     return isinstance(result, dict) and "status" in result and "tool" in result and "details" in result
 
 

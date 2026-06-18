@@ -46,16 +46,37 @@ class LatencyStats:
     total_time_us: float = 0.0
 
     def record(self, latency_us: float) -> None:
+        """
+        Perform the record operation.
+        
+        Args:
+            latency_us: Parameter description.
+        
+        Returns:
+            None
+        """
         self.samples.append(latency_us)
         self.total_calls += 1
         self.total_time_us += latency_us
 
     def avg_us(self) -> float:
+        """
+        Perform the avg us operation.
+        
+        Returns:
+            float
+        """
         if not self.samples:
             return 0.0
         return float(sum(self.samples) / len(self.samples))
 
     def p95_us(self) -> float:
+        """
+        Perform the p95 us operation.
+        
+        Returns:
+            float
+        """
         if not self.samples:
             return 0.0
         sorted_samples = sorted(self.samples)
@@ -129,6 +150,16 @@ class PythonFastPath:
 
     @classmethod
     def prat_route(cls, tool: str) -> str:
+        """
+        Perform the prat route operation.
+        
+        Args:
+            cls: Parameter description.
+            tool: Parameter description.
+        
+        Returns:
+            str
+        """
         try:
             from whitemagic.optimization import rust_accelerators
             if hasattr(rust_accelerators, "prat_route"):
@@ -139,6 +170,16 @@ class PythonFastPath:
 
     @classmethod
     def get_predecessor(cls, gana: str) -> str:
+        """
+        Get the predecessor.
+        
+        Args:
+            cls: Parameter description.
+            gana: Parameter description.
+        
+        Returns:
+            str
+        """
         try:
             from whitemagic.optimization import rust_accelerators
             if hasattr(rust_accelerators, "resonance_predecessor"):
@@ -151,6 +192,16 @@ class PythonFastPath:
 
     @classmethod
     def get_successor(cls, gana: str) -> str:
+        """
+        Get the successor.
+        
+        Args:
+            cls: Parameter description.
+            gana: Parameter description.
+        
+        Returns:
+            str
+        """
         try:
             from whitemagic.optimization import rust_accelerators
             if hasattr(rust_accelerators, "resonance_successor"):
@@ -163,10 +214,28 @@ class PythonFastPath:
 
     @classmethod
     def circuit_check(cls) -> str:
+        """
+        Perform the circuit check operation.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            str
+        """
         return cast(str, cls.circuit_state["state"])
 
     @classmethod
     def circuit_record_success(cls) -> str:
+        """
+        Perform the circuit record success operation.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            str
+        """
         successes = cast(int, cls.circuit_state["successes"])
         cls.circuit_state["successes"] = successes + 1
         if cls.circuit_state["state"] == "half-open" and cast(int, cls.circuit_state["successes"]) >= 3:
@@ -176,6 +245,15 @@ class PythonFastPath:
 
     @classmethod
     def circuit_record_failure(cls) -> str:
+        """
+        Perform the circuit record failure operation.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            str
+        """
         failures = cast(int, cls.circuit_state["failures"])
         cls.circuit_state["failures"] = failures + 1
         threshold = cast(int, cls.circuit_state["threshold"])
@@ -323,9 +401,21 @@ class KokaProcess:
 
     @property
     def is_healthy(self) -> bool:
+        """
+        Check whether the healthy condition holds.
+        
+        Returns:
+            bool
+        """
         return self._healthy and self._proc is not None
 
     def stop(self) -> None:
+        """
+        Perform the stop operation.
+        
+        Returns:
+            None
+        """
         with self._lock:
             if self._proc:
                 try:
@@ -336,6 +426,12 @@ class KokaProcess:
             self._healthy = False
 
     def stats(self) -> dict:
+        """
+        Perform the stats operation.
+        
+        Returns:
+            dict
+        """
         return {
             "binary": self.binary_name,
             "pool_id": self.pool_id,
@@ -406,12 +502,24 @@ class KokaProcessPool:
         return cast(list[dict], results)
 
     def stop(self) -> None:
+        """
+        Perform the stop operation.
+        
+        Returns:
+            None
+        """
         for proc in self._processes:
             proc.stop()
         self._processes.clear()
         self._executor.shutdown(wait=False)
 
     def stats(self) -> dict:
+        """
+        Perform the stats operation.
+        
+        Returns:
+            dict
+        """
         return {
             "binary": self.binary_name,
             "pool_size": self.pool_size,
@@ -595,6 +703,15 @@ class HybridDispatcherV2:
     # ── PRAT Routing ─────────────────────────────────────────────────────────
 
     def prat_route(self, tool: str) -> str:
+        """
+        Perform the prat route operation.
+        
+        Args:
+            tool: Parameter description.
+        
+        Returns:
+            str
+        """
         operation = "prat_route"
         start = time.perf_counter()
 
@@ -632,6 +749,15 @@ class HybridDispatcherV2:
     # ── Resonance ───────────────────────────────────────────────────────────
 
     def get_predecessor(self, gana: str) -> str:
+        """
+        Get the predecessor.
+        
+        Args:
+            gana: Parameter description.
+        
+        Returns:
+            str
+        """
         operation = "resonance_predecessor"
         start = time.perf_counter()
         try:
@@ -649,6 +775,15 @@ class HybridDispatcherV2:
         return result
 
     def get_successor(self, gana: str) -> str:
+        """
+        Get the successor.
+        
+        Args:
+            gana: Parameter description.
+        
+        Returns:
+            str
+        """
         operation = "resonance_successor"
         start = time.perf_counter()
         try:
@@ -668,6 +803,12 @@ class HybridDispatcherV2:
     # ── Circuit Breaker ─────────────────────────────────────────────────────
 
     def circuit_check(self) -> str:
+        """
+        Perform the circuit check operation.
+        
+        Returns:
+            str
+        """
         operation = "circuit_check"
         use_koka = self._should_use_koka(operation)
 
@@ -684,6 +825,12 @@ class HybridDispatcherV2:
             return result_str
 
     def circuit_record_failure(self) -> str:
+        """
+        Perform the circuit record failure operation.
+        
+        Returns:
+            str
+        """
         operation = "circuit_record"
         use_koka = self._should_use_koka(operation)
 
@@ -700,6 +847,12 @@ class HybridDispatcherV2:
             return result_str
 
     def circuit_record_success(self) -> str:
+        """
+        Perform the circuit record success operation.
+        
+        Returns:
+            str
+        """
         operation = "circuit_record"
         use_koka = self._should_use_koka(operation)
 
@@ -726,6 +879,12 @@ class HybridDispatcherV2:
         return result
 
     def dream_status(self) -> dict:
+        """
+        Perform the dream status operation.
+        
+        Returns:
+            dict
+        """
         start = time.perf_counter()
         result = self._get_pool("dream_cycle").call({"op": "status"})
         latency = (time.perf_counter() - start) * 1_000_000

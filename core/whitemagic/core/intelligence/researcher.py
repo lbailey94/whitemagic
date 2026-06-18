@@ -46,6 +46,12 @@ class ResearchStep:
     duration_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "round": self.round_num,
             "phase": self.phase,
@@ -71,6 +77,12 @@ class ResearchResult:
     saturated: bool = False  # True if no new evidence found
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "query": self.query,
             "rounds_completed": self.rounds_completed,

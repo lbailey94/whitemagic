@@ -10,6 +10,12 @@ import sys
 
 
 def main() -> None:
+    """
+    Perform the main operation.
+    
+    Returns:
+        None
+    """
     try:
         json.load(sys.stdin)  # event reserved for future per-tool contextualisation
     except json.JSONDecodeError:

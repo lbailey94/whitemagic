@@ -175,6 +175,15 @@ class PluginRegistry:
         visiting = set()
 
         def visit(name: str) -> Any:
+            """
+            Perform the visit operation.
+            
+            Args:
+                name: Parameter description.
+            
+            Returns:
+                Any
+            """
             if name in visiting:
                 raise ValueError(f"Circular dependency detected: {name}")
             if name in visited:

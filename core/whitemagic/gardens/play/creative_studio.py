@@ -55,6 +55,12 @@ class Creation:
     tags: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "type": self.creation_type,
             "title": self.title,

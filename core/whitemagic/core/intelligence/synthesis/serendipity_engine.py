@@ -484,6 +484,12 @@ class SerendipityEngine:
 _serendipity_engine = None
 
 def get_serendipity_engine() -> SerendipityEngine:
+    """
+    Get the serendipity engine.
+    
+    Returns:
+        SerendipityEngine
+    """
     global _serendipity_engine
     if _serendipity_engine is None:
         _serendipity_engine = SerendipityEngine()

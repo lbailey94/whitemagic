@@ -5,6 +5,12 @@ _verifications: dict[str, dict[str, Any]] = {}
 
 
 def handle_verification_request(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a verification request event.
+    
+    Returns:
+        dict[str, Any]
+    """
     target = kwargs.get("target", "")
     if not target:
         return {"status": "error", "error_code": "invalid_params", "message": "target is required"}
@@ -14,6 +20,12 @@ def handle_verification_request(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_verification_attest(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a verification attest event.
+    
+    Returns:
+        dict[str, Any]
+    """
     req_id = kwargs.get("request_id", "")
     attestation = kwargs.get("attestation", "")
     if not req_id or not attestation:
@@ -27,6 +39,12 @@ def handle_verification_attest(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_verification_status(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a verification status event.
+    
+    Returns:
+        dict[str, Any]
+    """
     req_id = kwargs.get("request_id", "")
     if req_id:
         if req_id not in _verifications:

@@ -3,6 +3,12 @@ from typing import Any
 
 
 def handle_edge_infer(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a edge infer event.
+    
+    Returns:
+        dict[str, Any]
+    """
     query = kwargs.get("query", "")
     if not query:
         return {"status": "error", "message": "query is required"}
@@ -21,6 +27,12 @@ def handle_edge_infer(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_edge_add_rule(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a edge add rule event.
+    
+    Returns:
+        dict[str, Any]
+    """
     rule_id = kwargs.get("id", "")
     pattern = kwargs.get("pattern", "")
     response = kwargs.get("response", "")
@@ -40,6 +52,12 @@ def handle_edge_add_rule(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_edge_batch_infer(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a edge batch infer event.
+    
+    Returns:
+        dict[str, Any]
+    """
     queries = kwargs.get("queries", [])
     if not isinstance(queries, list) or not queries:
         return {"status": "error", "message": "queries must be a non-empty list"}
@@ -61,5 +79,11 @@ def handle_edge_batch_infer(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_edge_stats(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a edge stats event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.edge.inference import get_edge_inference
     return {"status": "success", **get_edge_inference().stats}

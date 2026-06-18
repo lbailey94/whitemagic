@@ -6,11 +6,23 @@ logger = logging.getLogger(__name__)
 
 
 def handle_kaizen_analyze(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a kaizen analyze event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.kaizen import run_kaizen_analysis
     return cast("dict[str, Any]", run_kaizen_analysis(auto_fix=False, **kwargs))
 
 
 def handle_kaizen_apply_fixes(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a kaizen apply fixes event.
+    
+    Returns:
+        dict[str, Any]
+    """
     fix_ids = kwargs.get("fix_ids") or []
     dry_run = bool(kwargs.get("dry_run", True))
     if not isinstance(fix_ids, list) or not all(isinstance(x, str) for x in fix_ids):
@@ -61,6 +73,12 @@ def handle_kaizen_apply_fixes(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_serendipity_surface(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a serendipity surface event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.unified import get_unified_memory
     get_unified_memory()
     from whitemagic.core.intelligence.synthesis.serendipity_engine import (
@@ -72,6 +90,12 @@ def handle_serendipity_surface(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_serendipity_mark_accessed(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a serendipity mark accessed event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.unified import get_unified_memory
     get_unified_memory()
     from whitemagic.core.intelligence.synthesis.serendipity_engine import (
@@ -82,11 +106,23 @@ def handle_serendipity_mark_accessed(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_pattern_search(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a pattern search event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.pattern import detect_patterns
     return cast("dict[str, Any]", detect_patterns(**kwargs))
 
 
 def handle_cluster_stats(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a cluster stats event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.unified import get_unified_memory
     get_unified_memory()
     from whitemagic.core.intelligence.synthesis.sub_clustering import (
@@ -96,6 +132,12 @@ def handle_cluster_stats(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_list_cascade_patterns(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a list cascade patterns event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.adaptive import list_cascade_patterns
 
     return {"status": "success", "patterns": list_cascade_patterns()}

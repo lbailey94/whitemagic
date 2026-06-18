@@ -90,6 +90,12 @@ class RefiningFire:
 _refining_fire = None
 
 def get_refining_fire() -> RefiningFire:
+    """
+    Get the refining fire.
+    
+    Returns:
+        RefiningFire
+    """
     global _refining_fire
     if _refining_fire is None:
         _refining_fire = RefiningFire()

@@ -120,6 +120,12 @@ def batch_topk_cosine(query: list[float], corpus: list[list[float]], k: int = 10
 # --- STATUS ---
 
 def simd_status() -> dict[str, Any]:
+    """
+    Perform the simd status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     _init_libs()
     return {
         "rust_available": _rust_available,
@@ -128,8 +134,23 @@ def simd_status() -> dict[str, Any]:
     }
 
 # Legacy stubs
+"""
+Perform the simd cosine status operation.
+"""
 def simd_cosine_status(): return simd_status()
+"""
+Perform the simd distance status operation.
+"""
 def simd_distance_status(): return simd_status()
+"""
+Perform the simd holographic status operation.
+"""
 def simd_holographic_status(): return simd_status()
+"""
+Perform the simd keywords status operation.
+"""
 def simd_keywords_status(): return simd_status()
+"""
+Perform the simd vector batch status operation.
+"""
 def simd_vector_batch_status(): return simd_status()

@@ -48,6 +48,16 @@ class DatabaseConfig(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
+        """
+        Validate the url.
+        
+        Args:
+            cls: Parameter description.
+            v: Parameter description.
+        
+        Returns:
+            str
+        """
         if not v:
             raise ValueError("Database URL is required")
         return v
@@ -185,6 +195,16 @@ class WhiteMagicConfig(BaseModel):
         cls, v: dict[str, Any] | SecurityConfig,
     ) -> dict[str, Any] | SecurityConfig:
         # Generate secret key if not provided in development
+        """
+        Validate the security.
+        
+        Args:
+            cls: Parameter description.
+            v: Parameter description.
+        
+        Returns:
+            dict[str, Any] | SecurityConfig
+        """
         if isinstance(v, dict):
             if not v.get("secret_key"):
                 # Note: In V2, validation happens before model creation

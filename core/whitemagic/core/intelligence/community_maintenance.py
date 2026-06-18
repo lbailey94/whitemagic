@@ -53,6 +53,12 @@ class Community:
     cohesion_score: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "community_id": self.community_id,
             "label": self.label,

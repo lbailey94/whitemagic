@@ -49,6 +49,12 @@ class LocalEmbedder:
 
     @property
     def is_available(self) -> bool:
+        """
+        Check whether the available condition holds.
+        
+        Returns:
+            bool
+        """
         return self._available
 
     def embed(self, texts: str | list[str], batch_size: int = 256) -> np.ndarray | None:

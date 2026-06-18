@@ -203,6 +203,12 @@ class VoiceGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_voice_garden() -> VoiceGarden:
+    """
+    Get the voice garden.
+    
+    Returns:
+        VoiceGarden
+    """
     global _instance
     if _instance is None:
         _instance = VoiceGarden()

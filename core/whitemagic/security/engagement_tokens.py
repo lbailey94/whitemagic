@@ -93,15 +93,39 @@ class EngagementToken:
     max_uses: int = 0          # 0 = unlimited
 
     def is_expired(self) -> bool:
+        """
+        Check whether the expired condition holds.
+        
+        Returns:
+            bool
+        """
         return time.time() > self.expires_at
 
     def is_valid(self) -> bool:
+        """
+        Check whether the valid condition holds.
+        
+        Returns:
+            bool
+        """
         return not self.revoked and not self.is_expired() and (self.max_uses == 0 or self.uses < self.max_uses)
 
     def remaining_seconds(self) -> float:
+        """
+        Perform the remaining seconds operation.
+        
+        Returns:
+            float
+        """
         return max(0.0, self.expires_at - time.time())
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "token_id": self.token_id,
             "scope": self.scope,

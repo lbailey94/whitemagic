@@ -84,6 +84,15 @@ class QuantumGraphAdapter:
         # Phase 3: Grover amplification if oracle available
         if self._config.use_grover and oracle_func:
             def node_oracle(node: QuantumNode) -> bool:
+                """
+                Perform the node oracle operation.
+                
+                Args:
+                    node: Parameter description.
+                
+                Returns:
+                    bool
+                """
                 return oracle_func(node.id)
 
             amplified = self._quantum.grover_amplification(

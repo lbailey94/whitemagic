@@ -41,16 +41,34 @@ class LanguageBridge:
 class ElixirBridge(LanguageBridge):
     """Bridge to Elixir/Erlang BEAM via Port or NIF."""
     def call(self, function: str, *args):
+        """
+        Perform the call operation.
+        
+        Args:
+            function: Parameter description.
+        """
         return {"status": "fallback", "reason": "Elixir node not connected"}
 
 class JuliaBridge(LanguageBridge):
     """Bridge to Julia via PyJulia or ZMQ."""
     def call(self, function: str, *args):
+        """
+        Perform the call operation.
+        
+        Args:
+            function: Parameter description.
+        """
         return {"status": "fallback", "reason": "Julia environment not initialized"}
 
 class KokaBridge(LanguageBridge):
     """Bridge to Koka (effect-typed functional language)."""
     def call(self, function: str, *args):
+        """
+        Perform the call operation.
+        
+        Args:
+            function: Parameter description.
+        """
         return {"status": "fallback", "reason": "Koka runtime not available"}
 
 # --- POLYGLOT ACCELERATOR ---
@@ -83,17 +101,47 @@ class PolyglotAccelerator:
         return dot / (na*nb) if na*nb > 1e-10 else 0.0
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {**self.stats, "bridges": {k: b.available for k, b in self._bridges.items()}}
 
 # --- SINGLETONS ---
 _accelerator: PolyglotAccelerator | None = None
 
 def get_accelerator() -> PolyglotAccelerator:
+    """
+    Get the accelerator.
+    
+    Returns:
+        PolyglotAccelerator
+    """
     global _accelerator
     if _accelerator is None: _accelerator = PolyglotAccelerator()
     return _accelerator
 
 # Compatibility stubs
+"""
+Get the elixir bridge.
+"""
+"""
+Get the elixir bridge.
+"""
 def get_elixir_bridge(): return get_accelerator()._bridges["elixir"]
+"""
+Get the julia bridge.
+"""
+"""
+Get the julia bridge.
+"""
 def get_julia_bridge(): return get_accelerator()._bridges["julia"]
+"""
+Get the koka bridge.
+"""
+"""
+Get the koka bridge.
+"""
 def get_koka_bridge(): return get_accelerator()._bridges["koka"]

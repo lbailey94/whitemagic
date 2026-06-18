@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 def lazy_import(module_path: str, attr: str | None = None) -> Callable[[], Any]:
     """Import module/attribute only when called."""
     def loader():
+        """
+        Perform the loader operation.
+        """
         import importlib
         mod = importlib.import_module(module_path)
         return getattr(mod, attr) if attr else mod

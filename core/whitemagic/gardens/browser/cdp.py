@@ -73,9 +73,21 @@ class CDPResponse:
 
     @property
     def success(self) -> bool:
+        """
+        Perform the success operation.
+        
+        Returns:
+            bool
+        """
         return self.error is None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "result": self.result,
@@ -93,6 +105,12 @@ class CDPEvent:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "method": self.method,
             "params": self.params,

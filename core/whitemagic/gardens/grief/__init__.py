@@ -71,9 +71,21 @@ class GriefGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Grief", "mansion": 8})
 
     def get_name(self) -> str:
+        """
+        Get the name.
+        
+        Returns:
+            str
+        """
         return "grief"
 
     def get_coordinate_bias(self) -> CoordinateBias:
+        """
+        Get the coordinate bias.
+        
+        Returns:
+            CoordinateBias
+        """
         return CoordinateBias(x=0.8, y=-0.1, z=-0.4, w=0.25)
 
     # ------------------------------------------------------------------
@@ -335,6 +347,12 @@ class GriefGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_grief_garden() -> GriefGarden:
+    """
+    Get the grief garden.
+    
+    Returns:
+        GriefGarden
+    """
     global _instance
     if _instance is None:
         _instance = GriefGarden()

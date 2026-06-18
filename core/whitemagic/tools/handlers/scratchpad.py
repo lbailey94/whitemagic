@@ -36,6 +36,12 @@ def handle_scratchpad(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_scratchpad_create(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a scratchpad create event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from uuid import uuid4
 
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
@@ -54,6 +60,12 @@ def handle_scratchpad_create(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a scratchpad update event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
     base_path = _resolve_base_path(kwargs)
     manager = ScratchpadManager(scratch_dir=base_path / "scratchpads")
@@ -86,6 +98,12 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a analyze scratchpad event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.intelligence.multi_spectral_scratchpad import (
         analyze_scratchpad,
     )
@@ -118,6 +136,12 @@ def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a scratchpad finalize event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.manager import MemoryManager
     from whitemagic.core.memory.scratchpad_interleave import ScratchpadManager
     base_path = _resolve_base_path(kwargs)

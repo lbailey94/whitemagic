@@ -28,6 +28,16 @@ def get_seen_registry():
     """Return a simple file-backed seen registry."""
     class _SeenRegistry:
         def mark_seen(self, path: str, context: str | None = None) -> None:
+            """
+            Perform the mark seen operation.
+            
+            Args:
+                path: Parameter description.
+                context: Parameter description.
+            
+            Returns:
+                None
+            """
             entry = {"path": path, "context": context, "timestamp": datetime.now().isoformat()}
             try:
                 with file_lock(SEEN_REGISTRY):
@@ -137,6 +147,12 @@ class ContinuitySuite:
 # Singleton
 _suite = None
 def get_continuity_suite() -> ContinuitySuite:
+    """
+    Get the continuity suite.
+    
+    Returns:
+        ContinuitySuite
+    """
     global _suite
     if _suite is None:
         _suite = ContinuitySuite()

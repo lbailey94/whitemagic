@@ -9,6 +9,12 @@ from .zodiac_round_cycle import CyclePhase, ZodiacalRound, get_zodiacal_round
 
 # Lazy loader for Council to avoid circular imports with whitemagic.gardens.metal
 def get_zodiac_council() -> Any:
+    """
+    Get the zodiac council.
+    
+    Returns:
+        Any
+    """
     from whitemagic.gardens.metal.zodiac import get_zodiac_council as _get_council
     return _get_council()
 

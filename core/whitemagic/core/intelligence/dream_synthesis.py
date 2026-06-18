@@ -48,6 +48,12 @@ class DreamSynthesizer:
         logger.info("DreamSynthesizer mounted. Awaiting Yin/Water phases...")
 
     def unmount(self) -> None:
+        """
+        Perform the unmount operation.
+        
+        Returns:
+            None
+        """
         if self._listener_id:
             bus = get_bus()
             bus.unsubscribe(EventType.PHASE_TRANSITION, self._listener_id)
@@ -101,6 +107,12 @@ class DreamSynthesizer:
 _synthesizer_instance: DreamSynthesizer | None = None
 
 def get_dream_synthesizer() -> DreamSynthesizer:
+    """
+    Get the dream synthesizer.
+    
+    Returns:
+        DreamSynthesizer
+    """
     global _synthesizer_instance
     if _synthesizer_instance is None:
         _synthesizer_instance = DreamSynthesizer()

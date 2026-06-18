@@ -78,6 +78,12 @@ class TemporalContext:
     phase_start: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timestamp": self.timestamp.isoformat(),
             "timezone": self.timezone_name,

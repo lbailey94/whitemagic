@@ -226,6 +226,12 @@ class HolographicMemory:
             return []
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         if self._index_5d:
             try:
                 return {"status": "active", "backend": "rust5d", "size": self._index_5d.size()}
@@ -268,6 +274,12 @@ class HolographicMemory:
 _holo_memory: HolographicMemory | None = None
 
 def get_holographic_memory() -> HolographicMemory:
+    """
+    Get the holographic memory.
+    
+    Returns:
+        HolographicMemory
+    """
     global _holo_memory
     if _holo_memory is None:
         _holo_memory = HolographicMemory()

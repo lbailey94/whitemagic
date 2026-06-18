@@ -61,6 +61,12 @@ class ProjectionPoint:
     cluster: int = -1  # -1 = unclustered
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         d: dict[str, Any] = {
             "memory_id": self.memory_id,
             "x": round(self.x, 4),
@@ -87,6 +93,12 @@ class ProjectionResult:
     umap_params: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "n_memories": self.n_memories,
             "n_components": self.n_components,
@@ -291,6 +303,12 @@ class UMAPProjector:
         return k
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         cached = self._cached_projection is not None
         return {
             "available": self.available(),

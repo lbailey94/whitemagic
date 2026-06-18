@@ -66,6 +66,12 @@ class HolographicCoordinate:
     v: float = 0.5  # Vitality/Galactic Distance (1.0=core, 0.0=edge)
 
     def to_vector(self) -> list[float]:
+        """
+        Convert to/from vector.
+        
+        Returns:
+            list[float]
+        """
         return [self.x, self.y, self.z, self.w, self.v]
 
     def to_vector_4d(self) -> list[float]:
@@ -73,6 +79,12 @@ class HolographicCoordinate:
         return [self.x, self.y, self.z, self.w]
 
     def to_dict(self) -> dict[str, float]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, float]
+        """
         return {"x": self.x, "y": self.y, "z": self.z, "w": self.w, "v": self.v}
 
 class CoordinateEncoder:
@@ -187,12 +199,32 @@ class CoordinateEncoder:
         v = self._center_vector(mem_vec)
 
         def dot_product(v1, v2):
+            """
+            Perform the dot product operation.
+            
+            Args:
+                v1: Parameter description.
+                v2: Parameter description.
+            """
             return sum(x * y for x, y in zip(v1, v2))
 
         def vec_norm(v1):
+            """
+            Perform the vec norm operation.
+            
+            Args:
+                v1: Parameter description.
+            """
             return math.sqrt(sum(x * x for x in v1))
 
         def vec_sub(v1, v2):
+            """
+            Perform the vec sub operation.
+            
+            Args:
+                v1: Parameter description.
+                v2: Parameter description.
+            """
             return [x - y for x, y in zip(v1, v2)]
 
         # --- PCA Projection Path (Preferred) ---
@@ -767,5 +799,14 @@ class CoordinateEncoder:
 
 # Integration helper
 def encode_memory(memory_obj: Any) -> Any:
+    """
+    Perform the encode memory operation.
+    
+    Args:
+        memory_obj: Parameter description.
+    
+    Returns:
+        Any
+    """
     encoder = CoordinateEncoder()
     return encoder.encode(memory_obj)

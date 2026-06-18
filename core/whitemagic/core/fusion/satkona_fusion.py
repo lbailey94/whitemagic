@@ -401,6 +401,15 @@ def fuse_signals_with_fusion(
 
     # Normalize each signal independently
     def normalise(d: dict[Any, float]) -> dict[Any, float]:
+        """
+        Perform the normalise operation.
+        
+        Args:
+            d: Parameter description.
+        
+        Returns:
+            dict[Any, float]
+        """
         if not d:
             return d
         mn, mx = min(d.values()), max(d.values())

@@ -360,6 +360,12 @@ async def run_one_cycle(context: dict[str, Any] | None = None) -> list[CoreRespo
 if __name__ == "__main__":
     # Test the cycle
     async def test() -> None:
+        """
+        Perform the test operation.
+        
+        Returns:
+            None
+        """
         print("🌀 Testing Zodiacal Round Cycle")
         print("=" * 60)
 

@@ -27,11 +27,23 @@ class OptimizationMetrics:
 
     @property
     def cache_hit_rate(self) -> float:
+        """
+        Perform the cache hit rate operation.
+        
+        Returns:
+            float
+        """
         total = self.cache_hits + self.cache_misses
         return self.cache_hits / total if total > 0 else 0.0
 
     @property
     def avg_latency_saved_ms(self) -> float:
+        """
+        Perform the avg latency saved ms operation.
+        
+        Returns:
+            float
+        """
         return self.total_latency_saved_ms / self.calls_optimized if self.calls_optimized > 0 else 0.0
 
 

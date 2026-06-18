@@ -72,6 +72,12 @@ class IntakeItem:
     memory_id: str | None = None  # ID after ingestion
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "path": self.path,
             "detected_at": self.detected_at,

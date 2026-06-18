@@ -225,6 +225,15 @@ def _terminal(ctx: DispatchContext) -> dict[str, Any] | None:
 def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
     """Wrap a middleware + next into a single NextFn with safety net."""
     def wrapped(ctx: DispatchContext) -> dict[str, Any] | None:
+        """
+        Perform the wrapped operation.
+        
+        Args:
+            ctx: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         try:
             return mw(ctx, next_fn)
         except Exception as e:

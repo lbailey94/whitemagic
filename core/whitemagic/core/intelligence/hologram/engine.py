@@ -114,6 +114,12 @@ class HologramEngine:
 _hologram_engine = None
 
 def get_hologram_engine() -> HologramEngine:
+    """
+    Get the hologram engine.
+    
+    Returns:
+        HologramEngine
+    """
     global _hologram_engine
     if _hologram_engine is None:
         _hologram_engine = HologramEngine()

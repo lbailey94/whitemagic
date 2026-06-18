@@ -52,6 +52,12 @@ class BriefingItem:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "category": self.category,
@@ -77,6 +83,12 @@ class InsightBriefing:
     velocity_metrics: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timestamp": self.timestamp,
             "duration_ms": round(self.duration_ms, 1),
@@ -89,10 +101,22 @@ class InsightBriefing:
 
     @property
     def critical_items(self) -> list[BriefingItem]:
+        """
+        Perform the critical items operation.
+        
+        Returns:
+            list[BriefingItem]
+        """
         return [i for i in self.items if i.priority == "critical"]
 
     @property
     def high_items(self) -> list[BriefingItem]:
+        """
+        Perform the high items operation.
+        
+        Returns:
+            list[BriefingItem]
+        """
         return [i for i in self.items if i.priority == "high"]
 
     def format_text(self, max_items: int = 10) -> str:
@@ -558,6 +582,12 @@ _pipeline: InsightPipeline | None = None
 
 
 def get_insight_pipeline() -> InsightPipeline:
+    """
+    Get the insight pipeline.
+    
+    Returns:
+        InsightPipeline
+    """
     global _pipeline
     if _pipeline is None:
         _pipeline = InsightPipeline()

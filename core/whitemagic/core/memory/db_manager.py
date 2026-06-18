@@ -47,6 +47,12 @@ def retry_with_backoff(
             ...
     """
     def wrapper(*args: Any, **kwargs: Any) -> Any:
+        """
+        Perform the wrapper operation.
+        
+        Returns:
+            Any
+        """
         last_error = None
         delay = base_delay
         for attempt in range(max_retries + 1):

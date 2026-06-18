@@ -335,21 +335,57 @@ def simd_status() -> dict[str, Any]:
 
 # Legacy compatibility - individual status functions
 def simd_cosine_status() -> dict[str, Any]:
+    """
+    Perform the simd cosine status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"module": "cosine", **simd_status()}
 
 def simd_distance_status() -> dict[str, Any]:
+    """
+    Perform the simd distance status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"module": "distance", **simd_status()}
 
 def simd_holographic_status() -> dict[str, Any]:
+    """
+    Perform the simd holographic status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"module": "holographic", **simd_status()}
 
 def simd_constellation_status() -> dict[str, Any]:
+    """
+    Perform the simd constellation status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"module": "constellation", **simd_status()}
 
 def simd_keywords_status() -> dict[str, Any]:
+    """
+    Perform the simd keywords status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"module": "keywords", **simd_status()}
 
 def simd_vector_batch_status() -> dict[str, Any]:
+    """
+    Perform the simd vector batch status operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"module": "vector_batch", **simd_status()}
 
 

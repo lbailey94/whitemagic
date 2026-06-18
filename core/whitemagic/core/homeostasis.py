@@ -157,6 +157,12 @@ class HomeostasisSystem:
 _homeostasis: HomeostasisSystem | None = None
 
 def get_homeostasis() -> HomeostasisSystem:
+    """
+    Get the homeostasis.
+    
+    Returns:
+        HomeostasisSystem
+    """
     global _homeostasis
     if _homeostasis is None:
         _homeostasis = HomeostasisSystem()

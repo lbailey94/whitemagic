@@ -183,6 +183,16 @@ def register_commands(cli_group: Any) -> None:
                     def wrapper(ctx: Any, args: tuple[str, ...]) -> None:
                         # Simple callback wrapper - might need more sophisticated arg parsing
                         # For now, pass a simple namespace-like object
+                        """
+                        Perform the wrapper operation.
+                        
+                        Args:
+                            ctx: Parameter description.
+                            args: Parameter description.
+                        
+                        Returns:
+                            None
+                        """
                         class Args:
                             pass
                         parsed_args = Args()

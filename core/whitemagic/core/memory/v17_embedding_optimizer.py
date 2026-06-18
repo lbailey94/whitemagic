@@ -105,6 +105,9 @@ class V17EmbeddingOptimizer:
 
             # Use synchronous connection in async context via run_in_executor
             def create_conn():
+                """
+                Create a new conn.
+                """
                 conn = sqlite3.connect(str(DB_PATH))
                 conn.execute("PRAGMA journal_mode=WAL")
                 conn.execute("PRAGMA synchronous=NORMAL")
@@ -146,6 +149,9 @@ class V17EmbeddingOptimizer:
             try:
                 # Run model.encode() in thread pool (releases GIL!)
                 def encode():
+                    """
+                    Perform the encode operation.
+                    """
                     vec = model.encode(task.text, show_progress_bar=False)
                     # LocalEmbedder returns list[ndarray]; SentenceTransformer returns ndarray
                     if isinstance(vec, list):
@@ -197,6 +203,12 @@ class V17EmbeddingOptimizer:
 
             # Bulk insert in executor (SQLite is synchronous)
             def do_insert() -> int:
+                """
+                Perform the do insert operation.
+                
+                Returns:
+                    int
+                """
                 conn.executemany(
                     "INSERT OR REPLACE INTO memory_embeddings (memory_id, embedding, model) VALUES (?, ?, ?)",
                     insert_data
@@ -306,6 +318,12 @@ class V17EmbeddingOptimizer:
 
         try:
             def fetch() -> list[EmbeddingTask]:
+                """
+                Perform the fetch operation.
+                
+                Returns:
+                    list[EmbeddingTask]
+                """
                 sql = "SELECT id, title, content FROM memories"
                 params: list = []
                 conditions = ["memory_type != 'quarantined'"]

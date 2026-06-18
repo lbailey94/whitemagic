@@ -26,6 +26,12 @@ class SalienceScore:
 
     @property
     def composite(self) -> float:
+        """
+        Perform the composite operation.
+        
+        Returns:
+            float
+        """
         return round(self.urgency * self.novelty * self.confidence, 4)
 
 

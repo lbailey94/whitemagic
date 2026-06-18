@@ -212,6 +212,12 @@ class DharmaDecision:
     seccomp: str = "none"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "action": self.action.value,
             "score": self.score,
@@ -624,6 +630,12 @@ class DharmaRulesEngine:
         logger.info(f"Dharma profile switched to: {profile}")
 
     def get_profile(self) -> str:
+        """
+        Get the profile.
+        
+        Returns:
+            str
+        """
         return self._active_profile
 
     # ------------------------------------------------------------------

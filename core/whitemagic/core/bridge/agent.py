@@ -28,6 +28,12 @@ def manage_agent_collaboration(
     registry_path = base_dir / "agents.json"
 
     def load_registry() -> list[dict[str, Any]]:
+        """
+        Load registry from storage.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         if not registry_path.exists():
             return []
         try:
@@ -39,6 +45,15 @@ def manage_agent_collaboration(
             return []
 
     def save_registry(agents: list[dict[str, Any]]) -> None:
+        """
+        Save registry to storage.
+        
+        Args:
+            agents: Parameter description.
+        
+        Returns:
+            None
+        """
         registry_path.write_text(json.dumps(agents, indent=2))
 
     op = (operation or "list_agents").lower()

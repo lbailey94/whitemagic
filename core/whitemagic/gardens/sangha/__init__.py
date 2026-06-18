@@ -90,6 +90,12 @@ class SanghaGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_sangha_garden() -> SanghaGarden:
+    """
+    Get the sangha garden.
+    
+    Returns:
+        SanghaGarden
+    """
     global _instance
     if _instance is None:
         _instance = SanghaGarden()

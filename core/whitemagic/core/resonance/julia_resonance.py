@@ -75,6 +75,12 @@ class ResonanceResult:
     status: str = "CONVERGED"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "impulse_magnitude": round(self.impulse_magnitude, 4),
@@ -93,6 +99,12 @@ class CausalVerificationResult:
     status: str = "CONVERGED"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "node_scores": {k: round(v, 4) for k, v in self.node_scores.items()},
             "total_energy": round(self.total_energy, 4),
@@ -108,6 +120,12 @@ class NeighborResult:
     count: int
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "neighbors": self.neighbors,
@@ -209,6 +227,13 @@ class ResonanceEngine:
 
         # ODE: d²x/dt² + γ(dx/dt) + ω₀²x = 0 (free oscillation after impulse)
         def oscillator(t, state):
+            """
+            Perform the oscillator operation.
+            
+            Args:
+                t: Parameter description.
+                state: Parameter description.
+            """
             x, v = state
             dxdt = v
             dvdt = -damping * v - (frequency ** 2) * x
@@ -344,6 +369,13 @@ class ResonanceEngine:
 
         # ODE: coupled damped harmonic oscillators
         def coupled_oscillators(t, state):
+            """
+            Perform the coupled oscillators operation.
+            
+            Args:
+                t: Parameter description.
+                state: Parameter description.
+            """
             x = state[:num_nodes]      # displacements
             v = state[num_nodes:]      # velocities
 

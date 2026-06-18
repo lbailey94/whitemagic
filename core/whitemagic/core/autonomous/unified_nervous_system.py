@@ -404,6 +404,15 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
 
     # Wire Consciousness to respond to coherence events
     def consciousness_handler(event: BiologicalEvent) -> None:
+        """
+        Perform the consciousness handler operation.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         if event.event_type == "coherence.restore":
             logger.info("🧠 Consciousness: Coherence restored from dream cycle")
 
@@ -415,6 +424,15 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
 
     # Wire Dream to respond to critical coherence
     def dream_handler(event: BiologicalEvent) -> None:
+        """
+        Perform the dream handler operation.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         if event.event_type == "coherence.critical" or event.event_type == "dream.trigger":
             logger.info("💤 Dream: Triggering emergency or idle dream cycle")
             try:

@@ -68,9 +68,21 @@ class FetchResult:
 
     @property
     def success(self) -> bool:
+        """
+        Perform the success operation.
+        
+        Returns:
+            bool
+        """
         return self.error is None and self.status_code in range(200, 400)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "url": self.url,
             "title": self.title,
@@ -94,6 +106,12 @@ class SearchResult:
     position: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "title": self.title,
             "url": self.url,
@@ -115,9 +133,21 @@ class SearchResponse:
 
     @property
     def success(self) -> bool:
+        """
+        Perform the success operation.
+        
+        Returns:
+            bool
+        """
         return self.error is None and len(self.results) > 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "query": self.query,
             "results": [r.to_dict() for r in self.results],
@@ -139,6 +169,12 @@ class ResearchFinding:
     key_points: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "url": self.url,
             "title": self.title,
@@ -164,6 +200,12 @@ class ResearchReport:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "topic": self.topic,
             "findings": [f.to_dict() for f in self.findings],
@@ -728,6 +770,15 @@ class BrowserSessionManager:
 
     @classmethod
     def get(cls) -> BrowserSessionManager:
+        """
+        Perform the get operation.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            BrowserSessionManager
+        """
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
@@ -759,9 +810,21 @@ class BrowserSessionManager:
 
     @property
     def is_connected(self) -> bool:
+        """
+        Check whether the connected condition holds.
+        
+        Returns:
+            bool
+        """
         return self._session is not None
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "connected": self.is_connected,
             "last_url": self._last_url,

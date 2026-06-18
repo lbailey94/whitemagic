@@ -66,6 +66,9 @@ def invoke(tool_name: str, query: str, morphology: str | None, limit: int) -> No
     from whitemagic.cascade.adaptive_portal import get_adaptive_portal
 
     async def run():
+        """
+        Perform the run operation.
+        """
         portal = get_adaptive_portal()
         result = await portal.invoke(
             tool_name,

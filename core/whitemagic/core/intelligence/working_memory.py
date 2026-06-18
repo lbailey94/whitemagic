@@ -68,6 +68,12 @@ class WorkingChunk:
         self.access_count += 1
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memory_id": self.memory_id,
             "title": self.title,

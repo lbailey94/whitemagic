@@ -77,6 +77,12 @@ class ModeProfile:
     description: str
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "mode": self.mode.value,
             "preferred_tools": self.preferred_tools,

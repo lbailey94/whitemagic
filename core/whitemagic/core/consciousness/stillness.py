@@ -31,6 +31,12 @@ class StillnessManager:
 
     @property
     def is_still(self) -> bool:
+        """
+        Check whether the still condition holds.
+        
+        Returns:
+            bool
+        """
         return self._is_still
 
     def enter_stillness(self, reason: str = "Deep Reflection") -> None:
@@ -87,6 +93,12 @@ class StillnessManager:
 
 _stillness_manager = None
 def get_stillness_manager() -> StillnessManager:
+    """
+    Get the stillness manager.
+    
+    Returns:
+        StillnessManager
+    """
     global _stillness_manager
     if _stillness_manager is None:
         _stillness_manager = StillnessManager()

@@ -164,6 +164,12 @@ class SubClusteringEngine:
 _sub_clustering_engine: SubClusteringEngine | None = None
 
 def get_sub_clustering_engine() -> SubClusteringEngine:
+    """
+    Get the sub clustering engine.
+    
+    Returns:
+        SubClusteringEngine
+    """
     global _sub_clustering_engine
     if _sub_clustering_engine is None:
         _sub_clustering_engine = SubClusteringEngine()

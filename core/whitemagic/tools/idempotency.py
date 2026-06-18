@@ -49,6 +49,12 @@ class IdempotencyRecord:
     response: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "tool": self.tool,
             "key": self.key,
@@ -58,6 +64,16 @@ class IdempotencyRecord:
 
 
 def get_record(tool: str, key: str) -> IdempotencyRecord | None:
+    """
+    Get the record.
+    
+    Args:
+        tool: Parameter description.
+        key: Parameter description.
+    
+    Returns:
+        IdempotencyRecord | None
+    """
     path = _record_path(tool, key)
     if not path.exists():
         return None
@@ -80,6 +96,17 @@ def get_record(tool: str, key: str) -> IdempotencyRecord | None:
 
 
 def put_record(tool: str, key: str, response: dict[str, Any]) -> None:
+    """
+    Perform the put record operation.
+    
+    Args:
+        tool: Parameter description.
+        key: Parameter description.
+        response: Parameter description.
+    
+    Returns:
+        None
+    """
     path = _record_path(tool, key)
     record = IdempotencyRecord(tool=tool, key=key, stored_at=_utc_now_iso(), response=response)
     with file_lock(path):

@@ -99,6 +99,15 @@ class ObjectiveGenerator:
         import asyncio
 
         async def scan_dir(dir_path: str) -> list[str]:
+            """
+            Perform the scan dir operation.
+            
+            Args:
+                dir_path: Parameter description.
+            
+            Returns:
+                list[str]
+            """
             try:
                 proc = await asyncio.create_subprocess_exec(
                     "grep", "-r", "-n", "TODO", dir_path,
@@ -185,6 +194,15 @@ class ObjectiveGenerator:
         import asyncio
 
         async def scan_dir(dir_path: str) -> list[str]:
+            """
+            Perform the scan dir operation.
+            
+            Args:
+                dir_path: Parameter description.
+            
+            Returns:
+                list[str]
+            """
             try:
                 proc = await asyncio.create_subprocess_exec(
                     "grep", "-r", "-n", "TODO implement", dir_path,
@@ -206,6 +224,15 @@ class ObjectiveGenerator:
         import asyncio
 
         async def scan_dir(dir_path: str) -> list[str]:
+            """
+            Perform the scan dir operation.
+            
+            Args:
+                dir_path: Parameter description.
+            
+            Returns:
+                list[str]
+            """
             try:
                 proc = await asyncio.create_subprocess_exec(
                     "grep", "-r", "-n", "-E", "FIXME|HACK", dir_path,

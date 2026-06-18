@@ -193,6 +193,12 @@ class SolutionLibrary:
 _solution_library = None
 
 def get_solution_library() -> SolutionLibrary:
+    """
+    Get the solution library.
+    
+    Returns:
+        SolutionLibrary
+    """
     global _solution_library
     if _solution_library is None:
         _solution_library = SolutionLibrary()

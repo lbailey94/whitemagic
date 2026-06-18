@@ -67,6 +67,15 @@ class TFIDFEmbedder:
     def _tok(self, t: str) -> list[str]: return [w.strip(".,!?;:'\"()[]{}") for w in t.lower().split() if len(w)>2]
     def _h(self, t: str) -> int: return int(hashlib.md5(t.encode()).hexdigest(),16) % self._dim
     def encode(self, texts: list[str]) -> list[list[float]]:
+        """
+        Perform the encode operation.
+        
+        Args:
+            texts: Parameter description.
+        
+        Returns:
+            list[list[float]]
+        """
         out = []
         for t in texts:
             tf = Counter(self._tok(t))
@@ -96,6 +105,18 @@ class VSearchResult:
     score: float
     title: str=""
     snippet: str=""
+    """
+    Convert to/from dict.
+    
+    Returns:
+        dict[str, Any]
+    """
+    """
+    Convert to/from dict.
+    
+    Returns:
+        dict[str, Any]
+    """
     def to_dict(self) -> dict[str, Any]: return {"memory_id":self.memory_id,"score":round(self.score,4),"title":self.title,"snippet":self.snippet[:200]}
 
 class VectorSearch:
@@ -132,6 +153,17 @@ class VectorSearch:
         return self._tfidf.encode(texts)
 
     def index_memory(self, memory_id: str, content: str, title: str = "") -> None:
+        """
+        Perform the index memory operation.
+        
+        Args:
+            memory_id: Parameter description.
+            content: Parameter description.
+            title: Parameter description.
+        
+        Returns:
+            None
+        """
         vecs = self._encode([content[:5000]])
         vec = vecs[0]
         blob = struct.pack(f"{len(vec)}f",*vec)
@@ -153,6 +185,16 @@ class VectorSearch:
                 logging.getLogger(__name__).warning(f"Failed to sync embedding to SHM: {e}")
 
     def search(self, query: str, limit: int = 10) -> list[VSearchResult]:
+            """
+            Perform the search operation.
+            
+            Args:
+                query: Parameter description.
+                limit: Parameter description.
+            
+            Returns:
+                list[VSearchResult]
+            """
             qvec = self._encode([query])[0]
             scored = []
 
@@ -236,9 +278,27 @@ class VectorSearch:
                 results.append(VSearchResult(memory_id=mid,score=s,title=m.get("title",""),snippet=m.get("snippet","")))
             return results
 
+    """
+    Perform the index count operation.
+    
+    Returns:
+        int
+    """
+    """
+    Perform the index count operation.
+    
+    Returns:
+        int
+    """
     def index_count(self) -> int: return len(self._cache)
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "indexed": len(self._cache),
             "has_sbert": _has_sbert(),
@@ -253,6 +313,12 @@ class VectorSearch:
 _vs=None
 _vs_lock=threading.Lock()
 def get_vector_status() -> dict[str, Any]:
+    """
+    Get the vector status.
+    
+    Returns:
+        dict[str, Any]
+    """
     db = str(MEMORY_DIR / "embeddings.db")
     indexed = 0
     db_exists = os.path.exists(db)
@@ -290,6 +356,12 @@ def get_vector_status() -> dict[str, Any]:
 
 
 def get_vector_search() -> VectorSearch:
+    """
+    Get the vector search.
+    
+    Returns:
+        VectorSearch
+    """
     global _vs
     if _vs is None:
         with _vs_lock:

@@ -52,6 +52,12 @@ class LineageEdge:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "source_id": self.source_id,
             "source_galaxy": self.source_galaxy,
@@ -76,6 +82,12 @@ class TaxonomicRank:
     lineage_depth: int  # How many transfers/splits from original
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "species": self.species,
             "genus": self.genus,
@@ -106,6 +118,15 @@ class PhylogeneticTracker:
 
     @classmethod
     def get_instance(cls) -> PhylogeneticTracker:
+        """
+        Get the instance.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            PhylogeneticTracker
+        """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:

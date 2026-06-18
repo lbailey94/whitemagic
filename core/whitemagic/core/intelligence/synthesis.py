@@ -32,6 +32,15 @@ logger = logging.getLogger(__name__)
 class TitleGenerator:
     """Generate descriptive titles for memories based on content analysis."""
     def generate(self, content: str) -> str:
+        """
+        Perform the generate operation.
+        
+        Args:
+            content: Parameter description.
+        
+        Returns:
+            str
+        """
         if not content: return "Untitled"
         # Match header or first line
         match = re.search(r"^#\s+(.+)$", content, re.M)
@@ -52,6 +61,17 @@ class DharmicSolver:
     """Mathematical solver for causal constraints and ethical optimization."""
     def solve(self, nodes: list, edges: list, scores: dict) -> Any:
         # Simplified implementation
+        """
+        Perform the solve operation.
+        
+        Args:
+            nodes: Parameter description.
+            edges: Parameter description.
+            scores: Parameter description.
+        
+        Returns:
+            Any
+        """
         return {n: 1.0 for n in nodes}
 
 # --- SINGLETONS ---
@@ -60,16 +80,34 @@ _serendipity: SerendipityEngine | None = None
 _solver: DharmicSolver | None = None
 
 def get_title_generator() -> TitleGenerator:
+    """
+    Get the title generator.
+    
+    Returns:
+        TitleGenerator
+    """
     global _title_gen
     if _title_gen is None: _title_gen = TitleGenerator()
     return _title_gen
 
 def get_serendipity_engine() -> SerendipityEngine:
+    """
+    Get the serendipity engine.
+    
+    Returns:
+        SerendipityEngine
+    """
     global _serendipity
     if _serendipity is None: _serendipity = SerendipityEngine()
     return _serendipity
 
 def get_solver() -> DharmicSolver:
+    """
+    Get the solver.
+    
+    Returns:
+        DharmicSolver
+    """
     global _solver
     if _solver is None: _solver = DharmicSolver()
     return _solver

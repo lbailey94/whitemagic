@@ -37,6 +37,12 @@ class ScoreBreakdown:
     is_mojo_optimized: bool
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "recency": round(self.recency_component, 3),
             "frequency": round(self.frequency_component, 3),

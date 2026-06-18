@@ -118,6 +118,12 @@ class Telemetry:
 _telemetry = None
 
 def get_telemetry() -> Telemetry:
+    """
+    Get the telemetry.
+    
+    Returns:
+        Telemetry
+    """
     global _telemetry
     if _telemetry is None:
         _telemetry = Telemetry()

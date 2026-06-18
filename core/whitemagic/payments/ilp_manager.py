@@ -62,6 +62,12 @@ class PaymentRecord:
     receipt_hash: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "payment_id": self.payment_id,
             "destination": self.destination,
@@ -89,6 +95,12 @@ class ILPConfig:
     timeout_ms: int = 30000
 
     def is_configured(self) -> bool:
+        """
+        Check whether the configured condition holds.
+        
+        Returns:
+            bool
+        """
         return bool(self.payment_pointer or self.connector_url)
 
 

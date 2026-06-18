@@ -105,6 +105,12 @@ class DGAEngine:
             return "static_entropy"
 
 def get_dga_engine() -> DGAEngine:
+    """
+    Get the dga engine.
+    
+    Returns:
+        DGAEngine
+    """
     return DGAEngine()
 
 if __name__ == "__main__":

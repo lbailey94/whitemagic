@@ -47,6 +47,12 @@ class Conversation:
     size_bytes: int = 0
 
     def message_count(self) -> int:
+        """
+        Perform the message count operation.
+        
+        Returns:
+            int
+        """
         return len(self.messages)
 
     def to_markdown(self) -> str:
@@ -72,6 +78,12 @@ class Conversation:
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "path": self.path,

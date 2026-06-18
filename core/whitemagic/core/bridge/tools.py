@@ -320,38 +320,92 @@ def evaluate_dharma_router(operation: str = "evaluate", **kwargs: Any) -> dict[s
 
 # Consolidate router stubs
 def consolidate_consolidate_memories(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the consolidate consolidate memories operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], rust_consolidate_memories(**kwargs))
 
 
 def consolidate_finalize_scratchpad(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the consolidate finalize scratchpad operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"finalized": True}
 
 
 def consolidate_process_wisdom(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the consolidate process wisdom operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], archaeology_process_wisdom(**kwargs))
 
 
 def execute_cascade(**kwargs: Any) -> dict[str, Any]:
+    """
+    Run the cascade operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], detect_patterns(**kwargs))
 
 
 def list_patterns(**kwargs: Any) -> dict[str, Any]:
+    """
+    List the patterns.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"patterns": ["analyze"]}
 
 
 def cache_optimize_cache(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the cache optimize cache operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], optimize_cache(**kwargs))
 
 
 def cache_clear_cache(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the cache clear cache operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"cleared": True}
 
 
 def cache_cache_stats(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the cache cache stats operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"stats": "ok"}
 
 
 def manage_resonance(**kwargs: Any) -> dict[str, Any]:
+    """
+    Perform the manage resonance operation.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {"resonance": "active"}
 
 # ============================================================================

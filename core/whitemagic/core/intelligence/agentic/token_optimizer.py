@@ -47,10 +47,22 @@ class TokenBudget:
 
     @property
     def remaining(self) -> int:
+        """
+        Perform the remaining operation.
+        
+        Returns:
+            int
+        """
         return self.allocated - self.used
 
     @property
     def efficiency(self) -> float:
+        """
+        Perform the efficiency operation.
+        
+        Returns:
+            float
+        """
         total = self.used + self.saved
         return self.saved / total if total > 0 else 0.0
 
@@ -67,12 +79,36 @@ class TokenBudget:
 
     @property
     def rate_limit_remaining(self) -> int:
+        """
+        Perform the rate limit remaining operation.
+        
+        Returns:
+            int
+        """
         return max(0, self.max_calls_per_hour - self.calls_this_hour)
 
     def use(self, tokens: int) -> None:
+        """
+        Perform the use operation.
+        
+        Args:
+            tokens: Parameter description.
+        
+        Returns:
+            None
+        """
         self.used += tokens
 
     def save(self, tokens: int) -> None:
+        """
+        Perform the save operation.
+        
+        Args:
+            tokens: Parameter description.
+        
+        Returns:
+            None
+        """
         self.saved += tokens
 
     def record_call(self) -> None:
@@ -85,9 +121,21 @@ class TokenBudget:
         self.calls_this_hour += 1
 
     def is_rate_limited(self) -> bool:
+        """
+        Check whether the rate limited condition holds.
+        
+        Returns:
+            bool
+        """
         return self.calls_this_hour >= self.max_calls_per_hour
 
     def report(self) -> str:
+        """
+        Perform the report operation.
+        
+        Returns:
+            str
+        """
         tier_emoji = {"safe": "🟢", "wrap_up": "🟡", "checkpoint": "🔴"}[self.usage_tier]
         return (
             f"Token Budget Report:\n"
@@ -112,6 +160,15 @@ class CachedResult:
     hits: int = 0
 
     def is_stale(self, max_age_hours: int = 24) -> bool:
+        """
+        Check whether the stale condition holds.
+        
+        Args:
+            max_age_hours: Parameter description.
+        
+        Returns:
+            bool
+        """
         age = datetime.now() - self.created
         return age > timedelta(hours=max_age_hours)
 
@@ -157,6 +214,15 @@ class QueryCache:
         self.cache_file.write_text(_json_dumps(data, indent=2))
 
     def get(self, query: str) -> CachedResult | None:
+        """
+        Perform the get operation.
+        
+        Args:
+            query: Parameter description.
+        
+        Returns:
+            CachedResult | None
+        """
         h = self._hash_query(query)
         cached = self._cache.get(h)
         if cached and not cached.is_stale():
@@ -165,6 +231,17 @@ class QueryCache:
         return None
 
     def set(self, query: str, result: str, tokens_saved: int) -> None:
+        """
+        Perform the set operation.
+        
+        Args:
+            query: Parameter description.
+            result: Parameter description.
+            tokens_saved: Parameter description.
+        
+        Returns:
+            None
+        """
         h = self._hash_query(query)
         self._cache[h] = CachedResult(
             query_hash=h,
@@ -175,6 +252,12 @@ class QueryCache:
         self._save()
 
     def stats(self) -> dict[str, Any]:
+        """
+        Perform the stats operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         total_hits = sum(c.hits for c in self._cache.values())
         total_saved = sum(c.tokens_saved * c.hits for c in self._cache.values())
         return {

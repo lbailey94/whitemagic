@@ -63,6 +63,12 @@ class _AsyncBroker:
         self._connect_lock = asyncio.Lock()
 
     async def connect(self) -> None:
+        """
+        Perform the connect operation.
+        
+        Returns:
+            None
+        """
         async with self._connect_lock:
             if self.redis is None:
                 aioredis = _require_redis()
@@ -80,11 +86,27 @@ class _AsyncBroker:
                 self.redis = aioredis.Redis(connection_pool=pool)
 
     async def disconnect(self) -> None:
+        """
+        Perform the disconnect operation.
+        
+        Returns:
+            None
+        """
         if self.redis:
             await self.redis.close()
             self.redis = None
 
     async def publish(self, channel: str, message: dict[str, Any]) -> str:
+        """
+        Perform the publish operation.
+        
+        Args:
+            channel: Parameter description.
+            message: Parameter description.
+        
+        Returns:
+            str
+        """
         if not self.redis:
             await self.connect()
         redis = self.redis
@@ -102,6 +124,16 @@ class _AsyncBroker:
         return msg_id
 
     async def history(self, channel: str, limit: int = 20) -> list[dict[str, Any]]:
+        """
+        Perform the history operation.
+        
+        Args:
+            channel: Parameter description.
+            limit: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         if not self.redis:
             await self.connect()
         redis = self.redis
@@ -118,6 +150,12 @@ class _AsyncBroker:
 
 
     async def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         if not self.redis:
             await self.connect()
         redis = self.redis

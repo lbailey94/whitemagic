@@ -3,6 +3,12 @@ from typing import Any, cast
 
 
 def handle_evaluate_ethics(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a evaluate ethics event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.bridge.dharma import dharma_evaluate_ethics
         return cast("dict[str, Any]", dharma_evaluate_ethics(action={"tool": "evaluate_ethics", "args": kwargs}))
@@ -17,16 +23,34 @@ def handle_evaluate_ethics(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_check_boundaries(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a check boundaries event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.dharma import dharma_check_boundaries
     return cast("dict[str, Any]", dharma_check_boundaries(action={"tool": "check_boundaries", "args": kwargs}))
 
 
 def handle_verify_consent(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a verify consent event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.dharma import dharma_verify_consent
     return cast("dict[str, Any]", dharma_verify_consent(action={"tool": "verify_consent", "args": kwargs}))
 
 
 def handle_get_ethical_score(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a get ethical score event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.bridge.dharma import dharma_get_ethical_score
         return cast("dict[str, Any]", dharma_get_ethical_score(**kwargs))
@@ -40,6 +64,12 @@ def handle_get_ethical_score(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_get_dharma_guidance(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a get dharma guidance event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.bridge.dharma import dharma_get_guidance
         situation = kwargs.get("situation", "general inquiry")

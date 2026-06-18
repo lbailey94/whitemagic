@@ -145,12 +145,27 @@ class AutoLinker:
 _linker: AutoLinker | None = None
 
 def get_linker() -> AutoLinker:
+    """
+    Get the linker.
+    
+    Returns:
+        AutoLinker
+    """
     global _linker
     if _linker is None:
         _linker = AutoLinker()
     return _linker
 
 def find_similar_memories(memory: Memory) -> list[SimilarityResult]:
+    """
+    Find similar memories matching the criteria.
+    
+    Args:
+        memory: Parameter description.
+    
+    Returns:
+        list[SimilarityResult]
+    """
     return get_linker().find_similar(memory)
 
 def create_memory_with_links(content: str, title: str = "", tags: list[str] | None = None) -> Memory:

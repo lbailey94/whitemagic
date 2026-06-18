@@ -47,6 +47,12 @@ class SHMGraphTopology:
 
     def initialize(self) -> None:
 
+        """
+        Perform the initialize operation.
+        
+        Returns:
+            None
+        """
         with self._lock:
             if self._map_file is not None:
                 return
@@ -116,6 +122,12 @@ class SHMGraphTopology:
 
 _global_shm_graph = None
 def get_shm_graph() -> SHMGraphTopology:
+    """
+    Get the shm graph.
+    
+    Returns:
+        SHMGraphTopology
+    """
     global _global_shm_graph
     if _global_shm_graph is None:
         _global_shm_graph = SHMGraphTopology()

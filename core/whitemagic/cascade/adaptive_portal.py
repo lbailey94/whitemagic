@@ -834,6 +834,12 @@ if __name__ == "__main__":
     import asyncio
 
     async def test() -> Any:
+        """
+        Perform the test operation.
+        
+        Returns:
+            Any
+        """
         logger.info("🔮 Testing Adaptive Tool Portal")
         logger.info("=" * 60)
 

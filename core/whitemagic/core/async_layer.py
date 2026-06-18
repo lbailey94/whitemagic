@@ -47,6 +47,12 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
     if asyncio.iscoroutinefunction(func):
         @functools.wraps(func)
         def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            """
+            Perform the async wrapper operation.
+            
+            Returns:
+                Any
+            """
             try:
                 asyncio.get_running_loop()
                 # If we're already in a loop, return the coroutine directly
@@ -59,6 +65,12 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
 
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
+        """
+        Perform the wrapper operation.
+        
+        Returns:
+            Any
+        """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -87,6 +99,12 @@ def ensure_async(func: Callable) -> Callable:
 
     @functools.wraps(func)
     async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        """
+        Perform the async wrapper operation.
+        
+        Returns:
+            Any
+        """
         executor = AsyncCompat.get_executor()
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(executor, lambda: func(*args, **kwargs))

@@ -253,6 +253,12 @@ class GravityCalculator:
         }
 
 def get_gravity_calculator() -> GravityCalculator:
+    """
+    Get the gravity calculator.
+    
+    Returns:
+        GravityCalculator
+    """
     return GravityCalculator()
 
 if __name__ == "__main__":

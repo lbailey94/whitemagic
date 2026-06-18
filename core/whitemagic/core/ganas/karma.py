@@ -112,6 +112,12 @@ class KarmaTraceLogger:
 _logger: KarmaTraceLogger | None = None
 
 def get_karma_tracer() -> KarmaTraceLogger:
+    """
+    Get the karma tracer.
+    
+    Returns:
+        KarmaTraceLogger
+    """
     global _logger
     if _logger is None:
         _logger = KarmaTraceLogger()

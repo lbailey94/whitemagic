@@ -40,6 +40,12 @@ class EntityMatch:
     confidence: float = 0.8
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "text": self.text,
             "type": self.entity_type,

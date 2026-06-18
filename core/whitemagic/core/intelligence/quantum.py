@@ -154,6 +154,20 @@ class QuantumGraphAdapter:
 
     def quantum_enhanced_walk(self, seed_ids: list[str], hops: int = 2, top_k: int = 5, query_embedding: list[float] | None = None, oracle_func: Callable[[str], bool] | None = None, get_neighbors_func: Callable[[str], list[dict]] | None = None) -> Any:
         # Simplified bridge for consolidation
+        """
+        Perform the quantum enhanced walk operation.
+        
+        Args:
+            seed_ids: Parameter description.
+            hops: Parameter description.
+            top_k: Parameter description.
+            query_embedding: Parameter description.
+            oracle_func: Parameter description.
+            get_neighbors_func: Parameter description.
+        
+        Returns:
+            Any
+        """
         if self._classical:
             return self._classical.walk(seed_ids=seed_ids, hops=hops, top_k=top_k, query_embedding=query_embedding)
         return None
@@ -162,6 +176,12 @@ class QuantumGraphAdapter:
 _quantum_engine: QuantumEngine | None = None
 
 def get_quantum_engine() -> QuantumEngine:
+    """
+    Get the quantum engine.
+    
+    Returns:
+        QuantumEngine
+    """
     global _quantum_engine
     if _quantum_engine is None: _quantum_engine = QuantumEngine()
     return _quantum_engine

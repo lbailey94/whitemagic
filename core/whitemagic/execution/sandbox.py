@@ -167,6 +167,16 @@ class SafeSandbox:
         timeout_triggered = False
 
         def timeout_handler(signum: int, frame: Any) -> None:
+            """
+            Perform the timeout handler operation.
+            
+            Args:
+                signum: Parameter description.
+                frame: Parameter description.
+            
+            Returns:
+                None
+            """
             nonlocal timeout_triggered
             timeout_triggered = True
             # SECURITY: Use SystemExit (harder to catch than Exception)
@@ -295,6 +305,16 @@ class SafeSandbox:
         timeout_triggered = False
 
         def timeout_handler(signum: int, frame: Any) -> None:
+            """
+            Perform the timeout handler operation.
+            
+            Args:
+                signum: Parameter description.
+                frame: Parameter description.
+            
+            Returns:
+                None
+            """
             nonlocal timeout_triggered
             timeout_triggered = True
             raise SystemExit(f"Function call exceeded {self.timeout} second timeout")

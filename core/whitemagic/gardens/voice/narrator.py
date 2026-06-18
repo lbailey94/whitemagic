@@ -135,6 +135,12 @@ class Narrator:
 _narrator = None
 
 def get_narrator() -> Narrator:
+    """
+    Get the narrator.
+    
+    Returns:
+        Narrator
+    """
     global _narrator
     if _narrator is None:
         _narrator = Narrator()

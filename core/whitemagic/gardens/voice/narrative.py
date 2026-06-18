@@ -29,6 +29,12 @@ class Thread:
     entries: list[str] = field(default_factory=list)  # Entry IDs
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "name": self.name,
@@ -39,6 +45,16 @@ class Thread:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Thread:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            Thread
+        """
         return cls(
             id=data["id"],
             name=data["name"],
@@ -59,6 +75,12 @@ class Chapter:
     summary: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "story": self.story,
@@ -69,6 +91,16 @@ class Chapter:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Chapter:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            Chapter
+        """
         return cls(
             name=data["name"],
             story=data["story"],
@@ -90,6 +122,12 @@ class Story:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "title": self.title,
             "theme": self.theme,
@@ -101,6 +139,16 @@ class Story:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Story:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            Story
+        """
         return cls(
             title=data["title"],
             theme=data.get("theme"),

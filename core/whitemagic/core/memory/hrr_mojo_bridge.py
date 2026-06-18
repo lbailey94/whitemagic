@@ -194,11 +194,25 @@ def patch_hrr_engine():
 
         def patched_bind(self, a, b):
             # Use Mojo bridge for large batches, Python for single calls
+            """
+            Perform the patched bind operation.
+            
+            Args:
+                a: Parameter description.
+                b: Parameter description.
+            """
             if isinstance(a, np.ndarray) and a.ndim == 1:
                 return bridge.bind(a, b)
             return original_bind(self, a, b)
 
         def patched_unbind(self, bound, b):
+            """
+            Perform the patched unbind operation.
+            
+            Args:
+                bound: Parameter description.
+                b: Parameter description.
+            """
             if isinstance(bound, np.ndarray) and bound.ndim == 1:
                 return bridge.unbind(bound, b)
             return original_unbind(self, bound, b)

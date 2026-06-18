@@ -79,6 +79,12 @@ class MemoryMarket:
 _market: MemoryMarket | None = None
 
 def get_memory_market() -> MemoryMarket:
+    """
+    Get the memory market.
+    
+    Returns:
+        MemoryMarket
+    """
     global _market
     if _market is None:
         _market = MemoryMarket()

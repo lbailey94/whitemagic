@@ -50,6 +50,12 @@ class MemoryCluster:
     theme: str
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "cluster_id": self.cluster_id,
             "memory_ids": self.memory_ids,
@@ -75,6 +81,12 @@ class ConsolidationReport:
     timestamp: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memories_analyzed": self.memories_analyzed,
             "clusters_found": self.clusters_found,
@@ -729,6 +741,12 @@ class MemoryConsolidator:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "total_consolidations": self._total_consolidations,

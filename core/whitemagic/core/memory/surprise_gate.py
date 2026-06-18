@@ -57,6 +57,12 @@ class SurpriseVerdict:
     evaluation_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "action": self.action.value,
             "surprise_score": round(self.surprise_score, 3),
@@ -252,6 +258,12 @@ class SurpriseGate:
             logger.debug(f"Resonance event emission failed: {e}")
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "total_evaluations": self._total_evaluations,

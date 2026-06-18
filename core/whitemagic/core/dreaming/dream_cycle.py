@@ -71,6 +71,12 @@ class DreamReport:
     error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "phase": self.phase.value,
             "started_at": self.started_at,

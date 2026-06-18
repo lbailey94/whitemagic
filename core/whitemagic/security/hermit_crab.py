@@ -71,6 +71,12 @@ class ThreatAssessment:
     reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "threat_level": round(self.threat_level, 3),
             "signals": self.signals,
@@ -93,6 +99,12 @@ class WithdrawalRecord:
     ledger_hash: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "event_id": self.event_id,
             "timestamp": self.timestamp,

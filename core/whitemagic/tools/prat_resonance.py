@@ -203,6 +203,12 @@ class ResonanceSnapshot:
     successor_hint: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return asdict(self)
 
 
@@ -243,6 +249,12 @@ class PratResonanceState:
 
     @property
     def call_count(self) -> int:
+        """
+        Perform the call count operation.
+        
+        Returns:
+            int
+        """
         with self._lock:
             return self._session_calls
 

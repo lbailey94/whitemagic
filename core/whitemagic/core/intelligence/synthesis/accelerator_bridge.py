@@ -195,6 +195,15 @@ class AcceleratorBridge:
 _accelerator_bridge = None
 
 def get_accelerator_bridge(root_dir: Path | None = None) -> AcceleratorBridge:
+    """
+    Get the accelerator bridge.
+    
+    Args:
+        root_dir: Parameter description.
+    
+    Returns:
+        AcceleratorBridge
+    """
     global _accelerator_bridge
     if _accelerator_bridge is None:
         if root_dir is None:

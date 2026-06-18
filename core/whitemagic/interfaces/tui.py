@@ -29,23 +29,62 @@ class GalaxyStats(Static):
     clusters = reactive(0)
 
     def compose(self) -> ComposeResult:
+        """
+        Perform the compose operation.
+        
+        Returns:
+            ComposeResult
+        """
         yield Label("🌌 Galaxy Stats", classes="box-title")
         yield Label(f"Stars: {self.total_stars}", id="stat-stars")
         yield Label(f"Clusters: {self.clusters}", id="stat-clusters")
 
     def watch_total_stars(self, val: int) -> None:
+        """
+        Perform the watch total stars operation.
+        
+        Args:
+            val: Parameter description.
+        
+        Returns:
+            None
+        """
         self.query_one("#stat-stars", Label).update(f"Stars: {val}")
 
     def watch_clusters(self, val: int) -> None:
+        """
+        Perform the watch clusters operation.
+        
+        Args:
+            val: Parameter description.
+        
+        Returns:
+            None
+        """
         self.query_one("#stat-clusters", Label).update(f"Clusters: {val}")
 
 class GalaxyMap(Static):
     """Widget to display the 4D holographic map."""
 
     def on_mount(self) -> None:
+        """
+        Handle a mount event.
+        
+        Returns:
+            None
+        """
         self.update_map([])
 
     def update_map(self, memories: list[Any]) -> None:
+        """
+        Update the map.
+        
+        Args:
+            memories: Parameter description.
+        
+        Returns:
+            None
+        """
         from whitemagic.tools.tui.galaxy import GalaxyExplorer
         explorer = GalaxyExplorer(memories)
         # Use full width/height for the widget
@@ -110,6 +149,12 @@ class GalaxyTUI(App):
     ]
 
     def compose(self) -> ComposeResult:
+        """
+        Perform the compose operation.
+        
+        Returns:
+            ComposeResult
+        """
         yield Header(show_clock=True)
         yield Horizontal(
             Vertical(
@@ -127,12 +172,24 @@ class GalaxyTUI(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        """
+        Handle a mount event.
+        
+        Returns:
+            None
+        """
         self.title = f"WhiteMagic Galaxy v{__version__}"
         self.sub_title = "4D Memory Space Visualizer"
         # Small delay to allow size resolution
         self.set_timer(0.2, self.action_refresh_data)
 
     def action_refresh_data(self) -> None:
+        """
+        Perform the action refresh data operation.
+        
+        Returns:
+            None
+        """
         if not HAS_MEMORY:
             self.notify("Error: WhiteMagic Core not available", severity="error")
             return

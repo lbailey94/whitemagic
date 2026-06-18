@@ -134,6 +134,12 @@ class DareToCorpsResult:
     verdict: str = ""  # "victory", "pyrrhic_victory", "defeat"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_attempts": self.total_attempts,
             "successful": self.successful,

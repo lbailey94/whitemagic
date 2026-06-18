@@ -57,6 +57,12 @@ class BatchCommand:
     id: int = 0  # Assigned by client
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "op": self.op,
@@ -74,6 +80,16 @@ class BatchResult:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BatchResult:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            BatchResult
+        """
         return cls(
             id=data.get("id", 0),
             status=data.get("status", "unknown"),
@@ -92,6 +108,16 @@ class BatchResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BatchResponse:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            BatchResponse
+        """
         return cls(
             request_id=data.get("request_id", ""),
             results=[BatchResult.from_dict(r) for r in data.get("results", [])],

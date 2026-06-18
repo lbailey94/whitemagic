@@ -14,6 +14,12 @@ class HaskellBridge:
         self._available = False
 
     def check_availability(self) -> bool:
+        """
+        Perform the check availability operation.
+        
+        Returns:
+            bool
+        """
         return bool(self._available)
 
     def calculate_balance(self, inputs: list[float]) -> dict[str, Any]:
@@ -26,6 +32,12 @@ class HaskellBridge:
 _global_bridge = None
 
 def get_haskell_bridge() -> HaskellBridge:
+    """
+    Get the haskell bridge.
+    
+    Returns:
+        HaskellBridge
+    """
     global _global_bridge
     if _global_bridge is None:
         _global_bridge = HaskellBridge()

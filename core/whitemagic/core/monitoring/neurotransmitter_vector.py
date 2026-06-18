@@ -56,6 +56,12 @@ class NeurotransmitterSnapshot:
     timestamp: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return asdict(self)
 
 
@@ -68,19 +74,46 @@ class _SignalWindow:
         self._window = window_seconds
 
     def push(self, value: float) -> None:
+        """
+        Perform the push operation.
+        
+        Args:
+            value: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._events.append((time.time(), value))
 
     def recent(self) -> list[float]:
+        """
+        Perform the recent operation.
+        
+        Returns:
+            list[float]
+        """
         cutoff = time.time() - self._window
         with self._lock:
             return [v for t, v in self._events if t >= cutoff]
 
     def mean(self) -> float:
+        """
+        Perform the mean operation.
+        
+        Returns:
+            float
+        """
         vals = self.recent()
         return sum(vals) / len(vals) if vals else 0.5
 
     def variance(self) -> float:
+        """
+        Perform the variance operation.
+        
+        Returns:
+            float
+        """
         vals = self.recent()
         if len(vals) < 2:
             return 0.0

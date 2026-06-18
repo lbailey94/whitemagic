@@ -78,6 +78,12 @@ class PromptTemplate:
         return _VAR_PATTERN.sub(_replace, text)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "description": self.description,

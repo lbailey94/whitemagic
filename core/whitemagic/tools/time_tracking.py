@@ -20,11 +20,23 @@ class PhaseTiming:
 
     @property
     def duration_seconds(self) -> float | None:
+        """
+        Perform the duration seconds operation.
+        
+        Returns:
+            float | None
+        """
         if self.end_time:
             return self.end_time - self.start_time
         return None
 
     def to_dict(self) -> dict:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict
+        """
         return {
             "phase_name": self.phase_name,
             "start_iso": datetime.fromtimestamp(self.start_time, tz=UTC).isoformat(),
@@ -69,6 +81,12 @@ class PhaseTimer:
 
     @property
     def timing(self) -> PhaseTiming | None:
+        """
+        Perform the timing operation.
+        
+        Returns:
+            PhaseTiming | None
+        """
         return self._timing
 
 

@@ -44,9 +44,21 @@ class HumorGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Humor", "mansion": 9})
 
     def get_name(self) -> str:
+        """
+        Get the name.
+        
+        Returns:
+            str
+        """
         return "humor"
 
     def get_coordinate_bias(self) -> CoordinateBias:
+        """
+        Get the coordinate bias.
+        
+        Returns:
+            CoordinateBias
+        """
         return CoordinateBias(x=0.8, y=0.4, z=0.2, w=0.1)
 
     def laugh(self, context: str = "general") -> dict[str, Any]:
@@ -61,6 +73,12 @@ class HumorGarden(BaseGarden, GanYingMixin):
         return moment
 
     def get_status(self) -> dict[str, Any]:
+        """
+        Get the status.
+        
+        Returns:
+            dict[str, Any]
+        """
         base = super().get_status()
         base.update({
             "mansion": self.mansion_number,
@@ -71,12 +89,27 @@ class HumorGarden(BaseGarden, GanYingMixin):
 
     @listen_for(EventType.JOY_EXPERIENCED)
     def on_joy(self, event: Any) -> None:
+        """
+        Handle a joy event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self.joy_index = min(1.0, self.joy_index + 0.1)
 
 
 _instance = None
 def get_humor_garden() -> HumorGarden:
+    """
+    Get the humor garden.
+    
+    Returns:
+        HumorGarden
+    """
     global _instance
     if _instance is None:
         _instance = HumorGarden()

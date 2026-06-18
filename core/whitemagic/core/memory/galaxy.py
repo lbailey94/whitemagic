@@ -43,12 +43,24 @@ class GalaxyManager:
         self.constellations = {}
 
     def add_constellation(self, constellation: Constellation):
+        """
+        Add constellation.
+        
+        Args:
+            constellation: Parameter description.
+        """
         self.constellations[constellation.name] = constellation
 
 # --- SINGLETONS ---
 _galaxy: GalaxyManager | None = None
 
 def get_galaxy_manager() -> GalaxyManager:
+    """
+    Get the galaxy manager.
+    
+    Returns:
+        GalaxyManager
+    """
     global _galaxy
     if _galaxy is None: _galaxy = GalaxyManager()
     return _galaxy

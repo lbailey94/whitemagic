@@ -81,6 +81,12 @@ class NoHidingMemoryController:
 _controller = None
 
 def get_nohiding_controller() -> NoHidingMemoryController:
+    """
+    Get the nohiding controller.
+    
+    Returns:
+        NoHidingMemoryController
+    """
     global _controller
     if _controller is None:
         _controller = NoHidingMemoryController()

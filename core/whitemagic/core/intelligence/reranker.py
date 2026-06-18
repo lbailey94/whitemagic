@@ -306,10 +306,27 @@ def cross_encoder_rerank(
 class Reranker:
     """Wrapper class for reranking operations (backward compatibility)."""
     def rerank(self, query: str, items: list[dict[str, Any]], top_k: int = 10) -> list[dict[str, Any]]:
+        """
+        Perform the rerank operation.
+        
+        Args:
+            query: Parameter description.
+            items: Parameter description.
+            top_k: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         results = rerank(query, items, top_k=top_k)
         return [r.to_dict() if hasattr(r, "to_dict") else vars(r) for r in results]
 
     def get_status(self) -> dict[str, Any]:
+        """
+        Get the status.
+        
+        Returns:
+            dict[str, Any]
+        """
         return get_status()
 
 def rerank(

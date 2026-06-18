@@ -38,6 +38,12 @@ class HaskellBridge:
 
     @property
     def available(self) -> bool:
+        """
+        Perform the available operation.
+        
+        Returns:
+            bool
+        """
         return bool(self._available)
 
     def cast_hexagram(self, lines: list[int] | None = None) -> dict[str, Any]:
@@ -73,6 +79,12 @@ class HaskellBridge:
             }
 
     def check_availability(self) -> bool:
+        """
+        Perform the check availability operation.
+        
+        Returns:
+            bool
+        """
         return bool(self._available)
 
 

@@ -16,6 +16,12 @@ def _env_flag(name: str) -> bool:
 
 
 def get_runtime_status() -> dict[str, Any]:
+    """
+    Get the runtime status.
+    
+    Returns:
+        dict[str, Any]
+    """
     version = _VERSION_FILE.read_text().strip() if _VERSION_FILE.exists() else 'unknown'
     prat_mode = _env_flag('WM_MCP_PRAT')
     lite_mode = _env_flag('WM_MCP_LITE')

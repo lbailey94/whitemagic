@@ -55,6 +55,16 @@ class CoherencePersistence:
         }
 
     def save(self, level: int, factors: dict | None = None) -> Any:
+        """
+        Perform the save operation.
+        
+        Args:
+            level: Parameter description.
+            factors: Parameter description.
+        
+        Returns:
+            Any
+        """
         self.current = {
             "level": level,
             "factors": factors or self.current.get("factors", {}),
@@ -65,9 +75,25 @@ class CoherencePersistence:
             atomic_write(self.state_file, _json_dumps(self.current, indent=2))
 
     def get_level(self) -> int:
+        """
+        Get the level.
+        
+        Returns:
+            int
+        """
         return int(self.current.get("level", 100))
 
     def boost(self, amount: int, reason: str) -> Any:
+        """
+        Perform the boost operation.
+        
+        Args:
+            amount: Parameter description.
+            reason: Parameter description.
+        
+        Returns:
+            Any
+        """
         self.current["level"] = self.current.get("level", 100) + amount
         self.current["factors"][reason] = amount
         self.save(self.current["level"], self.current["factors"])
@@ -139,6 +165,12 @@ class CoherencePersistence:
 
 _coherence = None
 def get_coherence() -> CoherencePersistence:
+    """
+    Get the coherence.
+    
+    Returns:
+        CoherencePersistence
+    """
     global _coherence
     if _coherence is None:
         _coherence = CoherencePersistence()

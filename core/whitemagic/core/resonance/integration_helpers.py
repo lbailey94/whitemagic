@@ -68,6 +68,12 @@ def listen_for(event_type):
         stacklevel=2,
     )
     def decorator(callback):
+        """
+        Perform the decorator operation.
+        
+        Args:
+            callback: Parameter description.
+        """
         return get_bus().listen(event_type, callback)
     return decorator
 

@@ -153,6 +153,12 @@ class ResonanceOrchestrator:
 
 _orchestrator = None
 def get_orchestrator() -> ResonanceOrchestrator:
+    """
+    Get the orchestrator.
+    
+    Returns:
+        ResonanceOrchestrator
+    """
     global _orchestrator
     if _orchestrator is None:
         _orchestrator = ResonanceOrchestrator()

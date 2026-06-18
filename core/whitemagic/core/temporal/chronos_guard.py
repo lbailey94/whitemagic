@@ -113,6 +113,12 @@ class ChronosGuard:
 _chronos = None
 
 def get_chronos_guard() -> ChronosGuard:
+    """
+    Get the chronos guard.
+    
+    Returns:
+        ChronosGuard
+    """
     global _chronos
     if _chronos is None:
         _chronos = ChronosGuard()

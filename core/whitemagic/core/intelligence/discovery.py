@@ -78,6 +78,15 @@ class EntityExtractor:
 
     def extract(self, text: str) -> ExtractionResult:
         # Fallback to regex for speed in consolidation phase
+        """
+        Perform the extract operation.
+        
+        Args:
+            text: Parameter description.
+        
+        Returns:
+            ExtractionResult
+        """
         return self._extract_regex(text)
 
     def _extract_regex(self, text: str) -> ExtractionResult:
@@ -92,6 +101,16 @@ class EntityExtractor:
         return ExtractionResult(entities=entities[:10], relations=[], method="regex")
 
     def extract_and_store(self, memory_id: str, text: str) -> ExtractionResult:
+        """
+        Mine or extract and store.
+        
+        Args:
+            memory_id: Parameter description.
+            text: Parameter description.
+        
+        Returns:
+            ExtractionResult
+        """
         result = self.extract(text)
         # Add persistence logic if needed (similar to old entity_extractor.py)
         return result
@@ -107,6 +126,15 @@ class PromptClassifier:
     }
 
     def classify(self, text: str) -> dict[str, float]:
+        """
+        Perform the classify operation.
+        
+        Args:
+            text: Parameter description.
+        
+        Returns:
+            dict[str, float]
+        """
         text_lower = text.lower()
         scores = {}
         for intent, patterns in self.INTENTS.items():
@@ -118,6 +146,12 @@ class PromptClassifier:
 _extractor: EntityExtractor | None = None
 
 def get_entity_extractor() -> EntityExtractor:
+    """
+    Get the entity extractor.
+    
+    Returns:
+        EntityExtractor
+    """
     global _extractor
     if _extractor is None: _extractor = EntityExtractor()
     return _extractor

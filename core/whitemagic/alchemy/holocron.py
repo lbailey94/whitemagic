@@ -55,6 +55,12 @@ class Holocron:
             logger.error(f"Failed to load Holocron: {e}")
 
     def get_all_rules(self) -> list[dict[str, Any]]:
+        """
+        Get the all rules.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         return self.rules
 
     def get_relevant_rules(self, context: str, limit: int = 5) -> list[dict[str, Any]]:

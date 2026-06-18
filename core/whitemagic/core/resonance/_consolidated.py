@@ -168,6 +168,12 @@ class GanYingBus:
         self._lock = threading.Lock()
 
     def emit(self, event: ResonanceEvent):
+        """
+        Perform the emit operation.
+        
+        Args:
+            event: Parameter description.
+        """
         with self._lock:
             self._history.append(event)
             if len(self._history) > 1000: self._history.pop(0)
@@ -181,6 +187,13 @@ class GanYingBus:
                 logger.debug("Listener dispatch failed: %s", e)
 
     def listen(self, event_type: EventType, callback: Callable):
+        """
+        Perform the listen operation.
+        
+        Args:
+            event_type: Parameter description.
+            callback: Parameter description.
+        """
         with self._lock:
             if event_type not in self._listeners: self._listeners[event_type] = []
             self._listeners[event_type].append(callback)
@@ -189,6 +202,12 @@ class GanYingBus:
 _bus: GanYingBus | None = None
 
 def get_bus() -> GanYingBus:
+    """
+    Get the bus.
+    
+    Returns:
+        GanYingBus
+    """
     global _bus
     if _bus is None: _bus = GanYingBus()
     return _bus
@@ -196,6 +215,9 @@ def get_bus() -> GanYingBus:
 get_event_bus = get_bus # Compatibility alias
 
 def emit_event(*args, **kwargs):
+    """
+    Emit an event for event.
+    """
     if args and isinstance(args[0], EventType):
         kwargs["event_type"] = args[0]
         if len(args) > 1: kwargs["data"] = args[1]

@@ -53,6 +53,12 @@ class ZodiacEntry:
         return hasher.hexdigest()
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "entry_id": self.entry_id,
             "timestamp": self.timestamp,
@@ -141,6 +147,12 @@ class ZodiacLedger:
 _ledger_instance = None
 
 def get_ledger() -> ZodiacLedger:
+    """
+    Get the ledger.
+    
+    Returns:
+        ZodiacLedger
+    """
     global _ledger_instance
     if _ledger_instance is None:
         _ledger_instance = ZodiacLedger()

@@ -32,6 +32,12 @@ class HemisphereAgent:
         self._lock = threading.Lock()
 
     def start_listening(self) -> None:
+        """
+        Perform the start listening operation.
+        
+        Returns:
+            None
+        """
         with self._lock:
             if self._listening:
                 return
@@ -68,12 +74,30 @@ class LeftHemisphereAgent(HemisphereAgent):
         super().__init__("Left")
 
     def propose(self, topic: str) -> str:
+        """
+        Perform the propose operation.
+        
+        Args:
+            topic: Parameter description.
+        
+        Returns:
+            str
+        """
         return (
             f"[LEFT] Regarding '{topic}': We must proceed with rigorous analysis, "
             f"deterministic guarantees, and comprehensive risk mitigation."
         )
 
     def critique(self, position: str) -> str:
+        """
+        Perform the critique operation.
+        
+        Args:
+            position: Parameter description.
+        
+        Returns:
+            str
+        """
         return (
             f"[LEFT→RIGHT] The proposal '{position[:80]}...' lacks concrete validation. "
             f"What are the failure modes? What is the rollback plan?"
@@ -87,12 +111,30 @@ class RightHemisphereAgent(HemisphereAgent):
         super().__init__("Right")
 
     def propose(self, topic: str) -> str:
+        """
+        Perform the propose operation.
+        
+        Args:
+            topic: Parameter description.
+        
+        Returns:
+            str
+        """
         return (
             f"[RIGHT] Regarding '{topic}': I see emergent patterns and novel "
             f"connections. Let's explore the adjacent possible."
         )
 
     def critique(self, position: str) -> str:
+        """
+        Perform the critique operation.
+        
+        Args:
+            position: Parameter description.
+        
+        Returns:
+            str
+        """
         return (
             f"[RIGHT→LEFT] The stance '{position[:80]}...' is over-constrained. "
             f"Where is the room for serendipity and creative breakthrough?"

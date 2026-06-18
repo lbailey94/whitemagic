@@ -47,6 +47,12 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
 
 
 def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a session bootstrap event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.orchestration.session_startup import start_session
     result = start_session(verbose=False)
     _emit("SYSTEM_STARTED", {"mode": "bootstrap"})
@@ -87,6 +93,12 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_session_status(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a session status event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.unified import get_unified_memory
     try:
         stats = get_unified_memory().get_stats()
@@ -96,6 +108,12 @@ def handle_session_status(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_session_handoff_summary(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a session handoff summary event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.memory.unified import get_unified_memory
     from whitemagic.utils.time import now_iso
     try:
@@ -117,6 +135,12 @@ def handle_session_handoff_summary(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_create_session(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a create session event.
+    
+    Returns:
+        dict[str, Any]
+    """
     base_path = _resolve_base_path(kwargs)
     name = kwargs.get("name", "Default Session")
     session_id = f"session-{uuid4().hex[:8]}"
@@ -139,6 +163,12 @@ def handle_create_session(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a checkpoint session event.
+    
+    Returns:
+        dict[str, Any]
+    """
     base_path = _resolve_base_path(kwargs)
 
     # Try to find the most recent active session if none provided
@@ -168,6 +198,12 @@ def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_resume_session(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a resume session event.
+    
+    Returns:
+        dict[str, Any]
+    """
     base_path = _resolve_base_path(kwargs)
     session_id = kwargs.get("session_id")
     if not session_id:

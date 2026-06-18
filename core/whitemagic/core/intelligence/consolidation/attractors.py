@@ -29,6 +29,12 @@ class Attractor:
 
     @property
     def density(self) -> float:
+        """
+        Perform the density operation.
+        
+        Returns:
+            float
+        """
         return self.mass / (self.event_horizon ** 3 + 1e-6)
 
 class AttractorManager:

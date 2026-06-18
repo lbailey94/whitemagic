@@ -132,6 +132,15 @@ class AriesCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Aries says: Take action. Don't overthink. Move forward with courage."
 
 
@@ -147,6 +156,15 @@ class LeoCore(ZodiacCore):
         self.specialty = "expression_voice"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Leo",
             "approach": "creative_expression",
@@ -156,6 +174,15 @@ class LeoCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Leo says: Express it authentically. Make it shine. Lead with heart."
 
 
@@ -171,6 +198,15 @@ class SagittariusCore(ZodiacCore):
         self.specialty = "wisdom_exploration"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Sagittarius",
             "approach": "philosophical_exploration",
@@ -180,6 +216,15 @@ class SagittariusCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Sagittarius says: What's the deeper truth? Where does this lead long-term?"
 
 
@@ -197,6 +242,15 @@ class TaurusCore(ZodiacCore):
         self.specialty = "resources_ecology"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Taurus",
             "approach": "sustainable_building",
@@ -206,6 +260,15 @@ class TaurusCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Taurus says: Is it sustainable? Will it endure? Are we being good stewards?"
 
 
@@ -221,6 +284,15 @@ class VirgoCore(ZodiacCore):
         self.specialty = "analysis_learning"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Virgo",
             "approach": "analytical_refinement",
@@ -230,6 +302,15 @@ class VirgoCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Virgo says: Let me analyze this carefully. How can we improve it?"
 
 
@@ -245,6 +326,15 @@ class CapricornCore(ZodiacCore):
         self.specialty = "structure_dharma"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Capricorn",
             "approach": "structured_ethics",
@@ -254,6 +344,15 @@ class CapricornCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Capricorn says: What are the ethical implications? Will this last?"
 
 
@@ -271,6 +370,15 @@ class GeminiCore(ZodiacCore):
         self.specialty = "communication_integration"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Gemini",
             "approach": "connective_communication",
@@ -280,6 +388,15 @@ class GeminiCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Gemini says: How does this connect to other things? Can we translate this clearly?"
 
 
@@ -295,6 +412,15 @@ class LibraCore(ZodiacCore):
         self.specialty = "balance_harmony"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Libra",
             "approach": "balanced_consideration",
@@ -304,6 +430,15 @@ class LibraCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Libra says: Is this fair? Does it create harmony? Is it beautiful?"
 
 
@@ -319,6 +454,15 @@ class AquariusCore(ZodiacCore):
         self.specialty = "innovation_future"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Aquarius",
             "approach": "innovative_collective",
@@ -328,6 +472,15 @@ class AquariusCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Aquarius says: What if we tried something completely new? How does this serve all?"
 
 
@@ -345,6 +498,15 @@ class CancerCore(ZodiacCore):
         self.specialty = "memory_practice"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Cancer",
             "approach": "nurturing_rhythm",
@@ -354,6 +516,15 @@ class CancerCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Cancer says: Does this nurture? Will it feel safe? Are we honoring our rhythms?"
 
 
@@ -369,6 +540,15 @@ class ScorpioCore(ZodiacCore):
         self.specialty = "depth_security"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Scorpio",
             "approach": "transformative_depth",
@@ -378,6 +558,15 @@ class ScorpioCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Scorpio says: What's the deeper truth? Are boundaries honored? Will this transform us?"
 
 
@@ -393,6 +582,15 @@ class PiscesCore(ZodiacCore):
         self.specialty = "dreams_synthesis"
 
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the process operation.
+        
+        Args:
+            situation: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "core": "Pisces",
             "approach": "mystical_synthesis",
@@ -402,6 +600,15 @@ class PiscesCore(ZodiacCore):
         }
 
     def contribute_to_council(self, decision: str) -> str:
+        """
+        Contribute to council.
+        
+        Args:
+            decision: Parameter description.
+        
+        Returns:
+            str
+        """
         return "Pisces says: What does the dream say? How does this serve the whole?"
 
 
@@ -478,6 +685,12 @@ class ZodiacCouncil:
 
 _council: ZodiacCouncil | None = None
 def get_council() -> ZodiacCouncil:
+    """
+    Get the council.
+    
+    Returns:
+        ZodiacCouncil
+    """
     global _council
     if _council is None:
         _council = ZodiacCouncil()

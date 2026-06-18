@@ -58,6 +58,12 @@ class HomeostaticAction:
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "dimension": self.dimension,
             "level": self.level.value,
@@ -420,6 +426,12 @@ class HomeostaticLoop:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "running": self._running,
@@ -434,6 +446,12 @@ class HomeostaticLoop:
 
     @property
     def is_running(self) -> bool:
+        """
+        Check whether the running condition holds.
+        
+        Returns:
+            bool
+        """
         return self._running
 
 

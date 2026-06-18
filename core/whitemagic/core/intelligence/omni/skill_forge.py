@@ -155,6 +155,12 @@ class SkillForge:
 # Singleton accessor
 _forge = None
 def get_skill_forge() -> SkillForge:
+    """
+    Get the skill forge.
+    
+    Returns:
+        SkillForge
+    """
     global _forge
     if _forge is None:
         _forge = SkillForge()

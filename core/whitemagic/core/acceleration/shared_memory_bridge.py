@@ -109,6 +109,16 @@ class SharedMemoryBridge:
             raise
 
     def write_embedding(self, memory_id: int, vector: list[float]) -> bool:
+        """
+        Perform the write embedding operation.
+        
+        Args:
+            memory_id: Parameter description.
+            vector: Parameter description.
+        
+        Returns:
+            bool
+        """
         if len(vector) != EMBEDDING_DIM:
             raise ValueError(f"Vector dimension mismatch: {len(vector)} != {EMBEDDING_DIM}")
 
@@ -139,6 +149,16 @@ class SharedMemoryBridge:
             return True
 
     def write_batch_numpy(self, ids: np.ndarray, vectors: np.ndarray) -> int:
+        """
+        Perform the write batch numpy operation.
+        
+        Args:
+            ids: Parameter description.
+            vectors: Parameter description.
+        
+        Returns:
+            int
+        """
         if vectors.shape[1] != EMBEDDING_DIM:
             raise ValueError(f"Vector dimension mismatch: {vectors.shape[1]} != {EMBEDDING_DIM}")
 
@@ -172,6 +192,12 @@ class SharedMemoryBridge:
         return written
 
     def read_embedding(self) -> tuple[int, list[float]] | None:
+        """
+        Perform the read embedding operation.
+        
+        Returns:
+            tuple[int, list[float]] | None
+        """
         with self._lock:
             shm = self._shm
             if self._header is None or self._header.count == 0 or shm is None or shm.buf is None:
@@ -198,6 +224,15 @@ class SharedMemoryBridge:
             return memory_id, vector
 
     def read_batch_numpy(self, max_count: int = 1000) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Perform the read batch numpy operation.
+        
+        Args:
+            max_count: Parameter description.
+        
+        Returns:
+            tuple[np.ndarray, np.ndarray]
+        """
         with self._lock:
             shm = self._shm
             if self._header is None or self._header.count == 0 or shm is None or shm.buf is None:
@@ -226,6 +261,12 @@ class SharedMemoryBridge:
             return ids, vectors
 
     def get_stats(self) -> dict:
+        """
+        Get the stats.
+        
+        Returns:
+            dict
+        """
         with self._lock:
             if self._header is None:
                 return {}
@@ -241,12 +282,24 @@ class SharedMemoryBridge:
             }
 
     def close(self) -> None:
+        """
+        Perform the close operation.
+        
+        Returns:
+            None
+        """
         self._header = None
         if self._shm:
             self._shm.close()
             self._shm = None
 
     def destroy(self) -> None:
+        """
+        Perform the destroy operation.
+        
+        Returns:
+            None
+        """
         self.close()
         if self._is_owner:
             try:
@@ -267,14 +320,35 @@ class SharedMemoryBridge:
 
 
 def create_bridge() -> SharedMemoryBridge:
+    """
+    Create a new bridge.
+    
+    Returns:
+        SharedMemoryBridge
+    """
     return SharedMemoryBridge(create=True)
 
 
 def open_bridge() -> SharedMemoryBridge:
+    """
+    Perform the open bridge operation.
+    
+    Returns:
+        SharedMemoryBridge
+    """
     return SharedMemoryBridge(create=False)
 
 
 def benchmark_transfer(n_embeddings: int = 1000) -> dict[str, Any]:
+    """
+    Perform the benchmark transfer operation.
+    
+    Args:
+        n_embeddings: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     ids: np.ndarray = np.arange(n_embeddings, dtype=np.int32)
     vectors = np.random.randn(n_embeddings, EMBEDDING_DIM).astype(np.float32)
 

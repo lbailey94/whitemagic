@@ -26,22 +26,52 @@ class ZodiacSign(Enum):
 
     @property
     def name_str(self) -> str:
+        """
+        Perform the name str operation.
+        
+        Returns:
+            str
+        """
         return self.value[0]
 
     @property
     def symbol(self) -> str:
+        """
+        Perform the symbol operation.
+        
+        Returns:
+            str
+        """
         return self.value[1]
 
     @property
     def modality(self) -> str:
+        """
+        Perform the modality operation.
+        
+        Returns:
+            str
+        """
         return self.value[2]
 
     @property
     def element(self) -> str:
+        """
+        Perform the element operation.
+        
+        Returns:
+            str
+        """
         return self.value[3]
 
     @property
     def number(self) -> int:
+        """
+        Perform the number operation.
+        
+        Returns:
+            int
+        """
         return self.value[4]
 
     @property

@@ -90,6 +90,16 @@ class ChatMessage:
 
     @classmethod
     def from_dict(cls, data: dict) -> ChatMessage:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            ChatMessage
+        """
         return cls(
             id=data["id"],
             timestamp=parse_datetime(data["timestamp"]),
@@ -102,6 +112,12 @@ class ChatMessage:
         )
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "timestamp": self.timestamp.isoformat(),
@@ -155,6 +171,16 @@ class Task:
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            Task
+        """
         due_date = parse_datetime(data["due_date"]) if data.get("due_date") else None
         updates = data.get("updates", [])
         for update in updates:
@@ -174,6 +200,12 @@ class Task:
         )
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "title": self.title,
@@ -551,6 +583,12 @@ class SanghaChat:
 _chat: SanghaChat | None = None
 
 def get_chat() -> SanghaChat:
+    """
+    Get the chat.
+    
+    Returns:
+        SanghaChat
+    """
     global _chat
     if _chat is None:
         _chat = SanghaChat()

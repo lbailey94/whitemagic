@@ -56,6 +56,12 @@ class DharmaConstraints:
 _dharma: DharmaConstraints | None = None
 
 def get_dharma_bridge() -> DharmaConstraints:
+    """
+    Get the dharma bridge.
+    
+    Returns:
+        DharmaConstraints
+    """
     global _dharma
     if _dharma is None:
         _dharma = DharmaConstraints()

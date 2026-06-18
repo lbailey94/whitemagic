@@ -19,6 +19,12 @@ class DreamPlugin:
         self._running = False
 
     def start(self) -> None:
+        """
+        Perform the start operation.
+        
+        Returns:
+            None
+        """
         from whitemagic.core.intelligence.dream_synthesis import get_dream_synthesizer
         self._synthesizer = get_dream_synthesizer()
         self._synthesizer.awaken()
@@ -26,12 +32,24 @@ class DreamPlugin:
         logger.info("DreamPlugin started")
 
     def stop(self) -> None:
+        """
+        Perform the stop operation.
+        
+        Returns:
+            None
+        """
         if self._synthesizer:
             self._synthesizer.sleep()
         self._running = False
         logger.info("DreamPlugin stopped")
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         if not self._synthesizer:
             return {"running": False}
         return {
@@ -42,6 +60,9 @@ class DreamPlugin:
         }
 
 def register():
+    """
+    Perform the register operation.
+    """
     try:
         from whitemagic.core.plugin import get_registry
         get_registry().register(DreamPlugin())

@@ -53,6 +53,12 @@ class CausalEdge:
     reason: str
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "source_id": self.source_id,
             "target_id": self.target_id,
@@ -80,6 +86,12 @@ class CausalMiningReport:
     top_edges: list[CausalEdge] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memories_sampled": self.memories_sampled,
             "pairs_evaluated": self.pairs_evaluated,
@@ -454,6 +466,12 @@ class CausalMiner:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_runs": self._total_runs,
             "total_edges_created": self._total_edges_created,

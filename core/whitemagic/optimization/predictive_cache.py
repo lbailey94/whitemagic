@@ -35,11 +35,23 @@ class CacheStats:
 
     @property
     def hit_rate(self) -> float:
+        """
+        Perform the hit rate operation.
+        
+        Returns:
+            float
+        """
         total = self.hits + self.misses
         return self.hits / total if total > 0 else 0.0
 
     @property
     def prediction_accuracy(self) -> float:
+        """
+        Perform the prediction accuracy operation.
+        
+        Returns:
+            float
+        """
         return (self.prediction_hits / self.predictions
                 if self.predictions > 0 else 0.0)
 

@@ -272,6 +272,12 @@ class ContextOptimizer:
         return separator.join(item.content for item in packed.items)
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "default_budget": self._default_budget,
             "strategy": "salience_primacy_recency",
@@ -287,6 +293,12 @@ _opt_lock = threading.Lock()
 
 
 def get_context_optimizer() -> ContextOptimizer:
+    """
+    Get the context optimizer.
+    
+    Returns:
+        ContextOptimizer
+    """
     global _optimizer
     if _optimizer is None:
         with _opt_lock:

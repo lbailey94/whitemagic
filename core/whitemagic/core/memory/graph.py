@@ -61,6 +61,12 @@ class CentralitySnapshot:
     edge_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timestamp": self.timestamp,
             "node_count": self.node_count,
@@ -98,6 +104,12 @@ class WalkPath:
     depth: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "nodes": self.nodes,
             "edge_weights": [round(w, 4) for w in self.edge_weights],
@@ -117,6 +129,12 @@ class WalkResult:
     duration_ms: float = 0.0
 
     def discovered_ids(self) -> set[str]:
+        """
+        Perform the discovered ids operation.
+        
+        Returns:
+            set[str]
+        """
         seeds = set(self.seed_ids)
         all_nodes: set[str] = set()
         for path in self.paths:
@@ -153,6 +171,12 @@ class GraphEngine:
 
     @property
     def graph(self) -> Any:
+        """
+        Perform the graph operation.
+        
+        Returns:
+            Any
+        """
         now = time.time()
         current_vclock = 0
         try:
@@ -168,6 +192,15 @@ class GraphEngine:
         return self._graph
 
     def rebuild(self, sample_limit: int = 50000) -> dict[str, Any]:
+        """
+        Perform the rebuild operation.
+        
+        Args:
+            sample_limit: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         if not _NX_AVAILABLE: return {"status": "unavailable"}
         time.perf_counter()
         try:
@@ -189,6 +222,15 @@ class GraphEngine:
             return {"status": "error", "message": str(e)}
 
     def pagerank(self, alpha: float = 0.85) -> dict[str, float]:
+        """
+        Perform the pagerank operation.
+        
+        Args:
+            alpha: Parameter description.
+        
+        Returns:
+            dict[str, float]
+        """
         G = self.graph
         if G is None or not _NX_AVAILABLE: return {}
         try:
@@ -214,6 +256,17 @@ class GraphWalker:
         # Implementation moved from graph_walker.py
         # ... (full implementation would be pasted here) ...
         # For Milestone 4.3 I'll focus on structural consolidation first
+        """
+        Perform the walk operation.
+        
+        Args:
+            seed_ids: Parameter description.
+            hops: Parameter description.
+            top_k: Parameter description.
+        
+        Returns:
+            WalkResult
+        """
         return WalkResult(seed_ids=seed_ids, hops=hops)
 
 # --- SINGLETONS ---
@@ -221,11 +274,23 @@ _engine: GraphEngine | None = None
 _walker: GraphWalker | None = None
 
 def get_graph_engine() -> GraphEngine:
+    """
+    Get the graph engine.
+    
+    Returns:
+        GraphEngine
+    """
     global _engine
     if _engine is None: _engine = GraphEngine()
     return _engine
 
 def get_graph_walker() -> GraphWalker:
+    """
+    Get the graph walker.
+    
+    Returns:
+        GraphWalker
+    """
     global _walker
     if _walker is None: _walker = GraphWalker()
     return _walker

@@ -197,6 +197,12 @@ _compassion_gen: CompassionGenerator | None = None
 
 
 def get_love_garden() -> LoveGarden:
+    """
+    Get the love garden.
+    
+    Returns:
+        LoveGarden
+    """
     global _love_garden
     if _love_garden is None:
         _love_garden = LoveGarden()
@@ -204,6 +210,12 @@ def get_love_garden() -> LoveGarden:
 
 
 def get_love_detector() -> LoveDetector:
+    """
+    Get the love detector.
+    
+    Returns:
+        LoveDetector
+    """
     global _love_detector
     if _love_detector is None:
         _love_detector = LoveDetector()
@@ -211,6 +223,12 @@ def get_love_detector() -> LoveDetector:
 
 
 def get_compassion_generator() -> CompassionGenerator:
+    """
+    Get the compassion generator.
+    
+    Returns:
+        CompassionGenerator
+    """
     global _compassion_gen
     if _compassion_gen is None:
         _compassion_gen = CompassionGenerator()

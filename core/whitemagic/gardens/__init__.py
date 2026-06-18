@@ -266,16 +266,44 @@ def get_garden_getters() -> dict[str, Callable[..., Any] | None]:
 # Create a lazy dict-like object for backward compatibility
 class _LazyGardenGetters:
     def get(self, name: str, default: Any = None) -> Any:
+        """
+        Perform the get operation.
+        
+        Args:
+            name: Parameter description.
+            default: Parameter description.
+        
+        Returns:
+            Any
+        """
         getters = _get_garden_getters()
         return getters.get(name, default)
 
     def items(self) -> Any:
+        """
+        Perform the items operation.
+        
+        Returns:
+            Any
+        """
         return _get_garden_getters().items()
 
     def keys(self) -> Any:
+        """
+        Perform the keys operation.
+        
+        Returns:
+            Any
+        """
         return _get_garden_getters().keys()
 
     def values(self) -> Any:
+        """
+        Perform the values operation.
+        
+        Returns:
+            Any
+        """
         return _get_garden_getters().values()
 
     def __getitem__(self, name: str) -> Any:

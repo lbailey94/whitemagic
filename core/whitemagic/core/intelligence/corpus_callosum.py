@@ -35,6 +35,12 @@ class DebateRound:
     duration_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "round_number": self.round_number,
             "left_position": self.left_position,
@@ -62,6 +68,12 @@ class DebateResult:
     karma_logged: bool = False
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "debate_id": self.debate_id,
             "topic": self.topic,
@@ -82,6 +94,16 @@ class SynthesisArbiter:
 
     @classmethod
     def should_escalate(cls, tension: float) -> bool:
+        """
+        Perform the should escalate operation.
+        
+        Args:
+            cls: Parameter description.
+            tension: Parameter description.
+        
+        Returns:
+            bool
+        """
         return tension >= cls.TENSION_THRESHOLD
 
     @classmethod
@@ -178,9 +200,24 @@ class CorpusCallosumBus:
         return result
 
     def get_debate(self, debate_id: str) -> DebateResult | None:
+        """
+        Get the debate.
+        
+        Args:
+            debate_id: Parameter description.
+        
+        Returns:
+            DebateResult | None
+        """
         return self._debates.get(debate_id)
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         recent = list(self._debates.values())[-10:]
         avg_tension = sum(d.final_tension for d in recent) / max(len(recent), 1)
         return {

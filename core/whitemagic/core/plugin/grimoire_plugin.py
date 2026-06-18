@@ -44,6 +44,12 @@ class _PluginBase:
         logger.debug("GrimoirePlugin.stop: no-op fallback")
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"name": self.name, "running": True}
 
 
@@ -71,6 +77,12 @@ class GrimoirePlugin(_PluginBase):
         self._running = False
 
     def start(self) -> None:
+        """
+        Perform the start operation.
+        
+        Returns:
+            None
+        """
         from whitemagic.core.intelligence.grimoire_engine import get_grimoire_engine
         self._engine = get_grimoire_engine()
         self._engine.awaken()
@@ -78,6 +90,12 @@ class GrimoirePlugin(_PluginBase):
         logger.info("GrimoirePlugin started (v%s)", self.version)
 
     def stop(self) -> None:
+        """
+        Perform the stop operation.
+        
+        Returns:
+            None
+        """
         self._running = False
         self._engine = None
         logger.info("GrimoirePlugin stopped")
@@ -93,6 +111,12 @@ class GrimoirePlugin(_PluginBase):
         ]
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         from whitemagic.core.governance.unified_progression import (
             get_progression_daemon,
         )

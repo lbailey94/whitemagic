@@ -32,6 +32,12 @@ class QuarantineEntry:
     review_notes: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "session_id": self.session_id,
             "reason": self.reason,
@@ -104,6 +110,15 @@ class QuarantineManager:
             return sorted(results, key=lambda x: x["quarantined_at"], reverse=True)
 
     def is_quarantined(self, session_id: str) -> bool:
+        """
+        Check whether the quarantined condition holds.
+        
+        Args:
+            session_id: Parameter description.
+        
+        Returns:
+            bool
+        """
         with self._lock:
             self._prune_expired()
             entry = self._entries.get(session_id)
@@ -112,6 +127,12 @@ class QuarantineManager:
             return not entry.reviewed
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             self._prune_expired()
             active = [e for e in self._entries.values() if not e.reviewed]

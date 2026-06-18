@@ -91,6 +91,12 @@ class GalacticSweepReport:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_memories": self.total_memories,
             "memories_updated": self.memories_updated,
@@ -459,6 +465,12 @@ class GalacticMap:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_sweeps": self._total_sweeps,
         }
@@ -503,6 +515,15 @@ class GalacticMap:
 
             # Process page in executor to avoid blocking
             def process_page_sync(page_data: list[Memory]) -> tuple[list[tuple[str, float, float]], dict[str, Any]]:
+                """
+                Process page sync.
+                
+                Args:
+                    page_data: Parameter description.
+                
+                Returns:
+                    tuple[list[tuple[str, float, float]], dict[str, Any]]
+                """
                 page_updates: list[tuple[str, float, float]] = []
                 page_zone_counts: dict[str, int] = {z.value: 0 for z in GalacticZone}
                 page_retention = 0.0
@@ -586,6 +607,12 @@ class GalacticMap:
             loop = asyncio.get_event_loop()
 
             def query_zones() -> dict[str, int]:
+                """
+                Perform the query zones operation.
+                
+                Returns:
+                    dict[str, int]
+                """
                 counts: dict[str, int] = {z.value: 0 for z in GalacticZone}
                 with backend.pool.connection() as conn:
                     rows = conn.execute(

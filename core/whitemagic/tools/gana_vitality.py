@@ -46,6 +46,12 @@ class GanaReputation:
 
     @property
     def success_rate(self) -> float:
+        """
+        Perform the success rate operation.
+        
+        Returns:
+            float
+        """
         if self.total_calls == 0:
             return 1.0
         return self.total_successes / self.total_calls
@@ -76,6 +82,12 @@ class GanaReputation:
         return "cautious"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "gana_name": self.gana_name,
             "total_calls": self.total_calls,

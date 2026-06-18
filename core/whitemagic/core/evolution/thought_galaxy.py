@@ -13,6 +13,12 @@ class ThoughtGalaxy:
         self.episodes = []
 
     def add_episode(self, episode: CognitiveEpisode):
+        """
+        Add episode.
+        
+        Args:
+            episode: Parameter description.
+        """
         self.episodes.append(episode)
         self._recalculate_gravity()
 
@@ -23,6 +29,16 @@ class ThoughtGalaxy:
 
     def recall(self, query_tags: list[str], top_k: int = 5) -> list[CognitiveEpisode]:
         # Simple intersection scoring for now
+        """
+        Perform the recall operation.
+        
+        Args:
+            query_tags: Parameter description.
+            top_k: Parameter description.
+        
+        Returns:
+            list[CognitiveEpisode]
+        """
         results = []
         for ep in self.episodes:
             overlap = len(set(ep.tags).intersection(set(query_tags)))

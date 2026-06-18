@@ -95,6 +95,12 @@ class PracticeGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_practice_garden() -> PracticeGarden:
+    """
+    Get the practice garden.
+    
+    Returns:
+        PracticeGarden
+    """
     global _instance
     if _instance is None:
         _instance = PracticeGarden()

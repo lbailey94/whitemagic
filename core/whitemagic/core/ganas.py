@@ -82,6 +82,15 @@ class BaseGana:
         self.stats = {"invocations": 0}
 
     async def invoke(self, call: GanaCall) -> GanaResult:
+        """
+        Perform the invoke operation.
+        
+        Args:
+            call: Parameter description.
+        
+        Returns:
+            GanaResult
+        """
         self.stats["invocations"] += 1
         return GanaResult(mansion=self.mansion, output="Execution simulated")
 
@@ -97,15 +106,40 @@ class NorthernGana(BaseGana): pass
 class GanaChain:
     """Executes sequences of Gana calls with resonance."""
     async def execute_chain(self, mansions: list[LunarMansion], task: str) -> list[GanaResult]:
+        """
+        Run the chain operation.
+        
+        Args:
+            mansions: Parameter description.
+            task: Parameter description.
+        
+        Returns:
+            list[GanaResult]
+        """
         return [await get_gana(m).invoke(GanaCall(task=task)) for m in mansions]
 
 # --- SINGLETONS ---
 _registry: dict[LunarMansion, BaseGana] = {}
 
 def get_gana(mansion: LunarMansion) -> BaseGana:
+    """
+    Get the gana.
+    
+    Args:
+        mansion: Parameter description.
+    
+    Returns:
+        BaseGana
+    """
     if mansion not in _registry:
         _registry[mansion] = BaseGana(mansion)
     return _registry[mansion]
 
 def get_chain() -> GanaChain:
+    """
+    Get the chain.
+    
+    Returns:
+        GanaChain
+    """
     return GanaChain()

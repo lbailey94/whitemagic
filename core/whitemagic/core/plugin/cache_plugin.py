@@ -19,12 +19,24 @@ class CachePlugin:
         self._running = False
 
     def start(self) -> None:
+        """
+        Perform the start operation.
+        
+        Returns:
+            None
+        """
         from whitemagic.core.memory.cache_registry import get_cache_registry
         self._registry = get_cache_registry()
         self._running = True
         logger.info("CachePlugin started")
 
     def stop(self) -> None:
+        """
+        Perform the stop operation.
+        
+        Returns:
+            None
+        """
         self._running = False
         logger.info("CachePlugin stopped")
 
@@ -34,6 +46,12 @@ class CachePlugin:
             self._registry.flush_all()
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         if not self._registry:
             return {"running": False}
         return {
@@ -43,6 +61,9 @@ class CachePlugin:
         }
 
 def register():
+    """
+    Perform the register operation.
+    """
     try:
         from whitemagic.core.plugin import get_registry
         get_registry().register(CachePlugin())

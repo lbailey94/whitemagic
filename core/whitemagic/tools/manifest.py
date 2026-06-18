@@ -261,6 +261,12 @@ class ToolManifest:
     unique_permissions: list[str]
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "version": self.version,
             "generated_at": self.generated_at,

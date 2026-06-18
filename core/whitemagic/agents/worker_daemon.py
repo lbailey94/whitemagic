@@ -315,6 +315,12 @@ class WorkerDaemon:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "worker_name": self.worker_name,
             "running": self._running,
@@ -331,6 +337,12 @@ class WorkerDaemon:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    """
+    Perform the main operation.
+    
+    Returns:
+        None
+    """
     import argparse
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 

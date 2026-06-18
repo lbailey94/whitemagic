@@ -77,6 +77,12 @@ class Constellation:
     stability: float = 0.0  # HDBSCAN cluster persistence (0-1), 0 for grid-based
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "size": len(self.member_ids),
@@ -109,6 +115,12 @@ class DetectionReport:
     constellations: list[Constellation] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "memories_scanned": self.memories_scanned,
             "constellations_found": self.constellations_found,

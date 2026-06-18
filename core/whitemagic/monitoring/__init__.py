@@ -61,18 +61,63 @@ class StructuredLogger:
         self.logger.log(getattr(logging, level.value), log_entry)
 
     def debug(self, message: str, **kwargs) -> None:
+        """
+        Perform the debug operation.
+        
+        Args:
+            message: Parameter description.
+        
+        Returns:
+            None
+        """
         self.log(LogLevel.DEBUG, message, **kwargs)
 
     def info(self, message: str, **kwargs) -> None:
+        """
+        Perform the info operation.
+        
+        Args:
+            message: Parameter description.
+        
+        Returns:
+            None
+        """
         self.log(LogLevel.INFO, message, **kwargs)
 
     def warning(self, message: str, **kwargs) -> None:
+        """
+        Perform the warning operation.
+        
+        Args:
+            message: Parameter description.
+        
+        Returns:
+            None
+        """
         self.log(LogLevel.WARNING, message, **kwargs)
 
     def error(self, message: str, **kwargs) -> None:
+        """
+        Perform the error operation.
+        
+        Args:
+            message: Parameter description.
+        
+        Returns:
+            None
+        """
         self.log(LogLevel.ERROR, message, **kwargs)
 
     def critical(self, message: str, **kwargs) -> None:
+        """
+        Perform the critical operation.
+        
+        Args:
+            message: Parameter description.
+        
+        Returns:
+            None
+        """
         self.log(LogLevel.CRITICAL, message, **kwargs)
 
 
@@ -258,10 +303,22 @@ def traced(name: str | None = None, **tags) -> Callable:
         Decorated function
     """
     def decorator(func: Callable) -> Callable:
+        """
+        Perform the decorator operation.
+        
+        Args:
+            func: Parameter description.
+        
+        Returns:
+            Callable
+        """
         span_name = name or f"{func.__module__}.{func.__name__}"
 
         @wraps(func)
         def wrapper(*args, **kwargs):
+            """
+            Perform the wrapper operation.
+            """
             with trace(span_name, **tags):
                 return func(*args, **kwargs)
 
@@ -306,6 +363,15 @@ class HealthChecker:
             Decorator function
         """
         def decorator(func: Callable[[], HealthCheckResult]) -> Callable:
+            """
+            Perform the decorator operation.
+            
+            Args:
+                func: Parameter description.
+            
+            Returns:
+                Callable
+            """
             self.checks[name] = func
             return func
         return decorator

@@ -57,6 +57,15 @@ def _setup_beauty_cascades(bus: Any) -> None:
     """Beauty cascades to Joy and Love."""
     def on_beauty(event: Any) -> None:
         # Beauty triggers joy
+        """
+        Handle a beauty event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         joy_event = ResonanceEvent(
             source="beauty_garden",
             event_type=EventType.JOY_TRIGGERED,
@@ -75,6 +84,15 @@ def _setup_joy_cascades(bus: Any) -> None:
     """Joy cascades to Love and Play."""
     def on_joy(event: Any) -> None:
         # Joy amplifies love
+        """
+        Handle a joy event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         love_event = ResonanceEvent(
             source="joy_garden",
             event_type=EventType.LOVE_ACTIVATED,
@@ -105,6 +123,15 @@ def _setup_love_cascades(bus: Any) -> None:
     """Love cascades to Connection and Compassion."""
     def on_love(event: Any) -> None:
         # Love deepens connection
+        """
+        Handle a love event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         connection_event = ResonanceEvent(
             source="love_garden",
             event_type=EventType.BOND_FORMED,
@@ -135,6 +162,15 @@ def _setup_wisdom_cascades(bus: Any) -> None:
     """Wisdom cascades to Teaching and Integration."""
     def on_wisdom(event: Any) -> None:
         # Wisdom leads to teaching
+        """
+        Handle a wisdom event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         teaching_event = ResonanceEvent(
             source="wisdom_garden",
             event_type=EventType.TEACHING_OFFERED,
@@ -153,6 +189,15 @@ def _setup_mystery_cascades(bus: Any) -> None:
     """Mystery cascades to Wonder and Curiosity."""
     def on_mystery(event: Any) -> None:
         # Mystery sparks wonder
+        """
+        Handle a mystery event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         wonder_event = ResonanceEvent(
             source="mystery_garden",
             event_type=EventType.WONDER_SPARKED,

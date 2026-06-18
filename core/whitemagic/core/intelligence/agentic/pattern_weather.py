@@ -16,6 +16,12 @@ class PatternWeather:
         return {"patterns": {}}
 
     def get_forecast(self) -> dict:
+        """
+        Get the forecast.
+        
+        Returns:
+            dict
+        """
         p = self.patterns.get("patterns", {})
         sum(p.values()) if isinstance(list(p.values())[0] if p else 0, int) else 0
 
@@ -33,11 +39,23 @@ class PatternWeather:
         return ["Parallel processing", "Pattern synthesis", "Creative work", "Deep integration"]
 
     def display(self) -> str:
+        """
+        Perform the display operation.
+        
+        Returns:
+            str
+        """
         f = self.get_forecast()
         return f"☀️ Pattern Weather: {f['forecast']}\n   Top: {', '.join(f['dominant_patterns'][:3])}"
 
 _weather = None
 def get_weather() -> PatternWeather:
+    """
+    Get the weather.
+    
+    Returns:
+        PatternWeather
+    """
     global _weather
     if _weather is None:
         _weather = PatternWeather()

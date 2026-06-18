@@ -25,7 +25,19 @@ class CommandRegistry:
             func_name: Function name in module (defaults to module's CLI group)
         """
         def decorator(func: Callable) -> Callable:
+            """
+            Perform the decorator operation.
+            
+            Args:
+                func: Parameter description.
+            
+            Returns:
+                Callable
+            """
             def loader():
+                """
+                Perform the loader operation.
+                """
                 try:
                     module = __import__(import_path, fromlist=[func_name] if func_name else None)
                     if func_name:

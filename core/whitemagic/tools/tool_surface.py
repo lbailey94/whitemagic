@@ -13,11 +13,23 @@ from whitemagic.tools.tool_types import ToolDefinition, ToolStability
 
 
 def get_gana_names() -> list[str]:
+    """
+    Get the gana names.
+    
+    Returns:
+        list[str]
+    """
     return list(GANA_NAMES)
 
 
 
 def get_gana_descriptions() -> dict[str, str]:
+    """
+    Get the gana descriptions.
+    
+    Returns:
+        dict[str, str]
+    """
     return dict(GANA_SHORT_DESC)
 
 
@@ -37,6 +49,12 @@ def _cached_surface_counts() -> tuple[int, int, int, int, int]:
 
 
 def get_surface_counts() -> dict[str, int | dict[str, int]]:
+    """
+    Get the surface counts.
+    
+    Returns:
+        dict[str, int | dict[str, int]]
+    """
     authored_tools, callable_tools, gana_tools, nested_unique_tools, dispatch_tools = _cached_surface_counts()
     by_stability: dict[str, int] = {tier.value: 0 for tier in ToolStability}
     for tool in TOOL_REGISTRY:
@@ -53,6 +71,12 @@ def get_surface_counts() -> dict[str, int | dict[str, int]]:
 
 
 def get_gana_metadata() -> dict[str, tuple[str, list[str]]]:
+    """
+    Get the gana metadata.
+    
+    Returns:
+        dict[str, tuple[str, list[str]]]
+    """
     nested_tools = get_gana_nested_tools()
     return {
         gana_name: (
@@ -70,6 +94,12 @@ def _cached_callable_tool_names() -> tuple[str, ...]:
 
 
 def get_callable_tool_names() -> list[str]:
+    """
+    Get the callable tool names.
+    
+    Returns:
+        list[str]
+    """
     return list(_cached_callable_tool_names())
 
 
@@ -80,9 +110,24 @@ def _cached_callable_tool_definitions() -> tuple[ToolDefinition, ...]:
 
 
 def get_callable_tool_definitions() -> list[ToolDefinition]:
+    """
+    Get the callable tool definitions.
+    
+    Returns:
+        list[ToolDefinition]
+    """
     return list(_cached_callable_tool_definitions())
 
 
 
 def get_callable_tool_definition(name: str) -> ToolDefinition | None:
+    """
+    Get the callable tool definition.
+    
+    Args:
+        name: Parameter description.
+    
+    Returns:
+        ToolDefinition | None
+    """
     return get_tool(name)

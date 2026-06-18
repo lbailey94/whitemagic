@@ -61,6 +61,12 @@ class BittensorBridge:
 _bridge: BittensorBridge | None = None
 
 def get_bittensor_bridge() -> BittensorBridge:
+    """
+    Get the bittensor bridge.
+    
+    Returns:
+        BittensorBridge
+    """
     global _bridge
     if _bridge is None:
         _bridge = BittensorBridge()

@@ -47,6 +47,12 @@ class LocalLLM:
 
     @property
     def is_available(self) -> bool:
+        """
+        Check whether the available condition holds.
+        
+        Returns:
+            bool
+        """
         return self._available
 
     def complete(self, prompt: str, stop: list[str] | None = None, max_tokens: int = 512, temperature: float = 0.7) -> str:

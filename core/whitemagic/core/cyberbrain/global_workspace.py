@@ -14,6 +14,15 @@ class GlobalWorkspace:
         self.active_core = None
 
     def publish_event(self, core_id: str, event_type: str, payload: dict[str, Any], salience: float):
+        """
+        Publish or send a event event.
+        
+        Args:
+            core_id: Parameter description.
+            event_type: Parameter description.
+            payload: Parameter description.
+            salience: Parameter description.
+        """
         event = {
             "timestamp": time.time(),
             "core": core_id,
@@ -37,6 +46,9 @@ class GlobalWorkspace:
             # Dispatch to active core (simulated)
 
     def get_state(self):
+        """
+        Get the state.
+        """
         return {
             "active_core": self.active_core,
             "event_backlog": len(self.events)

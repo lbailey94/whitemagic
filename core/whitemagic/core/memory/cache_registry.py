@@ -58,6 +58,12 @@ class CacheRegistry:
 _registry: CacheRegistry | None = None
 
 def get_cache_registry() -> CacheRegistry:
+    """
+    Get the cache registry.
+    
+    Returns:
+        CacheRegistry
+    """
     global _registry
     if _registry is None:
         _registry = CacheRegistry()

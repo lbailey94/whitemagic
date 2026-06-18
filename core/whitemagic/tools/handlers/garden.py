@@ -8,6 +8,12 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
 
 
 def handle_garden_activate(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a garden activate event.
+    
+    Returns:
+        dict[str, Any]
+    """
     garden_name = kwargs.get("garden", "").lower()
     from whitemagic.gardens import get_garden
     get_garden(garden_name)
@@ -16,12 +22,24 @@ def handle_garden_activate(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_garden_status(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a garden status event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.gardens import get_all_gardens
     gardens = get_all_gardens()
     return {"status": "success", "count": len(gardens), "gardens": list(gardens.keys())}
 
 
 def handle_garden_synergy(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a garden synergy event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.gardens.cross_pollination import get_resonance_matrix
         from whitemagic.gardens.garden_state import get_garden_state_tracker
@@ -40,6 +58,12 @@ def handle_garden_synergy(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_garden_health(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a garden health event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.gardens import get_all_gardens
     gardens = get_all_gardens()
     health = {name: "healthy" for name in gardens.keys()}

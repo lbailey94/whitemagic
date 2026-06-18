@@ -24,14 +24,32 @@ def _disabled_error() -> RuntimeError:
 
 
 def get_model_info() -> dict[str, object]:
+    """
+    Get the model info.
+    
+    Returns:
+        dict[str, object]
+    """
     raise _disabled_error()
 
 
 def get_local_ml_engine() -> Any:
+    """
+    Get the local ml engine.
+    
+    Returns:
+        Any
+    """
     raise _disabled_error()
 
 
 def get_engine() -> Any:
+    """
+    Get the engine.
+    
+    Returns:
+        Any
+    """
     raise _disabled_error()
 
 

@@ -44,6 +44,12 @@ class AnomalyAlert:
             self.timestamp = time.time()
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "dimension": self.dimension,
             "current": round(self.current_value, 4),
@@ -230,6 +236,12 @@ _det_lock = threading.Lock()
 
 
 def get_anomaly_detector() -> AnomalyDetector:
+    """
+    Get the anomaly detector.
+    
+    Returns:
+        AnomalyDetector
+    """
     global _detector
     if _detector is None:
         with _det_lock:

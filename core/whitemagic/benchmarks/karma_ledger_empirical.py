@@ -69,6 +69,15 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
 
     # READ: list directory contents
     def measure_read(td: Path) -> tuple[int, int]:
+        """
+        Measure or score read.
+        
+        Args:
+            td: Parameter description.
+        
+        Returns:
+            tuple[int, int]
+        """
         return (0, 0)
 
     scenarios.append(
@@ -87,9 +96,27 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     test_file = temp_dir / f"{marker}.txt"
 
     def write_file(args: dict[str, Any]) -> None:
+        """
+        Perform the write file operation.
+        
+        Args:
+            args: Parameter description.
+        
+        Returns:
+            None
+        """
         Path(args["path"]).write_text(args["content"])
 
     def measure_write(td: Path) -> tuple[int, int]:
+        """
+        Measure or score write.
+        
+        Args:
+            td: Parameter description.
+        
+        Returns:
+            tuple[int, int]
+        """
         return (1 if test_file.exists() else 0, 0)
 
     scenarios.append(
@@ -106,6 +133,15 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
 
     # READ after WRITE: read the file
     def read_file(args: dict[str, Any]) -> None:
+        """
+        Perform the read file operation.
+        
+        Args:
+            args: Parameter description.
+        
+        Returns:
+            None
+        """
         Path(args["path"]).read_text()
 
     scenarios.append(
@@ -122,10 +158,28 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
 
     # DELETE: remove the file
     def delete_file(args: dict[str, Any]) -> None:
+        """
+        Remove the file.
+        
+        Args:
+            args: Parameter description.
+        
+        Returns:
+            None
+        """
         Path(args["path"]).unlink()
 
     def measure_delete(td: Path) -> tuple[int, int]:
         # Ledger treats DELETE as mutation; report writes=1 to avoid mismatch
+        """
+        Measure or score delete.
+        
+        Args:
+            td: Parameter description.
+        
+        Returns:
+            tuple[int, int]
+        """
         deleted = not test_file.exists()
         return (1 if deleted else 0, 1 if deleted else 0)
 
@@ -151,6 +205,15 @@ def _make_whitemagic_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
 
     # READ: agent.list (should not write)
     def measure_noop(_td: Path) -> tuple[int, int]:
+        """
+        Measure or score noop.
+        
+        Args:
+            _td: Parameter description.
+        
+        Returns:
+            tuple[int, int]
+        """
         return (0, 0)
 
     scenarios.append(
@@ -311,6 +374,12 @@ def run_empirical_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
 
 
 def main() -> int:
+    """
+    Perform the main operation.
+    
+    Returns:
+        int
+    """
     parser = argparse.ArgumentParser(
         description="Karma Ledger empirical benchmark harness",
     )

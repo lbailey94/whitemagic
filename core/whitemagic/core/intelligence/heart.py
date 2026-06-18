@@ -117,6 +117,15 @@ class HeartEngine:
         return pulse
 
     def report_pulse(self, pulse: ResonancePulse) -> Any:
+        """
+        Perform the report pulse operation.
+        
+        Args:
+            pulse: Parameter description.
+        
+        Returns:
+            Any
+        """
         self.pulse_history.append(pulse)
         if len(self.pulse_history) > self.max_history:
             self.pulse_history.pop(0)
@@ -136,6 +145,12 @@ class HeartEngine:
         return (padded[0], padded[1], padded[2], padded[3], padded[4])
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "state": self.current_state.value,
             "intensity": f"{self.current_intensity:.2f}",
@@ -146,6 +161,12 @@ class HeartEngine:
 _heart: HeartEngine | None = None
 
 def get_heart() -> HeartEngine:
+    """
+    Get the heart.
+    
+    Returns:
+        HeartEngine
+    """
     global _heart
     if _heart is None:
         _heart = HeartEngine()

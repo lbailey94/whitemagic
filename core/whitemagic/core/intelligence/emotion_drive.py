@@ -64,6 +64,12 @@ class DriveSnapshot:
     event_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "curiosity": round(self.curiosity, 4),
             "satisfaction": round(self.satisfaction, 4),

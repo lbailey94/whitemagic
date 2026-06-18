@@ -65,6 +65,12 @@ class GreenSnapshot:
     timestamp: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "green_score": round(self.score, 1),
             "edge_calls": self.edge_calls,

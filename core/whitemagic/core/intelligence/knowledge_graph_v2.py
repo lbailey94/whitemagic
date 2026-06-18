@@ -40,6 +40,12 @@ class ExtractedEntity:
     source_id: str
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "type": self.entity_type,
@@ -59,6 +65,12 @@ class ExtractedRelation:
     source_id: str
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "subject": self.subject,
             "predicate": self.predicate,

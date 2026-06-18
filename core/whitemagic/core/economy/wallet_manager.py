@@ -124,6 +124,12 @@ class WalletManager:
 _wallet_manager: WalletManager | None = None
 
 def get_wallet() -> WalletManager:
+    """
+    Get the wallet.
+    
+    Returns:
+        WalletManager
+    """
     global _wallet_manager
     if _wallet_manager is None:
         _wallet_manager = WalletManager()

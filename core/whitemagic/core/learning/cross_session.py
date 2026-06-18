@@ -211,6 +211,12 @@ class CrossSessionLearner:
             logger.debug("Failed to load tool patterns: %s", e)
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "sessions_analyzed": self._session_count,
@@ -230,6 +236,12 @@ _learner_lock = threading.Lock()
 
 
 def get_session_learner() -> CrossSessionLearner:
+    """
+    Get the session learner.
+    
+    Returns:
+        CrossSessionLearner
+    """
     global _learner
     if _learner is None:
         with _learner_lock:

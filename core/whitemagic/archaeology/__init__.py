@@ -27,18 +27,69 @@ def get_archaeologist() -> 'ChariotArchaeologist':
     return _archaeologist
 
 def mark_read(path: str, context: str | None = None, note: str | None = None, insight: str | None = None) -> dict[str, Any]:
+    """
+    Mark the read state.
+    
+    Args:
+        path: Parameter description.
+        context: Parameter description.
+        note: Parameter description.
+        insight: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], get_archaeologist().mark_read(path, context, note, insight))
 
 def mark_written(path: str, context: str | None = None, note: str | None = None) -> dict[str, Any]:
+    """
+    Mark the written state.
+    
+    Args:
+        path: Parameter description.
+        context: Parameter description.
+        note: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], get_archaeologist().mark_written(path, context, note))
 
 def have_read(path: str) -> bool:
+    """
+    Check whether the read has occurred.
+    
+    Args:
+        path: Parameter description.
+    
+    Returns:
+        bool
+    """
     return cast(bool, get_archaeologist().have_read(path))
 
 def find_unread(directory: str = ".", patterns: list[str] | None = None) -> list[Any]:
+    """
+    Find unread matching the criteria.
+    
+    Args:
+        directory: Parameter description.
+        patterns: Parameter description.
+    
+    Returns:
+        list[Any]
+    """
     return cast(list[Any], get_archaeologist().find_unread(directory, patterns))
 
 def stats(scan_disk: bool = False) -> dict[str, Any]:
+    """
+    Perform the stats operation.
+    
+    Args:
+        scan_disk: Parameter description.
+    
+    Returns:
+        dict[str, Any]
+    """
     return cast(dict[str, Any], get_archaeologist().stats(scan_disk=scan_disk))
 
 # Bridge for WisdomExtractor — delegates to ChariotArchaeologist
@@ -47,12 +98,28 @@ class WisdomExtractor:
         self.arch = get_archaeologist()
 
     def extract_wisdom(self, content: str, source: str) -> dict[str, Any]:
+        """
+        Mine or extract wisdom.
+        
+        Args:
+            content: Parameter description.
+            source: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "chapters": Grimoire.identify(content, source),
             "gana": Ganas.identify(content, source)
         }
 
 def get_wisdom_extractor() -> WisdomExtractor:
+    """
+    Get the wisdom extractor.
+    
+    Returns:
+        WisdomExtractor
+    """
     return WisdomExtractor()
 
 def process_wisdom_archives(limit_files: int = 1000, memory_type: str = "long_term") -> dict[str, Any]:
@@ -126,6 +193,12 @@ def create_daily_wisdom_digest() -> str:
     return str(output_path)
 
 def wisdom_report() -> str:
+    """
+    Perform the wisdom report operation.
+    
+    Returns:
+        str
+    """
     return cast(str, get_archaeologist().reading_report())
 
 __all__ = [
@@ -146,6 +219,32 @@ __all__ = [
 ]
 
 # Compatibility aliases
+"""
+Mark the read async state.
+"""
+"""
+Perform the mark read async operation.
+"""
 def mark_read_async(*args, **kwargs): return mark_read(*args, **kwargs)
+"""
+Mark the written async state.
+"""
+"""
+Perform the mark written async operation.
+"""
 def mark_written_async(*args, **kwargs): return mark_written(*args, **kwargs)
+"""
+Mine or extract wisdom.
+
+Args:
+    content: Parameter description.
+    source: Parameter description.
+"""
+"""
+Mine or extract wisdom.
+
+Args:
+    content: Parameter description.
+    source: Parameter description.
+"""
 def extract_wisdom(content: str, source: str): return get_wisdom_extractor().extract_wisdom(content, source)

@@ -43,6 +43,12 @@ class Entity:
     confidence: float = 1.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"name": self.name, "type": self.entity_type, "confidence": self.confidence}
 
 
@@ -56,6 +62,12 @@ class Relation:
     confidence: float = 1.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "subject": self.subject,
             "predicate": self.predicate,
@@ -73,6 +85,12 @@ class ExtractionResult:
     method: str = "none"  # "ollama", "regex", "none"
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "entities": [e.to_dict() for e in self.entities],
             "relations": [r.to_dict() for r in self.relations],
@@ -334,6 +352,12 @@ class EntityExtractor:
         return result
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return {
                 "total_extractions": self._total_extractions,

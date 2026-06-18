@@ -157,6 +157,12 @@ class DreamDaemon:
 _daemon: DreamDaemon | None = None
 
 def get_daemon() -> DreamDaemon:
+    """
+    Get the daemon.
+    
+    Returns:
+        DreamDaemon
+    """
     global _daemon
     if _daemon is None:
         _daemon = DreamDaemon()

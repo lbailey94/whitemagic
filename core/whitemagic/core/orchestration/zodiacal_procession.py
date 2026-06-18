@@ -32,6 +32,12 @@ class ProcessionState:
     started_at: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "current_sign": self.current_sign.name_str,
             "current_symbol": self.current_sign.symbol,

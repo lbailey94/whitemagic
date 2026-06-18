@@ -19,6 +19,12 @@ class ZodiacPlugin:
         self._running = False
 
     def start(self) -> None:
+        """
+        Perform the start operation.
+        
+        Returns:
+            None
+        """
         from whitemagic.core.governance.unified_progression import (
             get_progression_daemon,
         )
@@ -28,12 +34,24 @@ class ZodiacPlugin:
         logger.info("ZodiacPlugin started")
 
     def stop(self) -> None:
+        """
+        Perform the stop operation.
+        
+        Returns:
+            None
+        """
         if self._daemon:
             self._daemon.stop()
         self._running = False
         logger.info("ZodiacPlugin stopped")
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         if not self._daemon:
             return {"running": False}
         state = self._daemon.state
@@ -47,6 +65,9 @@ class ZodiacPlugin:
         }
 
 def register():
+    """
+    Perform the register operation.
+    """
     try:
         from whitemagic.core.plugin import get_registry
         get_registry().register(ZodiacPlugin())

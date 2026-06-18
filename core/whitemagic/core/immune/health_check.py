@@ -29,6 +29,12 @@ class HealthMetric:
 
     @property
     def status(self) -> HealthStatus:
+        """
+        Perform the status operation.
+        
+        Returns:
+            HealthStatus
+        """
         if self.value >= self.threshold_critical:
             return HealthStatus.CRITICAL
         elif self.value >= self.threshold_warning:
@@ -114,6 +120,12 @@ def create_system_health_check() -> HealthCheck:
 _health_check: HealthCheck | None = None
 
 def get_health_check() -> HealthCheck:
+    """
+    Get the health check.
+    
+    Returns:
+        HealthCheck
+    """
     global _health_check
     if _health_check is None:
         _health_check = create_system_health_check()

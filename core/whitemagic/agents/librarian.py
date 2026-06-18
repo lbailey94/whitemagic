@@ -61,6 +61,18 @@ class InMemoryStorage:
         tags: list[str] | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
+        """
+        Create a new memory.
+        
+        Args:
+            title: Parameter description.
+            content: Parameter description.
+            memory_type: Parameter description.
+            tags: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         mem = {
             "title": title,
             "content": content,
@@ -75,6 +87,12 @@ class InMemoryStorage:
 
     @property
     def memories(self) -> list[dict[str, Any]]:
+        """
+        Perform the memories operation.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         return list(self._memories)
 
 
@@ -94,6 +112,18 @@ def _get_default_storage() -> MemoryStorage:
                 tags: list[str] | None = None,
                 **kwargs: Any,
             ) -> dict[str, Any]:
+                """
+                Create a new memory.
+                
+                Args:
+                    title: Parameter description.
+                    content: Parameter description.
+                    memory_type: Parameter description.
+                    tags: Parameter description.
+                
+                Returns:
+                    dict[str, Any]
+                """
                 return manager.create_memory(
                     title=title,
                     content=content,
@@ -301,12 +331,31 @@ class EditorAgent:
         parent: dict[int, int] = {i: i for i in range(len(memories))}
 
         def find(x: int) -> int:
+            """
+            Perform the find operation.
+            
+            Args:
+                x: Parameter description.
+            
+            Returns:
+                int
+            """
             while parent[x] != x:
                 parent[x] = parent[parent[x]]
                 x = parent[x]
             return x
 
         def union(x: int, y: int) -> None:
+            """
+            Perform the union operation.
+            
+            Args:
+                x: Parameter description.
+                y: Parameter description.
+            
+            Returns:
+                None
+            """
             px, py = find(x), find(y)
             if px != py:
                 # Keep the higher-importance as the new root

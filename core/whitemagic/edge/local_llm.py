@@ -39,5 +39,11 @@ class CascadingInference:  # pragma: no cover - legacy shim
         raise _disabled_error()
 
     def get_cascade() -> Any:
+        """
+        Get the cascade.
+        
+        Returns:
+            Any
+        """
         raise _disabled_error()
 

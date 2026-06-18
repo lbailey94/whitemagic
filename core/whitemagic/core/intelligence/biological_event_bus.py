@@ -88,6 +88,12 @@ class BiologicalEventBus:
 
         # Wrap handler with subsystem identification and error handling
         async def safe_handler(event: BiologicalEvent):
+            """
+            Perform the safe handler operation.
+            
+            Args:
+                event: Parameter description.
+            """
             try:
                 if asyncio.iscoroutinefunction(handler):
                     await handler(event)

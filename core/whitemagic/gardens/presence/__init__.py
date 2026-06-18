@@ -44,9 +44,21 @@ class PresenceGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Presence", "mansion": 12})
 
     def get_name(self) -> str:
+        """
+        Get the name.
+        
+        Returns:
+            str
+        """
         return "presence"
 
     def get_coordinate_bias(self) -> CoordinateBias:
+        """
+        Get the coordinate bias.
+        
+        Returns:
+            CoordinateBias
+        """
         return CoordinateBias(x=0.3, y=-0.2, z=0.1, w=0.5)
 
     def breathe(self, duration_seconds: int = 60) -> dict[str, Any]:
@@ -61,6 +73,12 @@ class PresenceGarden(BaseGarden, GanYingMixin):
         return session
 
     def get_status(self) -> dict[str, Any]:
+        """
+        Get the status.
+        
+        Returns:
+            dict[str, Any]
+        """
         base = super().get_status()
         base.update({
             "mansion": self.mansion_number,
@@ -71,12 +89,27 @@ class PresenceGarden(BaseGarden, GanYingMixin):
 
     @listen_for(EventType.STILLNESS_DETECTED)
     def on_stillness(self, event: Any) -> None:
+        """
+        Handle a stillness event.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self.presence_level = min(1.0, self.presence_level + 0.1)
 
 
 _instance = None
 def get_presence_garden() -> PresenceGarden:
+    """
+    Get the presence garden.
+    
+    Returns:
+        PresenceGarden
+    """
     global _instance
     if _instance is None:
         _instance = PresenceGarden()

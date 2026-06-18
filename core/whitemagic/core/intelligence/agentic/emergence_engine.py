@@ -254,6 +254,12 @@ _emergence_engine: EmergenceEngine | None = None
 
 
 def get_emergence_engine() -> EmergenceEngine:
+    """
+    Get the emergence engine.
+    
+    Returns:
+        EmergenceEngine
+    """
     global _emergence_engine
     if _emergence_engine is None:
         _emergence_engine = EmergenceEngine()

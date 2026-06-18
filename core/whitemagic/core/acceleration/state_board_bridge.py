@@ -15,12 +15,33 @@ class StateBoardBridge:
         self._data: dict[str, Any] = {}
 
     def write_harmony(self, **kwargs: Any) -> None:
+        """
+        Perform the write harmony operation.
+        
+        Returns:
+            None
+        """
         self._data.update(kwargs)
 
     def read(self, key: str) -> Any:
+        """
+        Perform the read operation.
+        
+        Args:
+            key: Parameter description.
+        
+        Returns:
+            Any
+        """
         return self._data.get(key)
 
     def snapshot(self) -> dict[str, Any]:
+        """
+        Perform the snapshot operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return dict(self._data)
 
 

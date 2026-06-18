@@ -33,6 +33,12 @@ def _ensure_result_dict(result: Any, context: str) -> dict[str, Any]:
 
 # --- Agent Capabilities ---
 def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a get agent capabilities event.
+    
+    Returns:
+        dict[str, Any]
+    """
     return {
         "status": "success",
         "message": "WhiteMagic Agent Capabilities Registry",
@@ -67,6 +73,12 @@ def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
 
 # --- Immune ---
 def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a immune scan event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from pathlib import Path
 
@@ -92,6 +104,12 @@ def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_immune_heal(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a immune heal event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from pathlib import Path
 
@@ -107,6 +125,12 @@ def handle_immune_heal(**kwargs: Any) -> dict[str, Any]:
 
 # --- Symbolic / Oracle ---
 def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a cast oracle event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.intelligence.wisdom.i_ching import get_i_ching
         oracle = get_i_ching()
@@ -126,6 +150,12 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_wu_xing_balance(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a wu xing balance event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.intelligence.wisdom.wu_xing import get_wu_xing
         wu_xing = get_wu_xing()
@@ -143,11 +173,23 @@ def handle_wu_xing_balance(**kwargs: Any) -> dict[str, Any]:
 
 # --- Metrics ---
 def handle_track_metric(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a track metric event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.metrics import track_metric
     return _ensure_result_dict(track_metric(**kwargs), "track_metric")
 
 
 def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a get metrics summary event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.bridge.metrics import get_metrics_summary
         return _ensure_result_dict(get_metrics_summary(**kwargs), "get_metrics_summary")
@@ -163,6 +205,12 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
 
 # --- Intelligence ---
 def handle_execute_cascade(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a execute cascade event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.tools import execute_cascade
     # Fallback for verifier/no-arg calls
     if "pattern_name" not in kwargs:
@@ -173,6 +221,12 @@ def handle_execute_cascade(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_thought_clone(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a thought clone event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.tools.handlers.memory import handle_create_memory
         prompt = kwargs.get("prompt", "")
@@ -192,6 +246,12 @@ def handle_thought_clone(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_coherence_boost(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a coherence boost event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.consciousness.coherence import get_coherence_metric
         coherence = get_coherence_metric()
@@ -204,6 +264,12 @@ def handle_coherence_boost(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_anti_loop_check(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a anti loop check event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.intelligence.agentic.anti_loop import get_anti_loop
         detector = get_anti_loop()
@@ -220,6 +286,12 @@ def handle_anti_loop_check(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_token_report(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a token report event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.token_economy import get_token_economy
         economy = get_token_economy()
@@ -242,6 +314,12 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
 
 # --- Grimoire ---
 def handle_grimoire_list(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a grimoire list event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.alignment.grimoire_audit import get_auditor
         auditor = get_auditor()
@@ -252,6 +330,12 @@ def handle_grimoire_list(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a grimoire read event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.core.alignment.grimoire_audit import get_auditor
         auditor = get_auditor()
@@ -273,6 +357,12 @@ def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
 
 # --- Utility ---
 def handle_focus_session(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a focus session event.
+    
+    Returns:
+        dict[str, Any]
+    """
     task = kwargs.get("task", "")
     duration = kwargs.get("duration", 25)
     _emit("FLOW_STATE_ENTERED", {"task": task, "duration_minutes": duration})
@@ -280,6 +370,12 @@ def handle_focus_session(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_capability_harness(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a capability harness event.
+    
+    Returns:
+        dict[str, Any]
+    """
     try:
         from whitemagic.maintenance.capability_harness import CapabilityHarness
         harness = CapabilityHarness()
@@ -305,6 +401,12 @@ def handle_capability_harness(**kwargs: Any) -> dict[str, Any]:
 
 # --- Hologram ---
 def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a view hologram event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.intelligence.hologram.engine import get_hologram_engine
     engine = get_hologram_engine()
     operation = kwargs.get("operation", "snapshot")
@@ -334,6 +436,12 @@ def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
 
 # --- Memory aliases ---
 def handle_read_memory(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a read memory event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.memory import memory_read
 
     return _ensure_result_dict(memory_read(**kwargs), "memory_read")
@@ -367,6 +475,12 @@ def handle_list_memories(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_update_memory(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a update memory event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.memory import memory_update
 
     updates = kwargs.pop("updates", None)
@@ -379,6 +493,12 @@ def handle_update_memory(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_delete_memory(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a delete memory event.
+    
+    Returns:
+        dict[str, Any]
+    """
     from whitemagic.core.bridge.memory import memory_delete
 
     return _ensure_result_dict(memory_delete(**kwargs), "memory_delete")
@@ -386,6 +506,12 @@ def handle_delete_memory(**kwargs: Any) -> dict[str, Any]:
 
 # --- Optimization ---
 def handle_solve_optimization(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a solve optimization event.
+    
+    Returns:
+        dict[str, Any]
+    """
     nodes = kwargs.pop("nodes", [])
     edges = kwargs.pop("edges", [])
     scores = kwargs.pop("scores", {})

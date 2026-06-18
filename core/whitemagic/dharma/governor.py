@@ -97,6 +97,15 @@ class DharmaGovernor:
 _governor: DharmaGovernor | None = None
 
 def get_governor(strictness: float = 0.7) -> DharmaGovernor:
+    """
+    Get the governor.
+    
+    Args:
+        strictness: Parameter description.
+    
+    Returns:
+        DharmaGovernor
+    """
     global _governor
     if _governor is None:
         _governor = DharmaGovernor(strictness=strictness)

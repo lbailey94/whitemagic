@@ -21,4 +21,10 @@ class LocalMLEngine:  # pragma: no cover - legacy shim
 
 
 def get_local_ml_engine() -> Any:
+    """
+    Get the local ml engine.
+    
+    Returns:
+        Any
+    """
     raise _disabled_error()

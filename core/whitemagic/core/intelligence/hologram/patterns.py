@@ -253,6 +253,12 @@ class HolographicPatternEngine:
         }
 
 def get_pattern_engine() -> HolographicPatternEngine:
+    """
+    Get the pattern engine.
+    
+    Returns:
+        HolographicPatternEngine
+    """
     return HolographicPatternEngine()
 
 if __name__ == "__main__":

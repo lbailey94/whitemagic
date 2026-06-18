@@ -35,6 +35,12 @@ class ResonanceAmplifier:
         return relations.get(pattern.lower(), ["general"])
 
     def get_stats(self) -> dict:
+        """
+        Get the stats.
+        
+        Returns:
+            dict
+        """
         return {
             "cascades": self.cascades_triggered,
             "patterns_amplified": len(self.patterns_amplified),
@@ -43,6 +49,12 @@ class ResonanceAmplifier:
 
 _amp = None
 def get_amplifier() -> ResonanceAmplifier:
+    """
+    Get the amplifier.
+    
+    Returns:
+        ResonanceAmplifier
+    """
     global _amp
     if _amp is None:
         _amp = ResonanceAmplifier()

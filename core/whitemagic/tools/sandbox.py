@@ -45,6 +45,12 @@ class ResourceLimits:
     max_output_bytes: int = 10_000_000  # Max output size
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timeout_s": self.timeout_s,
             "max_memory_mb": self.max_memory_mb,
@@ -64,6 +70,12 @@ class SandboxResult:
     exceeded_limit: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         d: dict[str, Any] = {"success": self.success, "duration_s": round(self.duration_s, 4)}
         if self.result is not None:
             d["result"] = self.result
@@ -214,6 +226,12 @@ _sandbox: ToolSandbox | None = None
 _sandbox_lock = threading.Lock()
 
 def get_sandbox() -> ToolSandbox:
+    """
+    Get the sandbox.
+    
+    Returns:
+        ToolSandbox
+    """
     global _sandbox
     if _sandbox is None:
         with _sandbox_lock:

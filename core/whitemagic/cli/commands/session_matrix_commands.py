@@ -173,6 +173,15 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
         events: deque = deque(maxlen=20)
 
         def on_event(event) -> None:
+            """
+            Handle a event event.
+            
+            Args:
+                event: Parameter description.
+            
+            Returns:
+                None
+            """
             events.append(event)
 
         if hasattr(bus, "listen_all"):
@@ -182,6 +191,9 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
             return
 
         def generate_table():
+            """
+            Generate table.
+            """
             table = Table(title="🔮 Gan Ying Resonance (Real-time)", expand=True)
             table.add_column("Time", style="cyan", no_wrap=True)
             table.add_column("Type", style="magenta")

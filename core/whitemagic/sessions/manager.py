@@ -52,10 +52,26 @@ class Session:
     resonance_scores: dict[str, float] = field(default_factory=dict)  # Resonance by category
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {**asdict(self), "status": self.status.value}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Session:
+        """
+        Convert to/from m dict.
+        
+        Args:
+            cls: Parameter description.
+            data: Parameter description.
+        
+        Returns:
+            Session
+        """
         data = data.copy()
         if "status" in data:
             data["status"] = SessionStatus(data["status"])

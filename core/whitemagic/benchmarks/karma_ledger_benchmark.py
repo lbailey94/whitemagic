@@ -250,6 +250,12 @@ def run_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
 
 
 def main() -> int:
+    """
+    Perform the main operation.
+    
+    Returns:
+        int
+    """
     parser = argparse.ArgumentParser(
         description="Karma Ledger benchmark harness",
     )

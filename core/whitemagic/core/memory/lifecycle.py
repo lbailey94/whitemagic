@@ -59,6 +59,12 @@ class LifecycleStats:
     last_sweep_at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_sweeps": self.total_sweeps,
             "total_evaluated": self.total_evaluated,
@@ -94,6 +100,9 @@ class MemoryLifecycleManager:
     def _start_worker(self) -> None:
         """Start the background sweep worker thread."""
         def worker_loop():
+            """
+            Perform the worker loop operation.
+            """
             while self._running:
                 try:
                     # Bounded wait
@@ -319,11 +328,23 @@ class MemoryLifecycleManager:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             return self._stats.to_dict()
 
     @property
     def is_attached(self) -> bool:
+        """
+        Check whether the attached condition holds.
+        
+        Returns:
+            bool
+        """
         return self._attached
 
     # ------------------------------------------------------------------
@@ -340,6 +361,9 @@ class MemoryLifecycleManager:
 
         # Phase 1: Retention sweep (run in executor)
         def run_retention_sweep():
+            """
+            Run the retention sweep operation.
+            """
             from whitemagic.core.memory.mindful_forgetting import get_retention_engine
             engine = get_retention_engine()
             return engine.sweep(persist=persist)

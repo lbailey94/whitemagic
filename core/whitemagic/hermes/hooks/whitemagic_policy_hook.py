@@ -14,6 +14,12 @@ import sys
 
 
 def main() -> None:
+    """
+    Perform the main operation.
+    
+    Returns:
+        None
+    """
     try:
         event = json.load(sys.stdin)
     except json.JSONDecodeError:

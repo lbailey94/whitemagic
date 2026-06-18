@@ -59,4 +59,10 @@ class DharmaProtocol:
         return f"--- [Dharma Signed: {timestamp}] --- Alignment: Interconnection ---"
 
 def get_dharma() -> DharmaProtocol:
+    """
+    Get the dharma.
+    
+    Returns:
+        DharmaProtocol
+    """
     return DharmaProtocol()

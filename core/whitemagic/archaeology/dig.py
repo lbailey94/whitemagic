@@ -46,6 +46,16 @@ class Grimoire:
 
     @staticmethod
     def identify(content: str, filename: str) -> list[dict[str, Any]]:
+        """
+        Perform the identify operation.
+        
+        Args:
+            content: Parameter description.
+            filename: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         matches: list[dict[str, Any]] = []
         text = (content + " " + filename).lower()
         for num, info in Grimoire.CHAPTERS.items():
@@ -82,6 +92,16 @@ class Ganas:
 
     @staticmethod
     def identify(content: str, filename: str) -> str | None:
+        """
+        Perform the identify operation.
+        
+        Args:
+            content: Parameter description.
+            filename: Parameter description.
+        
+        Returns:
+            str | None
+        """
         text = (content + " " + filename).lower()
         best_gana = None
         best_score = 0
@@ -155,6 +175,18 @@ class ChariotArchaeologist:
             self.state_file.write_text(json.dumps(state, indent=2))
 
     def mark_read(self, path: str, context: str | None = None, note: str | None = None, insight: str | None = None) -> dict[str, Any]:
+        """
+        Mark the read state.
+        
+        Args:
+            path: Parameter description.
+            context: Parameter description.
+            note: Parameter description.
+            insight: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         entry = {
             "path": path,
             "type": "read",
@@ -170,6 +202,17 @@ class ChariotArchaeologist:
         return entry
 
     def mark_written(self, path: str, context: str | None = None, note: str | None = None) -> dict[str, Any]:
+        """
+        Mark the written state.
+        
+        Args:
+            path: Parameter description.
+            context: Parameter description.
+            note: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         entry = {
             "path": path,
             "type": "written",
@@ -183,9 +226,28 @@ class ChariotArchaeologist:
         return entry
 
     def have_read(self, path: str) -> bool:
+        """
+        Check whether the read has occurred.
+        
+        Args:
+            path: Parameter description.
+        
+        Returns:
+            bool
+        """
         return path in self._read_files
 
     def find_unread(self, directory: str = ".", patterns: list[str] | None = None) -> list[Any]:
+        """
+        Find unread matching the criteria.
+        
+        Args:
+            directory: Parameter description.
+            patterns: Parameter description.
+        
+        Returns:
+            list[Any]
+        """
         dir_path = Path(directory)
         unread = []
         for root, _, files in os.walk(dir_path):
@@ -202,6 +264,15 @@ class ChariotArchaeologist:
         return unread
 
     def stats(self, scan_disk: bool = False) -> dict[str, Any]:
+        """
+        Perform the stats operation.
+        
+        Args:
+            scan_disk: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_files_tracked": len(self._read_files),
             "history_size": len(self._history),
@@ -209,13 +280,37 @@ class ChariotArchaeologist:
         }
 
     def get_recent_reads(self, limit: int = 50) -> list[dict[str, Any]]:
+        """
+        Get the recent reads.
+        
+        Args:
+            limit: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         reads = [h for h in self._history if h["type"] == "read"]
         return reads[-limit:]
 
     def reading_report(self) -> str:
+        """
+        Perform the reading report operation.
+        
+        Returns:
+            str
+        """
         return f"Archaeologist report: {len(self._read_files)} files read, {len(self._history)} actions recorded."
 
     def search(self, query: str) -> list[dict[str, Any]]:
+        """
+        Perform the search operation.
+        
+        Args:
+            query: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         results = []
         query_lower = query.lower()
         for entry in self._history:
@@ -235,6 +330,15 @@ class ChariotArchaeologist:
                 logger.info(f"Artifacts found so far: {self.stats_data['found']}")
 
     def scan_file(self, file_path: Path) -> None:
+        """
+        Perform the scan file operation.
+        
+        Args:
+            file_path: Parameter description.
+        
+        Returns:
+            None
+        """
         try:
             # Skip ignored extensions
             if file_path.suffix.lower() in self.exclude_extensions:
@@ -296,6 +400,12 @@ class ChariotArchaeologist:
                 self.stats_data["errors"] += 1
 
     def dig(self) -> None:
+        """
+        Perform the dig operation.
+        
+        Returns:
+            None
+        """
         logger.info(f"Chariot started execution in {self.root_path}")
         files_to_scan = []
 
@@ -317,6 +427,12 @@ class ChariotArchaeologist:
         self.conclusion()
 
     def conclusion(self) -> None:
+        """
+        Perform the conclusion operation.
+        
+        Returns:
+            None
+        """
         logger.info(f"Excavation complete. Findings saved to {self.report_file}")
         print(f"\n--- CHARIOT RUN COMPLETE ---\nScanned: {self.stats_data['scanned']}\nFound: {self.stats_data['found']}\nErrors: {self.stats_data['errors']}")
 

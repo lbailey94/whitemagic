@@ -211,6 +211,12 @@ class SimplePlugin(PluginBase):
     @property
     def info(self) -> PluginInfo:
         # Priority: instance attributes > class attributes > defaults
+        """
+        Perform the info operation.
+        
+        Returns:
+            PluginInfo
+        """
         name = getattr(self, "_instance_name", None) or getattr(self.__class__, "name", "unnamed_plugin")
         if name == "unnamed_plugin" and hasattr(self, "_decorated_name"):
             name = self._decorated_name
@@ -235,6 +241,15 @@ def plugin(name: str, version: str = "1.0.0", description: str = "", author: str
         pass
     """
     def decorator(cls: type[_PluginT]) -> type[_PluginT]:
+        """
+        Perform the decorator operation.
+        
+        Args:
+            cls: Parameter description.
+        
+        Returns:
+            type[_PluginT]
+        """
         cls.name = name
         cls.version = version
         cls.description = description

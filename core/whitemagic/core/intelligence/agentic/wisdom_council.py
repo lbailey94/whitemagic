@@ -115,10 +115,19 @@ class WisdomCouncil:
         return "\n".join(rationale_lines)
 
 def get_wisdom_council() -> WisdomCouncil:
+    """
+    Get the wisdom council.
+    
+    Returns:
+        WisdomCouncil
+    """
     return WisdomCouncil()
 
 if __name__ == "__main__":
     async def main():
+        """
+        Perform the main operation.
+        """
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         council = WisdomCouncil()
 

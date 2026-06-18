@@ -32,6 +32,12 @@ class Bounty:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return asdict(self)
 
 class BountyBoard:
@@ -130,14 +136,38 @@ class BountyBoard:
             logger.error(f"Failed to persist bounty: {e}")
 
     def get_bounty(self, bounty_id: str) -> Bounty | None:
+        """
+        Get the bounty.
+        
+        Args:
+            bounty_id: Parameter description.
+        
+        Returns:
+            Bounty | None
+        """
         return self._bounties.get(bounty_id)
 
     def list_bounties(self, status: str = "open") -> list[Bounty]:
+        """
+        List the bounties.
+        
+        Args:
+            status: Parameter description.
+        
+        Returns:
+            list[Bounty]
+        """
         return [b for b in self._bounties.values() if b.status == status]
 
 _board: BountyBoard | None = None
 
 def get_bounty_board() -> BountyBoard:
+    """
+    Get the bounty board.
+    
+    Returns:
+        BountyBoard
+    """
     global _board
     if _board is None:
         _board = BountyBoard()

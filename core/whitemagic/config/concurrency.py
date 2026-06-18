@@ -9,6 +9,12 @@ from typing import Any
 
 
 def get_safe_cpu_count() -> int:
+    """
+    Get the safe cpu count.
+    
+    Returns:
+        int
+    """
     try:
         count = multiprocessing.cpu_count()
         # Reserve cores for OS and IDE

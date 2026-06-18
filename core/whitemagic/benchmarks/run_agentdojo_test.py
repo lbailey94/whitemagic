@@ -26,6 +26,9 @@ from dotenv import load_dotenv
 
 
 def run_test():
+    """
+    Run the test operation.
+    """
     suite = get_suite("v1", "workspace")
     logdir = Path("/tmp/agentdojo_wm_test")
     logdir.mkdir(parents=True, exist_ok=True)

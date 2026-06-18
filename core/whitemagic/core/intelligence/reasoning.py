@@ -91,6 +91,17 @@ class MultiSpectralReasoner:
         self.reasoning_history: list[ReasoningResult] = []
 
     def reason(self, question: str, lenses: Sequence[ReasoningLens] | None = None, context: ReasoningContext | None = None) -> ReasoningResult:
+        """
+        Perform the reason operation.
+        
+        Args:
+            question: Parameter description.
+            lenses: Parameter description.
+            context: Parameter description.
+        
+        Returns:
+            ReasoningResult
+        """
         if context is None: context = ReasoningContext(question=question)
         if lenses is None: lenses = list(ReasoningLens)
 
@@ -112,6 +123,17 @@ class MultiSpectralReasoner:
 # --- SCRATCHPAD INTEGRATION ---
 
 def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None = None, lenses: Sequence[ReasoningLens] | None = None) -> ScratchpadAnalysis:
+    """
+    Perform the analyze scratchpad operation.
+    
+    Args:
+        scratchpad_content: Parameter description.
+        question: Parameter description.
+        lenses: Parameter description.
+    
+    Returns:
+        ScratchpadAnalysis
+    """
     if question is None:
         question = scratchpad_content.get("current_focus") or "What should I focus on next?"
 
@@ -129,6 +151,17 @@ def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None 
     )
 
 def serialize_scratchpad_with_analysis(scratchpad_content: dict[str, str], analysis: ScratchpadAnalysis, title: str = "Scratchpad") -> str:
+    """
+    Perform the serialize scratchpad with analysis operation.
+    
+    Args:
+        scratchpad_content: Parameter description.
+        analysis: Parameter description.
+        title: Parameter description.
+    
+    Returns:
+        str
+    """
     lines = [f"# {title}", "", "## Analysis", f"Confidence: {analysis.confidence:.2%}", "", "### Synthesis", analysis.synthesis, "", "### Recommendation", analysis.wisdom, ""]
     lines.append("## Scratchpad")
     for section, content in scratchpad_content.items():
@@ -139,6 +172,12 @@ def serialize_scratchpad_with_analysis(scratchpad_content: dict[str, str], analy
 _reasoner: MultiSpectralReasoner | None = None
 
 def get_reasoner() -> MultiSpectralReasoner:
+    """
+    Get the reasoner.
+    
+    Returns:
+        MultiSpectralReasoner
+    """
     global _reasoner
     if _reasoner is None: _reasoner = MultiSpectralReasoner()
     return _reasoner

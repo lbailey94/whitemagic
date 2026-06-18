@@ -119,6 +119,15 @@ class ParallelSorter:
         from concurrent.futures import ThreadPoolExecutor
 
         def sort_batch(batch: list[T]) -> list[T]:
+            """
+            Perform the sort batch operation.
+            
+            Args:
+                batch: Parameter description.
+            
+            Returns:
+                list[T]
+            """
             return sorted(batch, key=key, reverse=reverse)
 
         with ThreadPoolExecutor(max_workers=min(len(batches), 8)) as executor:

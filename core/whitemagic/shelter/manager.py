@@ -64,6 +64,12 @@ class ShelterCapabilities:
     system_allow: list[str] = field(default_factory=list)      # syscall groups
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "filesystem_read": self.filesystem_read,
             "filesystem_write": self.filesystem_write,
@@ -83,6 +89,12 @@ class ShelterLimits:
     max_disk_mb: int = 500
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timeout_s": self.timeout_s,
             "max_memory_mb": self.max_memory_mb,
@@ -109,6 +121,12 @@ class Shelter:
     duration_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "name": self.name,
             "tier": self.tier.value,

@@ -86,6 +86,15 @@ class PracticeRitualConductor:
         # Custom completion check: deepening threshold
         def ritual_completion_check(thought_path: Any) -> bool:
             # Ritual is complete when confidence exceeds deepening threshold
+            """
+            Perform the ritual completion check operation.
+            
+            Args:
+                thought_path: Parameter description.
+            
+            Returns:
+                bool
+            """
             if thought_path.confidence >= self.ritual_config.deepening_threshold:
                 return True
 

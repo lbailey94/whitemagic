@@ -115,20 +115,54 @@ class AgentRoleRegistry:
             logger.debug("Could not save RBAC roles: %s", e)
 
     def set_roles(self, agent_id: str, roles: list[str]) -> None:
+        """
+        Perform the set roles operation.
+        
+        Args:
+            agent_id: Parameter description.
+            roles: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._agent_roles[agent_id] = roles
             self._save()
 
     def get_roles(self, agent_id: str) -> list[str]:
+        """
+        Get the roles.
+        
+        Args:
+            agent_id: Parameter description.
+        
+        Returns:
+            list[str]
+        """
         with self._lock:
             return self._agent_roles.get(agent_id, list(self._default_roles))
 
     def set_default_roles(self, roles: list[str]) -> None:
+        """
+        Perform the set default roles operation.
+        
+        Args:
+            roles: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._default_roles = roles
             self._save()
 
     def list_agents(self) -> dict[str, list[str]]:
+        """
+        List the agents.
+        
+        Returns:
+            dict[str, list[str]]
+        """
         with self._lock:
             return dict(self._agent_roles)
 
@@ -142,6 +176,12 @@ _registry_lock = threading.Lock()
 
 
 def get_agent_role_registry() -> AgentRoleRegistry:
+    """
+    Get the agent role registry.
+    
+    Returns:
+        AgentRoleRegistry
+    """
     global _registry_instance
     with _registry_lock:
         if _registry_instance is None:

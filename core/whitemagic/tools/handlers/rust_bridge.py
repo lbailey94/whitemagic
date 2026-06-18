@@ -8,6 +8,12 @@ def _load_rust() -> tuple[Any, Any]:
 
 
 def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a rust audit event.
+    
+    Returns:
+        dict[str, Any]
+    """
     path = kwargs.get("path", ".")
     pattern = kwargs.get("pattern", "*.py")
     rust, rust_error = _load_rust()
@@ -22,6 +28,12 @@ def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_rust_compress(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a rust compress event.
+    
+    Returns:
+        dict[str, Any]
+    """
     data = str(kwargs.get("data", ""))
     rust, rust_error = _load_rust()
     if rust is None:
@@ -33,6 +45,12 @@ def handle_rust_compress(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_rust_similarity(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a rust similarity event.
+    
+    Returns:
+        dict[str, Any]
+    """
     text1 = kwargs.get("text1", "")
     text2 = kwargs.get("text2", "")
     rust, rust_error = _load_rust()
@@ -48,6 +66,12 @@ def handle_rust_similarity(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_rust_status(**kwargs: Any) -> dict[str, Any]:
+    """
+    Handle a rust status event.
+    
+    Returns:
+        dict[str, Any]
+    """
     rust, rust_error = _load_rust()
     if rust is None:
         return {"status": "success", "available": False, "rust_error": rust_error}

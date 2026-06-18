@@ -36,6 +36,12 @@ class TransmutationPipeline:
         self.holocron = Holocron()
 
     def run(self, limit: int = 10000):
+        """
+        Perform the run operation.
+        
+        Args:
+            limit: Parameter description.
+        """
         logger.info("=== The Great Work: Transmutation Sequence Initiated ===")
         start_time = time.time()
 

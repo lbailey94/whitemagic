@@ -101,6 +101,12 @@ class ConnectionGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_connection_garden() -> ConnectionGarden:
+    """
+    Get the connection garden.
+    
+    Returns:
+        ConnectionGarden
+    """
     global _instance
     if _instance is None:
         _instance = ConnectionGarden()

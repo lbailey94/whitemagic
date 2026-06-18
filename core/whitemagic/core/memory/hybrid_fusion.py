@@ -131,6 +131,15 @@ class HybridFusion:
 
         # Normalize scores to [0, 1]
         def normalize(scores: dict) -> dict:
+            """
+            Perform the normalize operation.
+            
+            Args:
+                scores: Parameter description.
+            
+            Returns:
+                dict
+            """
             if not scores:
                 return {}
             max_score = max(scores.values()) if scores else 1.0

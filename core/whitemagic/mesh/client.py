@@ -50,6 +50,12 @@ class MeshPeer:
     last_seen: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "node_id": self.node_id,
             "address": self.address,
@@ -262,6 +268,12 @@ _client_lock = threading.Lock()
 
 
 def get_mesh_client() -> MeshClient:
+    """
+    Get the mesh client.
+    
+    Returns:
+        MeshClient
+    """
     global _client
     if _client is None:
         with _client_lock:

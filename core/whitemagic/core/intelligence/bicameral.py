@@ -85,6 +85,12 @@ class BicameralResult:
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "query": self.query,
             "left": {
@@ -242,6 +248,15 @@ class BicameralReasoner:
         # Override strategy generation to bias toward this hemisphere
 
         def biased_strategies(count: int) -> list[str]:
+            """
+            Perform the biased strategies operation.
+            
+            Args:
+                count: Parameter description.
+            
+            Returns:
+                list[str]
+            """
             result = []
             for i in range(count):
                 result.append(strategies[i % len(strategies)])
@@ -502,6 +517,12 @@ class BicameralReasoner:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "total_reasonings": self._total_reasonings,
             "left_wins": self._left_wins,

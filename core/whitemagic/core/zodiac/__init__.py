@@ -102,6 +102,12 @@ class ZodiacalClock:
 
     @property
     def current_phase(self) -> str:
+        """
+        Perform the current phase operation.
+        
+        Returns:
+            str
+        """
         return self._state.get("current_phase", "Aries")
 
     @property

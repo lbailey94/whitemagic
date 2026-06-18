@@ -143,16 +143,45 @@ class PythonSpatialIndex5D:
         self._points: list[tuple[str, list[float]]] = []
 
     def add(self, memory_id: str, vector: list[float]) -> int:
+        """
+        Perform the add operation.
+        
+        Args:
+            memory_id: Parameter description.
+            vector: Parameter description.
+        
+        Returns:
+            int
+        """
         idx = len(self._points)
         self._points.append((memory_id, list(vector)))
         return idx
 
     def add_batch(self, items: list[tuple[str, list[float]]]) -> int:
+        """
+        Add batch.
+        
+        Args:
+            items: Parameter description.
+        
+        Returns:
+            int
+        """
         for mid, vec in items:
             self._points.append((mid, list(vec)))
         return len(items)
 
     def query_nearest(self, vector: list[float], n: int) -> list[tuple[str, float]]:
+        """
+        Perform the query nearest operation.
+        
+        Args:
+            vector: Parameter description.
+            n: Parameter description.
+        
+        Returns:
+            list[tuple[str, float]]
+        """
         if not self._points:
             return []
         dists = []
@@ -163,6 +192,16 @@ class PythonSpatialIndex5D:
         return dists[:n]
 
     def query_within_radius(self, vector: list[float], radius_sq: float) -> list[tuple[str, float]]:
+        """
+        Perform the query within radius operation.
+        
+        Args:
+            vector: Parameter description.
+            radius_sq: Parameter description.
+        
+        Returns:
+            list[tuple[str, float]]
+        """
         results = []
         for mid, pt in self._points:
             d = sum((a - b) ** 2 for a, b in zip(vector, pt))
@@ -171,10 +210,28 @@ class PythonSpatialIndex5D:
         return results
 
     def size(self) -> int:
+        """
+        Perform the size operation.
+        
+        Returns:
+            int
+        """
         return len(self._points)
 
     def get_snapshot(self) -> list[tuple[str, list[float]]]:
+        """
+        Get the snapshot.
+        
+        Returns:
+            list[tuple[str, list[float]]]
+        """
         return list(self._points)
 
     def clear(self) -> None:
+        """
+        Perform the clear operation.
+        
+        Returns:
+            None
+        """
         self._points.clear()

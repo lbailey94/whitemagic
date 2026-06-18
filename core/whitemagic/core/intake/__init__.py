@@ -269,6 +269,12 @@ class HolographicIntake:
         self._running = True
 
         def daemon_loop() -> None:
+            """
+            Perform the daemon loop operation.
+            
+            Returns:
+                None
+            """
             while self._running:
                 try:
                     # Scan all watch directories

@@ -46,6 +46,12 @@ class TzimtzumManager:
         return self.intensity_cap
 
     def get_status(self) -> dict[str, Any]:
+        """
+        Get the status.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "is_active": self.is_vacant_space_active,
             "intensity_cap": self.intensity_cap,
@@ -57,6 +63,12 @@ class TzimtzumManager:
 _tzimtzum = None
 
 def get_tzimtzum() -> TzimtzumManager:
+    """
+    Get the tzimtzum.
+    
+    Returns:
+        TzimtzumManager
+    """
     global _tzimtzum
     if _tzimtzum is None:
         _tzimtzum = TzimtzumManager()

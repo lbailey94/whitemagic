@@ -86,12 +86,24 @@ def _wire_feedback_loops(ns):
 
         # Immune -> Dream (Threat -> Defense Cycle)
         def on_threat(event):
+            """
+            Handle a threat event.
+            
+            Args:
+                event: Parameter description.
+            """
             ns.signal_threat_detected(event.confidence, event.data)
 
         bus.listen(EventType.THREAT_DETECTED, on_threat)
 
         # Dream -> Genetics (Consolidation -> Fitness)
         def on_consolidation(event):
+            """
+            Handle a consolidation event.
+            
+            Args:
+                event: Parameter description.
+            """
             if "strategies" in event.data and event.data["strategies"] > 0:
                 ns.signal_dream_consolidation([{"type": "strategy_count", "count": event.data["strategies"]}])
 

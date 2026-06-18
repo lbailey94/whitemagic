@@ -21,6 +21,16 @@ try:
     from whitemagic.tools.tool_surface import call_tool
 except ImportError:
     def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
+        """
+        Perform the call tool operation.
+        
+        Args:
+            name: Parameter description.
+            args: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"status": "error", "message": f"Tool surface unavailable for {name}"}
 
 logger = logging.getLogger(__name__)

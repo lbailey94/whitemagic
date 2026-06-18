@@ -55,6 +55,12 @@ class SubTask:
     depends_on: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "id": self.id,
             "description": self.description,
@@ -76,6 +82,12 @@ class SwarmPlan:
     completed_at: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         done = sum(1 for t in self.subtasks if t.status == TaskStatus.COMPLETED)
         return {
             "plan_id": self.id,
@@ -520,16 +532,40 @@ class AgentSwarm:
         }
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
+        """
+        Get the plan.
+        
+        Args:
+            plan_id: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         with self._lock:
             plan = self._plans.get(plan_id)
             return plan.to_dict() if plan else None
 
     def list_plans(self, limit: int = 20) -> list[dict[str, Any]]:
+        """
+        List the plans.
+        
+        Args:
+            limit: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         with self._lock:
             plans = sorted(self._plans.values(), key=lambda p: p.created_at, reverse=True)
             return [p.to_dict() for p in plans[:limit]]
 
     def status(self) -> dict[str, Any]:
+        """
+        Perform the status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         with self._lock:
             active = sum(1 for p in self._plans.values() if not p.completed_at)
             return {
@@ -545,6 +581,12 @@ _swarm: AgentSwarm | None = None
 _swarm_lock = threading.Lock()
 
 def get_swarm() -> AgentSwarm:
+    """
+    Get the swarm.
+    
+    Returns:
+        AgentSwarm
+    """
     global _swarm
     if _swarm is None:
         with _swarm_lock:

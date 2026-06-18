@@ -40,6 +40,17 @@ class MeshAwareness:
         self._listening = False
 
     def register_peer(self, node_id: str, address: str = "", meta: dict | None = None) -> None:
+        """
+        Register a peer.
+        
+        Args:
+            node_id: Parameter description.
+            address: Parameter description.
+            meta: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._peers[node_id] = {
                 "node_id": node_id,
@@ -49,14 +60,38 @@ class MeshAwareness:
             }
 
     def remove_peer(self, node_id: str) -> None:
+        """
+        Remove the peer.
+        
+        Args:
+            node_id: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._peers.pop(node_id, None)
 
     def get_peers(self) -> list[dict[str, Any]]:
+        """
+        Get the peers.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         with self._lock:
             return list(self._peers.values())
 
     def record_event(self, event: dict[str, Any]) -> None:
+        """
+        Perform the record event operation.
+        
+        Args:
+            event: Parameter description.
+        
+        Returns:
+            None
+        """
         with self._lock:
             self._mesh_events.append({**event, "_received_at": time.time()})
             if len(self._mesh_events) > self._max_events:
@@ -122,6 +157,12 @@ _awareness_lock = threading.Lock()
 
 
 def get_mesh_awareness() -> MeshAwareness:
+    """
+    Get the mesh awareness.
+    
+    Returns:
+        MeshAwareness
+    """
     global _awareness
     if _awareness is None:
         with _awareness_lock:

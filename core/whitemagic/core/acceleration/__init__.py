@@ -21,6 +21,12 @@ except ImportError:
     has_elixir = False
 
     def elixir_bridge_status() -> dict[str, Any]:
+        """
+        Perform the elixir bridge status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"status": "error", "message": "Elixir bridge not available or archived."}
 
     def elixir_cascade_execute(
@@ -29,6 +35,18 @@ except ImportError:
         timeout_ms: int = 30000,
         priority: str = "normal",
     ) -> dict[str, Any] | None:
+        """
+        Perform the elixir cascade execute operation.
+        
+        Args:
+            tool_name: Parameter description.
+            args: Parameter description.
+            timeout_ms: Parameter description.
+            priority: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Elixir bridge not available — elixir_cascade_execute skipped")
         return {"status": "skipped", "reason": "Elixir bridge not available or archived."}
 
@@ -37,6 +55,17 @@ except ImportError:
         mode: str = "parallel",
         max_failures: int = -1,
     ) -> dict[str, Any] | None:
+        """
+        Perform the elixir cascade pipeline operation.
+        
+        Args:
+            tasks: Parameter description.
+            mode: Parameter description.
+            max_failures: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Elixir bridge not available — elixir_cascade_pipeline skipped")
         return {"status": "skipped", "reason": "Elixir bridge not available or archived."}
 
@@ -49,9 +78,21 @@ try:
     )
 except ImportError:
     def go_mesh_status() -> dict[str, Any]:
+        """
+        Perform the go mesh status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"status": "error", "message": "Go mesh bridge not available."}
 
     def mesh_agent_status() -> dict[str, Any] | None:
+        """
+        Perform the mesh agent status operation.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Go mesh bridge not available — mesh_agent_status skipped")
         return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
@@ -59,6 +100,16 @@ except ImportError:
         task: dict[str, Any],
         strategy: str = "least_loaded",
     ) -> dict[str, Any] | None:
+        """
+        Perform the mesh distribute task operation.
+        
+        Args:
+            task: Parameter description.
+            strategy: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Go mesh bridge not available — mesh_distribute_task skipped")
         return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
@@ -67,6 +118,17 @@ except ImportError:
         content: str,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
+        """
+        Perform the mesh sync memory operation.
+        
+        Args:
+            memory_id: Parameter description.
+            content: Parameter description.
+            metadata: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Go mesh bridge not available — mesh_sync_memory skipped")
         return {"status": "skipped", "reason": "Go mesh bridge not available."}
 
@@ -79,6 +141,12 @@ try:
     )
 except ImportError:
     def haskell_bridge_status() -> dict[str, Any]:
+        """
+        Perform the haskell bridge status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"status": "error", "message": "Haskell bridge not available."}
 
     def haskell_check_boundaries(
@@ -86,6 +154,17 @@ except ImportError:
         description: str = "",
         args_str: str = "",
     ) -> list[dict[str, Any]] | None:
+        """
+        Perform the haskell check boundaries operation.
+        
+        Args:
+            tool_name: Parameter description.
+            description: Parameter description.
+            args_str: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]] | None
+        """
         logger.debug("Haskell bridge not available — haskell_check_boundaries skipped")
         return []
 
@@ -96,6 +175,19 @@ except ImportError:
         category: str = "",
         profile: str = "default",
     ) -> dict[str, Any] | None:
+        """
+        Perform the haskell evaluate rules operation.
+        
+        Args:
+            tool_name: Parameter description.
+            description: Parameter description.
+            safety_level: Parameter description.
+            category: Parameter description.
+            profile: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Haskell bridge not available — haskell_evaluate_rules skipped")
         return {"status": "skipped", "reason": "Haskell bridge not available."}
 
@@ -109,6 +201,22 @@ except ImportError:
         agents_registered: int = 0,
         error_rate: float = 0.0,
     ) -> dict[str, Any] | None:
+        """
+        Perform the haskell maturity assess operation.
+        
+        Args:
+            stage: Parameter description.
+            tools_executed: Parameter description.
+            session_count: Parameter description.
+            dharma_score: Parameter description.
+            harmony_score: Parameter description.
+            consolidations: Parameter description.
+            agents_registered: Parameter description.
+            error_rate: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Haskell bridge not available — haskell_maturity_assess skipped")
         return {"status": "skipped", "reason": "Haskell bridge not available."}
 
@@ -124,10 +232,26 @@ except ImportError:
         metrics: dict[str, list[float]],
         steps: int = 5,
     ) -> dict[str, Any] | None:
+        """
+        Perform the julia batch forecast operation.
+        
+        Args:
+            metrics: Parameter description.
+            steps: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Julia bridge not available — julia_batch_forecast skipped")
         return {"status": "skipped", "reason": "Julia bridge not available."}
 
     def julia_bridge_status() -> dict[str, Any]:
+        """
+        Perform the julia bridge status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"status": "error", "message": "Julia bridge not available."}
 
     def julia_forecast_metric(
@@ -136,12 +260,33 @@ except ImportError:
         alpha: float = 0.3,
         beta: float = 0.1,
     ) -> dict[str, Any] | None:
+        """
+        Perform the julia forecast metric operation.
+        
+        Args:
+            values: Parameter description.
+            steps: Parameter description.
+            alpha: Parameter description.
+            beta: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Julia bridge not available — julia_forecast_metric skipped")
         return {"status": "skipped", "reason": "Julia bridge not available."}
 
     def julia_importance_distribution(
         scores: list[float],
     ) -> dict[str, Any] | None:
+        """
+        Perform the julia importance distribution operation.
+        
+        Args:
+            scores: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Julia bridge not available — julia_importance_distribution skipped")
         return {"status": "skipped", "reason": "Julia bridge not available."}
 
@@ -156,12 +301,30 @@ except ImportError:
     def mojo_batch_encode(
         memories: list[dict[str, Any]],
     ) -> list[tuple[float, float, float, float, float]] | None:
+        """
+        Perform the mojo batch encode operation.
+        
+        Args:
+            memories: Parameter description.
+        
+        Returns:
+            list[tuple[float, float, float, float, float]] | None
+        """
         logger.debug("Mojo bridge not available — mojo_batch_encode skipped")
         return None
 
     def mojo_neuro_score(
         memories: list[dict[str, Any]],
     ) -> list[dict[str, Any]] | None:
+        """
+        Perform the mojo neuro score operation.
+        
+        Args:
+            memories: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]] | None
+        """
         logger.debug("Mojo bridge not available — mojo_neuro_score skipped")
         return None
 
@@ -169,10 +332,26 @@ except ImportError:
         vectors: list[list[float]],
         mode: str = "int8",
     ) -> dict[str, Any] | None:
+        """
+        Perform the mojo quantize operation.
+        
+        Args:
+            vectors: Parameter description.
+            mode: Parameter description.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         logger.debug("Mojo bridge not available — mojo_quantize skipped")
         return None
 
     def mojo_status() -> dict[str, Any]:
+        """
+        Perform the mojo status operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"status": "error", "message": "Mojo bridge not available."}
 
 from .dispatch_bridge import DispatchBridge, get_dispatch

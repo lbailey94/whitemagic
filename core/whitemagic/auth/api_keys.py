@@ -120,6 +120,15 @@ class APIKeySystem:
             }
             # Handle datetime serialization
             def json_serial(obj: object) -> str:
+                """
+                Perform the json serial operation.
+                
+                Args:
+                    obj: Parameter description.
+                
+                Returns:
+                    str
+                """
                 if isinstance(obj, datetime):
                     return obj.isoformat()
                 raise TypeError(f"Type {type(obj)} not serializable")

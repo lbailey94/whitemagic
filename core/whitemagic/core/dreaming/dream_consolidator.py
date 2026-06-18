@@ -40,6 +40,12 @@ class ConsolidationReport:
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "promoted": self.promoted,
             "expired": self.expired,

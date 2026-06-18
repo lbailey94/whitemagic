@@ -75,6 +75,12 @@ class GraphEngine:
 _graph_engine = None
 
 def get_graph_engine() -> GraphEngine:
+    """
+    Get the graph engine.
+    
+    Returns:
+        GraphEngine
+    """
     global _graph_engine
     if _graph_engine is None:
         _graph_engine = GraphEngine()

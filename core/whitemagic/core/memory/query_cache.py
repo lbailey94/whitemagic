@@ -181,6 +181,9 @@ def cache_memory_query(func):
             # ... expensive query ...
     """
     def wrapper(*args, **kwargs):
+        """
+        Perform the wrapper operation.
+        """
         cache = get_query_cache()
 
         # Generate cache key

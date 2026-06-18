@@ -33,6 +33,15 @@ logger = logging.getLogger(__name__)
 class HolographicStorage:
     """Stores information using high-dimensional holographic vectors."""
     def encode(self, data: Any) -> list[float]:
+        """
+        Perform the encode operation.
+        
+        Args:
+            data: Parameter description.
+        
+        Returns:
+            list[float]
+        """
         return [0.0] * 512
 
 # --- HRR (Holographic Reduced Representations) ---
@@ -42,6 +51,16 @@ class HRREngine:
     def __init__(self, **kwargs: Any) -> None:
         self._config = kwargs
     def bind(self, a: list[float], b: list[float]) -> list[float]:
+        """
+        Perform the bind operation.
+        
+        Args:
+            a: Parameter description.
+            b: Parameter description.
+        
+        Returns:
+            list[float]
+        """
         return a
 
 # --- CONSOLIDATION & LIFECYCLE ---
@@ -49,6 +68,9 @@ class HRREngine:
 class MemoryLifecycle:
     """Manages the lifecycle of memories: short-term to long-term consolidation."""
     def consolidate(self):
+        """
+        Perform the consolidate operation.
+        """
         logger.info("Consolidating memories...")
 
 # --- SINGLETONS ---
@@ -57,16 +79,34 @@ _hrr: HRREngine | None = None
 _lifecycle: MemoryLifecycle | None = None
 
 def get_holographic_storage() -> HolographicStorage:
+    """
+    Get the holographic storage.
+    
+    Returns:
+        HolographicStorage
+    """
     global _holographic
     if _holographic is None: _holographic = HolographicStorage()
     return _holographic
 
 def get_hrr_engine() -> HRREngine:
+    """
+    Get the hrr engine.
+    
+    Returns:
+        HRREngine
+    """
     global _hrr
     if _hrr is None: _hrr = HRREngine()
     return _hrr
 
 def get_memory_lifecycle() -> MemoryLifecycle:
+    """
+    Get the memory lifecycle.
+    
+    Returns:
+        MemoryLifecycle
+    """
     global _lifecycle
     if _lifecycle is None: _lifecycle = MemoryLifecycle()
     return _lifecycle

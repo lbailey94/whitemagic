@@ -51,6 +51,19 @@ class MemoryManager:
         extra_fields: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
+        """
+        Create a new memory.
+        
+        Args:
+            title: Parameter description.
+            content: Parameter description.
+            memory_type: Parameter description.
+            tags: Parameter description.
+            extra_fields: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         if "type" in kwargs and not memory_type:
             memory_type = str(kwargs.pop("type"))
         elif "type" in kwargs:
@@ -83,6 +96,21 @@ class MemoryManager:
         include_content: bool = True,
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
+        """
+        Find memories matching the criteria.
+        
+        Args:
+            query: Parameter description.
+            memory_type: Parameter description.
+            tags: Parameter description.
+            limit: Parameter description.
+            min_importance: Parameter description.
+            include_archived: Parameter description.
+            include_content: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         mem_type = self._parse_memory_type(memory_type) if memory_type else None
         tag_set = {str(t).lower() for t in tags} if tags else None
         window = max(int(limit), min(1000, int(limit) * 5))
@@ -106,6 +134,16 @@ class MemoryManager:
         return results
 
     def search(self, query: str | None = None, limit: int = 20, **kwargs: Any) -> list[dict[str, Any]]:
+        """
+        Perform the search operation.
+        
+        Args:
+            query: Parameter description.
+            limit: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         return self.search_memories(query=query, limit=limit, **kwargs)
 
     def read_recent_memories(
@@ -115,6 +153,17 @@ class MemoryManager:
         include_archived: bool = False,
         **kwargs: Any,
     ) -> list[dict[str, Any]]:
+        """
+        Perform the read recent memories operation.
+        
+        Args:
+            memory_type: Parameter description.
+            limit: Parameter description.
+            include_archived: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         memories = self.unified.list_recent(limit=max(int(limit) * 2, int(limit)), memory_type=self._parse_memory_type(memory_type))
         results: list[dict[str, Any]] = []
         for memory in memories:
@@ -130,12 +179,42 @@ class MemoryManager:
         return results
 
     def list_recent(self, limit: int = 10, memory_type: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+        """
+        List the recent.
+        
+        Args:
+            limit: Parameter description.
+            memory_type: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         return [self._memory_to_dict(m) for m in self.unified.list_recent(limit=limit, memory_type=self._parse_memory_type(memory_type) if memory_type else None)]
 
     def list(self, limit: int = 20, memory_type: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
+        """
+        Perform the list operation.
+        
+        Args:
+            limit: Parameter description.
+            memory_type: Parameter description.
+        
+        Returns:
+            list[dict[str, Any]]
+        """
         return self.list_recent(limit=limit, memory_type=memory_type, **kwargs)
 
     def get_memory(self, memory_id: str, include_metadata: bool = True) -> dict[str, Any]:
+        """
+        Get the memory.
+        
+        Args:
+            memory_id: Parameter description.
+            include_metadata: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         real_id = memory_id[:-3] if memory_id.endswith(".md") else memory_id
         memory = self.unified.recall(real_id)
         if not memory or memory.metadata.get("status") == "archived":
@@ -158,6 +237,21 @@ class MemoryManager:
         memory_type: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
+        """
+        Update the memory.
+        
+        Args:
+            filename: Parameter description.
+            title: Parameter description.
+            content: Parameter description.
+            tags: Parameter description.
+            add_tags: Parameter description.
+            remove_tags: Parameter description.
+            memory_type: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         memory_id = filename[:-3] if filename.endswith(".md") else filename
         memory = self.unified.recall(memory_id)
         if not memory or memory.metadata.get("status") == "archived":
@@ -180,6 +274,16 @@ class MemoryManager:
         return {"success": True, "status": "success", **self._memory_to_dict(memory)}
 
     def delete_memory(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:
+        """
+        Remove the memory.
+        
+        Args:
+            filename: Parameter description.
+            permanent: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         memory_id = filename[:-3] if filename.endswith(".md") else filename
         memory = self.unified.recall(memory_id)
         if not memory:
@@ -205,22 +309,67 @@ class MemoryManager:
         return {"success": True, "status": "success", "id": memory_id, "action": "permanently_deleted"}
 
     def delete(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:
+        """
+        Perform the delete operation.
+        
+        Args:
+            filename: Parameter description.
+            permanent: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return self.delete_memory(filename=filename, permanent=permanent, **kwargs)
 
     def associate(self, memory_id1: str, memory_id2: str, strength: float = 0.5) -> dict[str, Any]:
+        """
+        Perform the associate operation.
+        
+        Args:
+            memory_id1: Parameter description.
+            memory_id2: Parameter description.
+            strength: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         self.unified.associate(memory_id1, memory_id2, strength=strength)
         return {"success": True, "status": "success", "source_id": memory_id1, "target_id": memory_id2, "strength": strength}
 
     def consolidate(self) -> int:
+        """
+        Perform the consolidate operation.
+        
+        Returns:
+            int
+        """
         return int(self.unified.consolidate())
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return cast(dict[str, Any], self.unified.get_stats())
 
     def stats(self) -> dict[str, Any]:
+        """
+        Perform the stats operation.
+        
+        Returns:
+            dict[str, Any]
+        """
         return self.get_stats()
 
     def get_cache_stats(self) -> dict[str, Any] | None:
+        """
+        Get the cache stats.
+        
+        Returns:
+            dict[str, Any] | None
+        """
         try:
             from whitemagic.optimization.predictive_cache import get_memory_cache
             return cast(dict[str, Any], get_memory_cache().get_stats())
@@ -228,6 +377,16 @@ class MemoryManager:
             return None
 
     def list_all_memories(self, include_archived: bool = False, sort_by: str = "created") -> dict[str, list[dict[str, Any]]]:
+        """
+        List the all memories.
+        
+        Args:
+            include_archived: Parameter description.
+            sort_by: Parameter description.
+        
+        Returns:
+            dict[str, list[dict[str, Any]]]
+        """
         memories = self.unified.list_recent(limit=1000)
         if sort_by == "accessed":
             memories.sort(key=lambda m: m.accessed_at, reverse=True)
@@ -245,6 +404,12 @@ class MemoryManager:
         return result
 
     def list_all_tags(self) -> dict[str, Any]:
+        """
+        List the all tags.
+        
+        Returns:
+            dict[str, Any]
+        """
         counter: Counter[str] = Counter()
         memories = self.unified.list_recent(limit=1000)
         for memory in memories:
@@ -257,18 +422,55 @@ class MemoryManager:
         }
 
     def generate_context_summary(self, tier: int = 1) -> str:
+        """
+        Generate context summary.
+        
+        Args:
+            tier: Parameter description.
+        
+        Returns:
+            str
+        """
         limits = {0: 3, 1: 10, 2: 50}
         memories = self.unified.list_recent(limit=limits.get(tier, 10))
         return "\n---\n".join(f"Title: {m.title}\nContent: {m.content}\n" for m in memories)
 
     def consolidate_short_term(self, dry_run: bool = False) -> dict[str, int]:
+        """
+        Perform the consolidate short term operation.
+        
+        Args:
+            dry_run: Parameter description.
+        
+        Returns:
+            dict[str, int]
+        """
         count = 0 if dry_run else self.consolidate()
         return {"archived": count, "auto_promoted": 0, "decayed": 0}
 
     def normalize_legacy_tags(self, dry_run: bool = True) -> dict[str, Any]:
+        """
+        Perform the normalize legacy tags operation.
+        
+        Args:
+            dry_run: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {"dry_run": dry_run, "affected_memories": 0, "changes": []}
 
     def restore_memory(self, memory_id: str, memory_type: str = "short_term") -> dict[str, Any]:
+        """
+        Perform the restore memory operation.
+        
+        Args:
+            memory_id: Parameter description.
+            memory_type: Parameter description.
+        
+        Returns:
+            dict[str, Any]
+        """
         real_id = memory_id[:-3] if memory_id.endswith(".md") else memory_id
         memory = self.unified.recall(real_id)
         if not memory:
@@ -286,6 +488,15 @@ _manager: MemoryManager | None = None
 
 
 def get_memory_manager(base_dir: str | Path = ".") -> MemoryManager:
+    """
+    Get the memory manager.
+    
+    Args:
+        base_dir: Parameter description.
+    
+    Returns:
+        MemoryManager
+    """
     global _manager
     if str(base_dir) != ".":
         return MemoryManager(base_dir=base_dir)

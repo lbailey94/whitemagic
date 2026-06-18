@@ -30,6 +30,12 @@ class ForesightReport:
     convergence_warnings: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "timestamp": self.timestamp,
             "horizon_days": self.horizon_days,

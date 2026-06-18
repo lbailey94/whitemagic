@@ -67,6 +67,12 @@ class Objective:
     completed_at: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             **asdict(self),
             "created_at": self.created_at.isoformat(),
@@ -744,6 +750,15 @@ class ContinuousExecutor:
             self.log(f"Captured git state for batch {i//batch_size + 1}")
 
             async def execute_with_limit(obj: Objective) -> ExecutionResult:
+                """
+                Run the with limit operation.
+                
+                Args:
+                    obj: Parameter description.
+                
+                Returns:
+                    ExecutionResult
+                """
                 async with semaphore:
                     # NEW: Isolation Logic (Context Separation) - Initialize context if not present
                     if not hasattr(obj, "context"):

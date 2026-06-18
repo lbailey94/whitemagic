@@ -71,10 +71,22 @@ class BackgroundDreamer:
             self._dreaming = False
 
     def get_latest_report(self) -> dict[str, Any]:
+        """
+        Get the latest report.
+        
+        Returns:
+            dict[str, Any]
+        """
         return self._last_dream_report or {"status": "No dreams recorded yet"}
 
 _dreamer_instance = None
 def get_background_dreamer() -> BackgroundDreamer:
+    """
+    Get the background dreamer.
+    
+    Returns:
+        BackgroundDreamer
+    """
     global _dreamer_instance
     if _dreamer_instance is None:
         _dreamer_instance = BackgroundDreamer()

@@ -51,6 +51,12 @@ class GrimoireContext:
         return daemon.state.yin_yang
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "task": self.task,
             "emotional_state": self.emotional_state,
@@ -128,10 +134,22 @@ class Grimoire:
         self.cast_history: list[dict[str, Any]] = []
 
     def awaken(self) -> Grimoire:
+        """
+        Perform the awaken operation.
+        
+        Returns:
+            Grimoire
+        """
         self.state = GrimoireState.LISTENING
         return self
 
     def update_context(self, **kwargs: Any) -> Grimoire:
+        """
+        Update the context.
+        
+        Returns:
+            Grimoire
+        """
         for key, value in kwargs.items():
             if hasattr(self.context, key):
                 setattr(self.context, key, value)
@@ -139,6 +157,15 @@ class Grimoire:
         return self
 
     def recommend_spells(self, max_results: int = 3) -> list[SpellRecommendation]:
+        """
+        Perform the recommend spells operation.
+        
+        Args:
+            max_results: Parameter description.
+        
+        Returns:
+            list[SpellRecommendation]
+        """
         recommendations = []
 
         # Pull dynamic phase
@@ -193,6 +220,12 @@ class Grimoire:
 _grimoire_engine_instance: Grimoire | None = None
 
 def get_grimoire_engine() -> Grimoire:
+    """
+    Get the grimoire engine.
+    
+    Returns:
+        Grimoire
+    """
     global _grimoire_engine_instance
     if _grimoire_engine_instance is None:
         _grimoire_engine_instance = Grimoire()

@@ -82,6 +82,9 @@ def run_cycle(num_cycles: int, intention: str) -> None:
 
 
     async def run():
+        """
+        Perform the run operation.
+        """
         round_system = get_zodiacal_round()
         responses = await round_system.run_autonomous_cycle(num_cycles=num_cycles)
         return responses

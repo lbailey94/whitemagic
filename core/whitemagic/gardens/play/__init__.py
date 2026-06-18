@@ -67,6 +67,12 @@ class PlayGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_play_garden() -> PlayGarden:
+    """
+    Get the play garden.
+    
+    Returns:
+        PlayGarden
+    """
     global _instance
     if _instance is None:
         _instance = PlayGarden()

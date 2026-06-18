@@ -57,6 +57,9 @@ class SQLiteBackend:
             conn.executescript(SCHEMA)
 
     def get_connection(self):
+        """
+        Get the connection.
+        """
         return sqlite3.connect(self.db_path)
 
 # --- MANAGER ---
@@ -85,6 +88,12 @@ class MemoryManager:
 _manager: MemoryManager | None = None
 
 def get_memory_manager() -> MemoryManager:
+    """
+    Get the memory manager.
+    
+    Returns:
+        MemoryManager
+    """
     global _manager
     if _manager is None:
         from whitemagic.config.paths import DB_PATH

@@ -82,6 +82,12 @@ class TokenEconomy:
 _token_economy: TokenEconomy | None = None
 
 def get_token_economy() -> TokenEconomy:
+    """
+    Get the token economy.
+    
+    Returns:
+        TokenEconomy
+    """
     global _token_economy
     if _token_economy is None:
         _token_economy = TokenEconomy()

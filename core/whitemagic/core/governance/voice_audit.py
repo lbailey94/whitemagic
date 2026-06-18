@@ -53,6 +53,12 @@ class AuditReport:
     quarantine_triggered: bool = False
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "scanned_claims": self.scanned_claims,
             "verified_claims": self.verified_claims,
@@ -106,6 +112,12 @@ class ClaimLog:
         return None
 
     def get_unverified(self) -> list[ClaimEntry]:
+        """
+        Get the unverified.
+        
+        Returns:
+            list[ClaimEntry]
+        """
         with self._lock:
             self._prune_old()
             return [c for c in self._claims if not c.verified]
@@ -135,6 +147,12 @@ class VoiceAuditScanner:
 
     @property
     def claim_log(self) -> ClaimLog:
+        """
+        Perform the claim log operation.
+        
+        Returns:
+            ClaimLog
+        """
         return self._claim_log
 
     def register_claim(
@@ -197,6 +215,12 @@ class VoiceAuditScanner:
         return report
 
     def get_stats(self) -> dict[str, Any]:
+        """
+        Get the stats.
+        
+        Returns:
+            dict[str, Any]
+        """
         return {
             "scan_count": self._scan_count,
             "last_report": self._last_report.to_dict() if self._last_report else None,
