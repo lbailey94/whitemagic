@@ -21,12 +21,26 @@ class CausalNet:
     """
 
     def mine_causal_patterns(self, query: str = "", max_patterns: int = 10) -> list[dict[str, Any]]:
-        """Mine causal patterns from memory clusters — not yet implemented."""
+        """Mine causal patterns from memory clusters — not yet implemented.
+
+        Planned for v22.3.0: query-driven pattern discovery across all
+        cluster centroids. Returns the top `max_patterns` edges whose
+        source/target embeddings best match `query`.
+        """
         raise NotImplementedError("Causal pattern mining is not yet implemented.")
 
     def get_stats(self) -> dict[str, Any]:
-        """Placeholder for causal stats logic."""
-        return {"total_patterns": 0, "active_causal_chains": 0}
+        """Return statistics from the last infer_dependencies() call.
+
+        Until infer_dependencies has been called, returns zeros. After a
+        call, surfaces the inferred edge count and resonance-score coverage.
+        """
+        edge_count = getattr(self, "_last_edge_count", 0)
+        chain_count = len(getattr(self, "_last_chain_keys", set()))
+        return {
+            "total_patterns": edge_count,
+            "active_causal_chains": chain_count,
+        }
 
     def __init__(self, db_path: Path | None = None):
         from whitemagic.config.paths import DB_PATH
@@ -118,6 +132,10 @@ class CausalNet:
             if src not in result_dict:
                 result_dict[src] = []
             result_dict[src].append(dst)
+
+        # Track last-call state for get_stats()
+        self._last_edge_count = len(edges_list)
+        self._last_chain_keys = set(result_dict.keys())
 
         return result_dict
 

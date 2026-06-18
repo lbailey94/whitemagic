@@ -331,8 +331,10 @@ def mw_rate_limiter(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | N
     _ensure_cached()
     if _get_rate_limiter is not None:
         try:
-            if not _get_rate_limiter()(ctx.agent_id, ctx.tool_name):
-                return {"status": "error", "error": f"Rate limit exceeded for tool '{ctx.tool_name}'"}
+            limiter = _get_rate_limiter()
+            result = limiter.check(ctx.agent_id, ctx.tool_name)
+            if result is not None:
+                return result
         except (AttributeError, RuntimeError) as e:
             logger.debug(f"Middleware: rate limit check failed for {ctx.tool_name}: {e}")
     return next_fn(ctx)

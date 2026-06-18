@@ -10,7 +10,7 @@ name = "whitemagic_rust"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["python", "arrow"]
+default = ["python", "arrow", "iceoryx2"]
 iceoryx2 = ["dep:iceoryx2"]
 python = ["pyo3", "numpy", "pyo3-build-config", "tokio", "rusqlite", "reqwest"]
 arrow = ["dep:arrow"]

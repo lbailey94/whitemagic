@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 def _emit_gan_ying(event_type: str, data: dict[str, Any]) -> None:
     """Emit a Gan Ying event if the bus is available."""
     try:
-        from whitemagic.core.resonance.gan_ying import get_bus
+        from whitemagic.core.resonance import ResonanceEvent, get_bus
         bus = get_bus()
-        bus.emit(event_type, data)
+        bus.emit(ResonanceEvent(source="codegenome.vault", event_type=event_type, data=data))  # type: ignore[arg-type]
     except (ImportError, AttributeError):
         pass  # Graceful degradation if Gan Ying is unavailable
 

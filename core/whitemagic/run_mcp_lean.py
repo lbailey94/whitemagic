@@ -883,12 +883,12 @@ async def main_stdio() -> None:
         # Close streams to unblock any pending reads/writes
         try:
             await read_stream_writer.aclose()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Shutdown: read_stream_writer.aclose() raised: {e}")
         try:
             await write_stream.aclose()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Shutdown: write_stream.aclose() raised: {e}")
         # Cancel the main server task to force exit
         current_task = asyncio.current_task()
         for task in asyncio.all_tasks():

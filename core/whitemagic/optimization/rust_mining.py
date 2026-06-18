@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 _RUST_ARROW = False
 _rs: Any = None
+_arrow_bridge: Any = None  # submodule reference (may be nested or flat)
 
 try:
     import whitemagic_rust as _rs_mod
@@ -29,14 +30,23 @@ except ImportError:
     except ImportError:
         pass
 
-if _rs is not None and hasattr(_rs, "arrow_encode_memories"):
-    _RUST_ARROW = True
+# Detect the Arrow bridge — supports both flat (legacy) and nested (current) layouts
+if _rs is not None:
+    if hasattr(_rs, "arrow_bridge") and hasattr(_rs.arrow_bridge, "arrow_encode_memories"):
+        _arrow_bridge = _rs.arrow_bridge
+        _RUST_ARROW = True
+    elif hasattr(_rs, "arrow_encode_memories"):
+        # Legacy flat layout (older builds)
+        _arrow_bridge = _rs
+        _RUST_ARROW = True
+
+if _RUST_ARROW:
     logger.debug("Rust Arrow IPC bridge available")
 
 
 def arrow_available() -> bool:
     """Check if Arrow IPC bridge is available."""
-    return _rs is not None and hasattr(_rs, "arrow_encode_memories")
+    return _RUST_ARROW
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +161,7 @@ def arrow_encode_memories(memories_json: str) -> bytes | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(bytes, _rs.arrow_encode_memories(memories_json))
+        return cast(bytes, _arrow_bridge.arrow_encode_memories(memories_json))
     except Exception as e:
         logger.debug(f"Rust arrow_encode_memories failed: {e}")
         return None
@@ -165,7 +175,7 @@ def arrow_decode_memories(ipc_bytes: bytes) -> str | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(str, _rs.arrow_decode_memories(ipc_bytes))
+        return cast(str, _arrow_bridge.arrow_decode_memories(ipc_bytes))
     except Exception as e:
         logger.debug(f"Rust arrow_decode_memories failed: {e}")
         return None
@@ -176,7 +186,7 @@ def arrow_schema_info() -> dict[str, Any] | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(dict[str, Any], _json_loads(_rs.arrow_schema_info()))
+        return cast(dict[str, Any], _json_loads(_arrow_bridge.arrow_schema_info()))
     except Exception as e:
         logger.debug(f"Rust arrow_schema_info failed: {e}")
         return None
@@ -190,7 +200,7 @@ def arrow_roundtrip_bench(n: int = 1000) -> tuple[int, int, int] | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(tuple[int, int, int], _rs.arrow_roundtrip_bench(n))
+        return cast(tuple[int, int, int], _arrow_bridge.arrow_roundtrip_bench(n))
     except Exception as e:
         logger.debug(f"Rust arrow_roundtrip_bench failed: {e}")
         return None

@@ -157,7 +157,7 @@ cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — 🧪 ex
 | Elixir | ✅ Builds | OTP GenServer scaffolds; `mix compile` succeeds on Elixir 1.14.0 / OTP 25. |
 | Zig | ✅ Builds | Migrated to Zig 0.16 — 12 API categories fixed, `libwhitemagic.so` (12MB) + `libwhitemagic-zig.a` (10MB). |
 | Julia | ✅ Loads | Recovered 698 lines from archive (self_model_forecast.jl, memory_stats.jl). Module loads with `JULIA_NUM_THREADS=1`. |
-| Haskell | ⏳ Installing | Recovered 2,670 lines from archive (13 source files: DharmaRules, DepGraph, WuXing, etc.). GHC 9.6.6 installing via ghcup. |
+| Haskell | ✅ Builds | Recovered 2,670 lines from archive (13 source files: DharmaRules, DepGraph, WuXing, etc.). GHC 9.6.6 builds via ghcup. JSON stdio bridge operational (5 tests pass); interpreted via `runhaskell` is ~10–50× slower than compiled — see `polyglot/STATUS.md` for benchmarks. |
 | Mojo | ❌ Compiler unavailable | 3,644 lines of source ready (more complete than archive). Modular CLI requires auth token for Mojo compiler install. |
 
 ## Canonical Interfaces
@@ -682,7 +682,7 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **490 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped (as of 2026-05-05)
-- **Current local audit baseline:** 2,423 tests passing, 0 failures, 0 skipped (as of 2026-06-05)
+- **Current local audit baseline:** 2,461 tests passing, 0 failures, 0 skipped (as of 2026-06-18)
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)
 
 ---

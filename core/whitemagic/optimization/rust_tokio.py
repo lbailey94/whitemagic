@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 _RUST_TOKIO_CLONES = False
 _RUST_IPC = False
 _rs: Any = None
+_ipc_bridge: Any = None  # submodule reference (may be nested or flat)
 
 try:
     import whitemagic_rust as _rs_mod
@@ -30,13 +31,21 @@ except ImportError:
     except ImportError:
         pass
 
+# Detect IPC bridge — supports both flat (legacy) and nested (current) layouts
 if _rs is not None:
     if hasattr(_rs, "tokio_deploy_clones"):
         _RUST_TOKIO_CLONES = True
         logger.debug("Rust Tokio Clone Army available")
-    if hasattr(_rs, "ipc_bridge_status"):
+    if hasattr(_rs, "ipc_bridge") and hasattr(_rs.ipc_bridge, "ipc_bridge_status"):
+        _ipc_bridge = _rs.ipc_bridge
         _RUST_IPC = True
-        logger.debug("Rust IPC bridge available")
+    elif hasattr(_rs, "ipc_bridge_status"):
+        # Legacy flat layout (older builds)
+        _ipc_bridge = _rs
+        _RUST_IPC = True
+
+if _RUST_IPC:
+    logger.debug("Rust IPC bridge available")
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +120,7 @@ def ipc_status() -> dict[str, Any] | None:
     if not _RUST_IPC:
         return None
     try:
-        return cast(dict[str, Any], _json_loads(_rs.ipc_bridge_status()))
+        return cast(dict[str, Any], _json_loads(_ipc_bridge.ipc_bridge_status()))
     except Exception as e:
         logger.debug(f"Rust ipc_bridge_status failed: {e}")
         return None

@@ -363,8 +363,15 @@ class TestH10_RustLicenseAndFeatures:
             content = f.read()
         assert 'license = "MIT"' in content
 
-    def test_cargo_toml_iceoryx2_not_default(self):
-        """iceoryx2 should not be in default features."""
+    def test_cargo_toml_iceoryx2_in_default(self):
+        """iceoryx2 should be in default features (re-enabled 2026-06-18).
+
+        iceoryx2 is a true zero-copy IPC library over /dev/shm and was
+        a serious performance upgrade for Whitemagic's cognition and
+        memory systems. The default was changed back to include it.
+        See reports/WHITEMAGIC_ARCHIVE_EXCAVATION_2026-06-18.md and
+        the 2026-06-18 session log.
+        """
         cargo_path = os.path.join(REPO_ROOT, "core", "whitemagic-rust", "Cargo.toml")
         with open(cargo_path) as f:
             content = f.read()
@@ -372,4 +379,4 @@ class TestH10_RustLicenseAndFeatures:
         assert 'default = [' in content
         for line in content.split("\n"):
             if line.strip().startswith("default ="):
-                assert "iceoryx2" not in line
+                assert "iceoryx2" in line, f"iceoryx2 should be in default features, got: {line}"
