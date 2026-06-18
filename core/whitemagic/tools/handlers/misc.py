@@ -7,11 +7,18 @@ logger = logging.getLogger(__name__)
 
 
 def _stub(tool_name: str, **preview: Any) -> dict[str, Any]:
-    """Return a not-implemented stub response."""
+    """Return a not-implemented stub response.
+
+    Returns status="error" (NOT "success") so AI agents don't
+    treat the stub as a successful no-op. Per the tool contract
+    (AGENTS.md §6), a not-implemented tool is an explicit error
+    state that the caller must handle.
+    """
     return {
-        "status": "success",
+        "status": "error",
         "error_code": "not_implemented",
         "message": f"{tool_name} is a stub — not yet implemented",
+        "retryable": False,
         **preview,
     }
 

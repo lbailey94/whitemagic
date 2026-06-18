@@ -14,6 +14,7 @@ Design goals:
 from __future__ import annotations
 
 import base64
+import logging
 from collections.abc import Iterable, Mapping, MutableMapping
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
@@ -23,6 +24,8 @@ from typing import Any, cast
 
 from whitemagic.tools.contract import ENVELOPE_VERSION, TOOL_CONTRACT_VERSION
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
+
+logger = logging.getLogger(__name__)
 
 _RESERVED_KEYS = {
     "status",
@@ -74,7 +77,7 @@ def coerce_jsonable(value: Any) -> Any:
         try:
             return coerce_jsonable(value.to_dict())
         except Exception as e:
-            logging.getLogger(__name__).debug("Exception silenced: %s", e)
+            logger.debug("Exception silenced: %s", e)
     if isinstance(value, Mapping):
         out: dict[str, Any] = {}
         for k, v in value.items():

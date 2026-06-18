@@ -82,7 +82,7 @@ class DreamSynthesizer:
         # Cache Catharsis — flush stale entries across all registered caches
         catharsis_summary: dict[str, Any] = {}
         try:
-            from whitemagic.core.memory.cache_coherence import get_cache_registry
+            from whitemagic.core.memory.cache_registry import get_cache_registry
             registry = get_cache_registry()
             catharsis_summary = registry.flush_stale()
             logger.info(

@@ -224,7 +224,7 @@ def ensure_paths() -> Any:
     try:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        logger.debug("Operation failed: %s", e)
+        log.debug("Operation failed: %s", e)
         pass
     if not os.getenv("WM_SILENT_INIT"):
         log.info("Paths verified.")

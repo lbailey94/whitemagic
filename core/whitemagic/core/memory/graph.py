@@ -181,7 +181,7 @@ class GraphEngine:
         now = time.time()
         current_vclock = 0
         try:
-            from whitemagic.core.memory.cache_coherence import get_cache_registry
+            from whitemagic.core.memory.cache_registry import get_cache_registry
             current_vclock = get_cache_registry().get_version("graph")
         except (ImportError, ModuleNotFoundError):
             pass
