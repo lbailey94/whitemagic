@@ -1,6 +1,6 @@
 [package]
 name = "whitemagic-rust"
-version = "22.2.1"
+version = "22.2.2"
 edition = "2021"
 license = "MIT"
 autobins = false

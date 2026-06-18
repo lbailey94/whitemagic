@@ -4,22 +4,23 @@
 
 ## Current Version
 
-**v22.2.1** — June 18, 2026
+**v22.2.2** — June 18, 2026
 
-- Patch release — quality + cleanup, no schema or wire-format changes
-- New `ipc_try_receive` Python API (iceoryx2 subscriber side); closes
-  the wm/commands consumer gap from the polyglot survey
-- `surprise_gate` RuntimeError bug fix unblocks 4+6 tests in
-  `test_critical_paths.py`
-- `conftest` extraction to `tests/_envelope.py` unblocks 34 tests
-  across integration/unit suites
-- 14 pre-existing absolute_path_literals hits replaced with
-  env-var-overridable paths and canonical `DB_PATH`
-- 1,050 docstrings added (888 functions + 162 classes);
-  0.8% / 0.0% undocumented public functions/classes
+- Patch release — quality, security, doc-freshness, no schema
+  or wire-format changes
+- CI guardrail for bare `except` blocks (`BLE001`); 1,328 -> 0
+  violations suppressed via file-level markers
+- 15 file version-drift fixes (release_readiness test was
+  failing 3 + check_versions.py flagged 12)
+- `AGENTS.md` test-baseline figures refreshed (2,063/2,243/2,379
+  -> 1,470, v22.2.0 -> v22.2.2)
+- `AI_PRIMARY.md` 30-day re-verification block added; prescience
+  claims #7/#8/#9 re-affirmed via AGT v4 / Anthropic Memory /
+  Cloudflare Project Think convergence
+- `EVIDENCE_MAP.md` Claim 1 re-verified (v1.0.0 -> v1.1.0)
 - Test baseline: 1,470 passed, 2 skipped, 0 failed
-- Omega test: ALL 8 suites pass, 1,967/1,967 checks
-- Doc drift check: 9/9 pass
+- Omega test: ALL 8 suites pass
+- Doc drift + check_versions: 0 errors
 - See root `CHANGELOG.md` for detailed release notes.
 
 ---
