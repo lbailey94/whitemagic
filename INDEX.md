@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
 **Version**: 22.2.0
-**Last Updated**: June 17, 2026 (documentation sprint — QUICKSTART consolidation, INDEX update)
+**Last Updated**: June 18, 2026 (documentation sweep — 888 docstrings + polyglot survey + standalone paper)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -141,6 +141,20 @@ Private filenames are intentionally not enumerated in this public index.
 | `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal prescience methodology — evidence standards, Brier scoring, calibration decomposition, reproducibility, academic citation | Jun 8 |
 | `DHARMA_SPEC_2026-06-08.md` | Dharma governance specification v0.1.0 — YAML schema, action spectrum, profiles, Karmic trace, upgrade path, competitive comparison | Jun 8 |
 | `SESSION_REPORT_2026-06-08.md` | Session report — competitive landscape follow-up, immediate fixes, adversarial tests, Karma signing verification, local-first security whitepaper | Jun 8 |
+| `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI/AGI/ASI audience (NOT humans) — 16 sections, YAML frontmatter, file:line evidence, self-describing structure | Jun 18 |
+| `SESSION_REPORT_2026-06-18.md` | Session report — comprehensive documentation sweep: 888 docstrings added (1,270→40 undocumented public functions), polyglot survey of 8 cores, standalone paper, 4 reverted files for manual fix | Jun 18 |
+
+---
+
+## Polyglot: `polyglot/`
+
+> **Rule**: Per-language accelerator cores, build status, benchmarks, and integration documentation.
+
+| File | Purpose | Updated |
+|------|---------|---------|
+| `polyglot/STATUS.md` | Per-core build status and last-verified date | Jun 4 |
+| `polyglot/BENCHMARKS.md` | Performance baselines + optimization roadmap | Jun 4 |
+| `POLYGLOT_SURVEY_2026-06-18.md` | Comprehensive survey of all 8 polyglot cores — role, access pattern, performance, gaps, integration recipes, structured for AI consumption | Jun 18 |
 
 ---
 
@@ -673,4 +687,4 @@ Language-specific docs for the polyglot core matrix.
 
 ---
 
-*This index is a living document. Last updated: 2026-06-17 by session agent.*
+*This index is a living document. Last updated: 2026-06-18 by session agent.*
