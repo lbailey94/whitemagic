@@ -72,6 +72,37 @@ def publish_json(channel: str, data: dict) -> dict[str, Any]:
     """Publish JSON-serializable data to an IPC channel."""
     return publish(channel, json.dumps(data).encode())
 
+def try_receive(channel: str, max_samples: int = 16) -> list[bytes]:
+    """Non-blocking poll for up to `max_samples` pending messages on a channel.
+
+    Returns a list of byte payloads (empty if no messages are pending or the
+    Rust bridge / iceoryx2 is unavailable). Use this for in-process testing
+    of the publish path; production consumers are expected to live in
+    separate processes (e.g. the Nexus UI for wm/commands).
+    """
+    if not _ipc_initialized:
+        init_ipc()
+
+    rs = _get_rs()
+    if not rs or not hasattr(rs, "ipc_bridge"):
+        return []
+
+    try:
+        return list(rs.ipc_bridge.ipc_try_receive(channel, int(max_samples)))
+    except Exception as e:
+        logger.debug(f"ipc_try_receive({channel}) failed: {e}")
+        return []
+
+def try_receive_json(channel: str, max_samples: int = 16) -> list[dict]:
+    """Like try_receive, but parse each payload as JSON and skip malformed entries."""
+    out: list[dict] = []
+    for raw in try_receive(channel, max_samples=max_samples):
+        try:
+            out.append(json.loads(raw.decode("utf-8")))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+    return out
+
 def get_status() -> dict[str, Any]:
     """Get IPC bridge status."""
     rs = _get_rs()

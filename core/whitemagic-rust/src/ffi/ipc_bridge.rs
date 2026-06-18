@@ -126,6 +126,55 @@ mod iox2 {
     pub fn is_available() -> bool {
         IOX_NODE.lock().map(|g| g.is_some()).unwrap_or(false)
     }
+
+    /// Try to receive up to `max_samples` pending messages from a channel.
+    /// Non-blocking: returns Ok(Vec<Vec<u8>>) of available samples, or Err
+    /// if the channel has not been opened yet.
+    ///
+    /// NOTE: in iceoryx2 v0.8 each subscriber has its own per-subscriber
+    /// queue, and samples published before the subscriber is created are
+    /// not visible to it. We also can't safely cache the subscriber at
+    /// module scope because iceoryx2's `Subscriber` type is `!Send` (it
+    /// holds an `Rc` for shared state). This function is therefore most
+    /// useful when a single long-lived test process opens the subscriber
+    /// once and then polls repeatedly with a small `max_samples`; for
+    /// production cross-process consumers (e.g. the Nexus UI listening
+    /// to `wm/commands`), the consumer is expected to be a separate
+    /// process that creates its own subscriber before any publish.
+    pub fn try_receive(channel: &str, max_samples: usize) -> Result<Vec<Vec<u8>>, String> {
+        use iceoryx2::prelude::*;
+
+        let guard = IOX_NODE.lock().map_err(|e| format!("Lock: {}", e))?;
+        let node = guard.as_ref().ok_or("IPC not initialized")?;
+
+        let buffer: usize = 64.min(max_samples.max(1));
+        let service = node
+            .service_builder(&channel.try_into().map_err(|e| format!("{:?}", e))?)
+            .publish_subscribe::<[u8]>()
+            .history_size(buffer)
+            .subscriber_max_buffer_size(buffer)
+            .open_or_create()
+            .map_err(|e| format!("Service open_or_create: {:?}", e))?;
+
+        let subscriber = service
+            .subscriber_builder()
+            .buffer_size(buffer)
+            .create()
+            .map_err(|e| format!("Subscriber: {:?}", e))?;
+
+        let mut out: Vec<Vec<u8>> = Vec::new();
+        for _ in 0..max_samples {
+            match subscriber.receive() {
+                Ok(Some(sample)) => {
+                    let bytes: &[u8] = sample.payload();
+                    out.push(bytes.to_vec());
+                }
+                Ok(None) => break, // No more pending samples
+                Err(_) => break,
+            }
+        }
+        Ok(out)
+    }
 }
 
 #[cfg(not(feature = "iceoryx2"))]
@@ -142,6 +191,10 @@ mod iox2 {
 
     pub fn is_available() -> bool {
         false
+    }
+
+    pub fn try_receive(_channel: &str, _max_samples: usize) -> Result<Vec<Vec<u8>>, String> {
+        Err("iceoryx2 not compiled — using in-process EventRing instead".to_string())
     }
 }
 
@@ -170,6 +223,21 @@ pub fn ipc_publish(channel: &str, payload: &[u8]) -> PyResult<()> {
             IPC_STATS.errors.fetch_add(1, Ordering::Relaxed);
             Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
         }
+    }
+}
+
+/// Try to receive up to `max_samples` pending messages from a channel.
+/// Returns a list of byte payloads (empty list if none are pending).
+#[pyfunction]
+pub fn ipc_try_receive(channel: &str, max_samples: usize) -> PyResult<Vec<Vec<u8>>> {
+    match iox2::try_receive(channel, max_samples) {
+        Ok(samples) => {
+            for _ in &samples {
+                IPC_STATS.received.fetch_add(1, Ordering::Relaxed);
+            }
+            Ok(samples)
+        }
+        Err(e) => Err(pyo3::exceptions::PyRuntimeError::new_err(e.to_string())),
     }
 }
 
@@ -280,6 +348,7 @@ mod tests {
 pub fn ipc_bridge(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ipc_init, m)?)?;
     m.add_function(wrap_pyfunction!(ipc_publish, m)?)?;
+    m.add_function(wrap_pyfunction!(ipc_try_receive, m)?)?;
     m.add_function(wrap_pyfunction!(ipc_status, m)?)?;
     m.add_function(wrap_pyfunction!(ipc_bridge_status, m)?)?;
     Ok(())
