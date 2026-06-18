@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Wisdom CLI Commands
 Consult wisdom systems: I Ching, Wu Xing, Art of War.

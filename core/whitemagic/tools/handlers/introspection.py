@@ -96,6 +96,7 @@ def _load_cached_binary_status(binary_name: str, fallback_path: str) -> dict[str
 
 def handle_capabilities(**kwargs: Any) -> dict[str, Any]:
     """
+# ruff: noqa: BLE001
     Handle a capabilities event.
     
     Returns:
@@ -501,7 +502,8 @@ def handle_vitality(**kwargs: Any) -> dict[str, Any]:
                 continue
             try:
                 v = get_vitality(gid) if callable(get_vitality) else None
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 v = None
             if isinstance(v, dict):
                 out[gid] = v

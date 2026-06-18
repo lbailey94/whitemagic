@@ -3,6 +3,7 @@
 Adaptive resource allocation based on detected hardware capabilities.
 Prevents system overload while maximizing throughput.
 """
+# ruff: noqa: BLE001
 
 import os
 import subprocess

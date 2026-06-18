@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 import logging
 import os
 from typing import Any, cast

@@ -13,6 +13,7 @@ Usage:
   .venv/bin/python -m whitemagic.intelligence.learning.relationship_extractor
   .venv/bin/python -m whitemagic.intelligence.learning.relationship_extractor --dry-run
 """
+# ruff: noqa: BLE001
 
 import logging
 import sqlite3

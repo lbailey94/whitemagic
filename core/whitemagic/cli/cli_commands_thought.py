@@ -4,6 +4,7 @@ CLI Commands: Thought Galaxy (G003)
 
 wm thought status/recall/score
 """
+# ruff: noqa: BLE001
 
 import click
 

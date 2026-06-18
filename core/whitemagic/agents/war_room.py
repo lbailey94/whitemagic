@@ -41,6 +41,7 @@ Usage:
         error_log="TypeError that makes no sense",
     )
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

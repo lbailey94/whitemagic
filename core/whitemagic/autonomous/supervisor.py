@@ -5,6 +5,7 @@ Auto-Prompting Supervisor (G004)
 The "Supervisor Loop" that handles routine managerial prompts automatically.
 Monitors agent state and triggers Standard Operating Procedures (SOPs).
 """
+# ruff: noqa: BLE001
 
 import json
 import logging

@@ -9,6 +9,7 @@ Usage:
     )
     probs = transition_batch(semantic, gravity, recency, staleness, weights)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

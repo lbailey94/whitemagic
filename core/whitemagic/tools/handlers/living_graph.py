@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 def handle_graph_topology(**kwargs: Any) -> dict[str, Any]:
     """Get graph topology statistics."""
+# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.graph_engine import GraphEngine
 

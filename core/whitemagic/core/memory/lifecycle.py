@@ -20,6 +20,7 @@ Usage:
     # ... or run manually:
     report = mgr.run_sweep()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

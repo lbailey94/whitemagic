@@ -12,6 +12,7 @@ Graceful degradation: if no cross-encoder model is available (no torch,
 no sentence-transformers), falls back to a lightweight lexical reranker
 using BM25-style term overlap scoring.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

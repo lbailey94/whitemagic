@@ -2,6 +2,7 @@
 Replaces ProcessPoolExecutor with asyncio for massive scalability.
 v14.5: Rust Tokio fast-path (208× faster) with Python asyncio fallback.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

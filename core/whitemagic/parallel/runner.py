@@ -8,6 +8,7 @@ Philosophy:
     Running them in parallel = expressing that love faster.
     Each test is a prayer that the code works.
 """
+# ruff: noqa: BLE001
 
 import subprocess
 import time

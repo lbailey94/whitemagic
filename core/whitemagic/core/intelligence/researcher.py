@@ -22,6 +22,7 @@ Usage:
     researcher = get_researcher()
     result = researcher.research("What patterns exist in our dream cycle data?")
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

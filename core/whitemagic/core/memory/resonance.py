@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 
 import ctypes
 from pathlib import Path

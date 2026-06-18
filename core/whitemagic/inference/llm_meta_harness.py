@@ -12,6 +12,7 @@ Wraps local LLMs to enhance their capabilities through:
 
 This turns a small local LLM into a much more capable system.
 """
+# ruff: noqa: BLE001
 
 import logging
 import time

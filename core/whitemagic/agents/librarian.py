@@ -13,6 +13,7 @@ Recovered 2026-06-18 from the legacy_reference_dump archive
   - Uses pluggable MemoryStorage protocol (defaults to in-memory)
   - No dependency on the removed `neural_system` module
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 
@@ -133,7 +134,8 @@ def _get_default_storage() -> MemoryStorage:
                 )
 
         return _ManagerStorage()
-    except Exception:
+    except Exception as e:
+        logger.debug("Operation failed: %s", e)
         return InMemoryStorage()
 
 

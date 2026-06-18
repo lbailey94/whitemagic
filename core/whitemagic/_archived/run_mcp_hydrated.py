@@ -18,6 +18,7 @@ Dynamically loads tools from the hydrated `mcp_api_bridge.py`.
 
 **SHIP_SURFACE**: ⚠️ Legacy Tier — use run_mcp_lean.py instead
 """
+# ruff: noqa: BLE001
 
 import inspect
 import logging

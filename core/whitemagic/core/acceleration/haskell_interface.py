@@ -13,6 +13,7 @@ _HASKELL_DIR = Path(__file__).resolve().parents[3] / "haskell"
 
 class HaskellBridge:
     """High-level interface to the Haskell divination library."""
+# ruff: noqa: BLE001
 
     def __init__(self) -> None:
         self._divination = None

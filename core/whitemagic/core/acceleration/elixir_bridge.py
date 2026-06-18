@@ -17,6 +17,7 @@ Usage:
         elixir_harmony_status, elixir_bridge_status
     )
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

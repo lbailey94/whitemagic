@@ -21,6 +21,7 @@ Zodiacal phases trigger campaign actions:
   Capricorn → Structure, consolidation
   Pisces → Dissolution, cleanup
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

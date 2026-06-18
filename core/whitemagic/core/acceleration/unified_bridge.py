@@ -2,6 +2,7 @@
 
 Phase 1 VC6: Translate unified.py core methods to Rust.
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import hashlib

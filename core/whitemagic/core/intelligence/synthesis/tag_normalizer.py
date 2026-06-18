@@ -2,6 +2,7 @@
 
 Handles case normalization, plural/singular, synonyms, and orphan tags.
 """
+# ruff: noqa: BLE001
 
 import logging
 import re

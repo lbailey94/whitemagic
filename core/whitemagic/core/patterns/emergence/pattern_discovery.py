@@ -11,6 +11,7 @@ Recovered 2026-06-18 from the legacy_reference_dump archive
   - WM_STATE_ROOT for log/report destinations
   - Graceful degradation for unavailable sources
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 
@@ -72,14 +73,15 @@ class PatternDiscovery:
             try:
                 from whitemagic.config.paths import WM_STATE_ROOT
                 self.base_dir = Path(WM_STATE_ROOT)
-            except Exception:
+            except (ImportError, AttributeError):
                 self.base_dir = Path(".")
 
         self.sources: list[PatternSource] = []
         self.discovery_log = self.base_dir / "logs" / "pattern_discovery_log.jsonl"
         try:
             self.discovery_log.parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             # State root may not be writable in some environments
             pass
 
@@ -266,9 +268,11 @@ class PatternDiscovery:
                     # Parameters don't match — try without
                     try:
                         return func()
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("Operation failed: %s", e)
                         return None
-                except Exception:
+                except Exception as e:
+                    logger.debug("Operation failed: %s", e)
                     return None
 
         # Strategy 2: class instantiation then method call
@@ -282,9 +286,11 @@ class PatternDiscovery:
                 cls = getattr(module, source.function_name)
                 instance = cls()
                 return instance
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
 
         # Strategy 3: factory getter (e.g., get_detector())
@@ -296,7 +302,8 @@ class PatternDiscovery:
                 instance = getter()
                 if instance is not None:
                     return instance
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         # Strategy 4: instantiate via CamelCase class name from last segment
@@ -307,7 +314,8 @@ class PatternDiscovery:
                 instance = cls()
                 if instance is not None:
                     return instance
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 pass
 
         return None
@@ -354,7 +362,8 @@ class PatternDiscovery:
                         insights.append(f"[{source_name}] Solution: {title}")
                 if "guidance" in result:
                     insights.append(f"[{source_name}] {result['guidance']}")
-        except Exception:
+        except Exception as e:
+            logger.debug("Operation failed: %s", e)
             pass
         return insights
 

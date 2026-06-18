@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Parallel Memory Consolidator - Consolidate 301+ memory files simultaneously
 

@@ -3,6 +3,7 @@
 Structured repository for "Discovered Solutions" and "Code Primitives".
 Bridges the gap between raw pattern extraction and actionable code.
 """
+# ruff: noqa: BLE001
 
 import logging
 import sqlite3

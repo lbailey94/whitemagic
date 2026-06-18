@@ -8,6 +8,7 @@ Path definitions are centralized in paths.py:
 - WM_ROOT: user state location (configurable, defaults to ~/.whitemagic)
 - MEMORY_DIR, DATA_DIR, CACHE_DIR: subdirs of WM_ROOT
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

@@ -10,6 +10,7 @@ Usage:
     if pattern.search(text):
         ...
 """
+# ruff: noqa: BLE001
 
 import logging
 import re

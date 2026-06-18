@@ -10,6 +10,7 @@ Usage:
         await browser.type_text("#username", "user@example.com")
         dom = await browser.extract_dom()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

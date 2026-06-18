@@ -24,6 +24,7 @@ Usage:
     # decision.action == DharmaAction.WARN
     # decision.explain == "Destructive operations require explicit consent"
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

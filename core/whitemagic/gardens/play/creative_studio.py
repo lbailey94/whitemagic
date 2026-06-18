@@ -13,6 +13,7 @@ Recovered 2026-06-18 from the legacy_reference_dump archive
   - Uses WM_STATE_ROOT for gallery directory (state hygiene)
   - Gan Ying integration via the modern ResonanceEvent API
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 
@@ -402,7 +403,8 @@ def meditate(depth: int = 0) -> "awareness":
                 creation.joy_score = data.get("joy_score", 0.0)
                 creation.tags = data.get("tags", [])
                 self.creations.append(creation)
-            except Exception:
+            except Exception as e:
+                logger.debug("Operation failed: %s", e)
                 # Skip corrupted files; don't crash the studio
                 pass
 

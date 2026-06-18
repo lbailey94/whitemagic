@@ -18,6 +18,7 @@ Integration points:
 
 Requires: pip install watchdog (optional dependency)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import hashlib

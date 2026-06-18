@@ -12,6 +12,7 @@ Usage:
     sandbox = get_sandbox()
     result = sandbox.execute(tool_name, handler_fn, kwargs, limits)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

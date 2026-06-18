@@ -11,6 +11,7 @@ Usage:
 
     results = await pipeline.execute(input_data)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -9,6 +9,7 @@ Each lieutenant has:
 3. MCP tool access (which tools they can invoke)
 4. Real-time decision-making (MCP-informed strategy)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

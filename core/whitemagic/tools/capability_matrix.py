@@ -12,6 +12,7 @@ Usage:
     from whitemagic.tools.capability_matrix import get_capability_matrix
     matrix = get_capability_matrix()
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any

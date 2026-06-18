@@ -5,6 +5,7 @@ based on access patterns. Uses Markov chains for prediction.
 
 Target: 60-70% faster access for frequently used memories
 """
+# ruff: noqa: BLE001
 
 import logging
 from collections import OrderedDict, defaultdict

@@ -15,6 +15,7 @@ Usage:
     manifest = generate_manifest()
     ok, errors = verify_manifest(manifest)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

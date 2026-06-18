@@ -12,6 +12,7 @@ Usage:
     # Result includes morphology metadata
     logger.info(result['_meta']['morphology'])  # e.g., "wisdom"
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

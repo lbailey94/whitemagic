@@ -10,6 +10,7 @@ into a static, optimized "Skill" (Pattern).
 
 This is the core of Recursive Self-Improvement.
 """
+# ruff: noqa: BLE001
 
 import json
 import logging

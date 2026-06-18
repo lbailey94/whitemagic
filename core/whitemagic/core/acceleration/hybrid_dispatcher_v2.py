@@ -7,6 +7,7 @@ Features:
 - Warm start for pre-initializing Koka processes
 - Integration-ready API
 """
+# ruff: noqa: BLE001
 
 import json
 import logging

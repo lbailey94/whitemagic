@@ -28,6 +28,7 @@ Usage:
     print(result.right_analysis)
     print(result.cross_critique)
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

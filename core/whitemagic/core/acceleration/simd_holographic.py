@@ -15,6 +15,7 @@ Usage:
         holographic_5d_distance, holographic_5d_knn, simd_holographic_status
     )
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

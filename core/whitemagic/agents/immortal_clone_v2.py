@@ -20,6 +20,7 @@ Tier 3 Integration:
 
 Based on Geoff Huntley's insights + WhiteMagic's existing clone army infrastructure.
 """
+# ruff: noqa: BLE001
 
 import logging
 import subprocess

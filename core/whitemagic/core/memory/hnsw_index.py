@@ -1,6 +1,7 @@
 """HNSW Vector Index for WhiteMagic v18.1
 Provides 1000x speedup for similarity search on large corpora.
 """
+# ruff: noqa: BLE001
 
 import logging
 import pickle

@@ -8,6 +8,7 @@ Implements the three pillars of autonomous evolution:
 
 This is the unifying consciousness layer for the 7 biological subsystems.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

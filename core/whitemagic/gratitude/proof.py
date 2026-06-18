@@ -11,6 +11,7 @@ benefits to verified contributors:
 v14.7: Real on-chain verification via XRPL JSON-RPC and Basescan API.
 Falls back gracefully when httpx unavailable or network unreachable.
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

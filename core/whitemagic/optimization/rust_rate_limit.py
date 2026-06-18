@@ -3,6 +3,7 @@
 Extracted from rust_accelerators.py for better separation of concerns.
 Provides atomic sliding window rate limiting with Rust acceleration.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any

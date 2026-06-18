@@ -45,6 +45,7 @@ Usage:
     code = engine.render("fastapi_endpoint", path="/items", name="items",
                          tier="xianfeng")
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

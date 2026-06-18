@@ -13,6 +13,7 @@ Integration:
     Wired into the Browser Garden and Gan Ying Bus for resonance.
     Results can be stored as memories for future recall.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

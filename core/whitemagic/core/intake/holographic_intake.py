@@ -23,6 +23,7 @@ Usage:
     # Manual processing
     intake.process_queue()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

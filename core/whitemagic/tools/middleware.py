@@ -21,6 +21,7 @@ The ``DispatchContext`` carries mutable state through the chain so
 middlewares can share data (e.g. the circuit breaker instance for
 post-processing feedback).
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

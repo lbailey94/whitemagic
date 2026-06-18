@@ -11,6 +11,7 @@ Environment variables:
     WM_ILP_CONNECTOR_URL — ILP connector URL (e.g., http://localhost:3001)
     WM_ILP_AUTH_TOKEN    — Bearer token for the connector
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

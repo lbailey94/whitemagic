@@ -2,6 +2,7 @@
 HRR Mojo Integration Layer
 Bridges Python HRR calls to Mojo implementation for 10-50x speedup.
 """
+# ruff: noqa: BLE001
 import logging
 import os
 import subprocess

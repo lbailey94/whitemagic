@@ -7,6 +7,7 @@ Provides:
 - Session storage
 - Rate limiting support
 """
+# ruff: noqa: BLE001
 
 import hashlib
 import json

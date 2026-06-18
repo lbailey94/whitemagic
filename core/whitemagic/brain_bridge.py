@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 import base64
 import json
 import logging

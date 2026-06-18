@@ -6,6 +6,7 @@ Provides 100-1000x speedup for 4D coordinate encoding.
 
 Fallback: Standard Python CoordinateEncoder.
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

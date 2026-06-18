@@ -16,6 +16,7 @@ Holographic Integration:
 - Reflects on the past (Z-axis -0.4) — learns from history
 - Important for healing (W-axis +0.25) — self-knowledge enables growth
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

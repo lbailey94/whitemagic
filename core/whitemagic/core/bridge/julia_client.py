@@ -1,6 +1,7 @@
 """Julia Persistent Server Client for WhiteMagic v18.1
 Provides zero-latency access to Julia graph algorithms via ZMQ.
 """
+# ruff: noqa: BLE001
 
 import atexit
 import logging

@@ -26,6 +26,7 @@ Usage:
     python -m whitemagic.benchmarks.agentdojo_driver \
         --suite v1 --domain workspace --all-tasks --dry-run
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

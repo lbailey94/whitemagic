@@ -5,6 +5,7 @@ Pulse (heartbeat) and breath (prana cycles) for organic flow.
 
 Phase 2C implementation.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

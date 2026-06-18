@@ -31,6 +31,7 @@ Usage:
     hc.assess_threat({"boundary_violations": 3, "coercion_detected": True})
     status = hc.status()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

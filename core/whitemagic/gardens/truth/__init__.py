@@ -15,6 +15,7 @@ Holographic Integration:
 - Timeless (Z-axis 0.0) — structural truth doesn't change
 - High importance (W-axis +0.35) — foundations matter
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

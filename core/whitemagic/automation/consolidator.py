@@ -5,6 +5,7 @@ Runs at session end to extract lasting knowledge from temporary experiences.
 
 Inspired by human sleep consolidation: noisy experiences → usable knowledge.
 """
+# ruff: noqa: BLE001
 
 import logging
 import re

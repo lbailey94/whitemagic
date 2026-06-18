@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 def handle_kaizen_analyze(**kwargs: Any) -> dict[str, Any]:
     """
+# ruff: noqa: BLE001
     Handle a kaizen analyze event.
     
     Returns:

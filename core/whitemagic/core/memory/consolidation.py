@@ -22,6 +22,7 @@ Usage:
     consolidator = get_consolidator()
     report = consolidator.consolidate()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

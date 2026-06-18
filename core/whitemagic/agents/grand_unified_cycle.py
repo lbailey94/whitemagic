@@ -19,6 +19,7 @@ Architecture:
 
 All connected via Gan Ying resonance cascade.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

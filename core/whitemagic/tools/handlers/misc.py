@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 def _stub(tool_name: str, **preview: Any) -> dict[str, Any]:
     """Return a not-implemented stub response."""
+# ruff: noqa: BLE001
     return {
         "status": "success",
         "error_code": "not_implemented",

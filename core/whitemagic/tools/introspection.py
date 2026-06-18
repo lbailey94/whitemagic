@@ -11,6 +11,7 @@ They are designed to be safe to run in automated contexts:
 - read-only
 - no content exfiltration of user memory by default
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

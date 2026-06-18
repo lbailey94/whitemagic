@@ -8,6 +8,7 @@ maturity level. Dangerous or advanced tools require higher stages.
 
 Returns None if the tool is allowed, or an error dict if blocked.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

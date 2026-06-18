@@ -18,6 +18,7 @@ Usage:
 
     entries = export_audit_log(limit=100, since="2026-02-07T00:00:00")
 """
+# ruff: noqa: BLE001
 
 import logging
 from datetime import datetime

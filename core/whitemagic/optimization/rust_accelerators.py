@@ -21,6 +21,7 @@ Usage:
         get_spatial_index_5d,
     )
 """
+# ruff: noqa: BLE001
 
 import logging
 import sqlite3

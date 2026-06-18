@@ -11,6 +11,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 """
+# ruff: noqa: BLE001
 Autoimmune Protection
 
 Prevents the immune system from attacking WhiteMagic itself.

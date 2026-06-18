@@ -19,6 +19,7 @@ Usage:
     # Or configure via environment:
     # WM_PROMETHEUS_PORT=9090 WM_PROMETHEUS_ENABLED=1
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -14,6 +14,7 @@ Usage:
         batch_topk_cosine, batch_normalize, simd_vector_batch_status
     )
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

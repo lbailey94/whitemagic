@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed

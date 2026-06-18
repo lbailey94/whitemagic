@@ -11,6 +11,7 @@ Fusions implemented here:
 These are lightweight, safe, read-mostly wiring functions that can be
 called from the dispatch pipeline, PRAT router, or background loops.
 """
+# ruff: noqa: BLE001
 
 import logging
 import time

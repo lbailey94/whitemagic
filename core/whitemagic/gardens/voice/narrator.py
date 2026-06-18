@@ -1,6 +1,7 @@
 """🗣️ System Narrator - The Voice of WhiteMagic
 Translates system events into a coherent narrative stream.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

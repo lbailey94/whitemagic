@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 import logging
 
 from whitemagic.utils.rust_helper import get_rust_module

@@ -16,6 +16,7 @@ Override paths via environment:
     WM_GHC_LIB_DIR — GHC library directory (e.g. output of `ghc --print-libdir`)
     WM_HS_LIB      — Full path to libwhitemagic_hs.so
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

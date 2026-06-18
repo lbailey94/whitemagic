@@ -3,6 +3,7 @@
 Implementations for Lunar Mansions 22-28 (Winter/North).
 Theme: Resilience, Memory, Closure, Governance.
 """
+# ruff: noqa: BLE001
 
 from typing import Any
 

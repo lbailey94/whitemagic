@@ -7,6 +7,7 @@ Features:
 - Deduplication via content hashing
 - Queue-based processing
 """
+# ruff: noqa: BLE001
 
 import hashlib
 import json

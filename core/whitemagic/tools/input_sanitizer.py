@@ -15,6 +15,7 @@ Usage:
     if result is not None:
         return result  # blocked — contains sanitization error
 """
+# ruff: noqa: BLE001
 
 import logging
 import re

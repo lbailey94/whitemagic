@@ -9,6 +9,7 @@ Design goals:
 - Stable top-level keys
 - Tool-specific payload lives under `details`
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

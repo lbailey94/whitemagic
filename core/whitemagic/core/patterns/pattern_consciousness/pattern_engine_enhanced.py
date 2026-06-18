@@ -5,6 +5,7 @@ Feeds discoveries to Gan Ying Bus for resonance cascades.
 
 Updated Ganapati Day: ML-based extraction with scipy!
 """
+# ruff: noqa: BLE001
 
 import logging
 from datetime import datetime

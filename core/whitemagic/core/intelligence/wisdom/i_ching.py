@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Hexagram:
     """An I Ching hexagram."""
+# ruff: noqa: BLE001
 
     number: int
     name: str

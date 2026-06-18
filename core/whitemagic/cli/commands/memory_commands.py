@@ -28,6 +28,7 @@ _memory = None
 
 def get_memory():  # type: ignore[return]
     """Get or create memory instance (respects WM_STATE_ROOT)."""
+# ruff: noqa: BLE001
     global _memory
     if _memory is None and HAS_CORE:
         _memory = get_unified_memory()

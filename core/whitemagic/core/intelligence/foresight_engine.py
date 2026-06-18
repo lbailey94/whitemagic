@@ -7,6 +7,7 @@ Predictive engine for:
 
 This is the final layer of the 7-layer CyberBrain cognitive stack.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

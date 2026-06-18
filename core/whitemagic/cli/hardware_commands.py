@@ -12,6 +12,7 @@ except ImportError:
 @click.group()
 def hardware():
     """Hardware monitoring and recommendations."""
+# ruff: noqa: BLE001
     pass
 
 

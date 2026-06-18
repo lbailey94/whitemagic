@@ -10,6 +10,7 @@ Usage:
     cons = DreamConsolidator()
     report = cons.consolidate()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

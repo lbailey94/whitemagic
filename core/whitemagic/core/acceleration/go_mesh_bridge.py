@@ -15,6 +15,7 @@ Usage:
         mesh_sync_memory, mesh_agent_status, go_mesh_status
     )
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

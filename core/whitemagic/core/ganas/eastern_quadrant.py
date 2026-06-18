@@ -10,6 +10,7 @@ Includes:
 6. Tail (Wei) - Passionate Drive
 7. Winnowing Basket (Ji) - Separation
 """
+# ruff: noqa: BLE001
 
 import logging
 from datetime import datetime

@@ -3,6 +3,7 @@
 Provides Python access to whitemagic-jl scientific computing modules.
 Gracefully degrades when Julia or PyJulia is not available.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

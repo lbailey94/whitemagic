@@ -24,6 +24,7 @@ Usage:
     ]
     results = client.execute_batch(batch)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

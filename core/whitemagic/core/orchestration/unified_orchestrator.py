@@ -13,6 +13,7 @@ where the whole becomes greater than the sum of its parts.
 Philosophy: Like a conductor guiding an orchestra, the UOL doesn't replace
 the musicians—it creates the conditions for them to harmonize.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

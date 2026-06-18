@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 def handle_art_of_war_chapter(**kwargs: Any) -> dict[str, Any]:
     """Get principles from a specific chapter of the Art of War."""
+# ruff: noqa: BLE001
     try:
         chapter = int(kwargs.get("chapter") or kwargs.get("chapter_number") or 1)
         engine = get_war_engine()

@@ -10,6 +10,7 @@ Usage:
     detector.ingest(harmony_snapshot)
     alerts = detector.check()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

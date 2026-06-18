@@ -21,6 +21,7 @@ Usage:
     # Memory operations
     duplicates = accel.find_duplicates(memories)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

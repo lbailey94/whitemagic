@@ -4,6 +4,7 @@ Benchmark Historical Tracker
 
 Tracks benchmark results over time for regression detection and trend analysis.
 """
+# ruff: noqa: BLE001
 
 import json
 import logging

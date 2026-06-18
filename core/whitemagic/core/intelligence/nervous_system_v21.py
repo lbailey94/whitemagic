@@ -3,6 +3,7 @@
 This is the complete V021 implementation with event bus integration
 and all 7 biological subsystems wired together.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

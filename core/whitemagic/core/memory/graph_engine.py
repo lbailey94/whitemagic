@@ -26,6 +26,7 @@ Usage:
     # Echo chamber detection (compare T_now vs T_prev)
     echo = engine.detect_echo_chambers(sigma_threshold=2.0)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

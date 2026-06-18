@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 def handle_jit_research(**kwargs: Any) -> dict[str, Any]:
     """Just-in-time memory research on a topic."""
+# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.jit_researcher import JITResearcher
         researcher = JITResearcher()

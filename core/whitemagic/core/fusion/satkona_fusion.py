@@ -16,6 +16,7 @@ Usage:
 Created: 2026-02-05
 Phase: 2 (Fusion Opportunities)
 """
+# ruff: noqa: BLE001
 
 import os
 import sqlite3

@@ -9,6 +9,7 @@ Coordinates all automated systems to work together harmoniously:
 Like an orchestra conductor, this ensures all systems play together
 in harmony, creating emergent capabilities greater than the sum of parts.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

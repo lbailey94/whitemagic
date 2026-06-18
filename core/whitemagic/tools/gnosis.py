@@ -26,6 +26,7 @@ Usage:
     from whitemagic.tools.gnosis import gnosis_snapshot
     snapshot = gnosis_snapshot()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

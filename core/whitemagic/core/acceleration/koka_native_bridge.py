@@ -10,6 +10,7 @@ Usage:
 
     result = koka_dispatch("prat", "route", {"tool": "memory.create"})
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import json

@@ -7,6 +7,7 @@ and verification of the task.
 
 Philosophy: "Trustless exchange of value for intelligence."
 """
+# ruff: noqa: BLE001
 
 import logging
 import time

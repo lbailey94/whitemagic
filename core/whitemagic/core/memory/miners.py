@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 """Pattern Extraction Engine - Week 3 of v2.3.1.

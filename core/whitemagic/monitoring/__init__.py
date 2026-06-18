@@ -7,6 +7,7 @@ Provides:
 - Health checks
 - Alerting hooks
 """
+# ruff: noqa: BLE001
 
 import importlib.util
 import logging

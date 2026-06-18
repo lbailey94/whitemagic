@@ -2,6 +2,7 @@
 Purpose: Offline processing, memory consolidation, and system maintenance.
 Runs in the background when the system is "idle" (or continuously).
 """
+# ruff: noqa: BLE001
 import logging
 import signal
 import sys

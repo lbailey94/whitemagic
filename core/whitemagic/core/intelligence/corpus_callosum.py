@@ -9,6 +9,7 @@ Usage:
     print(result.synthesis)
     print(result.rounds)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

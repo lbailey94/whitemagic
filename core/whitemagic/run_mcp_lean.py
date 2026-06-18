@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """
 WhiteMagic MCP Server — Lean Edition

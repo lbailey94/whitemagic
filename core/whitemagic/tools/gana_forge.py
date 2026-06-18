@@ -17,6 +17,7 @@ Lifecycle:
   3. Valid tools are injected into DISPATCH_TABLE and TOOL_TO_GANA
   4. Invalid manifests are logged but do not block startup
 """
+# ruff: noqa: BLE001
 
 import logging
 from pathlib import Path

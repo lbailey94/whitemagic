@@ -4,6 +4,7 @@ This module provides health checks and recovery procedures for Gana Willow
 to prevent MCP hang issues. Implements circuit breaker validation,
 Koka handler timeout wrapping, and automatic recovery.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

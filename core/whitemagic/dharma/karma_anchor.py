@@ -22,6 +22,7 @@ Usage:
     snapshot = compute_anchor()
     result = submit_anchor(snapshot["merkle_root"], wallet_seed="s...")
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

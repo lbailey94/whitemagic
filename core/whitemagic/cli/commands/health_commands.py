@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Health & Resonance CLI Commands
 System health checks, dharma assessment, and related diagnostics.

@@ -12,6 +12,7 @@ v4.3.0 Enhancement: Memory Context Loading
 - Integrates with continuous execution mode
 - Circuit breaker initialization
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

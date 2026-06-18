@@ -28,6 +28,7 @@ Usage:
     # Batch sweep (run periodically via slow-lane scheduler):
     report = engine.sweep()
 """
+# ruff: noqa: BLE001
 
 import logging
 import math

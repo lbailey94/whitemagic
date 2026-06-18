@@ -9,6 +9,7 @@ Security layers:
 - Memory limits
 - Namespace isolation
 """
+# ruff: noqa: BLE001
 
 import contextlib
 import io

@@ -16,6 +16,7 @@ Usage:
     gov = get_wallet_governor()
     ok, reason = gov.check_spend("tip", 0.50, "XRP")
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -9,6 +9,7 @@ Fallback: Pure Python checks (~40µs)
 The Zig dispatch core reads from the StateBoard mmap to make decisions
 without any Python overhead.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

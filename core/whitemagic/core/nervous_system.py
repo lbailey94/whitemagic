@@ -5,6 +5,7 @@ Unified Nervous System (V005)
 Central nervous bus that wires WhiteMagic's biological subsystems into a unified organism.
 Connects Immune, Genetics, Dream, Metabolism, Consciousness, Resonance, and Emergence.
 """
+# ruff: noqa: BLE001
 
 import logging
 import threading

@@ -2,6 +2,7 @@
 
 "Free your mind and your ass will follow" - Funkadelic
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

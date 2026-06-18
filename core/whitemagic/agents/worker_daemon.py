@@ -21,6 +21,7 @@ Usage:
     # As a script
     python -m whitemagic.agents.worker_daemon [--poll-interval 5]
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

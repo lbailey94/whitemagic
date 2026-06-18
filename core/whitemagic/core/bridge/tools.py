@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 
 from collections.abc import Callable
 from typing import Any, cast

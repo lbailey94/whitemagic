@@ -3,6 +3,7 @@
 Use Knowledge Graph entity relationships to suggest which Gana to invoke next.
 Extracted from fusions.py for better separation of concerns.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any

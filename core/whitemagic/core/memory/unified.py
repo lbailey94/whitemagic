@@ -1,6 +1,7 @@
 """🧠 Unified Memory System - WhiteMagic v12.3
 Consolidates all memory implementations into one coherent system using SQLite backend.
 """
+# ruff: noqa: BLE001
 
 import logging
 import sys

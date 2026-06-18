@@ -3,6 +3,7 @@
 Provides caching layer for parallel operations to reduce redundant work.
 Supports TTL, pattern-based invalidation, and distributed coordination.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

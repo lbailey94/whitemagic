@@ -10,6 +10,7 @@ This module provides a unified API for all high-performance backends:
 Each operation automatically selects the fastest available backend,
 with transparent fallback to Python if native code isn't available.
 """
+# ruff: noqa: BLE001
 
 import logging
 import subprocess

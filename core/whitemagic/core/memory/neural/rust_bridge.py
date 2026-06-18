@@ -5,6 +5,7 @@ Falls back to Python implementations if Rust is unavailable.
 
 Created: December 2, 2025 (Hanuman Tuesday)
 """
+# ruff: noqa: BLE001
 
 import logging
 from pathlib import Path

@@ -14,6 +14,7 @@ instead of:
 The Gana handler routes through the existing call_tool() pipeline,
 preserving all middleware (circuit breaker, rate limiter, RBAC, etc.).
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

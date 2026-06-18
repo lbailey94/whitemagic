@@ -9,6 +9,7 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
 
 def handle_ganying_emit(**kwargs: Any) -> dict[str, Any]:
     """
+# ruff: noqa: BLE001
     Handle a ganying emit event.
     
     Returns:

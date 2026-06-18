@@ -15,6 +15,7 @@ Usage (automatic via PluginDiscovery, or explicit):
     plugin = registry.get("grimoire")
     plugin.start()
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

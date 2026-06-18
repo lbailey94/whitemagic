@@ -4,6 +4,7 @@ This module provides a decorator to register singleton instances and a
 centralized reset mechanism for test isolation. Replaces manual conftest
 tracking of singleton module-level variables.
 """
+# ruff: noqa: BLE001
 import functools
 import logging
 import threading

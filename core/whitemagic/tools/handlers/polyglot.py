@@ -3,6 +3,7 @@
 Dynamically adds the polyglot bridge path to sys.path and monkey-patches
 POLYGLOT_ROOT so the bridge resolves files correctly regardless of import context.
 """
+# ruff: noqa: BLE001
 
 import logging
 import sys

@@ -5,6 +5,7 @@ this module provides a library of known issue patterns and their fixes.
 
 Each antibody is a reusable solution to a recurring problem.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

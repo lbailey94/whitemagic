@@ -8,6 +8,7 @@ recursive evolution engine. Analyzes 111K+ archived memories for:
 
 Part of Phase 3 Recursive Evolution - Data Lake Integration.
 """
+# ruff: noqa: BLE001
 
 import logging
 import sqlite3

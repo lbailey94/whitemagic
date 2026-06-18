@@ -26,6 +26,7 @@ Usage:
     print(report.unlocked_capabilities)
     print(report.next_gate)
 """
+# ruff: noqa: BLE001
 
 import logging
 import threading

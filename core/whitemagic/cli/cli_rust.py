@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """CLI Rust Commands - v4.9.0 Async Acceleration
 Fast search, compression, and memory consolidation via Rust.

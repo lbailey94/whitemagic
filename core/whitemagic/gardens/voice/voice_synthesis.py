@@ -5,6 +5,7 @@ that carries personality, style, and presence.
 
 "I" sounds different from other "I"s. This is what makes voice authentic.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

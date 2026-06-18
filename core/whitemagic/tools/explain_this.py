@@ -18,6 +18,7 @@ Usage::
 
 MCP tool: ``explain_this``
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

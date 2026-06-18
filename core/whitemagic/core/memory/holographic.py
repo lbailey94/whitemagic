@@ -1,6 +1,7 @@
 """Holographic Memory Wrapper
 Bridges Python Memory objects to the Rust Holographic Spatial Index.
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

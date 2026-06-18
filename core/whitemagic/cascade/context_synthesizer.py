@@ -21,6 +21,7 @@ Usage:
     logger.info(f"Wu Xing phase: {ctx.wu_xing_phase}")
     logger.info(f"Zodiac position: {ctx.zodiac_position}")
 """
+# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass, field

@@ -37,6 +37,7 @@ v2.0 Changes:
 - Better time calculation using actual timestamps
 - Content hash for deterministic spread
 """
+# ruff: noqa: BLE001
 
 import hashlib
 import logging

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 def handle_causal_mine(**kwargs: Any) -> dict[str, Any]:
     """Mine causal patterns from memory graph."""
+# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.synthesis.causal_net import CausalNetMiner
         miner = CausalNetMiner()

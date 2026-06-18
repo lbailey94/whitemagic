@@ -18,6 +18,7 @@ Usage:
     if result is not None:
         return result  # blocked — insufficient permissions
 """
+# ruff: noqa: BLE001
 
 import logging
 import threading

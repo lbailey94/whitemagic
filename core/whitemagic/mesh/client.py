@@ -20,6 +20,7 @@ Usage:
     client.broadcast_signal("MEMORY_CREATED", payload="{...}")
     peers = client.discover_peers()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

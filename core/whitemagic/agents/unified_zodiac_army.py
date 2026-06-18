@@ -11,6 +11,7 @@ Architecture:
 - Python orchestration for MCP integration and campaign management
 - 12×12 mapping of army types to zodiac signs
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import json

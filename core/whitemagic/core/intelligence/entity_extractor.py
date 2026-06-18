@@ -19,6 +19,7 @@ Usage:
     # result.entities = [("Lucas", "PERSON"), ("WhiteMagic", "PROJECT")]
     # result.relations = [("Lucas", "CREATED", "WhiteMagic")]
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

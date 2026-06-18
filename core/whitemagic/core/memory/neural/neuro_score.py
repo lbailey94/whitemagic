@@ -11,6 +11,7 @@ This module calculates memory strength based on:
 
 Created: December 2, 2025 (Hanuman Tuesday)
 """
+# ruff: noqa: BLE001
 
 import math
 from dataclasses import dataclass

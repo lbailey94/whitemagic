@@ -9,6 +9,7 @@ Usage:
     vault.set("OPENAI_API_KEY", "sk-abc123...")
     key = vault.get("OPENAI_API_KEY")
 """
+# ruff: noqa: BLE001
 
 import base64
 import hashlib

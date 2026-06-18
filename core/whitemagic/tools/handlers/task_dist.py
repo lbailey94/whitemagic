@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 """Task distribution tool handlers — intelligent task routing and execution.
+# ruff: noqa: BLE001
 
 Provides distributed task management across machines with load-based routing,
 task profiles, and result tracking.  All state is stored under WM_STATE_ROOT.

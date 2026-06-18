@@ -27,6 +27,7 @@ Usage:
     # Batch score from DB
     report = scorer.sweep(persist=True)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

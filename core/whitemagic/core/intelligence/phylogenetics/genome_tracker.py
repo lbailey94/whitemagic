@@ -24,6 +24,7 @@ Usage:
     tree = pg.build_lineage_tree("mem_abc")
     taxonomy = pg.classify_memory("mem_abc")
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

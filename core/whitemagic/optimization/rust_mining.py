@@ -4,6 +4,7 @@ Extracted from rust_accelerators.py for better separation of concerns.
 Provides galaxy pattern mining, geneseed codebase mining, and Arrow IPC
 zero-copy columnar interchange with Rust acceleration.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any, cast

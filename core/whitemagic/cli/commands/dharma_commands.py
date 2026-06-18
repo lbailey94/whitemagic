@@ -20,6 +20,7 @@ except ImportError:
 @click.group(name="dharma")
 def dharma_group() -> None:
     """☸️  Ethical reasoning and boundary detection"""
+# ruff: noqa: BLE001
 
 
 @dharma_group.command(name="evaluate")

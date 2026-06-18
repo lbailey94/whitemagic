@@ -3,6 +3,7 @@
 Extracted from prat_router.py for better separation of concerns.
 Contains the TOOL_TO_GANA mapping dictionary and related lookup functions.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any, cast

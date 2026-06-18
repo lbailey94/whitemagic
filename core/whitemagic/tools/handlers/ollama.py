@@ -8,6 +8,7 @@ v15.5: Context injection pipeline — automatically enriches prompts with
 relevant WhiteMagic memories via hybrid search + graph walk.  Responses
 can optionally be stored back (Memory-Augmented Generation).
 """
+# ruff: noqa: BLE001
 import asyncio
 import logging
 import os

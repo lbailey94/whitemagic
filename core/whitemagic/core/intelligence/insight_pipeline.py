@@ -20,6 +20,7 @@ Usage:
     briefing = pipeline.generate_briefing()
     print(briefing.to_dict())
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

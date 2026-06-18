@@ -11,6 +11,7 @@ The marketplace supports:
   - Rating completed exchanges
   - Importing/exporting .mem packages as tradeable goods
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

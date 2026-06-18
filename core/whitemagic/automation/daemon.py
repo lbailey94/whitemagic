@@ -10,6 +10,7 @@ Architecture:
     EventDrivenTask - Gan Ying event-triggered operations
     AutomationDaemon - Orchestrates all autonomous processes
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

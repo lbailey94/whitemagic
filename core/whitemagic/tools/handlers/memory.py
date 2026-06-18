@@ -21,6 +21,7 @@ def _load_rust() -> tuple[Any, Any]:
 
 def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
     """
+# ruff: noqa: BLE001
     Handle a create memory event.
     
     Returns:

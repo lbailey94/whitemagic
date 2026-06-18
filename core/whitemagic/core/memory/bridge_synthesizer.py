@@ -12,6 +12,7 @@ Usage:
     synth = get_bridge_synthesizer()
     insights = synth.synthesize_from_bridges(bridge_nodes, graph_engine)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

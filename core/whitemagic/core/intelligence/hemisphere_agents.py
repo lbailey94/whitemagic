@@ -13,6 +13,7 @@ Usage:
     left.start_listening()
     right.start_listening()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

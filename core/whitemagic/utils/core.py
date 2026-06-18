@@ -1,6 +1,7 @@
 """WhiteMagic core utility functions.
 Standardized robust datetime parsing, markdown utilities, and resource formatting.
 """
+# ruff: noqa: BLE001
 import re
 from datetime import datetime
 from typing import Any

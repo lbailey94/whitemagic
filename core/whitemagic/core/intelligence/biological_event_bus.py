@@ -4,6 +4,7 @@ This implements the event bus architecture for V021 Unified Nervous System.
 Provides publish/subscribe pattern for cross-system communication with
 Rust-accelerated dispatch and circuit breaker protection.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

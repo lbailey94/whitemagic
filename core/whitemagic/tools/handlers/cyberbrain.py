@@ -7,6 +7,7 @@ from typing import Any
 
 def handle_salience_spotlight(**kwargs: Any) -> dict[str, Any]:
     """Return the current attention spotlight — top-N most salient events."""
+# ruff: noqa: BLE001
     from whitemagic.core.resonance.salience_arbiter import get_salience_arbiter
     arbiter = get_salience_arbiter()
     n = kwargs.get("limit", 5)

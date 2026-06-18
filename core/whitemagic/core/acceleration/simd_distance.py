@@ -19,6 +19,7 @@ Usage:
     matrix = pairwise_distance_matrix(vectors)
     sim = cosine_similarity_zig(vec_a, vec_b)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

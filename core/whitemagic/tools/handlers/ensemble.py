@@ -11,6 +11,7 @@ MCP tools:
   - ensemble.status  — Check status of a running ensemble query
   - ensemble.history — List past ensemble results
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

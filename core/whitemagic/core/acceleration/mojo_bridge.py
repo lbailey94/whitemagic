@@ -18,6 +18,7 @@ Usage:
         mojo_batch_encode, mojo_quantize, mojo_neuro_score, mojo_status
     )
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

@@ -3,6 +3,7 @@
 Implementations for Lunar Mansions 8-14 (Summer/South).
 Theme: Expression, Harmony, Visibility.
 """
+# ruff: noqa: BLE001
 
 from datetime import datetime
 from typing import Any

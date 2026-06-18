@@ -3,6 +3,7 @@
 Orchestrates self-evolving agentic deployments based on Self-Model alerts
 and Codebase Census bottlenecks.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

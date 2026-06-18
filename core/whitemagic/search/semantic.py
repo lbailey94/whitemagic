@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Semantic search implementation using embeddings and vector similarity.
 

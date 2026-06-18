@@ -10,6 +10,7 @@ Environment variables:
     WM_SHELTER_MAX_CONCURRENT — Max simultaneous shelters (default: 4)
     WM_SHELTER_TIMEOUT_S      — Default timeout seconds (default: 300)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

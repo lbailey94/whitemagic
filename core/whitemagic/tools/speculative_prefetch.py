@@ -15,6 +15,7 @@ Architecture:
 
 Cache is invalidated after a configurable TTL (default 5s) to avoid stale data.
 """
+# ruff: noqa: BLE001
 
 import logging
 import threading

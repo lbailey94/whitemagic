@@ -5,6 +5,7 @@ from typing import Any
 
 def handle_codegenome_generate(**kwargs: Any) -> dict[str, Any]:
     """Generate code from a natural language prompt using the God-Kit.
+# ruff: noqa: BLE001
 
     Args:
         prompt: Natural language code request (e.g., "I need a FastAPI endpoint for items")

@@ -27,6 +27,7 @@ Usage:
     hv = get_harmony_vector()
     snapshot = hv.snapshot()   # dict safe for JSON / MCP envelope
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

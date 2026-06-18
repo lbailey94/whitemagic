@@ -6,6 +6,7 @@ Analyzes long-term memories to extract:
 - Heuristics (if condition, then action)
 - Optimizations (proven approaches)
 """
+# ruff: noqa: BLE001
 
 import json
 import logging

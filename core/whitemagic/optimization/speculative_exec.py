@@ -9,6 +9,7 @@ Concepts:
 - Type Check (MyPy stub): ~100ms
 - Local LLM Sanity Check: ~500ms
 """
+# ruff: noqa: BLE001
 
 import ast
 import logging

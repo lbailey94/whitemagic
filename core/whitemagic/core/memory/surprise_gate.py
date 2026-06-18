@@ -23,6 +23,7 @@ Usage:
     verdict = gate.evaluate(content="some new memory content")
     # verdict.action: 'create', 'reinforce', or 'create_boosted'
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

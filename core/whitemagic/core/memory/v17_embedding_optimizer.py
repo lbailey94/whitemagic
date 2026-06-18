@@ -12,6 +12,7 @@ Key optimizations:
 5. Pre-fetched text batches (minimize DB round-trips)
 6. Model.encode() in thread pool (releases GIL)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import asyncio

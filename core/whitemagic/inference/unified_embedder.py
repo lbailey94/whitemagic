@@ -11,6 +11,7 @@ Usage:
     embedder = UnifiedEmbedder()
     embeddings = embedder.encode_batch(texts, batch_size=2048)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

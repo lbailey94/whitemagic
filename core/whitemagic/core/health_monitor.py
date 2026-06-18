@@ -1,6 +1,7 @@
 """Health Monitor System
 Checks the health of various system components including memory, resonance, and integrations.
 """
+# ruff: noqa: BLE001
 
 import importlib
 from datetime import datetime

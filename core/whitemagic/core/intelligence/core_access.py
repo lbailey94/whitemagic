@@ -27,6 +27,7 @@ Usage:
     # Hybrid recall: embedding similarity + association graph walk
     results = cal.hybrid_recall("memory consolidation architecture", k=10)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

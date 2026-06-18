@@ -21,6 +21,7 @@ Usage:
     detector = get_constellation_detector()
     report = detector.detect()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """ChronosGuard — Phase 28: Temporal Resonance.
 ===========================================

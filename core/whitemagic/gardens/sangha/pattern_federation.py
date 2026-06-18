@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FederatedPattern:
     """Pattern shared across collective."""
+# ruff: noqa: BLE001
 
     pattern_id: str
     name: str

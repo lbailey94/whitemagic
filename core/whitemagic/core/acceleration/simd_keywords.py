@@ -14,6 +14,7 @@ Usage:
     from whitemagic.core.acceleration.simd_keywords import extract_keywords, simd_keywords_status
     keywords = extract_keywords("some text content here", max_keywords=50)
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

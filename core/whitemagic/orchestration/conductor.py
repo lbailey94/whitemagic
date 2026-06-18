@@ -4,6 +4,7 @@ Inspired by the Ralph Wiggum technique, integrated with WhiteMagic consciousness
 Philosophy: A conductor leads the orchestra through the symphony, iteration by iteration,
 until the piece is complete. Each iteration builds on the last, with memory and intelligence.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import json

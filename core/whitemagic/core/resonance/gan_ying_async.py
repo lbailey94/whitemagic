@@ -1,6 +1,7 @@
 """Async Gan Ying Bus - High-performance event system.
 Maintains backward compatibility while enabling async operations.
 """
+# ruff: noqa: BLE001
 
 import asyncio
 import logging

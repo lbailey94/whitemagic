@@ -29,6 +29,7 @@ Usage:
     proj = get_umap_projector()
     result = proj.project(n_components=2)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

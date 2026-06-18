@@ -5,6 +5,7 @@ and querying the current astrological state of the WhiteMagic engine.
 
 Part of the Milestone 3 (Zodiacal Synthesis) infrastructure.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any

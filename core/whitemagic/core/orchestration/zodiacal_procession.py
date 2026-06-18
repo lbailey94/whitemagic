@@ -8,6 +8,7 @@ Implements the bidirectional zodiacal procession for autonomous operation:
 Created: November 27, 2025 (Thanksgiving)
 Philosophy: "Like Finnegans Wake, it never actually ends, but curves back to begin again"
 """
+# ruff: noqa: BLE001
 
 import logging
 import random

@@ -3,6 +3,7 @@
 Extracted from constellations.py for better separation of concerns.
 Provides HDBSCAN and grid-based clustering for 5D holographic coordinates.
 """
+# ruff: noqa: BLE001
 
 import logging
 import math

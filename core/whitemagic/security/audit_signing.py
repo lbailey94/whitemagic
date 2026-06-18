@@ -8,6 +8,7 @@ Key design: graceful degradation. If cryptography is unavailable or the key
 is missing, the system continues operating but emits a warning. No tool call
 should ever fail because signing failed.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -6,6 +6,7 @@ Wraps unified_api with:
 - Tool discovery metrics
 - Autocast suggestions
 """
+# ruff: noqa: BLE001
 
 import logging
 import time

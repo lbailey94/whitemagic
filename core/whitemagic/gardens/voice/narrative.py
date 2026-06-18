@@ -3,6 +3,7 @@
 Creates coherent narratives from discrete moments, maintaining continuity
 and threading themes across sessions.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

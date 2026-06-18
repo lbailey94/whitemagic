@@ -6,6 +6,7 @@ Detects emergent phenomena in the memory system:
 - Novelty spikes (sudden increases in previously rare tags)
 - Cross-domain bridges (memories connecting previously separate constellations)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

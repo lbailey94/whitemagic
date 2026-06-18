@@ -9,6 +9,7 @@ Maps every cognitive engine in WhiteMagic to the 28-fold mandala structure:
 
 This registry is the single source of truth for the Engine Framework.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

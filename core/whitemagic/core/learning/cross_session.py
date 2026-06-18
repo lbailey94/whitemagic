@@ -13,6 +13,7 @@ Usage:
     learner.end_session()
     patterns = learner.get_patterns()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

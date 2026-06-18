@@ -6,6 +6,7 @@ Provides shared memory channels between WhiteMagic processes:
 - wm/commands: Agent coordination
 - wm/harmony: Health pulse broadcast
 """
+# ruff: noqa: BLE001
 
 import atexit
 import json

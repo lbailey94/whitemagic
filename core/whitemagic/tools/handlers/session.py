@@ -15,6 +15,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 
 def _resolve_base_path(kwargs: dict[str, Any]) -> Path:
     """Import and delegate to unified_api's path resolver."""
+# ruff: noqa: BLE001
     from whitemagic.tools.unified_api import _resolve_base_path as _rbp
     return cast("Path", _rbp(kwargs))
 

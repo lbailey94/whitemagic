@@ -42,6 +42,7 @@ Usage:
     mode = cm.current_mode()
     hints = cm.get_tool_hints()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

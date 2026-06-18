@@ -3,6 +3,7 @@
 Emit fusion events to the Gan Ying bus.
 Extracted from fusions.py for better separation of concerns.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any

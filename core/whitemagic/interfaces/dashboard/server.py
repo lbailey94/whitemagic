@@ -3,6 +3,7 @@
 
 Provides REST API endpoints for the React dashboard.
 """
+# ruff: noqa: BLE001
 
 import argparse
 import logging

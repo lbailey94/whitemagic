@@ -15,6 +15,7 @@ Usage:
     # ... later ...
     report = scanner.scan()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

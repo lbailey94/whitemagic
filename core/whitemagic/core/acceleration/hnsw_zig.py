@@ -10,6 +10,7 @@ Usage:
     index.add(vector)  # Add vectors
     results = index.search(query, k=10)  # Find nearest neighbors
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

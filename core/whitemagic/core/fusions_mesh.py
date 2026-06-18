@@ -3,6 +3,7 @@
 Sync memory operations across mesh peers via the Go libp2p network.
 Extracted from fusions.py for better separation of concerns.
 """
+# ruff: noqa: BLE001
 
 import logging
 import time

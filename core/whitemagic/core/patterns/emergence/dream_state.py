@@ -3,6 +3,7 @@
 Enhanced to use PatternEngine for reading ALL memories including archives!
 Philosophy: 夢境創造 (Dream Creation)
 """
+# ruff: noqa: BLE001
 
 import logging
 import os

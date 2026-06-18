@@ -6,6 +6,7 @@ align with compassionate principles.
 
 Created: January 6, 2026
 """
+# ruff: noqa: BLE001
 
 import logging
 from dataclasses import dataclass

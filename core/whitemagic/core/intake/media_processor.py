@@ -18,6 +18,7 @@ Usage:
     if result:
         print(result.text, result.metadata, result.holographic_bias)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

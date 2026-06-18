@@ -22,6 +22,7 @@ Usage:
     significance = analyzer.cluster_significance(cluster_sizes, total_points, volume)
     weights = analyzer.zone_sampling_weights(distances)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

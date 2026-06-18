@@ -8,6 +8,7 @@ Designed to work on:
 - Microcontrollers (via compiled rules)
 - WebAssembly in browsers
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

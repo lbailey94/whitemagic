@@ -16,6 +16,7 @@ Usage:
     reg.register_model("phi-3-mini", sha256="abc123...", trust="verified")
     result = reg.verify_model("phi-3-mini")
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

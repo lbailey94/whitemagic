@@ -2,6 +2,7 @@
 
 Phase 1 VC3: Translate deploy_grand_army.py sorting to Rust.
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging

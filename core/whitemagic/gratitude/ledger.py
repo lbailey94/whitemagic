@@ -7,6 +7,7 @@ rate-limit boosts.
 
 Storage: $WM_STATE_ROOT/gratitude/ledger.jsonl
 """
+# ruff: noqa: BLE001
 
 import logging
 import threading

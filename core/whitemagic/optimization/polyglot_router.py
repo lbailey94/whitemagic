@@ -7,6 +7,7 @@ Routes operations to fastest available implementation:
 3. Zig (Tier 5) - Deterministic/Low-level performance
 4. Python (Baseline) - Fallback
 """
+# ruff: noqa: BLE001
 
 import ctypes
 import logging

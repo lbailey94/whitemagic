@@ -3,6 +3,7 @@
 Provides a single source of truth for checking Rust availability
 and importing whitemagic_rs with consistent fallback handling.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

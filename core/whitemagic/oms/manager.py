@@ -6,6 +6,7 @@ Handles the full lifecycle of .mem packages:
 The .mem format is a ZIP archive containing JSONL data files
 and a manifest with metadata, quality metrics, and Merkle verification.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

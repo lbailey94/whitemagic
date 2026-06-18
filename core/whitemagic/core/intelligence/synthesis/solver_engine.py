@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class DharmicSolver:
     """Dharmic Solver — Layer 3: Optimization.
+# ruff: noqa: BLE001
 
     Solves for the optimal configuration of concepts/actions.
 

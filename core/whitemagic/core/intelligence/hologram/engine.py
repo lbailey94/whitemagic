@@ -11,6 +11,7 @@ Responsibility:
 3. Store vectors in the Rust Spatial Index.
 4. Provide spatial query capabilities.
 """
+# ruff: noqa: BLE001
 
 import logging
 from typing import Any

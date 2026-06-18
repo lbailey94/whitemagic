@@ -3,6 +3,7 @@
 Autonomous system that scans the codebase for TODOs, test gaps, documentation gaps,
 incomplete features, and technical debt to generate actionable objectives.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

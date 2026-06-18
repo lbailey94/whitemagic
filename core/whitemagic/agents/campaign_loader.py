@@ -42,6 +42,7 @@ Campaign Format:
     ## Verification
     How to confirm complete victory.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

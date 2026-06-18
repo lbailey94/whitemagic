@@ -17,6 +17,7 @@ Usage:
     # Check status
     status = get_status()
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

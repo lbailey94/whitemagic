@@ -11,6 +11,7 @@ Usage:
     score = cosine_similarity(vec_a, vec_b)
     scores = batch_cosine(query, [vec1, vec2, vec3])
 """
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import ctypes

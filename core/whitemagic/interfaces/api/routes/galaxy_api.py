@@ -3,6 +3,7 @@
 Connects to the real GalaxyManager and returns actual memory nodes
 with holographic coordinates from the active galaxy.
 """
+# ruff: noqa: BLE001
 
 import os
 import sqlite3

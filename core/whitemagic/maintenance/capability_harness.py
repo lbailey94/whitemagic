@@ -10,6 +10,7 @@ Usage:
     harness = CapabilityHarness()
     results = harness.run_all_combos()
 """
+# ruff: noqa: BLE001
 
 import logging
 import time

@@ -6,6 +6,7 @@ Provides:
 - Fallback chain: Rust -> Elixir -> SQLite
 - Blackboard integration for all operations
 """
+# ruff: noqa: BLE001
 
 import json
 import logging
