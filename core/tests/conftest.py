@@ -1,14 +1,10 @@
+import importlib
 import os
 import sys
-import sys
-import sys
-
-# No more sys.modules hacking - using empty dummy files instead!
-
-import importlib
 import tempfile
 
 import pytest
+
 try:
     from whitemagic.core.resonance.event_types import EventType
     # Monkey patch EventType to avoid missing attribute errors in obsolete tests
@@ -48,13 +44,13 @@ os.environ["WM_SKIP_HOLO_INDEX"] = "1"
 # If paths.py was already imported (e.g. by a plugin), force-reload it so
 # the module-level constants pick up the new WM_STATE_ROOT.
 if "whitemagic.config.paths" in sys.modules:
-    import importlib
     importlib.reload(sys.modules["whitemagic.config.paths"])
 
 # Ensure all subdirectories (memory/, data/, cache/, etc.) exist on disk.
 # Without this, SQLite cannot create the DB file in CI where ~/.whitemagic
 # doesn't pre-exist.
 from whitemagic.config.paths import ensure_paths  # noqa: E402
+
 ensure_paths()
 
 
@@ -163,8 +159,39 @@ def tool_caller():
     return ToolCaller()
 
 
-# Envelope helpers moved to tests/_envelope.py so they can be imported as a
-# regular Python module (pytest conftest.py is not importable as
-# `from tests.conftest import ...`). Kept here as a re-export for any code
-# that still references them via the conftest module.
-from _envelope import ENVELOPE_KEYS, assert_envelope_shape  # noqa: E402,F401
+@pytest.fixture(autouse=True, scope="module")
+def mcp_test_env(tmp_path_factory):
+    """Set up an isolated WM_STATE_ROOT + WM_SILENT_INIT for MCP tests.
+
+    Equivalent to the prior per-file `_mcp_env` fixture in
+    tests/integration/test_mcp_e2e.py, test_opencode_hermes_bridge.py,
+    and test_all_ganas_mcp.py. Hoisted here so the three duplicates
+    can be deleted and the test files only declare fixtures they
+    actually need. autouse=True with scope=module so it applies
+    automatically to all tests in modules that need it.
+
+    The fixture restores the prior env state on teardown and
+    removes the temp directory (ignore_errors because Windows
+    holds file handles briefly after process teardown).
+    """
+    import shutil
+    state_dir = tmp_path_factory.mktemp("wm_mcp_state")
+    prev = {
+        "WM_SILENT_INIT": os.environ.get("WM_SILENT_INIT"),
+        "WM_STATE_ROOT": os.environ.get("WM_STATE_ROOT"),
+    }
+    os.environ["WM_SILENT_INIT"] = "1"
+    os.environ["WM_STATE_ROOT"] = str(state_dir)
+    yield state_dir
+    for k, v in prev.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+    shutil.rmtree(state_dir, ignore_errors=True)
+
+
+# Envelope helpers live in tests/_envelope.py. No re-export here:
+# conftest.py is auto-loaded by pytest but not importable as
+# `from tests.conftest import ...`. Any code that needs the
+# envelope helpers should import them from _envelope directly.

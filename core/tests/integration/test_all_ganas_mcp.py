@@ -40,23 +40,9 @@ pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
 
 # ── Environment ─────────────────────────────────────────────────────────
 
-@pytest.fixture(scope="module", autouse=True)
-def _mcp_env():
-    state_dir = Path(tempfile.mkdtemp(prefix="wm_all_ganas_"))
-    prev = {
-        "WM_SILENT_INIT": os.environ.get("WM_SILENT_INIT"),
-        "WM_STATE_ROOT": os.environ.get("WM_STATE_ROOT"),
-    }
-    os.environ["WM_SILENT_INIT"] = "1"
-    os.environ["WM_STATE_ROOT"] = str(state_dir)
-    yield
-    for k, v in prev.items():
-        if v is None:
-            os.environ.pop(k, None)
-        else:
-            os.environ[k] = v
-    shutil.rmtree(state_dir, ignore_errors=True)
-
+# _mcp_env fixture removed in v22.2.2; the conftest.py
+# `mcp_test_env` autouse fixture (scope=module) provides the
+# same isolation automatically for this test module.
 
 # ── MCP Client ──────────────────────────────────────────────────────────
 
