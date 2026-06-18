@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +20,7 @@ and hot-path optimizations for graph traversals.
 Consolidated from graph_engine.py, graph_walker.py, and graph_walker_hot_path.py.
 Part of Milestone 4.3 Singleton Reduction.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

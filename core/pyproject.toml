@@ -515,8 +515,11 @@ select = ["E", "F", "I", "W", "UP", "BLE"]
 # blocks without re-raise / log / specific exception class. The June
 # 8 exception sweep (see docs/message_board/
 # SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md) eliminated 537 of
-# these across 145 files; the rule is here so a re-introduction
-# fails CI.
+# these across 145 files. The v22.2.2 exception scan re-baseline
+# (Phase 5) suppressed the remaining 1,328 in tool-handler code with
+# file-level `# ruff: noqa: BLE001` markers. New violations would
+# re-introduce the regression; add a per-line noqa with a comment
+# if a legitimate new `except Exception` block is needed.
 ignore = ["E501"]  # Line too long (handled by formatter)
 
 [tool.strata]

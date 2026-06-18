@@ -1,9 +1,9 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Continuous Executor - Main autonomous execution engine.
 
 The Ralph Wiggum Loop: "I'm helping!" but actually effective.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 """I Ching Advisor - Hexagram guidance for decisions."""
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import json
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Hexagram:
     """An I Ching hexagram."""
-# ruff: noqa: BLE001
 
     number: int
     name: str

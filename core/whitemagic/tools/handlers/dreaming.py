@@ -1,4 +1,5 @@
 """MCP handlers for Dream Cycle control."""
+# ruff: noqa: BLE001
 
 import asyncio
 import logging
@@ -9,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 def handle_dream(**kwargs: Any) -> dict[str, Any]:
     """Unified dream handler — routes by action parameter."""
-# ruff: noqa: BLE001
     action = kwargs.get("action", "status")
     dispatch = {
         "start": handle_dream_start,

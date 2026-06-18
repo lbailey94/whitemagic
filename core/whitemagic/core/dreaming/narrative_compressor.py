@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +34,7 @@ Usage:
     nc = get_narrative_compressor()
     result = nc.compress(max_clusters=5)
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 """Autoimmune Defense System - Transform 229 anti-patterns into active defenses."""
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 
@@ -11,7 +12,6 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 """
-# ruff: noqa: BLE001
 Autoimmune Protection
 
 Prevents the immune system from attacking WhiteMagic itself.

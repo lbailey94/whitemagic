@@ -1,4 +1,5 @@
 """Governance & lifecycle tool handlers — lifecycle, consolidation, homeostasis, maturity, dharma reload, tool graph."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any, cast
 
@@ -7,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def handle_memory_lifecycle(**kwargs: Any) -> dict[str, Any]:
     """Unified memory lifecycle handler — routes by action parameter."""
-# ruff: noqa: BLE001
     action = kwargs.get("action", "stats")
     dispatch = {
         "sweep": handle_lifecycle_sweep,

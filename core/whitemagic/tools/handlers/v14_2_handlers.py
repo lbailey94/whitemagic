@@ -1,4 +1,5 @@
 """v14.2 Handlers - JIT Research, Narrative Compression, Hermit Crab, Green Score, Cognitive Modes."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 def handle_jit_research(**kwargs: Any) -> dict[str, Any]:
     """Just-in-time memory research on a topic."""
-# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.jit_researcher import JITResearcher
         researcher = JITResearcher()

@@ -1,4 +1,5 @@
 """Pattern bridge — Pattern detection and analysis."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -7,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def detect_patterns(query: str = "", **kwargs: Any) -> dict[str, Any]:
     """Detect patterns in memory or data."""
-# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.synthesis.pattern_engine import PatternEngine
 

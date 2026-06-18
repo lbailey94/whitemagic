@@ -1,11 +1,11 @@
 """Pipeline tool handlers."""
+# ruff: noqa: BLE001
 import logging
 
 logger = logging.getLogger(__name__)
 from typing import Any
 
 """Declarative tool chaining.
-# ruff: noqa: BLE001
 
 Allows agents to define multi-step tool chains that execute sequentially,
 with each step able to reference the output of previous steps via ``$prev``.

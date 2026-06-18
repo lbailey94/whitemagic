@@ -1,4 +1,5 @@
 """Pattern Federation - Distributed pattern library across sessions."""
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 
@@ -19,7 +20,6 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FederatedPattern:
     """Pattern shared across collective."""
-# ruff: noqa: BLE001
 
     pattern_id: str
     name: str

@@ -1,8 +1,8 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Diagnostics CLI Commands
 Status, health, doctor, explore, galaxy, and related diagnostic commands.
 """
+# ruff: noqa: BLE001
 
 import sqlite3
 

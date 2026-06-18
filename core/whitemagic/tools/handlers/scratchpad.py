@@ -1,4 +1,5 @@
 """Scratchpad tool handlers."""
+# ruff: noqa: BLE001
 import logging
 from collections import defaultdict
 from collections.abc import Callable
@@ -23,7 +24,6 @@ def _resolve_base_path(kwargs: dict[str, Any]) -> Path:
 
 def handle_scratchpad(**kwargs: Any) -> dict[str, Any]:
     """Unified scratchpad handler — routes by action parameter."""
-# ruff: noqa: BLE001
     action = kwargs.get("action", "create")
     dispatch: dict[str, ScratchpadHandler] = {
         "create": handle_scratchpad_create,

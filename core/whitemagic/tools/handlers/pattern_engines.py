@@ -1,4 +1,5 @@
 """Pattern Analysis Engines — Mining, emergence, constellation, and novelty detection."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 def handle_causal_mine(**kwargs: Any) -> dict[str, Any]:
     """Mine causal patterns from memory graph."""
-# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.synthesis.causal_net import CausalNetMiner
         miner = CausalNetMiner()

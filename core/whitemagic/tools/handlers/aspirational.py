@@ -1,10 +1,10 @@
 """Aspirational tool handlers — Grimoire auto-cast, session context, wisdom council."""
+# ruff: noqa: BLE001
 from typing import Any
 
 
 def handle_navigate_grimoire(**kwargs: Any) -> dict[str, Any]:
     """Auto-cast: find the best Gana chapter for the current task."""
-# ruff: noqa: BLE001
     query = kwargs.get("query", "")
     if not query:
         return {"status": "error", "error_code": "invalid_params", "message": "query is required"}

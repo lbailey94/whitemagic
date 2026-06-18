@@ -1,4 +1,5 @@
 """Haskell Divination Bridge — wraps the FFI-based haskell_bridge.py."""
+# ruff: noqa: BLE001
 
 import logging
 import sys
@@ -13,7 +14,6 @@ _HASKELL_DIR = Path(__file__).resolve().parents[3] / "haskell"
 
 class HaskellBridge:
     """High-level interface to the Haskell divination library."""
-# ruff: noqa: BLE001
 
     def __init__(self) -> None:
         self._divination = None

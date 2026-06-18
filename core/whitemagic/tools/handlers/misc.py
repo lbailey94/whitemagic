@@ -1,4 +1,5 @@
 """Miscellaneous tool handlers — stubs, capabilities, immune, oracle, intelligence, metrics, grimoire, memory aliases, hologram, utility."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -7,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def _stub(tool_name: str, **preview: Any) -> dict[str, Any]:
     """Return a not-implemented stub response."""
-# ruff: noqa: BLE001
     return {
         "status": "success",
         "error_code": "not_implemented",

@@ -1,4 +1,5 @@
 """Fast SimHash with Rust backend (PSR-015)."""
+# ruff: noqa: BLE001
 import hashlib
 import logging
 
@@ -20,7 +21,6 @@ def _py_simhash(text: str, bits: int = 64) -> int:
 
 def compute_simhash(text: str, bits: int = 64) -> int:
     """Compute SimHash fingerprint. Uses Rust when available."""
-# ruff: noqa: BLE001
     if _RUST:
         try:
             lsh = _RustLSH(bits)

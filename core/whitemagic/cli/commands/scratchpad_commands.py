@@ -1,8 +1,8 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Scratchpad CLI Commands
 Create, update, analyze, and finalize scratchpads.
 """
+# ruff: noqa: BLE001
 
 import click
 

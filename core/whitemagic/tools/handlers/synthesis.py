@@ -1,4 +1,5 @@
 """Synthesis, Kaizen, Serendipity, and Pattern tool handlers."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any, cast
 
@@ -7,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def handle_kaizen_analyze(**kwargs: Any) -> dict[str, Any]:
     """
-# ruff: noqa: BLE001
     Handle a kaizen analyze event.
     
     Returns:

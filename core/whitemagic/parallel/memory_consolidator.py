@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Parallel Memory Consolidator - Consolidate 301+ memory files simultaneously
 
@@ -10,6 +9,7 @@ Philosophy:
     this tool processes all memories in parallel, finding patterns
     and connections that sequential processing would miss.
 """
+# ruff: noqa: BLE001
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field

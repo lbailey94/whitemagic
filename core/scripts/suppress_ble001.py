@@ -39,25 +39,48 @@ def get_statistics() -> dict[str, int]:
 
 
 def has_marker(path: Path) -> bool:
-    return HEADER_MARKER in path.read_text()
+    """Check if the file already has the suppression marker at the top.
+
+    Looks for the marker in the first 50 lines, where it must be
+    (per PEP 263 and the placement after the file-level docstring).
+    """
+    content = path.read_text()
+    head = "\n".join(content.splitlines()[:50])
+    return HEADER_MARKER in head
 
 
 def add_marker(path: Path) -> None:
+    """Add the suppression marker immediately after the leading
+    docstring (the first ast.Expr with a Constant string at module
+    scope).
+
+    If a working marker already exists at the top of the file (lines
+    1-3 or after the leading docstring), this is a no-op.
+    """
+    import ast
     content = path.read_text()
     lines = content.splitlines(keepends=True)
     insert_at = 0
     # Skip shebang
     if lines and lines[0].startswith("#!"):
         insert_at = 1
-    # Skip leading docstring
-    if insert_at < len(lines):
-        first_meaningful = lines[insert_at].lstrip()
-        if first_meaningful.startswith('"""') or first_meaningful.startswith("'''"):
-            quote = first_meaningful[:3]
-            for j in range(insert_at + 1, len(lines)):
-                if quote in lines[j]:
-                    insert_at = j + 1
-                    break
+    # Skip coding declaration (must stay in first 2 lines per PEP 263)
+    if insert_at < len(lines) and "coding" in lines[insert_at] and lines[insert_at].lstrip().startswith("#"):
+        insert_at += 1
+    # Use ast to find end of module docstring (the first Expr with
+    # a Constant string in the module body)
+    try:
+        tree = ast.parse(content)
+        for node in tree.body:
+            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                # node.end_lineno is 1-indexed, last line of the docstring
+                insert_at = max(insert_at, node.end_lineno)
+                break
+    except SyntaxError:
+        pass
+    # If a working marker is already at insert_at, skip
+    if insert_at < len(lines) and HEADER_MARKER in lines[insert_at]:
+        return
     new_lines = lines[:insert_at] + [HEADER_MARKER + "\n"] + lines[insert_at:]
     path.write_text("".join(new_lines))
 

@@ -1,11 +1,11 @@
 """Foresight Engine handler — Logos Layer predictions."""
+# ruff: noqa: BLE001
 
 from typing import Any
 
 
 def handle_foresight_analyze(**kwargs: Any) -> dict[str, Any]:
     """Run foresight analysis on constellation drift, memory decay, and convergence."""
-# ruff: noqa: BLE001
     horizon_days = int(kwargs.get("horizon_days", 7))
     try:
         from whitemagic.core.intelligence.foresight_engine import get_foresight_engine

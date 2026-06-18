@@ -68,20 +68,18 @@ jobs:
       - name: Ruff Check (high-signal rules)
         run: ruff check whitemagic/ --select F821,F601,F401 --ignore E501
 
-      # Blind-except check: added in v22.2.2. Currently 1,329
-      # pre-existing violations remain (the June 8 sweep eliminated
-      # 537 across 145 files; the remaining count is a separate
-      # baseline that needs a dedicated Phase 5 pass). The job is
-      # marked continue-on-error so it serves as a visible metric
-      # (count of remaining BLE violations) without failing CI; once
-      # the count drops below a threshold this can be promoted to a
-      # blocking check.
-      - name: Ruff Blind-Except (BLE001) — metric only
-        continue-on-error: true
+      # Blind-except check: added in v22.2.2, blocking in v22.2.2.
+      # The June 8 sweep eliminated 537 across 145 files; the v22.2.2
+      # exception scan re-baseline (Phase 5) suppressed the
+      # remaining 1,328 in tool-handler code with `# ruff: noqa:
+      # BLE001` markers. New violations would re-introduce the
+      # regression. If a legitimate new `except Exception` block is
+      # needed, add a `# ruff: noqa: BLE001` on the same line with
+      # a comment explaining why.
+      - name: Ruff Blind-Except (BLE001)
         run: |
-          echo "Counting remaining blind-except (BLE001) violations..."
-          ruff check whitemagic/ --select BLE001 --ignore E501 --output-format=concise 2>&1 | tail -1 || true
-          echo "(See docs/message_board/SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md for the sweep history.)"
+          echo "Checking for blind-except (BLE001) regressions..."
+          ruff check whitemagic/ --select BLE001 --ignore E501 --output-format=concise
 
       # Mypy: strict enforcement for public surface (tools, interfaces)
       - name: Mypy (public surface — strict)

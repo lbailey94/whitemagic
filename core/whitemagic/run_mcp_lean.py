@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """
 WhiteMagic MCP Server — Lean Edition
@@ -18,6 +17,7 @@ Supports:
 
 **SHIP_SURFACE**: 🎯 Core Tier - Essential runtime component
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

@@ -1,4 +1,5 @@
 """Adaptive bridge — Cascade pattern execution."""
+# ruff: noqa: BLE001
 import asyncio
 import logging
 from typing import Any
@@ -8,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 def list_cascade_patterns() -> list[dict[str, Any]]:
     """List available cascade execution patterns."""
-# ruff: noqa: BLE001
     patterns = [
         {"name": "sequential", "description": "Execute tools in sequence"},
         {"name": "parallel", "description": "Execute tools in parallel"},

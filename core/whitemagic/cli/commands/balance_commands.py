@@ -1,8 +1,8 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Balance CLI Commands
 Yin-Yang balance tracking and reporting.
 """
+# ruff: noqa: BLE001
 
 import click
 

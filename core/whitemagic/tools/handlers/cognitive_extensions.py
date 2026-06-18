@@ -1,4 +1,5 @@
 """Cognitive Extensions — Working Memory & Reconsolidation handlers."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -7,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def handle_working_memory_attend(**kwargs: Any) -> dict[str, Any]:
     """Attend to working memory items."""
-# ruff: noqa: BLE001
     from whitemagic.core.intelligence.working_memory import WorkingMemory
     wm = WorkingMemory()
     items = kwargs.get("items", [])

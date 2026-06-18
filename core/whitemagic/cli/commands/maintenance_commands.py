@@ -1,8 +1,8 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Maintenance CLI Commands
 System maintenance and synchronization.
 """
+# ruff: noqa: BLE001
 
 import os
 import subprocess

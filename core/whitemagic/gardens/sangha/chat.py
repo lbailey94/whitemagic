@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 from __future__ import annotations
 
 import importlib
@@ -25,6 +24,7 @@ Enables multiple AI instances (Agents) to communicate, coordinate, and plan
 via shared markdown chat logs. Designed for parallel execution in separate
 terminal tabs/sessions.
 """
+# ruff: noqa: BLE001
 
 
 try:

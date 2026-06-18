@@ -1,4 +1,5 @@
 """Rapid Cognition - Learn every 5 seconds."""
+# ruff: noqa: BLE001
 
 import logging
 import threading
@@ -12,7 +13,6 @@ try:
 except ImportError:
     def get_rust_bridge() -> Any:
         """Fallback when Rust bridge is not built — returns None."""
-# ruff: noqa: BLE001
         logger.debug("Rust bridge not available, using Python fallback")
         return None
 

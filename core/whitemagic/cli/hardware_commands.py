@@ -1,4 +1,5 @@
 """Hardware CLI commands for adaptive inference."""
+# ruff: noqa: BLE001
 
 import click
 
@@ -12,7 +13,6 @@ except ImportError:
 @click.group()
 def hardware():
     """Hardware monitoring and recommendations."""
-# ruff: noqa: BLE001
     pass
 
 

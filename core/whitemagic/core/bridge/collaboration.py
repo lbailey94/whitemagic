@@ -1,4 +1,5 @@
 """Collaboration bridge — Sangha chat, locks, and agent coordination."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -12,7 +13,6 @@ _PROFILE_STATE: dict[str, Any] = {
 
 def sangha_lock_acquire(resource: str, reason: str = "", timeout: int = 3600, **kwargs: Any) -> dict[str, Any]:
     """Acquire a resource lock."""
-# ruff: noqa: BLE001
     try:
         from whitemagic.gardens.sangha.resources import get_resources
         rm = get_resources()

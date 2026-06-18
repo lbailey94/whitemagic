@@ -1,4 +1,5 @@
 """Dharma CLI commands — extracted from cli_app.py (PSR-028 decomposition)."""
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import click
@@ -20,7 +21,6 @@ except ImportError:
 @click.group(name="dharma")
 def dharma_group() -> None:
     """☸️  Ethical reasoning and boundary detection"""
-# ruff: noqa: BLE001
 
 
 @dharma_group.command(name="evaluate")

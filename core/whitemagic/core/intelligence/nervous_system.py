@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +19,7 @@ communication and lifecycle management.
 Consolidated from nervous_system.py, nervous_system_v21.py, and biological_event_bus.py.
 Part of Milestone 4.3 Singleton Reduction.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

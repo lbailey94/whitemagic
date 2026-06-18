@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +17,7 @@ Unified gateway for Gan Ying event bus, cascade protocols, and salience arbitrat
 
 Consolidated from resonance/ sub-package. Part of Milestone 4.3 Singleton Reduction.
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

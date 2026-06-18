@@ -1,4 +1,5 @@
 """Living Graph handlers — Graph topology and analysis."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 def handle_graph_topology(**kwargs: Any) -> dict[str, Any]:
     """Get graph topology statistics."""
-# ruff: noqa: BLE001
     try:
         from whitemagic.core.intelligence.graph_engine import GraphEngine
 

@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # mypy: disable-error-code=no-untyped-def
 """Fool's Guard (Ralph Wiggum Protection) + Dare-to-Die Corps
 =============================================================
@@ -55,6 +54,7 @@ Usage:
         mission="Fix the null guard in consolidation.py line 310",
     )
 """
+# ruff: noqa: BLE001
 
 from __future__ import annotations
 

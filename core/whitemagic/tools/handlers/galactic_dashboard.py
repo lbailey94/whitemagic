@@ -1,4 +1,5 @@
 """Galactic dashboard handler — real-time galactic map visualization data."""
+# ruff: noqa: BLE001
 import logging
 from typing import Any
 
@@ -7,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def handle_galactic_dashboard(**kwargs: Any) -> dict[str, Any]:
     """Return comprehensive galactic map visualization data."""
-# ruff: noqa: BLE001
     try:
         from whitemagic.core.memory.galactic_map import GalacticMap
 

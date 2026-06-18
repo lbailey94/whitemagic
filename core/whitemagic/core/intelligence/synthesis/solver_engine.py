@@ -1,4 +1,5 @@
 """Dharmic Solver Engine — cvxpy-based constrained optimization."""
+# ruff: noqa: BLE001
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 class DharmicSolver:
     """Dharmic Solver — Layer 3: Optimization.
-# ruff: noqa: BLE001
 
     Solves for the optimal configuration of concepts/actions.
 
