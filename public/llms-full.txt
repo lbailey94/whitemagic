@@ -211,6 +211,9 @@ WhiteMagic treats the public web as a discovery surface for AI agents. The follo
 | `/api/zodiac.json` | 12 zodiac cores catalog | JSON |
 | `/api/mcp-bridge.json` | whitemagic.core.bridge surface (13 modules, 29 functions, recovered v22.2.3) | JSON |
 | `/mcp-bridge` | Human-facing catalog of the 13 fixed bridge modules | HTML |
+| `/zodiac` | Interactive 12-core zodiac coordination personas (live + planned) | HTML |
+| `/becoming` | The Book of Becoming — 64-hexagram journey (interactive board) | HTML |
+| `/becoming/hexagram/[1-64]` | Per-hexagram deep view with paired hexagram | HTML |
 | `/sitemap.xml` | Site map | XML |
 | `/robots.txt` | Crawler directives | text/plain |
 
