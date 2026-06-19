@@ -972,6 +972,30 @@ export const TIMELINE_DATA: TimelineEntry[] = [
       "First US state-level enforceable AI regulation with governance and disclosure requirements. Organizations deploying high-risk AI in Colorado must demonstrate audit trails, policy enforcement, and operator oversight — requirements WhiteMagic shipped on Feb 7, 2026.",
   },
 
+  // ── v22.2.x polish + excavation ─────────────────────────────────────
+  {
+    date: "2026-06-18",
+    displayDate: "Jun 18",
+    monthKey: "2026-06",
+    monthLabel: "June 2026",
+    category: "whitemagic",
+    title: "WhiteMagic v22.2.3 — MCP API bridge crash fixed, 13 modules resurfaced",
+    description:
+      "Polish marathon + archaeological excavation. whitemagic.mcp_api_bridge.py had 14 unguarded star imports of missing modules; the entire MCP API surface was crashing on import. Surfaced all 13 whitemagic.core.bridge.* modules (zodiac, autonomous, gana_wrappers, garden, wisdom, system, session, reasoning, voice, archaeology, meditation, benchmark, inference) from the SD-card archive. Fixed 9 real bugs in the process. Final state: ruff 0, mypy 0, 2,503 tests passing, 0 failures.",
+    version: "v22.2.3",
+    gap: "Architecture predates Anthropic's MCP roadmap priorities by ~5 months. The bridge was broken in v22.2.0 → v22.2.2 (3 releases) and only fixed when the polish marathon audited it.",
+  },
+  {
+    date: "2026-06-19",
+    displayDate: "Jun 19",
+    monthKey: "2026-06",
+    monthLabel: "June 2026",
+    category: "whitemagic",
+    title: "whitemagic.dev v22.2.3 sync — /mcp-bridge + /zodiac pages live",
+    description:
+      "Site was 3 releases behind the core. Caught up to v22.2.3 + 2,503 tests. New pages: /mcp-bridge (catalog of the 13 fixed bridge modules with 29 functions) and /zodiac (interactive 12-core coordination personas). Machine-readable endpoints: /api/mcp-bridge (ISR, 1h cache) and existing /api/zodiac.json. Vercel auto-deploy from main.",
+  },
+
   // ── Upcoming ─────────────────────────────────────────────────────────
   {
     date: "2026-06-15",
