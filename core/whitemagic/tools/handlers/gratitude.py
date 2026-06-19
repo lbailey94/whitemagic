@@ -58,7 +58,7 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
                 result = verify_x402_payment(tx_hash)
                 verified = result.get("verified", False)
         except Exception as exc:
-            logger.warning(f"Verification failed for {tx_hash}: {exc}")
+            logger.warning("Verification failed for %s: %s", tx_hash, exc, exc_info=True)
 
     event = GratitudeEvent(
         channel=channel,
@@ -74,7 +74,7 @@ def handle_tip(**kwargs: Any) -> dict[str, Any]:
     ledger = get_gratitude_ledger()
     ledger.record(event)
 
-    logger.info(f"Gratitude recorded: {amount} {currency} via {channel} (verified={verified})")
+    logger.info("Gratitude recorded: %s %s via %s (verified=%s)", amount, currency, channel, verified, exc_info=True)
 
     # Generate payment link for XRPL if manual/failed
     payment_link = ""

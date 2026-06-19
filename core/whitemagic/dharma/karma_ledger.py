@@ -365,7 +365,7 @@ class KarmaLedger:
             with open(ledger_file, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(entry.to_dict()) + "\n")
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.debug(f"Karma ledger persist failed: {e}")
+            logger.debug("Karma ledger persist failed: %s", e, exc_info=True)
 
     def _maybe_rotate(
         self,
@@ -402,7 +402,7 @@ class KarmaLedger:
         # Rotate current → .1
         rotated = ledger_file.parent / "karma_ledger.1.jsonl"
         ledger_file.rename(rotated)
-        logger.info(f"Karma ledger rotated: {ledger_file.name} → {rotated.name}")
+        logger.info("Karma ledger rotated: %s → %s", ledger_file.name, rotated.name, exc_info=True)
         return True
 
     def rotation_stats(self) -> dict[str, Any]:
@@ -464,9 +464,9 @@ class KarmaLedger:
             # Fix: restore chain head so new entries link correctly
             if self._entries:
                 self._chain_head = self._entries[-1].entry_hash
-            logger.info(f"Karma ledger: loaded {loaded} entries, debt={self._total_debt:.1f}, head={self._chain_head[:16]}")
+            logger.info("Karma ledger: loaded %s entries, debt={self._total_debt:.1f}, head={self._chain_head[:16]}", loaded, exc_info=True)
         except Exception as e:
-            logger.debug(f"Karma ledger load failed: {e}")
+            logger.debug("Karma ledger load failed: %s", e, exc_info=True)
 
 
 # ---------------------------------------------------------------------------

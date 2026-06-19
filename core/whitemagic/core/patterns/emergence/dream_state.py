@@ -82,7 +82,7 @@ class DreamState:
 
     async def enter_dream_state(self, duration_minutes: int = 5) -> list[DreamInsight]:
         """Enter dream state - synthesize patterns AND drive autonomy."""
-        logger.info(f"💤 Entering dream state for {duration_minutes} minutes...")
+        logger.info("💤 Entering dream state for %s minutes...", duration_minutes, exc_info=True)
 
         # 1. Run Autonomy Cycle (Self-Improvement)
         try:
@@ -90,7 +90,7 @@ class DreamState:
             autonomy = get_autonomy_engine()
             await autonomy.run_cycle()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Failed to run autonomy cycle: {e}")
+            logger.warning("Failed to run autonomy cycle: %s", e, exc_info=True)
 
         logger.info("📚 Loading patterns from archives + all memories...")
 
@@ -140,10 +140,10 @@ class DreamState:
                         "confidence": h.confidence,
                     })
 
-                logger.info(f"🧠 Loaded {len(patterns)} patterns from {report.total_memories} memories (including archives!)")
+                logger.info("🧠 Loaded {len(patterns)} patterns from %s memories (including archives!)", report.total_memories, exc_info=True)
                 return patterns
             except Exception as e:
-                logger.info(f"⚠️ Pattern engine error: {e}")
+                logger.info("⚠️ Pattern engine error: %s", e, exc_info=True)
 
         # Fallback
         return [
@@ -239,9 +239,9 @@ class DreamState:
                         "synthesized_from": insight.synthesized_from,
                     },
                 )
-                logger.info(f"💾 Insight {insight.id} persisted to Data Sea")
+                logger.info("💾 Insight %s persisted to Data Sea", insight.id, exc_info=True)
             except Exception as e:
-                logger.info(f"⚠️ Failed to store insight in Data Sea: {e}")
+                logger.info("⚠️ Failed to store insight in Data Sea: %s", e, exc_info=True)
 
             if insight.practical_value < 0.7:
                 continue

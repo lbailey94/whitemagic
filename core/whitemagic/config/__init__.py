@@ -101,8 +101,8 @@ def show_config() -> None:
     debug_value = getattr(current, "debug", "unknown")
 
     logger.info("Configuration summary:")
-    logger.info(f"  environment: {env_value}")
-    logger.info(f"  debug: {debug_value}")
+    logger.info("  environment: %s", env_value, exc_info=True)
+    logger.info("  debug: %s", debug_value, exc_info=True)
 
 
 __all__ = [

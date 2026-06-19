@@ -66,7 +66,7 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
             metadata.setdefault("wu_xing_phase", phase.value)
             metadata.setdefault("wu_xing_timestamp", now_iso())
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Silenced memory handler err: {e}")
+            logger.debug("Silenced memory handler err: %s", e, exc_info=True)
 
     tag_set = {str(t).lower() for t in (tags or []) if str(t).strip()}
     auto_embed_raw = kwargs.get("auto_embed", False)
@@ -128,7 +128,7 @@ def handle_fast_read_memory(**kwargs: Any) -> dict[str, Any]:
                 _emit("MEMORY_ACCESSED", {"filename": filename, "fast": True, "virtual": True})
                 return {"status": "success", "content": mem.get("content", ""), "memory": mem}
         except Exception as e:
-            logger.debug(f"Silenced memory handler err: {e}")
+            logger.debug("Silenced memory handler err: %s", e, exc_info=True)
         return {"status": "error", "message": f"File not found: {filename}"}
 
     if rust is not None:
@@ -145,7 +145,7 @@ def handle_fast_read_memory(**kwargs: Any) -> dict[str, Any]:
             try:
                 get_archaeologist().mark_read(str(path), context="MCP:fast_read", note=purpose)
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.debug(f"Silenced memory handler err: {e}")
+                logger.debug("Silenced memory handler err: %s", e, exc_info=True)
             return {"status": "success", "content": content}
 
     content = path.read_text(encoding="utf-8")
@@ -153,7 +153,7 @@ def handle_fast_read_memory(**kwargs: Any) -> dict[str, Any]:
     try:
         get_archaeologist().mark_read(str(path), context="MCP:fast_read", note=purpose)
     except (OSError, FileNotFoundError, PermissionError) as e:
-        logger.debug(f"Silenced memory handler err: {e}")
+        logger.debug("Silenced memory handler err: %s", e, exc_info=True)
     return {"status": "success", "content": content, "rust_error": rust_error}
 
 
@@ -197,7 +197,7 @@ def handle_batch_read_memories(**kwargs: Any) -> dict[str, Any]:
     try:
         archaeologist = get_archaeologist()
     except Exception as e:
-        logger.debug(f"Silenced memory handler err: {e}")
+        logger.debug("Silenced memory handler err: %s", e, exc_info=True)
 
     if rust is not None:
         contents = rust.read_files_fast(filenames)
@@ -209,7 +209,7 @@ def handle_batch_read_memories(**kwargs: Any) -> dict[str, Any]:
                     try:
                         archaeologist.mark_read(filename, context="MCP:batch_read", note=purpose)
                     except (OSError, FileNotFoundError, PermissionError) as e:
-                        logger.debug(f"Silenced memory handler err: {e}")
+                        logger.debug("Silenced memory handler err: %s", e, exc_info=True)
             else:
                 skipped_files.append({"filename": filename, "reason": "File not found or unreadable", "status": "missing"})
     else:
@@ -223,7 +223,7 @@ def handle_batch_read_memories(**kwargs: Any) -> dict[str, Any]:
                         try:
                             archaeologist.mark_read(filename, context="MCP:batch_read", note=purpose)
                         except (OSError, FileNotFoundError, PermissionError) as e:
-                            logger.debug(f"Silenced memory handler err: {e}")
+                            logger.debug("Silenced memory handler err: %s", e, exc_info=True)
                 except (OSError, FileNotFoundError, PermissionError) as e:
                     skipped_files.append({"filename": filename, "reason": str(e), "status": "read_error"})
             else:
@@ -322,7 +322,7 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.monitoring.telemetry import get_telemetry
         get_telemetry().record_context_reuse(hit=len(memories) > 0)
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced memory telemetry err: {e}")
+        logger.debug("Silenced memory telemetry err: %s", e, exc_info=True)
 
     result: dict[str, Any] = {
         "status": "success",

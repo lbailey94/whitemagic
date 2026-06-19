@@ -142,7 +142,7 @@ class UnifiedMemory:
             try:
                 self._holographic = factory()
             except Exception as e:
-                logger.debug(f"Holographic memory initialization failed: {e}")
+                logger.debug("Holographic memory initialization failed: %s", e, exc_info=True)
                 self._holographic = False  # type: ignore[assignment]
                 return None
         if self._holographic is False:
@@ -169,9 +169,9 @@ class UnifiedMemory:
                         count += 1
                 self._holographic_loaded = True
                 if count > 0 and not os.getenv("WM_SILENT_INIT"):
-                    logger.info(f"🌌 Holographic Index loaded: {count} points (lazy)")
+                    logger.info("🌌 Holographic Index loaded: %s points (lazy)", count, exc_info=True)
             except Exception as e:
-                logger.info(f"⚠️  Failed to load holographic index: {e}")
+                logger.info("⚠️  Failed to load holographic index: %s", e, exc_info=True)
 
             return self._holographic
 
@@ -208,7 +208,7 @@ class UnifiedMemory:
                     existing.metadata["last_reinforced"] = now_iso()
                     existing.metadata["reinforcement_count"] = existing.metadata.get("reinforcement_count", 0) + 1
                     self.backend.store(existing, content_hash=content_hash)
-                    logger.debug(f"Content hash dedup: reinforced {existing_id} instead of creating duplicate")
+                    logger.debug("Content hash dedup: reinforced %s instead of creating duplicate", existing_id, exc_info=True)
                     return existing
         except (sqlite3.Error, AttributeError, TypeError) as _e:
             logger.debug(f"Dedup check failed: {_e}")  # Proceed normally
@@ -237,7 +237,7 @@ class UnifiedMemory:
                                 existing.metadata["last_reinforced"] = now_iso()
                                 existing.metadata["reinforcement_count"] = existing.metadata.get("reinforcement_count", 0) + 1
                                 self.backend.store(existing)
-                                logger.debug(f"Surprise gate: reinforced {target_id} instead of creating duplicate")
+                                logger.debug("Surprise gate: reinforced %s instead of creating duplicate", target_id, exc_info=True)
                                 return existing
                         except (sqlite3.Error, AttributeError, TypeError) as _e:
                             logger.debug(f"Surprise gate reinforcement failed: {_e}")  # Fall through
@@ -310,7 +310,7 @@ class UnifiedMemory:
                 # KG v2 unavailable; fall back to hook-based extraction
                 _emit_store_hooks(memory)
             except Exception as _e:
-                logger.debug(f"Entity extraction failed: {_e}")
+                logger.debug("Entity extraction failed: %s", _e, exc_info=True)
 
         return memory
 
@@ -411,11 +411,11 @@ class UnifiedMemory:
                                     },
                                 )
                             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                                logger.debug(f"Gan Ying pattern detection failed: {_e}")
+                                logger.debug("Gan Ying pattern detection failed: %s", _e, exc_info=True)
 
                         return results
                 except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                    logger.info(f"⚠️ Rust batch search failed: {_e}, falling back to FTS")
+                    logger.info("⚠️ Rust batch search failed: %s, falling back to FTS", _e, exc_info=True)
 
             # Fallback to single-pair similarity if batch is not available but fast_similarity is
             elif rs and hasattr(rs, "fast_similarity"):
@@ -432,7 +432,7 @@ class UnifiedMemory:
                     results = scored_results[:limit]
                     return results
                 except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                    logger.info(f"⚠️ Rust fast_similarity failed: {_e}, falling back to FTS")
+                    logger.info("⚠️ Rust fast_similarity failed: %s, falling back to FTS", _e, exc_info=True)
 
         # Fallback to standard FTS search with optional Rust pipeline re-ranking
         results = self.search(query=query, memory_type=memory_type, limit=limit * 3)
@@ -449,13 +449,13 @@ class UnifiedMemory:
                         if c:
                             coords = list(c)
                     except (sqlite3.Error, AttributeError, TypeError) as _e:
-                        logger.debug(f"Coords lookup failed: {_e}")
+                        logger.debug("Coords lookup failed: %s", _e, exc_info=True)
                     age_days = 0.0
                     if mem.created_at:
                         try:
                             age_days = max(0.0, (datetime.now() - mem.created_at).total_seconds() / 86400.0)
                         except (TypeError, AttributeError) as _e:
-                            logger.debug(f"Age calculation failed: {_e}")
+                            logger.debug("Age calculation failed: %s", _e, exc_info=True)
                     candidates.append({  # type: ignore[arg-type]
                         "id": mem.id,
                         "score": mem.metadata.get("similarity_score", 0.5),
@@ -490,7 +490,7 @@ class UnifiedMemory:
                     if reranked:
                         return reranked[:limit]
             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Retrieval pipeline failed: {_e}")
+                logger.debug("Retrieval pipeline failed: %s", _e, exc_info=True)
 
         return results[:limit]
 
@@ -554,7 +554,7 @@ class UnifiedMemory:
                                 lexical_results.append(mem_map[mid])
                                 all_memories[mid] = mem_map[mid]
         except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-            logger.debug(f"BM25 search failed: {_e}")
+            logger.debug("BM25 search failed: %s", _e, exc_info=True)
 
         if not lexical_results:
             lexical_results = self.backend.search(
@@ -586,7 +586,7 @@ class UnifiedMemory:
                             all_memories[mid] = recalled
                     semantic_results.append(hit)
         except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-            logger.debug(f"Semantic search failed: {_e}")
+            logger.debug("Semantic search failed: %s", _e, exc_info=True)
 
         for rank, hit in enumerate(semantic_results):
             mid = hit["memory_id"]
@@ -609,7 +609,7 @@ class UnifiedMemory:
                     spatial_results.append(mid)
                     rrf_scores[mid] += spatial_weight / (rrf_k + rank + 1)
             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Holographic query failed: {_e}")
+                logger.debug("Holographic query failed: %s", _e, exc_info=True)
 
         # --- Fuse and rank ---
         if not rrf_scores:
@@ -628,7 +628,7 @@ class UnifiedMemory:
                 if closest and closest[0]["similarity"] >= 0.25:
                     query_constellation_name = closest[0]["name"]
         except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-            logger.debug(f"Constellation lookup failed: {_e}")
+            logger.debug("Constellation lookup failed: %s", _e, exc_info=True)
 
         if query_constellation_name:
             for mid in rrf_scores:
@@ -653,7 +653,7 @@ class UnifiedMemory:
                             # Different constellation → small diversity bonus
                             rrf_scores[mid] += diversity_bonus * (1.0 - strongest_confidence)
                 except (sqlite3.Error, AttributeError, TypeError) as _e:
-                    logger.debug(f"Constellation membership failed: {_e}")
+                    logger.debug("Constellation membership failed: %s", _e, exc_info=True)
 
         ranked_ids = sorted(rrf_scores.keys(), key=lambda mid: rrf_scores[mid], reverse=True)
         results = []
@@ -706,7 +706,7 @@ class UnifiedMemory:
                 final_limit=final_limit,
             ))
         except Exception as e:
-            logger.debug(f"hybrid_recall: graph walker unavailable, falling back to search_hybrid: {e}")
+            logger.debug("hybrid_recall: graph walker unavailable, falling back to search_hybrid: %s", e, exc_info=True)
             # Graceful fallback to standard hybrid search
             results = self.search_hybrid(query=query, limit=final_limit)
             return [
@@ -771,16 +771,16 @@ class UnifiedMemory:
                 try:
                     sol_id = refiner.refine_memory(mem)
                     if sol_id:
-                        logger.info(f"✨ Memory {mem.id} refined into spark {sol_id}.")
+                        logger.info("✨ Memory %s refined into spark %s.", mem.id, sol_id, exc_info=True)
                 except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                    logger.debug(f"Refining fire failed: {_e}")
+                    logger.debug("Refining fire failed: %s", _e, exc_info=True)
 
             # 3. Rotate to galactic edge (NEVER delete)
             self.backend.archive_to_edge(mem.id, galactic_distance=0.95)
             rotated_count += 1
 
         if rotated_count > 0:
-            logger.info(f"🌌 Galactic Rotation complete: {rotated_count} memories rotated to edge.")
+            logger.info("🌌 Galactic Rotation complete: %s memories rotated to edge.", rotated_count, exc_info=True)
 
         return rotated_count
 
@@ -830,7 +830,7 @@ class UnifiedMemory:
                 })
             return arrow_encode_memories(_json.dumps(docs))
         except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-            logger.debug(f"Arrow export failed: {_e}")
+            logger.debug("Arrow export failed: %s", _e, exc_info=True)
             return None
 
     def arrow_import(self, ipc_bytes: bytes) -> int:
@@ -878,10 +878,10 @@ class UnifiedMemory:
                     tags=tags,
                 )
                 count += 1
-            logger.info(f"Arrow IPC import: {count} memories imported")
+            logger.info("Arrow IPC import: %s memories imported", count, exc_info=True)
             return count
         except (ImportError, ModuleNotFoundError, AttributeError, ValueError) as _e:
-            logger.debug(f"Arrow import failed: {_e}")
+            logger.debug("Arrow import failed: %s", _e, exc_info=True)
             return 0
 
     def save(self, memory_type: MemoryType | None = None) -> None:

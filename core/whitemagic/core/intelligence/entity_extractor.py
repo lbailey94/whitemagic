@@ -241,7 +241,7 @@ class EntityExtractor:
                 method="ollama",
             )
         except Exception as e:
-            logger.debug(f"Ollama extraction failed: {e}")
+            logger.debug("Ollama extraction failed: %s", e, exc_info=True)
             return None
 
     def _extract_regex(self, text: str) -> ExtractionResult:
@@ -348,7 +348,7 @@ class EntityExtractor:
                 f"Stored {len(result.relations)} extracted relations for {memory_id[:8]}",
             )
         except Exception as e:
-            logger.debug(f"Failed to store extracted relations: {e}")
+            logger.debug("Failed to store extracted relations: %s", e, exc_info=True)
 
         return result
 
@@ -402,7 +402,7 @@ try:
                 content = f"{memory.title}\n{content}"
             get_entity_extractor().extract_and_store(memory.id, content)
         except Exception as e:
-            logger.debug(f"Entity extraction hook failed: {e}")
+            logger.debug("Entity extraction hook failed: %s", e, exc_info=True)
 
     register_store_hook(_entity_extraction_hook)
 except ImportError:

@@ -519,7 +519,7 @@ class SemanticFileWatcher:
             return True
 
         except Exception as e:
-            logger.warning(f"Failed to start watcher: {e}")
+            logger.warning("Failed to start watcher: %s", e, exc_info=True)
             return False
 
     def stop(self) -> bool:
@@ -536,7 +536,7 @@ class SemanticFileWatcher:
             self._running = False
             return True
         except Exception as e:
-            logger.warning(f"Failed to stop watcher: {e}")
+            logger.warning("Failed to stop watcher: %s", e, exc_info=True)
             return False
 
     def is_running(self) -> bool:

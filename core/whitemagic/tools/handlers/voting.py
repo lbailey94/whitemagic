@@ -27,7 +27,7 @@ def _emit(event_type_name: str, data: dict) -> None:
         from whitemagic.core.resonance import emit_event
         emit_event(event_type_name, data, source="voting")
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced voting emit err: {e}")
+        logger.debug("Silenced voting emit err: %s", e, exc_info=True)
 
 
 def _votes_dir() -> Path:

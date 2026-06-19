@@ -377,7 +377,7 @@ class TokenOptimizer:
                 return query, f"[LOCAL] {result.summary}", total_saved
             tokens_saved += result.total_tokens_saved
         except Exception as e:
-            logger.info(f"DEBUG: reason_locally failed: {e}")
+            logger.info("DEBUG: reason_locally failed: %s", e, exc_info=True)
             pass
 
         # 3. Compress context if provided

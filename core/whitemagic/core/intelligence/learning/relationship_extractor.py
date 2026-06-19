@@ -205,7 +205,7 @@ def extract_relationships(
     try:
         conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     except (sqlite3.Error, sqlite3.OperationalError) as e:
-        logger.warning(f"WAL checkpoint failed (might be locked): {e}")
+        logger.warning("WAL checkpoint failed (might be locked): %s", e, exc_info=True)
 
     # 1. Load all persisted coordinates (only for memories that actually exist)
     rows = conn.execute("""
@@ -265,7 +265,7 @@ def extract_relationships(
                  conn.commit()
                  total_persisted += len(chunk)
                  chunk = []
-                 logger.info(f"Persisted {total_persisted} associations...")
+                 logger.info("Persisted %s associations...", total_persisted, exc_info=True)
 
         if chunk:
              conn.executemany(

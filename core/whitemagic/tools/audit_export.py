@@ -56,7 +56,7 @@ def export_audit_log(
             if _passes_filters(entry, since, tool_filter, agent_filter):
                 entries.append(entry)
     except Exception as e:
-        logger.debug(f"Karmic trace unavailable: {e}")
+        logger.debug("Karmic trace unavailable: %s", e, exc_info=True)
 
     # 2. Gather telemetry entries (tool call records)
     try:
@@ -73,7 +73,7 @@ def export_audit_log(
             if _passes_filters(entry, since, tool_filter, agent_filter):
                 entries.append(entry)
     except Exception as e:
-        logger.debug(f"Telemetry unavailable: {e}")
+        logger.debug("Telemetry unavailable: %s", e, exc_info=True)
 
     # 3. Gather circuit breaker events
     try:
@@ -94,7 +94,7 @@ def export_audit_log(
                     },
                 })
     except Exception as e:
-        logger.debug(f"Circuit breaker data unavailable: {e}")
+        logger.debug("Circuit breaker data unavailable: %s", e, exc_info=True)
 
     # 4. Gather rate limiter stats
     try:

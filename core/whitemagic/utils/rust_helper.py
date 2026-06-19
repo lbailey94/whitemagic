@@ -82,7 +82,7 @@ def rust_fallback(rust_fn: Callable[..., Any], python_fn: Callable[..., Any], *a
         try:
             return rust_fn(*args, **kwargs)
         except Exception as e:
-            logger.warning(f"Rust implementation failed: {e}, falling back to Python")
+            logger.warning("Rust implementation failed: %s, falling back to Python", e, exc_info=True)
             return python_fn(*args, **kwargs)
     else:
         return python_fn(*args, **kwargs)
@@ -114,5 +114,5 @@ def safe_rust_call(func_name: str, args: dict[str, Any]) -> Any | None:
         fn = getattr(rs, func_name)
         return fn(**args)
     except Exception as e:
-        logger.warning(f"Rust call {func_name} failed: {e}")
+        logger.warning("Rust call %s failed: %s", func_name, e, exc_info=True)
         return None

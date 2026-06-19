@@ -65,13 +65,13 @@ class ConsolidationEngine:
         try:
             stats = self.manager.stats()
         except Exception as e:
-            logger.debug(f"Manager stats failed, estimating from recent memories: {e}")
+            logger.debug("Manager stats failed, estimating from recent memories: %s", e, exc_info=True)
             # Fallback: estimate from recent memories
             try:
                 recent = self.manager.read_recent_memories(memory_type="short_term", limit=100)
                 short_term_count = len(recent)
             except Exception as e2:
-                logger.debug(f"Recent memories read failed: {e2}")
+                logger.debug("Recent memories read failed: %s", e2, exc_info=True)
                 short_term_count = 0
             stats = {"short_term": short_term_count}
 
@@ -178,7 +178,7 @@ class ConsolidationEngine:
                     if similarity > self.thresholds["similarity"]:
                         duplicates.append((mem1, mem2, similarity))
                 except Exception as e:
-                    logger.debug(f"Duplicate similarity check failed: {e}")
+                    logger.debug("Duplicate similarity check failed: %s", e, exc_info=True)
                     continue
 
         # Sort by similarity (highest first)
@@ -321,7 +321,7 @@ class ConsolidationEngine:
                                 should_promote = True
                                 promotion_reason.append(f"age_{age_days}d")
                         except (ValueError, TypeError) as e:
-                            logger.debug(f"Date parse failed for promotion check: {e}")
+                            logger.debug("Date parse failed for promotion check: %s", e, exc_info=True)
 
                     # Rule 3: Size-based promotion (>1000 words)
                     word_count = len(content.split())
@@ -446,14 +446,14 @@ class ConsolidationEngine:
                     try:
                         self.manager.delete(memory.filename, permanent=False)
                     except OSError as e:
-                        logger.debug(f"Archive delete failed for {memory.filename}: {e}")
+                        logger.debug("Archive delete failed for %s: %s", memory.filename, e, exc_info=True)
 
                 return consolidated  # type: ignore[no-any-return, return-value]
             else:
                 return None
 
         except Exception as e:
-            logger.info(f"Session consolidation failed: {e}")
+            logger.info("Session consolidation failed: %s", e, exc_info=True)
             return None
 
 

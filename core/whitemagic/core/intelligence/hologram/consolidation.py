@@ -267,7 +267,7 @@ class HolographicConsolidator:
                     result.summaries_created += 1
 
             conn.commit()
-            logger.info(f"✅ Processed batch {i//batch_size + 1}, Total Summaries: {result.summaries_created}")
+            logger.info("✅ Processed batch {i//batch_size + 1}, Total Summaries: %s", result.summaries_created, exc_info=True)
 
         conn.close()
         return result

@@ -95,7 +95,7 @@ class ThoughtGalaxy:
                     tags=["golden_rule", "wisdom"]
                 ))
         except Exception as e:
-            logger.warning(f"Failed to retrieve Golden Rules: {e}")
+            logger.warning("Failed to retrieve Golden Rules: %s", e, exc_info=True)
 
         # 2. Fetch from Galaxy DB
         with sqlite3.connect(self.db_path) as conn:

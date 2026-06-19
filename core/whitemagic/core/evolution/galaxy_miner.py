@@ -118,7 +118,7 @@ class GalaxyPatternMiner:
                                 discovered_at=datetime.now().isoformat()
                             ))
                     except Exception as e:
-                        logger.warning(f"Rust mining failed for {db_path}: {e}")
+                        logger.warning("Rust mining failed for %s: %s", db_path, e, exc_info=True)
             self.patterns.extend(patterns)
             logger.info(f"✓ Discovered {len(patterns)} access patterns (Rust)")
             return patterns
@@ -256,7 +256,7 @@ class GalaxyPatternMiner:
                                 discovered_at=datetime.now().isoformat()
                             ))
                     except Exception as e:
-                        logger.warning(f"Rust cache mining failed for {db_path}: {e}")
+                        logger.warning("Rust cache mining failed for %s: %s", db_path, e, exc_info=True)
             self.patterns.extend(patterns)
             logger.info(f"✓ Discovered {len(patterns)} cache candidates (Rust)")
             return patterns
@@ -336,7 +336,7 @@ class GalaxyPatternMiner:
                                 confidence=min(1.0, rc.size / 50.0)
                             ))
                     except Exception as e:
-                        logger.warning(f"Rust cluster mining failed for {db_path}: {e}")
+                        logger.warning("Rust cluster mining failed for %s: %s", db_path, e, exc_info=True)
             self.clusters.extend(clusters)
             logger.info(f"✓ Discovered {len(clusters)} semantic clusters (Rust)")
             return clusters

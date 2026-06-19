@@ -307,12 +307,12 @@ class FoolGuard:
             results.append(result)
 
             if result.success:
-                logger.info(f"Dare-to-Die clone {clone_id} SUCCEEDED on attempt {attempt + 1}")
+                logger.info("Dare-to-Die clone %s SUCCEEDED on attempt {attempt + 1}", clone_id, exc_info=True)
                 break
             else:
                 # Clone dies. Next clone gets only the new error.
                 current_error = result.error or result.output[:200]
-                logger.debug(f"Clone {clone_id} died (attempt {attempt + 1}/{max_attempts})")
+                logger.debug("Clone %s died (attempt {attempt + 1}/%s)", clone_id, max_attempts, exc_info=True)
 
         total_duration = (time.time() - t0) * 1000
         successful = [r for r in results if r.success]

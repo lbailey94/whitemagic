@@ -468,7 +468,7 @@ class ShelterManager:
                 shelter.error = f"Dharma blocked: {getattr(verdict, 'reason', 'unknown')}"
                 return {"status": "blocked", "reason": shelter.error}
         except Exception as e:
-            logger.warning(f"Dharma check failed, proceeding without governance: {e}")
+            logger.warning("Dharma check failed, proceeding without governance: %s", e, exc_info=True)
 
         start = time.perf_counter()
         stdout, stderr, exit_code = "", "", 1
@@ -509,7 +509,7 @@ class ShelterManager:
                 success=exit_code == 0,
             )
         except Exception as e:
-            logger.debug(f"Karma logging failed: {e}")
+            logger.debug("Karma logging failed: %s", e, exc_info=True)
 
         # Auto-destroy if ephemeral
         if shelter.ephemeral and shelter.state == ShelterState.COMPLETED:
@@ -577,7 +577,7 @@ class ShelterManager:
         with self._lock:
             del self._shelters[name]
 
-        logger.info(f"🏠 Shelter '{name}' destroyed")
+        logger.info("🏠 Shelter '%s' destroyed", name, exc_info=True)
         return {"status": "ok", "message": f"Shelter '{name}' destroyed"}
 
     def status(self) -> dict[str, Any]:

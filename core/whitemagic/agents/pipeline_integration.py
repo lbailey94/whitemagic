@@ -201,7 +201,7 @@ class PipelineIntegration:
             try:
                 import_count += f.read_text(encoding="utf-8").count("import ")
             except (OSError, UnicodeDecodeError) as e:
-                logger.debug(f"Skipping unreadable file {f}: {e}")
+                logger.debug("Skipping unreadable file %s: %s", f, e, exc_info=True)
         elapsed = time.perf_counter() - start
         return {
             "type": "baseline_measurement",

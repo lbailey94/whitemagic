@@ -258,9 +258,9 @@ class AsyncThoughtCloneArmy:
                         metadata={"backend": "rust_tokio", "strategy_votes": result.get("strategy_votes", {})},
                     )
             except Exception as e:
-                logger.debug(f"Tokio fast-path failed, falling back to asyncio: {e}")
+                logger.debug("Tokio fast-path failed, falling back to asyncio: %s", e, exc_info=True)
 
-        logger.info(f"Deploying {clones_to_deploy} clones for prompt: {prompt[:50]}...")
+        logger.info("Deploying %s clones for prompt: {prompt[:50]}...", clones_to_deploy, exc_info=True)
 
         # Generate strategies
         strategies = self._generate_strategies(clones_to_deploy)
@@ -317,7 +317,7 @@ class AsyncThoughtCloneArmy:
 
         if valid_paths:
             best_path = max(valid_paths, key=lambda p: p.confidence)
-            logger.info(f"Best path: {best_path.strategy} (confidence: {best_path.confidence:.2f})")
+            logger.info("Best path: %s (confidence: {best_path.confidence:.2f})", best_path.strategy, exc_info=True)
             return best_path
 
         # Fallback if no valid paths
@@ -405,7 +405,7 @@ class AsyncThoughtCloneArmy:
                 )
 
             except TimeoutError:
-                logger.warning(f"Clone {clone_id} timed out")
+                logger.warning("Clone %s timed out", clone_id, exc_info=True)
                 raise
             except Exception as e:
                 logger.error("Clone %s failed: %s", clone_id, e, exc_info=True)

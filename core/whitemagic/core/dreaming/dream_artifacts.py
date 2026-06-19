@@ -157,7 +157,7 @@ class DreamArtifactWriter:
                 self._listening = True
                 logger.info("DreamArtifactWriter registered on Gan Ying bus")
             except Exception as exc:
-                logger.warning(f"DreamArtifactWriter failed to register: {exc}")
+                logger.warning("DreamArtifactWriter failed to register: %s", exc, exc_info=True)
 
     def _on_event(self, event: Any) -> None:
         data = getattr(event, "data", {})
@@ -209,7 +209,7 @@ class DreamArtifactWriter:
         with open(path, "w", encoding="utf-8") as fp:
             yaml.dump(artifact.to_dict(), fp, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
-        logger.info(f"Dream artifact written: {path.name}")
+        logger.info("Dream artifact written: %s", path.name, exc_info=True)
         return artifact
 
 
@@ -229,7 +229,7 @@ def list_dreams(status_filter: str | None = None) -> list[dict[str, Any]]:
                 data["_filename"] = path.name
                 results.append(data)
         except Exception as exc:
-            logger.debug(f"Skipping unreadable dream {path.name}: {exc}")
+            logger.debug("Skipping unreadable dream %s: %s", path.name, exc, exc_info=True)
     return results
 
 
@@ -245,7 +245,7 @@ def read_dream(dream_id: str) -> dict[str, Any] | None:
                     data["_filename"] = path.name
                     return data
             except Exception as exc:
-                logger.warning(f"Failed to read dream {path.name}: {exc}")
+                logger.warning("Failed to read dream %s: %s", path.name, exc, exc_info=True)
     return None
 
 
@@ -266,7 +266,7 @@ def _update_dream_file(dream_id: str, **kwargs: Any) -> dict[str, Any] | None:
                 data["_filename"] = path.name
                 return data
             except Exception as exc:
-                logger.warning(f"Failed to update dream {path.name}: {exc}")
+                logger.warning("Failed to update dream %s: %s", path.name, exc, exc_info=True)
     return None
 
 

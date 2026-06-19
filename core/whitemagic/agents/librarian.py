@@ -273,7 +273,7 @@ class LibrarianAgent:
                 )
                 stored.append(result)
             except Exception as e:
-                logger.warning(f"Failed to store extracted memory: {e}")
+                logger.warning("Failed to store extracted memory: %s", e, exc_info=True)
         return stored
 
 

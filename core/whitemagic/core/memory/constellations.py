@@ -459,7 +459,7 @@ class ConstellationDetector:
                     f"KG enrichment: {entities_created} constellation entities registered",
                 )
         except Exception as e:
-            logger.debug(f"KG enrichment from constellations skipped: {e}")
+            logger.debug("KG enrichment from constellations skipped: %s", e, exc_info=True)
 
     def find_nearest_constellation(
         self, x: float, y: float, z: float, w: float, v: float,
@@ -600,10 +600,10 @@ class ConstellationDetector:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             count = um.backend.update_constellation_membership(memberships)
-            logger.info(f"Persisted {count} constellation memberships to DB index")
+            logger.info("Persisted %s constellation memberships to DB index", count, exc_info=True)
             return cast(int, count)
         except Exception as e:
-            logger.debug(f"Failed to persist constellation memberships: {e}")
+            logger.debug("Failed to persist constellation memberships: %s", e, exc_info=True)
             return 0
 
     def list_constellations(self) -> list[Constellation]:

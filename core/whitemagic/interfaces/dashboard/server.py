@@ -97,7 +97,7 @@ def get_memories() -> Any:
                 }
                 memories.append(memory_data)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.info(f"Error getting memories: {e}")
+            logger.info("Error getting memories: %s", e, exc_info=True)
             if DEMO_MODE:
                 memories = [
                     {
@@ -161,7 +161,7 @@ def create_memory() -> Any:
             return jsonify({"id": str(result), "status": "created"}), 201
         except Exception as e:
             # Fallback if create_memory fails
-            logger.info(f"Error creating memory: {e}")
+            logger.info("Error creating memory: %s", e, exc_info=True)
             return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -398,7 +398,7 @@ def get_plugins() -> Any:
 
         return jsonify({"plugins": plugin_list})
     except Exception as e:
-        logger.info(f"Error in get_plugins: {e}")
+        logger.info("Error in get_plugins: %s", e, exc_info=True)
         import traceback
 
         traceback.print_exc()

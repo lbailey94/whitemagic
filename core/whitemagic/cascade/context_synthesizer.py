@@ -171,25 +171,25 @@ class ContextSynthesizer:
             from whitemagic.zodiac.zodiac_round_cycle import get_zodiacal_round
             self._zodiacal_round = get_zodiacal_round()
         except ImportError as e:
-            logger.warning(f"ZodiacalRound not available: {e}")
+            logger.warning("ZodiacalRound not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.consciousness.coherence import get_coherence_metric
             self._coherence_metric = get_coherence_metric()
         except ImportError as e:
-            logger.warning(f"CoherenceMetric not available: {e}")
+            logger.warning("CoherenceMetric not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.gardens.wisdom.wu_xing import get_wu_xing
             self._wu_xing = get_wu_xing()
         except ImportError as e:
-            logger.warning(f"WuXing not available: {e}")
+            logger.warning("WuXing not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
             self._gan_ying_bus = get_bus()
         except ImportError as e:
-            logger.warning(f"GanYing bus not available: {e}")
+            logger.warning("GanYing bus not available: %s", e, exc_info=True)
 
         self._initialized = True
 
@@ -267,7 +267,7 @@ class ContextSynthesizer:
                 ctx.garden_weights = dict.fromkeys(ctx.active_gardens, weight)
 
         except Exception as e:
-            logger.warning(f"Failed to gather garden state: {e}")
+            logger.warning("Failed to gather garden state: %s", e, exc_info=True)
 
     def _gather_wu_xing_state(self, ctx: UnifiedContext) -> None:
         """Gather state from Wu Xing system."""
@@ -303,7 +303,7 @@ class ContextSynthesizer:
             ctx.wu_xing_qualities = self._wu_xing._get_element_qualities(current)
 
         except Exception as e:
-            logger.warning(f"Failed to gather Wu Xing state: {e}")
+            logger.warning("Failed to gather Wu Xing state: %s", e, exc_info=True)
 
     def _gather_zodiac_state(self, ctx: UnifiedContext) -> None:
         """Gather state from Zodiacal Round."""
@@ -361,7 +361,7 @@ class ContextSynthesizer:
             ctx.phase_intention = intentions.get(phase, "balance")
 
         except Exception as e:
-            logger.warning(f"Failed to gather zodiac state: {e}")
+            logger.warning("Failed to gather zodiac state: %s", e, exc_info=True)
 
     def _gather_yin_yang_state(self, ctx: UnifiedContext) -> None:
         """Gather Yin-Yang balance state."""
@@ -389,7 +389,7 @@ class ContextSynthesizer:
             ctx.burnout_risk = max(0.0, (ctx.yin_yang_balance - 0.5) * 0.5)
 
         except Exception as e:
-            logger.warning(f"Failed to gather yin-yang state: {e}")
+            logger.warning("Failed to gather yin-yang state: %s", e, exc_info=True)
 
     def _gather_coherence_state(self, ctx: UnifiedContext) -> None:
         """Gather coherence metric state."""
@@ -407,7 +407,7 @@ class ContextSynthesizer:
                 ctx.coherence_dimensions = dict(scores)
 
         except Exception as e:
-            logger.warning(f"Failed to gather coherence state: {e}")
+            logger.warning("Failed to gather coherence state: %s", e, exc_info=True)
 
     def _gather_session_state(self, ctx: UnifiedContext) -> None:
         """Gather session state."""
@@ -432,7 +432,7 @@ class ContextSynthesizer:
                         )
 
         except Exception as e:
-            logger.debug(f"Session state not available: {e}")
+            logger.debug("Session state not available: %s", e, exc_info=True)
 
     def get_summary(self) -> str:
         """Get human-readable context summary."""

@@ -252,11 +252,11 @@ class ConductorOrchestrator:
             for iteration in range(1, self.config.max_iterations + 1):
                 self._live_phase = f"iteration-{iteration}-exploring"
                 await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
-                logger.info(f"\n🎼 Conductor Iteration {iteration}/{self.config.max_iterations}")
+                logger.info("\n🎼 Conductor Iteration %s/%s", iteration, self.config.max_iterations, exc_info=True)
 
                 # Check timeout
                 if self._check_timeout():
-                    logger.info(f"⏰ Timeout reached after {self.config.timeout_minutes} minutes")
+                    logger.info("⏰ Timeout reached after %s minutes", self.config.timeout_minutes, exc_info=True)
                     self._live_phase = "timeout"
                     await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
                     break
@@ -313,13 +313,13 @@ class ConductorOrchestrator:
 
                 # Exit if complete
                 if result.is_complete:
-                    logger.info(f"✅ Task complete at iteration {iteration}!")
+                    logger.info("✅ Task complete at iteration %s!", iteration, exc_info=True)
                     self._completed = True
                     break
 
                 # Check budget
                 if self.token_budget.used > self.token_budget.allocated * 0.9:
-                    logger.info(f"💰 Token budget approaching limit: {self.token_budget.used}/{self.token_budget.allocated}")
+                    logger.info("💰 Token budget approaching limit: %s/%s", self.token_budget.used, self.token_budget.allocated, exc_info=True)
                     self._live_phase = "budget-limit"
                     await asyncio.to_thread(self._write_live_status, active=True, phase=self._live_phase)
                     break
@@ -412,10 +412,10 @@ class ConductorOrchestrator:
                     "content_preview": result.thought_path.content[:200],
                 },
             )
-            logger.info(f"📍 Checkpoint created at iteration {iteration}")
+            logger.info("📍 Checkpoint created at iteration %s", iteration, exc_info=True)
             return True
         except Exception as e:
-            logger.info(f"⚠️ Checkpoint failed: {e}")
+            logger.info("⚠️ Checkpoint failed: %s", e, exc_info=True)
             return False
 
     def get_progress_report(self) -> dict[str, Any]:
@@ -476,7 +476,7 @@ class ConductorOrchestrator:
         }
 
         output_path.write_text(_json_dumps(session_data, indent=2))
-        logger.info(f"📄 Session exported to {output_path}")
+        logger.info("📄 Session exported to %s", output_path, exc_info=True)
 
         self._write_live_status(
             active=False,

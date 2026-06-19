@@ -109,7 +109,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return result
             except Exception as e:
-                logger.debug(f"Rust cosine failed: {e}")
+                logger.debug("Rust cosine failed: %s", e, exc_info=True)
 
         # Try Zig SIMD (second fastest)
         if self._zig_available:
@@ -120,7 +120,7 @@ class PolyglotAccelerator:
                 self.total_time_ms += (time.time() - start) * 1000
                 return result
             except Exception as e:
-                logger.debug(f"Zig cosine failed: {e}")
+                logger.debug("Zig cosine failed: %s", e, exc_info=True)
 
         # Python fallback
         result = self._py_cosine(a, b)
@@ -150,7 +150,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return cast(list[float], result)
             except Exception as e:
-                logger.debug(f"Rust batch cosine failed: {e}")
+                logger.debug("Rust batch cosine failed: %s", e, exc_info=True)
 
         # Try Zig batch operation
         if self._zig_available:
@@ -163,7 +163,7 @@ class PolyglotAccelerator:
                 self.total_time_ms += (time.time() - start) * 1000
                 return cast(list[float], result)
             except Exception as e:
-                logger.debug(f"Zig batch cosine failed: {e}")
+                logger.debug("Zig batch cosine failed: %s", e, exc_info=True)
 
         # Python fallback
         result = [self._py_cosine(query, v) for v in vectors]
@@ -192,7 +192,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return cast(list[dict[str, Any]], result)
             except Exception as e:
-                logger.debug(f"Rust pattern extraction failed: {e}")
+                logger.debug("Rust pattern extraction failed: %s", e, exc_info=True)
 
         # Python fallback - simple keyword extraction
         result = self._py_extract_patterns(content, limit)  # type: ignore[assignment]
@@ -217,7 +217,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return cast(list[tuple[int, int, float]], result)
             except Exception as e:
-                logger.debug(f"Rust minhash failed: {e}")
+                logger.debug("Rust minhash failed: %s", e, exc_info=True)
 
         # Python fallback - simple exact match
         result = self._py_find_duplicates(texts, threshold)
@@ -250,7 +250,7 @@ class PolyglotAccelerator:
                     self.total_time_ms += (time.time() - start) * 1000
                     return [(r["id"], r["score"]) for r in results]
             except Exception as e:
-                logger.debug(f"Rust search failed: {e}")
+                logger.debug("Rust search failed: %s", e, exc_info=True)
 
         # Python fallback
         result = self._py_search_memories(query, memories, threshold, limit)

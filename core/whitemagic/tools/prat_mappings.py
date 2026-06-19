@@ -693,6 +693,6 @@ def try_koka_handler(gana_name: str, tool: str | None, args: dict | None) -> dic
                 return None
             return cast(dict[str, Any], result)
     except Exception as e:
-        logger.debug(f"Koka handler fallback for {gana_name}: {e}")
+        logger.debug("Koka handler fallback for %s: %s", gana_name, e, exc_info=True)
 
     return None  # Fallback to Python

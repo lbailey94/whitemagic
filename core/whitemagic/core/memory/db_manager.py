@@ -62,7 +62,7 @@ def retry_with_backoff(
                 if not _is_transient_error(e) or attempt == max_retries:
                     raise
                 last_error = e
-                logger.debug(f"Transient DB error, retrying in {delay:.2f}s: {e}")
+                logger.debug("Transient DB error, retrying in {delay:.2f}s: %s", e, exc_info=True)
                 time.sleep(delay)
                 delay = min(delay * 2, max_delay)
         if last_error:

@@ -29,4 +29,4 @@ def emit_fusion_event(event_name: str, data: dict[str, Any]) -> None:
         bus.emit(event)
         logger.debug(f"Fusion event emitted: {event_name}")
     except Exception as e:
-        logger.warning(f"Failed to emit fusion event {event_name}: {e}")
+        logger.warning("Failed to emit fusion event %s: %s", event_name, e, exc_info=True)

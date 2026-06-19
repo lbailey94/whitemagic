@@ -267,7 +267,7 @@ class SelfModel:
                     if results:
                         return results
         except Exception as e:
-            logger.debug(f"Julia query execution failed: {e}")
+            logger.debug("Julia query execution failed: %s", e, exc_info=True)
 
         results = {}
         with self._lock:

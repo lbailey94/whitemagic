@@ -52,7 +52,7 @@ class ChronosGuard:
             m_num = mansion.number
             m_name = mansion.name
         except Exception as e:
-            logger.warning(f"Celestial grounding failed: {e}")
+            logger.warning("Celestial grounding failed: %s", e, exc_info=True)
             phase = 0.0
             m_num = 0
             m_name = "Unknown"

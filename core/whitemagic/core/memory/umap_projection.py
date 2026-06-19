@@ -220,7 +220,7 @@ class UMAPProjector:
                             "galactic_distance": mem.galactic_distance,
                         }
             except Exception as e:
-                logger.debug(f"UMAP: metadata hydration failed: {e}")
+                logger.debug("UMAP: metadata hydration failed: %s", e, exc_info=True)
 
         # Build points
         points: list[ProjectionPoint] = []

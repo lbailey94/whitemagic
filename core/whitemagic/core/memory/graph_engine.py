@@ -233,7 +233,7 @@ class GraphEngine:
             noise_ids.update(r[0] if isinstance(r, tuple) else r["memory_id"] for r in rows)
 
         except Exception as e:
-            logger.debug(f"Noise exclusion set build failed: {e}")
+            logger.debug("Noise exclusion set build failed: %s", e, exc_info=True)
 
         if noise_ids:
             logger.info(f"Graph quality filter: excluding {len(noise_ids)} noise memories")
@@ -372,7 +372,7 @@ class GraphEngine:
                     nx.eigenvector_centrality(G.to_undirected(), max_iter=max_iter, tol=1e-4),
                 )
             except Exception as e:
-                logger.debug(f"Eigenvector centrality failed: {e}")
+                logger.debug("Eigenvector centrality failed: %s", e, exc_info=True)
                 return {}
 
     def betweenness_centrality(self, k: int | None = 500) -> dict[str, float]:
@@ -385,7 +385,7 @@ class GraphEngine:
             sample_k = min(k, n) if k and n > k else None
             return cast(dict[str, float], nx.betweenness_centrality(G, k=sample_k, weight="weight"))
         except Exception as e:
-            logger.debug(f"Betweenness centrality failed: {e}")
+            logger.debug("Betweenness centrality failed: %s", e, exc_info=True)
             return {}
 
     def pagerank(self, alpha: float = 0.85) -> dict[str, float]:
@@ -396,7 +396,7 @@ class GraphEngine:
         try:
             return cast(dict[str, float], nx.pagerank(G, alpha=alpha, weight="weight"))
         except Exception as e:
-            logger.debug(f"PageRank failed: {e}")
+            logger.debug("PageRank failed: %s", e, exc_info=True)
             return {}
 
     def centrality_snapshot(self) -> CentralitySnapshot:
@@ -539,7 +539,7 @@ class GraphEngine:
             bridges.sort(key=lambda x: x["bridging_centrality"], reverse=True)
             return bridges[:top_n]
         except Exception as e:
-            logger.debug(f"Bridge detection failed: {e}")
+            logger.debug("Bridge detection failed: %s", e, exc_info=True)
             return []
 
     # ------------------------------------------------------------------
@@ -608,13 +608,13 @@ class GraphEngine:
                     result.sort(key=lambda c: c.size, reverse=True)
                     return result
                 except Exception as e:
-                    logger.debug(f"Rust community edge counting failed: {e}")
+                    logger.debug("Rust community edge counting failed: %s", e, exc_info=True)
                     # Fall back to Python
 
             result.sort(key=lambda c: c.size, reverse=True)
             return result
         except Exception as e:
-            logger.debug(f"Community detection failed: {e}")
+            logger.debug("Community detection failed: %s", e, exc_info=True)
             return []
 
     def _get_member_tags(self, member_ids: list[str]) -> list[str]:

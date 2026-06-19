@@ -373,7 +373,7 @@ class CoordinateEncoder:
                         mojo_coords.get("v", v),
                     )
             except Exception as e:
-                logger.debug(f"Mojo router failed, falling back to Python math: {e}")
+                logger.debug("Mojo router failed, falling back to Python math: %s", e, exc_info=True)
                 self._routing_active = False
                 # Fall through to Python math
 
@@ -433,7 +433,7 @@ class CoordinateEncoder:
                     for r in results
                 ]
             except Exception as e:
-                logger.warning(f"Rust batch encoding failed: {e}, falling back to Python")
+                logger.warning("Rust batch encoding failed: %s, falling back to Python", e, exc_info=True)
 
         # Python fallback: encode one at a time
         return [self.encode(m) for m in memories]

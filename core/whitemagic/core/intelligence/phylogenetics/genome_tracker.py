@@ -170,7 +170,7 @@ class PhylogeneticTracker:
                 conn.commit()
             self._initialized = True
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.debug(f"Phylogenetics table init: {e}")
+            logger.debug("Phylogenetics table init: %s", e, exc_info=True)
 
     # ── Recording edges ──────────────────────────────────────────────
 
@@ -303,7 +303,7 @@ class PhylogeneticTracker:
                 )
                 conn.commit()
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.debug(f"Lineage edge persist: {e}")
+            logger.debug("Lineage edge persist: %s", e, exc_info=True)
 
         return edge
 
@@ -366,7 +366,7 @@ class PhylogeneticTracker:
                 frontier = next_frontier
             return ancestors
         except Exception as e:
-            logger.debug(f"Ancestor walk: {e}")
+            logger.debug("Ancestor walk: %s", e, exc_info=True)
             return []
 
     def _walk_descendants(self, memory_id: str, max_depth: int) -> list[dict[str, Any]]:
@@ -407,7 +407,7 @@ class PhylogeneticTracker:
                 frontier = next_frontier
             return descendants
         except Exception as e:
-            logger.debug(f"Descendant walk: {e}")
+            logger.debug("Descendant walk: %s", e, exc_info=True)
             return []
 
     # ── Taxonomic classification ─────────────────────────────────────
@@ -459,7 +459,7 @@ class PhylogeneticTracker:
                 lineage_depth=depth,
             )
         except Exception as e:
-            logger.debug(f"Classify memory: {e}")
+            logger.debug("Classify memory: %s", e, exc_info=True)
             return TaxonomicRank("unknown", galaxy_name, "unknown", "unknown", "unknown", 0)
 
     # ── Statistics ───────────────────────────────────────────────────

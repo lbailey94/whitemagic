@@ -497,7 +497,7 @@ def _load_signing_key() -> Any | None:
     try:
         return SigningKey(priv_path.read_bytes())
     except Exception as e:
-        logger.warning(f"Failed to load signing key: {e}")
+        logger.warning("Failed to load signing key: %s", e, exc_info=True)
         return None
 
 
@@ -512,7 +512,7 @@ def _load_verify_key() -> Any | None:
     try:
         return VerifyKey(pub_path.read_bytes())
     except Exception as e:
-        logger.warning(f"Failed to load verify key: {e}")
+        logger.warning("Failed to load verify key: %s", e, exc_info=True)
         return None
 
 

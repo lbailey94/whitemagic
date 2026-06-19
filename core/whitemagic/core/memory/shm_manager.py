@@ -114,10 +114,10 @@ class SharedMemoryManager:
                                     self._write_memory_item(self._count, int_id, vec)
                                     self._count += 1
                             except Exception as e:
-                                logger.warning(f"Failed to load embedding for {mem_id}: {e}")
+                                logger.warning("Failed to load embedding for %s: %s", mem_id, e, exc_info=True)
 
                     self._update_count(self._count)
-                    logger.info(f"Synchronized {self._count} embeddings to shared memory.")
+                    logger.info("Synchronized %s embeddings to shared memory.", self._count, exc_info=True)
 
     def add_or_update(self, mem_id: str, vector: np.ndarray) -> None:
         """Add a single embedding or update it."""
@@ -136,7 +136,7 @@ class SharedMemoryManager:
                     self._write_memory_item(slot_index, int_id, vector)
                 else:
                     # This should not happen if state is consistent, but handle anyway
-                    logger.warning(f"Missing slot index for {mem_id}, appending as new instead.")
+                    logger.warning("Missing slot index for %s, appending as new instead.", mem_id, exc_info=True)
                     self._append_new(mem_id, vector)
             else:
                 self._append_new(mem_id, vector)

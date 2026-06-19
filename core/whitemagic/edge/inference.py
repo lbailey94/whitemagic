@@ -424,7 +424,7 @@ class EdgeInference:
         except ImportError:
             pass
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Local LLM fallback failed: {e}")
+            logger.debug("Local LLM fallback failed: %s", e, exc_info=True)
 
         # No match - return fallback
         return InferenceResult(

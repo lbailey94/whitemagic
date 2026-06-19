@@ -56,7 +56,7 @@ def rust_search(
                 logger.info(f"  ... and {len(results) - 20} more")
         return 0
     except Exception as e:
-        logger.info(f"❌ Search error: {e}")
+        logger.info("❌ Search error: %s", e, exc_info=True)
         return 1
 
 
@@ -72,7 +72,7 @@ def rust_compress(input_path: str, output_path: str) -> int:
         logger.info(f"✅ Compressed: {compressed} bytes written to {output_path}")
         return 0
     except (OSError, FileNotFoundError, PermissionError) as e:
-        logger.info(f"❌ Compression error: {e}")
+        logger.info("❌ Compression error: %s", e, exc_info=True)
         return 1
 
 
@@ -109,7 +109,7 @@ def rust_consolidate(
             logger.info(f"   Duration: {payload['duration_seconds']:.2f}s")
         return 0
     except Exception as e:
-        logger.info(f"❌ Consolidation error: {e}")
+        logger.info("❌ Consolidation error: %s", e, exc_info=True)
         return 1
 
 
@@ -126,7 +126,7 @@ def rust_status() -> int:
             logger.debug("Operation failed: %s", e)
             pass
         return 0
-    logger.info(f"❌ Rust bridge not available: {err}")
+    logger.info("❌ Rust bridge not available: %s", err, exc_info=True)
     return 1
 
 

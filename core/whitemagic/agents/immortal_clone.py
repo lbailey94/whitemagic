@@ -146,7 +146,7 @@ class ImmortalClone:
                     'timestamp': time.time()
                 })
 
-        logger.warning(f"⚠️ Immortal Clone {self.clone_id} reached max iterations ({self.max_iterations})")
+        logger.warning("⚠️ Immortal Clone %s reached max iterations (%s)", self.clone_id, self.max_iterations, exc_info=True)
         return ActionResult(
             success=False,
             error=f"Max iterations ({self.max_iterations}) reached",

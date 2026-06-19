@@ -706,7 +706,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
             "tamasic": round(snap.guna_tamasic_pct, 2),
         }
     except Exception as e:
-        logger.debug(f"Harmony vector snapshot failed: {e}")
+        logger.debug("Harmony vector snapshot failed: %s", e, exc_info=True)
     try:
         from whitemagic.core.monitoring.neurotransmitter_vector import (
             get_neurotransmitter_vector,
@@ -719,13 +719,13 @@ def _read_grimoire_resource(uri_str: str) -> str:
             "dopamine": nt_snap.dopamine,
         }
     except Exception as e:
-        logger.debug(f"Neurotransmitter snapshot failed: {e}")
+        logger.debug("Neurotransmitter snapshot failed: %s", e, exc_info=True)
     try:
         from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
         dc = get_dream_cycle()
         live_state["dream_phase"] = dc.status().get("phase", "unknown")
     except Exception as e:
-        logger.debug(f"Dream cycle status failed: {e}")
+        logger.debug("Dream cycle status failed: %s", e, exc_info=True)
 
     # Build frontmatter
     frontmatter = "---\n" + json.dumps(live_state, indent=2) + "\n---\n\n"
@@ -855,7 +855,7 @@ async def main_stdio() -> None:
     def signal_handler(signum, frame):
         """Handle SIGTERM/SIGINT for graceful shutdown."""
         sig_name = signal.Signals(signum).name
-        logger.warning(f"Received {sig_name}, initiating graceful shutdown...")
+        logger.warning("Received %s, initiating graceful shutdown...", sig_name, exc_info=True)
         shutdown_event.set()
 
     # Register signal handlers
@@ -877,7 +877,7 @@ async def main_stdio() -> None:
                     await read_stream_writer.send(SessionMessage(message))
                 except Exception as exc:
                     if not shutdown_event.is_set():
-                        logger.error(f"stdin_reader error: {exc}")
+                        logger.error("stdin_reader error: %s", exc, exc_info=True)
                         await read_stream_writer.send(exc)
                     continue
 
@@ -904,11 +904,11 @@ async def main_stdio() -> None:
         try:
             await read_stream_writer.aclose()
         except Exception as e:
-            logger.debug(f"Shutdown: read_stream_writer.aclose() raised: {e}")
+            logger.debug("Shutdown: read_stream_writer.aclose() raised: %s", e, exc_info=True)
         try:
             await write_stream.aclose()
         except Exception as e:
-            logger.debug(f"Shutdown: write_stream.aclose() raised: {e}")
+            logger.debug("Shutdown: write_stream.aclose() raised: %s", e, exc_info=True)
         # Cancel the main server task to force exit
         current_task = asyncio.current_task()
         for task in asyncio.all_tasks():

@@ -390,7 +390,7 @@ async def _brave_search(
             duration = (time.monotonic() - start) * 1000
 
             if response.status_code != 200:
-                logger.debug(f"Brave search returned {response.status_code}, falling back to DDG")
+                logger.debug("Brave search returned %s, falling back to DDG", response.status_code, exc_info=True)
                 return None
 
             data = response.json()
@@ -412,7 +412,7 @@ async def _brave_search(
                 duration_ms=duration,
             )
     except Exception as e:
-        logger.debug(f"Brave search failed ({e}), falling back to DDG")
+        logger.debug("Brave search failed (%s), falling back to DDG", e, exc_info=True)
         return None
 
 

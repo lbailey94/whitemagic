@@ -246,7 +246,7 @@ class JITResearcher:
             from whitemagic.optimization.rust_accelerators import keyword_extract
             return list(keyword_extract(text, max_keywords=5))  # type: ignore[arg-type]
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Keyword extraction failed: {e}")
+            logger.debug("Keyword extraction failed: %s", e, exc_info=True)
 
         # Fallback: simple word extraction
         stop_words = {
@@ -317,7 +317,7 @@ class JITResearcher:
             )
             return results
         except Exception as e:
-            logger.debug(f"Search expansion failed: {e}")
+            logger.debug("Search expansion failed: %s", e, exc_info=True)
 
         # Fallback to basic search
         try:
@@ -335,7 +335,7 @@ class JITResearcher:
                 for m in memories
             ]
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Research search failed: {e}")
+            logger.debug("Research search failed: %s", e, exc_info=True)
             return []
 
     # ------------------------------------------------------------------
@@ -443,7 +443,7 @@ class JITResearcher:
             if isinstance(result, dict) and result.get("response"):
                 return str(result["response"]).strip()
         except Exception as e:
-            logger.debug(f"Failed to evaluate context: {e}")
+            logger.debug("Failed to evaluate context: %s", e, exc_info=True)
         return None
 
     def _template_synthesize(

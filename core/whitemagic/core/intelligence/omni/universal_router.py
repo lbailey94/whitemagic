@@ -122,7 +122,7 @@ class UniversalRouter:
                             required_capabilities=["llm_reasoning"],
                         )
                 except Exception as e:
-                    logger.warning(f"Failed to parse LLM route: {e}. Falling back to default.")
+                    logger.warning("Failed to parse LLM route: %s. Falling back to default.", e, exc_info=True)
 
         except ImportError:
             logger.warning("Whitemagic Brain not available. Using heuristic fallback.")
@@ -166,7 +166,7 @@ class UniversalRouter:
         from whitemagic.core.ganas.registry import get_gana_for_tool
 
         for i, step in enumerate(chain.steps):
-            logger.info(f"  [{i+1}/{len(chain.steps)}] Invoking {step.mansion} ({step.operation})...")
+            logger.info("  [{i+1}/{len(chain.steps)}] Invoking %s (%s)...", step.mansion, step.operation, exc_info=True)
 
             # Map Mansion name to tool name (e.g., "NET" -> "gana_net")
             tool_name = f"gana_{step.mansion.lower()}"
@@ -228,7 +228,7 @@ class UniversalRouter:
                     logger.error("    ❌ Execution Failed: %s", e, exc_info=True)
                     context[f"error_{i}"] = str(e)
             else:
-                logger.warning(f"    ⚠️ Gana not found for {tool_name}. Skipping.")
+                logger.warning("    ⚠️ Gana not found for %s. Skipping.", tool_name, exc_info=True)
                 context[f"skipped_{i}"] = f"Gana {step.mansion} not found"
 
         # Auto-Forge Skill (Muscle Memory)
@@ -246,7 +246,7 @@ class UniversalRouter:
                 forge.forge(chain, skill_name)
 
         except Exception as e:
-            logger.warning(f"Failed to auto-forge skill: {e}")
+            logger.warning("Failed to auto-forge skill: %s", e, exc_info=True)
 
         logger.info("✅ Chain execution complete.")
         return {

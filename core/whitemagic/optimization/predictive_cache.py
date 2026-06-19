@@ -206,7 +206,7 @@ class PredictiveCache:
             }
             self.state_path.write_text(_json_dumps(state))
         except Exception as e:
-            logger.warning(f"Failed to save cache state: {e}")
+            logger.warning("Failed to save cache state: %s", e, exc_info=True)
 
     def load_state(self) -> None:
         """Restore access_history and access_patterns from disk."""
@@ -225,7 +225,7 @@ class PredictiveCache:
                 f"{len(self.access_patterns)} transition keys",
             )
         except Exception as e:
-            logger.warning(f"Failed to load cache state: {e}")
+            logger.warning("Failed to load cache state: %s", e, exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
@@ -377,7 +377,7 @@ class MemoryCache:
             }
 
         except Exception as e:
-            logger.warning(f"Cache warm failed: {e}")
+            logger.warning("Cache warm failed: %s", e, exc_info=True)
             return {"warmed": 0, "error": str(e)}
 
     def get_stats(self) -> dict[str, Any]:

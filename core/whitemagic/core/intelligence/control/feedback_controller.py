@@ -92,7 +92,7 @@ class FeedbackController:
             awareness = get_awareness()
             awareness.inject_insight(f"BREAKTHROUGH: {pattern} (Confidence: {event.confidence})")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Could not inject insight into awareness: {e}")
+            logger.warning("Could not inject insight into awareness: %s", e, exc_info=True)
 
         # 3. Consult Wisdom Council on how to integrate this
         # (Async dispatch to avoid blocking the event bus thread if not async)

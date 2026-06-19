@@ -269,9 +269,9 @@ def _ensure_router_cached() -> None:
         from whitemagic.core.bridge.gana import gana_invoke
         _gana_invoke = gana_invoke
     except (ImportError, AttributeError) as e:
-        logger.debug(f"Gana invoke bridge not available: {e}")
+        logger.debug("Gana invoke bridge not available: %s", e, exc_info=True)
     except RuntimeError as e:
-        logger.warning(f"Gana invoke bridge initialization failed: {e}")
+        logger.warning("Gana invoke bridge initialization failed: %s", e, exc_info=True)
     try:
         import warnings
         with warnings.catch_warnings():
@@ -307,9 +307,9 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
             if bridge_result:
                 result = bridge_result
         except (ImportError, AttributeError, TypeError, ValueError) as e:
-            logger.debug(f"Bridge execution fallback (type/attr error): {e}")
+            logger.debug("Bridge execution fallback (type/attr error): %s", e, exc_info=True)
         except RuntimeError as e:
-            logger.warning(f"Bridge execution fallback runtime error: {e}")
+            logger.warning("Bridge execution fallback runtime error: %s", e, exc_info=True)
 
     if result is None:
         return next_fn(ctx)

@@ -150,7 +150,7 @@ class AcceleratorBridge:
         """Runs specialized maintenance scripts."""
         script_path = self.root_dir / "scripts" / "memory_maintenance.py"
         if not script_path.exists():
-            logger.warning(f"Maintenance script {script_path} not found.")
+            logger.warning("Maintenance script %s not found.", script_path, exc_info=True)
             return
 
         try:
@@ -158,7 +158,7 @@ class AcceleratorBridge:
             # cmd = ["python3", str(script_path), "--type", task_type, "--mids", ",".join(metadata.get('mids', []))]
             # logger.info(f"  Executing: {' '.join(cmd)}")
             # result = subprocess.run(cmd, check=True)
-            logger.info(f"  Action executed successfully: {task_type}")
+            logger.info("  Action executed successfully: %s", task_type, exc_info=True)
             return True
         except Exception as e:
             logger.error("  Action execution failed: %s", e, exc_info=True)
@@ -170,10 +170,10 @@ class AcceleratorBridge:
         proposal_id = consensus.get("proposal_id", "unknown")
 
         if importance < 0.7:
-            logger.info(f"⏭️ Council decision {proposal_id} importance too low for autonomous execution: {importance:.2f}")
+            logger.info("⏭️ Council decision %s importance too low for autonomous execution: {importance:.2f}", proposal_id, exc_info=True)
             return False
 
-        logger.info(f"⚡ Executing Council Decision {proposal_id} (Importance: {importance:.2f})")
+        logger.info("⚡ Executing Council Decision %s (Importance: {importance:.2f})", proposal_id, exc_info=True)
 
         # Determine the MODE of execution based on Logic Spectrum
         # Logic > 0.7 = Analytical/Strict

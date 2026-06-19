@@ -128,7 +128,7 @@ class EmbeddingDaemon:
                     self._rust_engine = None
                     self._stats.rust_available = False
         except Exception as e:
-            logger.debug(f"Rust embedding not available: {e}")
+            logger.debug("Rust embedding not available: %s", e, exc_info=True)
             self._stats.rust_available = False
 
     def _get_model_path(self) -> str | None:
@@ -159,7 +159,7 @@ class EmbeddingDaemon:
                     if snapshots:
                         return str(snapshots[0])
         except OSError as e:
-            logger.debug(f"Model path resolution failed: {e}")
+            logger.debug("Model path resolution failed: %s", e, exc_info=True)
         return None
 
     def _get_db(self) -> sqlite3.Connection | None:
@@ -203,7 +203,7 @@ class EmbeddingDaemon:
             name="EmbeddingDaemon"
         )
         self._thread.start()
-        logger.info(f"EmbeddingDaemon started (batch_size={self.batch_size}, poll={self.poll_interval}s)")
+        logger.info("EmbeddingDaemon started (batch_size=%s, poll=%ss)", self.batch_size, self.poll_interval, exc_info=True)
 
     def stop(self) -> None:
         """Stop the embedding daemon gracefully."""
@@ -217,7 +217,7 @@ class EmbeddingDaemon:
         if self._thread:
             self._thread.join(timeout=10.0)
 
-        logger.info(f"EmbeddingDaemon stopped (total_embedded={self._stats.total_embedded})")
+        logger.info("EmbeddingDaemon stopped (total_embedded=%s)", self._stats.total_embedded, exc_info=True)
 
     def _run_loop(self) -> None:
         """Main daemon loop."""
@@ -377,7 +377,7 @@ class EmbeddingDaemon:
                     )
                     embedded += 1
                 except (sqlite3.Error, struct.error) as e:
-                    logger.debug(f"Embedding insert failed for {mid}: {e}")
+                    logger.debug("Embedding insert failed for %s: %s", mid, e, exc_info=True)
                     failed += 1
 
             db.commit()
@@ -418,7 +418,7 @@ class EmbeddingDaemon:
         except ImportError:
             pass  # prometheus_client not installed
         except Exception as e:
-            logger.debug(f"Metrics recording failed: {e}")
+            logger.debug("Metrics recording failed: %s", e, exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """Get daemon statistics."""

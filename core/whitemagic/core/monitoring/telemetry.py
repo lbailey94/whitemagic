@@ -80,7 +80,7 @@ class Telemetry:
             with open(self.log_path, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(event) + "\n")
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.warning(f"Failed to persist telemetry: {e}")
+            logger.warning("Failed to persist telemetry: %s", e, exc_info=True)
 
     def get_summary(self) -> dict[str, Any]:
         """Get summarized performance metrics."""

@@ -67,7 +67,7 @@ class ForesightEngine:
             detector = get_constellation_detector()
             drift_data = detector.get_drift_vectors(window_days=self.horizon_days)
         except Exception as exc:
-            logger.debug(f"Constellation drift unavailable: {exc}")
+            logger.debug("Constellation drift unavailable: %s", exc, exc_info=True)
             return []
 
         projections: list[dict[str, Any]] = []
@@ -101,7 +101,7 @@ class ForesightEngine:
             um = get_unified_memory()
             backend = um.backend
         except Exception as exc:
-            logger.debug(f"Decay prediction unavailable: {exc}")
+            logger.debug("Decay prediction unavailable: %s", exc, exc_info=True)
             return []
 
         predictions: list[dict[str, Any]] = []

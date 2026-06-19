@@ -294,7 +294,7 @@ class CorpusCallosumBus:
             )
             result.karma_logged = True
         except Exception as exc:
-            logger.debug(f"CorpusCallosum karma log failed: {exc}")
+            logger.debug("CorpusCallosum karma log failed: %s", exc, exc_info=True)
 
 
 # ---------------------------------------------------------------------------

@@ -101,9 +101,9 @@ class DreamDaemon:
         try:
             from whitemagic.core.memory.unified import consolidate
             consolidated = consolidate()
-            logger.info(f"  - Consolidated memories: {consolidated}")
+            logger.info("  - Consolidated memories: %s", consolidated, exc_info=True)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"  - Memory consolidation skipped: {e}")
+            logger.warning("  - Memory consolidation skipped: %s", e, exc_info=True)
 
     def _maintain_logs(self) -> None:
         """Compress old logs."""
@@ -149,11 +149,11 @@ class DreamDaemon:
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
             top_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:3]
             tag_summary = ", ".join([f"{tag}({count})" for tag, count in top_tags]) if top_tags else "none"
-            logger.info(f"  - Recent memories: {len(recent)} | Top tags: {tag_summary}")
+            logger.info("  - Recent memories: {len(recent)} | Top tags: %s", tag_summary, exc_info=True)
             if titles:
                 logger.info(f"  - Recent titles: {', '.join(titles[:3])}")
         except Exception as e:
-            logger.warning(f"  - Insight generation skipped: {e}")
+            logger.warning("  - Insight generation skipped: %s", e, exc_info=True)
 
 # Singleton instance
 _daemon: DreamDaemon | None = None

@@ -91,7 +91,7 @@ class IChingAdvisor:
                 result = whitemagic_rs.iching_cast(question)
                 if isinstance(result, tuple) and len(result) == 2:
                     hexagram_number, lines = result
-                    logger.info(f"🦀 Rust I Ching calculated hexagram {hexagram_number} from query hash")
+                    logger.info("🦀 Rust I Ching calculated hexagram %s from query hash", hexagram_number, exc_info=True)
                 else:
                     raise ValueError("Invalid Rust I Ching result")
         except ImportError:
@@ -111,12 +111,12 @@ class IChingAdvisor:
 
         logger.info("\n☯️  I CHING READING")
         logger.info("═══════════════════════════════════════")
-        logger.info(f"Question: {question}")
-        logger.info(f"Hexagram {hexagram.number}: {hexagram.name} ({hexagram.chinese})")
-        logger.info(f"Lines: {hexagram.lines}")
-        logger.info(f"\nJudgment: {hexagram.judgment}")
-        logger.info(f"Image: {hexagram.image}")
-        logger.info(f"\n💡 Guidance: {hexagram.guidance}")
+        logger.info("Question: %s", question, exc_info=True)
+        logger.info("Hexagram %s: %s (%s)", hexagram.number, hexagram.name, hexagram.chinese, exc_info=True)
+        logger.info("Lines: %s", hexagram.lines, exc_info=True)
+        logger.info("\nJudgment: %s", hexagram.judgment, exc_info=True)
+        logger.info("Image: %s", hexagram.image, exc_info=True)
+        logger.info("\n💡 Guidance: %s", hexagram.guidance, exc_info=True)
         logger.info("═══════════════════════════════════════\n")
 
         # Emit to Gan Ying
@@ -199,7 +199,7 @@ class IChingAdvisor:
                 confidence=0.9,
             ), async_dispatch=True)
         except Exception as e:
-            logger.info(f"⚠️ Could not emit oracle event: {e}")
+            logger.info("⚠️ Could not emit oracle event: %s", e, exc_info=True)
 
 
 # Global instance

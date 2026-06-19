@@ -126,7 +126,7 @@ class AutoCaster:
                     outcome = future.result(timeout=10.0)  # 10s max per spell
                     auto_cast = True
                 except TimeoutError:
-                    logger.warning(f"Spell {spell.name} timed out during auto-cast")
+                    logger.warning("Spell %s timed out during auto-cast", spell.name, exc_info=True)
                     outcome = SpellOutcome.FAILED
                     auto_cast = False
                 except Exception as e:

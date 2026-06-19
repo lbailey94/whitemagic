@@ -122,7 +122,7 @@ class V17EmbeddingOptimizer:
                 None, create_conn
             )
         except Exception as e:
-            logger.debug(f"DB connection failed: {e}")
+            logger.debug("DB connection failed: %s", e, exc_info=True)
             return None
 
     async def _get_model_async(self) -> Any:
@@ -223,7 +223,7 @@ class V17EmbeddingOptimizer:
 
             return cast(int, inserted)
         except Exception as e:
-            logger.debug(f"Bulk insert failed: {e}")
+            logger.debug("Bulk insert failed: %s", e, exc_info=True)
             return 0
         finally:
             await self._release_db_connection(conn)
@@ -256,7 +256,7 @@ class V17EmbeddingOptimizer:
             }
 
         total_to_index = len(tasks)
-        logger.info(f"V17: Indexing {total_to_index} memories with bounded concurrency")
+        logger.info("V17: Indexing %s memories with bounded concurrency", total_to_index, exc_info=True)
 
         # Step 2: Process in batches with bounded concurrency
         all_tasks: list[EmbeddingTask] = []

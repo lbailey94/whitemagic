@@ -258,7 +258,7 @@ class CausalMiner:
                         "title": mem.title or "",
                     }
         except Exception as e:
-            logger.debug(f"Causal mining: hydration partially failed: {e}")
+            logger.debug("Causal mining: hydration partially failed: %s", e, exc_info=True)
 
         report.memories_sampled = len(mem_meta)
 
@@ -459,7 +459,7 @@ class CausalMiner:
                 f"from {len(parsed)} memories",
             )
         except Exception as e:
-            logger.debug(f"Temporal fallback failed: {e}")
+            logger.debug("Temporal fallback failed: %s", e, exc_info=True)
 
         return pairs[:self._max_edges * 5]
 

@@ -122,7 +122,7 @@ class AutoLinker:
         except ImportError:
             pass
         except (ImportError, ModuleNotFoundError) as e:
-            logger.info(f"⚠️ Rust graph build failed: {e}")
+            logger.info("⚠️ Rust graph build failed: %s", e, exc_info=True)
 
         # Fallback to Python (iterative)
         count = 0

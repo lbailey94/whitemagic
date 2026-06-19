@@ -184,7 +184,7 @@ class ILPManager:
             with open(history_file, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(record.to_dict()) + "\n")
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.debug(f"Payment history persist failed: {e}")
+            logger.debug("Payment history persist failed: %s", e, exc_info=True)
 
     def configure(
         self,
@@ -304,7 +304,7 @@ class ILPManager:
         with self._lock:
             self._payments[payment_id] = record
 
-        logger.info(f"💸 ILP payment initiated: {payment_id} → {destination} ({amount} {asset_code})")
+        logger.info("💸 ILP payment initiated: %s → %s (%s %s)", payment_id, destination, amount, asset_code, exc_info=True)
 
         return {
             "status": "ok",

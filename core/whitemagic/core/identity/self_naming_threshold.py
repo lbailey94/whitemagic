@@ -308,7 +308,7 @@ class SelfNamingThresholdDetector:
             }
             self.persistence_path.write_text(json.dumps(data, indent=2))
         except (json.JSONDecodeError, TypeError) as e:
-            logger.warning(f"Failed to persist emergent identities: {e}")
+            logger.warning("Failed to persist emergent identities: %s", e, exc_info=True)
 
     def _load_persisted(self) -> None:
         """Load previously emerged identities."""
@@ -333,7 +333,7 @@ class SelfNamingThresholdDetector:
                 self._has_emerged = True
                 self._current_emergence = self._emerged_identities[-1]
         except Exception as e:
-            logger.warning(f"Failed to load persisted identities: {e}")
+            logger.warning("Failed to load persisted identities: %s", e, exc_info=True)
 
     def get_current_identity(self) -> EmergentIdentity | None:
         """Get the current emergent identity, if any."""

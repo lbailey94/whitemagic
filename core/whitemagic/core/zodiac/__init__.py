@@ -84,7 +84,7 @@ class ZodiacalClock:
                 with open(self.state_file) as f:
                     return json.load(f)
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.warning(f"ZodiacalClock: failed to load state: {e}")
+                logger.warning("ZodiacalClock: failed to load state: %s", e, exc_info=True)
 
         # Initialize default state
         state = DEFAULT_STATE.copy()
@@ -143,7 +143,7 @@ class ZodiacalClock:
         self._state["total_shifts"] = self._state.get("total_shifts", 0) + 1
         self._save_state()
 
-        logger.info(f"🌌 Astro-Shift: {new_phase} (Mansion Alignment: {', '.join(self.mansions)})")
+        logger.info("🌌 Astro-Shift: %s (Mansion Alignment: {', '.join(self.mansions)})", new_phase, exc_info=True)
         return self.status()
 
     def get_resonance_multiplier(self, mansion_num: int) -> float:

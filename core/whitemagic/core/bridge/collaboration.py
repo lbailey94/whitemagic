@@ -117,7 +117,7 @@ def sangha_chat_send(content: str, channel: str = "general", sender_id: str = "s
                 coords=coords.to_vector()
             )
         except Exception as e:
-            logger.warning(f"Failed to broadcast 5D sangha signal: {e}")
+            logger.warning("Failed to broadcast 5D sangha signal: %s", e, exc_info=True)
         # ---------------------------------
 
         return {

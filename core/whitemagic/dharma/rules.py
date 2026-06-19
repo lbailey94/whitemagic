@@ -145,7 +145,7 @@ class DharmaRule:
             try:
                 self._compiled_regex.append(re.compile(pat, re.IGNORECASE))
             except re.error as e:
-                logger.warning(f"Dharma rule '{self.name}': invalid regex '{pat}': {e}")
+                logger.warning("Dharma rule '%s': invalid regex '%s': %s", self.name, pat, e, exc_info=True)
 
     def matches(self, action: dict[str, Any]) -> bool:
         """Check if this rule matches the given action dict.
@@ -630,7 +630,7 @@ class DharmaRulesEngine:
     def set_profile(self, profile: str) -> None:
         """Switch the active Dharma profile."""
         self._active_profile = profile
-        logger.info(f"Dharma profile switched to: {profile}")
+        logger.info("Dharma profile switched to: %s", profile, exc_info=True)
 
     def get_profile(self) -> str:
         """
@@ -897,7 +897,7 @@ class DharmaRulesEngine:
         if rule:
             with self._lock:
                 self._rules.append(rule)
-            logger.info(f"Dharma rule added at runtime: {rule.name}")
+            logger.info("Dharma rule added at runtime: %s", rule.name, exc_info=True)
 
     # ------------------------------------------------------------------
     # Internals
@@ -1007,12 +1007,12 @@ class DharmaRulesEngine:
                 # Phase 1: extends inheritance (store for future resolution)
                 extends = data.get("extends")
                 if extends:
-                    logger.debug(f"Dharma rules {path.name}: extends profile '{extends}'")
+                    logger.debug("Dharma rules %s: extends profile '%s'", path.name, extends, exc_info=True)
                 entries.extend(data.get("rules", []))
             mtimes[str(path)] = path.stat().st_mtime
-            logger.debug(f"Dharma rules: loaded {path.name}")
+            logger.debug("Dharma rules: loaded %s", path.name, exc_info=True)
         except Exception as e:
-            logger.warning(f"Failed to load Dharma rules from {path}: {e}")
+            logger.warning("Failed to load Dharma rules from %s: %s", path, e, exc_info=True)
 
     def _parse_rule(self, entry: dict[str, Any]) -> DharmaRule | None:
         """Parse a single rule dict into a DharmaRule."""
@@ -1048,7 +1048,7 @@ class DharmaRulesEngine:
                 seccomp_profile=str(entry.get("seccomp_profile", "none")),
             )
         except Exception as e:
-            logger.warning(f"Failed to parse Dharma rule: {e}")
+            logger.warning("Failed to parse Dharma rule: %s", e, exc_info=True)
             return None
 
 

@@ -155,7 +155,7 @@ class GratitudePulse:
 
             self.ledger.record(event)
             new_tips += 1
-            logger.info(f"💓 Pulse detected NEW tip: {amount} {currency} from {event.sender} (tx: {tx_hash})")
+            logger.info("💓 Pulse detected NEW tip: %s %s from %s (tx: %s)", amount, currency, event.sender, tx_hash, exc_info=True)
 
             # Trigger 'Abundance' effect (e.g., clearing some debt)
             try:
@@ -166,7 +166,7 @@ class GratitudePulse:
                 logging.getLogger(__name__).debug("Exception silenced: %s", e)
 
         if new_tips > 0:
-            logger.info(f"💓 Pulse finished. Recorded {new_tips} new tips.")
+            logger.info("💓 Pulse finished. Recorded %s new tips.", new_tips, exc_info=True)
 
 _pulse: GratitudePulse | None = None
 

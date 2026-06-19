@@ -42,7 +42,7 @@ class JuliaZMQClient:
                 return True
 
         except Exception as e:
-            logger.debug(f"Could not connect to existing Julia server: {e}")
+            logger.debug("Could not connect to existing Julia server: %s", e, exc_info=True)
 
         # Start new server
         return self._start_server()
@@ -58,7 +58,7 @@ class JuliaZMQClient:
                 # Try fallback location in SD card archives
                 server_path = "/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/whitemagic-julia/src/persistent_server.jl"
                 if not os.path.exists(server_path):
-                    logger.error(f"Julia server not found at {server_path}")
+                    logger.error("Julia server not found at %s", server_path, exc_info=True)
                     return False
 
             env = os.environ.copy()
@@ -72,7 +72,7 @@ class JuliaZMQClient:
                 julia_cmd = "/snap/bin/julia"
 
             # Start server process
-            logger.info(f"Starting Julia server with command: {julia_cmd} {server_path}")
+            logger.info("Starting Julia server with command: %s %s", julia_cmd, server_path, exc_info=True)
             self._server_process = subprocess.Popen(
                 [julia_cmd, server_path],
                 env=env,
@@ -96,7 +96,7 @@ class JuliaZMQClient:
                 logger.info(f"🚀 Started Julia server v{response.get('version', 'unknown')}")
                 return True
             else:
-                logger.error(f"Julia server health check failed: {response}")
+                logger.error("Julia server health check failed: %s", response, exc_info=True)
                 return False
 
         except FileNotFoundError:

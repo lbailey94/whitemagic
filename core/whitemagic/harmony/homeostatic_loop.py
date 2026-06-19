@@ -148,7 +148,7 @@ class HomeostaticLoop:
             try:
                 self.check()
             except Exception as e:
-                logger.debug(f"Homeostatic check error: {e}")
+                logger.debug("Homeostatic check error: %s", e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Core check
@@ -290,7 +290,7 @@ class HomeostaticLoop:
     def _advise(self, dimension: str, value: float, threshold: float,
                 message: str) -> HomeostaticAction:
         """Log an advisory — no system changes."""
-        logger.info(f"[Homeostasis/ADVISE] {dimension}={value:.3f} < {threshold}: {message}")
+        logger.info("[Homeostasis/ADVISE] %s={value:.3f} < %s: %s", dimension, threshold, message, exc_info=True)
         return HomeostaticAction(
             dimension=dimension, level=ActionLevel.ADVISE,
             value=value, threshold=threshold, action_taken=message,
@@ -299,7 +299,7 @@ class HomeostaticLoop:
     def _correct_errors(self, snap: Any) -> HomeostaticAction:
         """Correct high error rate by emitting a warning event."""
         msg = "Error rate critical. Emitting system warning."
-        logger.warning(f"[Homeostasis/CORRECT] error_rate={snap.error_rate:.3f}: {msg}")
+        logger.warning("[Homeostasis/CORRECT] error_rate={snap.error_rate:.3f}: %s", msg, exc_info=True)
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
                 EventType,
@@ -324,7 +324,7 @@ class HomeostaticLoop:
     def _correct_karma(self, snap: Any) -> HomeostaticAction:
         """Correct high karma debt by emitting a boundary event."""
         msg = "Karma debt high. Emitting boundary violation event."
-        logger.warning(f"[Homeostasis/CORRECT] karma_debt={snap.karma_debt:.3f}: {msg}")
+        logger.warning("[Homeostasis/CORRECT] karma_debt={snap.karma_debt:.3f}: %s", msg, exc_info=True)
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
                 EventType,
@@ -349,7 +349,7 @@ class HomeostaticLoop:
     def _correct_energy(self, snap: Any) -> HomeostaticAction:
         """Correct low energy by triggering a memory lifecycle sweep."""
         msg = "Energy critical. Triggering memory lifecycle sweep."
-        logger.warning(f"[Homeostasis/CORRECT] energy={snap.energy:.3f}: {msg}")
+        logger.warning("[Homeostasis/CORRECT] energy={snap.energy:.3f}: %s", msg, exc_info=True)
         try:
             from whitemagic.core.memory.lifecycle import get_lifecycle_manager
             mgr = get_lifecycle_manager()
@@ -376,7 +376,7 @@ class HomeostaticLoop:
     def _correct_dharma(self, snap: Any) -> HomeostaticAction:
         """Correct low dharma by temporarily tightening the profile."""
         msg = "Dharma score critical. Switching to 'secure' profile temporarily."
-        logger.warning(f"[Homeostasis/CORRECT] dharma={snap.dharma:.3f}: {msg}")
+        logger.warning("[Homeostasis/CORRECT] dharma={snap.dharma:.3f}: %s", msg, exc_info=True)
         try:
             from whitemagic.dharma.rules import get_rules_engine
             engine = get_rules_engine()

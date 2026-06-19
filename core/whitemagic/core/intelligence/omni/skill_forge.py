@@ -77,10 +77,10 @@ class SkillForge:
                 self.known_skills[skill.name] = skill
                 count += 1
             except Exception as e:
-                logger.warning(f"Failed to load skill {skill_file}: {e}")
+                logger.warning("Failed to load skill %s: %s", skill_file, e, exc_info=True)
 
         if count > 0:
-            logger.info(f"🧠 Skill Forge loaded {count} crystallized skills.")
+            logger.info("🧠 Skill Forge loaded %s crystallized skills.", count, exc_info=True)
 
     def assess_pattern(self, chain: ExecutionChain, success_metric: float) -> bool:
         """Determine if a chain is worthy of becoming a skill.
@@ -94,7 +94,7 @@ class SkillForge:
         """Convert a Chain into a clean, reusable Skill.
         In a full system, this would write Python code.
         """
-        logger.info(f"🔨 Forging new skill: '{name}' from chain for '{chain.intent}'")
+        logger.info("🔨 Forging new skill: '%s' from chain for '%s'", name, chain.intent, exc_info=True)
 
         skill = ForgedSkill(
             name=name,
@@ -127,7 +127,7 @@ class SkillForge:
         with open(skill_file, "w") as f:
             json.dump(data, f, indent=2)
 
-        logger.info(f"💾 Skill saved to {skill_file}")
+        logger.info("💾 Skill saved to %s", skill_file, exc_info=True)
         self._update_skills_md()
 
     def _update_skills_md(self) -> None:
@@ -151,7 +151,7 @@ class SkillForge:
         with open(catalog_path, "w") as f:
             f.write("\n".join(content))
 
-        logger.info(f"📘 Updated SKILLS.md registry at {catalog_path}")
+        logger.info("📘 Updated SKILLS.md registry at %s", catalog_path, exc_info=True)
 
 # Singleton accessor
 _forge = None

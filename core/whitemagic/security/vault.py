@@ -193,7 +193,7 @@ class Vault:
                 updated_at = excluded.updated_at
         """, (name, ct, nonce, now, now))
         self._conn.commit()
-        logger.info(f"Vault: stored secret '{name}'")
+        logger.info("Vault: stored secret '%s'", name, exc_info=True)
 
     def get(self, name: str) -> str | None:
         """Retrieve a decrypted secret."""
@@ -262,7 +262,7 @@ class Vault:
         except (ImportError, AttributeError):
             logger.debug("Could not update machine key file during rekey")
 
-        logger.info(f"Vault: re-keyed {count} secrets")
+        logger.info("Vault: re-keyed %s secrets", count, exc_info=True)
         return count
 
     def __enter__(self) -> "Vault":

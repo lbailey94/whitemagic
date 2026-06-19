@@ -54,7 +54,7 @@ class RapidCognition:
                 self.cycles_completed += 1
                 time.sleep(self.learn_interval)
             except Exception as e:
-                logger.info(f"⚠️  Learning cycle error: {e}")
+                logger.info("⚠️  Learning cycle error: %s", e, exc_info=True)
                 time.sleep(self.learn_interval)
 
     def get_stats(self) -> dict:

@@ -188,7 +188,7 @@ class KaizenEngine:
 
             return metrics
         except Exception as e:
-            logger.debug(f"Rust metrics gathering failed, using Python fallback: {e}")
+            logger.debug("Rust metrics gathering failed, using Python fallback: %s", e, exc_info=True)
             return {}
 
     def _check_untitled(self) -> list[ImprovementProposal]:
@@ -297,7 +297,7 @@ class KaizenEngine:
                         metadata={"quadrant": f"{x_reg}/{y_reg}", "count": count},
                     ))
         except Exception as e:
-            logger.debug(f"Knowledge gap analysis skipped (no holographic_coords): {e}")
+            logger.debug("Knowledge gap analysis skipped (no holographic_coords): %s", e, exc_info=True)
 
         return gaps
 
@@ -318,7 +318,7 @@ class KaizenEngine:
                 LIMIT 5
             """)
         except Exception as e:
-            logger.debug(f"Large cluster analysis skipped (no holographic_coords): {e}")
+            logger.debug("Large cluster analysis skipped (no holographic_coords): %s", e, exc_info=True)
             return []
 
         large = cur.fetchall()
@@ -355,7 +355,7 @@ class KaizenEngine:
                 LIMIT 10
             """)
         except Exception as e:
-            logger.debug(f"Theme discovery skipped (no holographic_coords): {e}")
+            logger.debug("Theme discovery skipped (no holographic_coords): %s", e, exc_info=True)
             return []
 
         themes = cur.fetchall()
@@ -407,7 +407,7 @@ class KaizenEngine:
                                 "similarity": sim,
                             })
         except Exception as e:
-            logger.warning(f"MansionBridge similarity check failed: {e}")
+            logger.warning("MansionBridge similarity check failed: %s", e, exc_info=True)
 
         proposals = []
 
@@ -617,7 +617,7 @@ class KaizenEngine:
                         get_sub_clustering_engine().subdivide_large_clusters()
                     results["applied"] += 1
                 except Exception as e:
-                    logger.debug(f"Kaizen proposal apply failed: {e}")
+                    logger.debug("Kaizen proposal apply failed: %s", e, exc_info=True)
                     results["errors"] += 1
             else:
                 results["skipped"] += 1

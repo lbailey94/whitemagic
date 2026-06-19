@@ -309,7 +309,7 @@ class NurturingEngine:
                     # Simple deserialization (would need more robust in production)
                     logger.info(f"Loaded {len(data)} profiles from storage")
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.warning(f"Could not load profiles: {e}")
+                logger.warning("Could not load profiles: %s", e, exc_info=True)
 
     def save_profiles(self) -> None:
         """Save profiles to storage."""

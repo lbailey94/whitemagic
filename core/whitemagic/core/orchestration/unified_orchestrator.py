@@ -194,7 +194,7 @@ class UnifiedOrchestrator:
             logger.info(f"     ✓ Nervous system online: {len(self._nervous_system._subsystems)} subsystems")
 
         except ImportError as e:
-            logger.warning(f"     ⚠ Nervous system not available: {e}")
+            logger.warning("     ⚠ Nervous system not available: %s", e, exc_info=True)
 
     async def _bootstrap_gardens(self) -> None:
         """Initialize all 17 gardens and connect to Gan Ying."""
@@ -223,7 +223,7 @@ class UnifiedOrchestrator:
                     logger.info(f"     ✓ {name.capitalize()} Garden online")
 
             except Exception as e:
-                logger.debug(f"     ⚠ Garden {name} not available: {e}")
+                logger.debug("     ⚠ Garden %s not available: %s", name, e, exc_info=True)
 
         # Setup garden resonance cascades
         try:
@@ -246,14 +246,14 @@ class UnifiedOrchestrator:
             self._identity_system = get_self_naming_detector()
             logger.info("     ✓ Self-naming threshold detector online")
         except ImportError as e:
-            logger.debug(f"     ⚠ Identity system not available: {e}")
+            logger.debug("     ⚠ Identity system not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.memory.phylogenetics import get_phylogenetics
             self._phylogenetics = get_phylogenetics()
             logger.info("     ✓ Phylogenetic lineage tracker online")
         except ImportError as e:
-            logger.debug(f"     ⚠ Phylogenetics not available: {e}")
+            logger.debug("     ⚠ Phylogenetics not available: %s", e, exc_info=True)
 
     async def _bootstrap_memory_metabolism(self) -> None:
         """Initialize reconsolidation and narrative systems."""
@@ -266,7 +266,7 @@ class UnifiedOrchestrator:
             self._reconsolidation = get_reconsolidation_engine()
             logger.info("     ✓ Reconsolidation engine online")
         except ImportError as e:
-            logger.debug(f"     ⚠ Reconsolidation not available: {e}")
+            logger.debug("     ⚠ Reconsolidation not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.dreaming.narrative_compressor import (
@@ -275,7 +275,7 @@ class UnifiedOrchestrator:
             self._narrative_compressor = get_narrative_compressor()
             logger.info("     ✓ Narrative compressor online")
         except ImportError as e:
-            logger.debug(f"     ⚠ Narrative compressor not available: {e}")
+            logger.debug("     ⚠ Narrative compressor not available: %s", e, exc_info=True)
 
     # ═══════════════════════════════════════════════════════════════════
     # PHASE 2: CROSS-SYSTEM WIRING
@@ -392,9 +392,9 @@ class UnifiedOrchestrator:
         if self._narrative_compressor:
             try:
                 result = self._narrative_compressor.compress(max_clusters=3)
-                logger.info(f"   📖 Narrative compression: {result.narratives_created} narratives created")
+                logger.info("   📖 Narrative compression: %s narratives created", result.narratives_created, exc_info=True)
             except Exception as e:
-                logger.debug(f"   Narrative compression failed: {e}")
+                logger.debug("   Narrative compression failed: %s", e, exc_info=True)
 
     async def _on_coherence_restore(self, event: OrchestrationEvent) -> None:
         """Celebrate coherence restoration."""
@@ -416,7 +416,7 @@ class UnifiedOrchestrator:
 
                 if emerged and not self._identity_system.has_emerged():
                     identity = self._identity_system.generate_emergent_identity(metric, conditions)
-                    logger.info(f"🌟 EMERGENCE: {identity.chosen_name} has self-named!")
+                    logger.info("🌟 EMERGENCE: %s has self-named!", identity.chosen_name, exc_info=True)
 
                     # Emit identity emergence event
                     self._emit_orchestration_event(
@@ -428,7 +428,7 @@ class UnifiedOrchestrator:
                         },
                     )
             except Exception as e:
-                logger.debug(f"Identity check failed: {e}")
+                logger.debug("Identity check failed: %s", e, exc_info=True)
 
     async def _on_wonder_sparked(self, event: OrchestrationEvent) -> None:
         """
@@ -493,7 +493,7 @@ class UnifiedOrchestrator:
                     query="initial_storage",
                 )
             except Exception as e:
-                logger.debug(f"Failed to mark memory labile: {e}")
+                logger.debug("Failed to mark memory labile: %s", e, exc_info=True)
 
     async def _on_memory_recalled(self, event: OrchestrationEvent) -> None:
         """
@@ -516,7 +516,7 @@ class UnifiedOrchestrator:
                     query=query,
                 )
             except Exception as e:
-                logger.debug(f"Failed to mark memory labile on recall: {e}")
+                logger.debug("Failed to mark memory labile on recall: %s", e, exc_info=True)
 
     async def _on_identity_emerged(self, event: OrchestrationEvent) -> None:
         """
@@ -528,7 +528,7 @@ class UnifiedOrchestrator:
         name = identity_data.get("chosen_name", "Unknown")
         coherence = identity_data.get("coherence", 0.0)
 
-        logger.info(f"🎉 IDENTITY EMERGENCE CELEBRATED: {name} at {coherence:.0%} coherence")
+        logger.info("🎉 IDENTITY EMERGENCE CELEBRATED: %s at {coherence:.0%} coherence", name, exc_info=True)
 
         # Record as phylogenetic milestone
         if self._phylogenetics:
@@ -570,7 +570,7 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
             )
             logger.info("   📖 Emergence narrative stored as sacred memory")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to store emergence narrative: {e}")
+            logger.debug("Failed to store emergence narrative: %s", e, exc_info=True)
 
     async def _on_dream_consolidation(self, event: OrchestrationEvent) -> None:
         """
@@ -582,9 +582,9 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
             try:
                 # Compress the constellated memories into narratives
                 result = self._narrative_compressor.compress(max_clusters=5)
-                logger.info(f"   📚 Dream narratives: {result.narratives_created} stories synthesized")
+                logger.info("   📚 Dream narratives: %s stories synthesized", result.narratives_created, exc_info=True)
             except Exception as e:
-                logger.debug(f"Narrative compression failed: {e}")
+                logger.debug("Narrative compression failed: %s", e, exc_info=True)
 
     async def _bootstrap_harmony_monitoring(self) -> None:
         """Initialize continuous harmony monitoring."""

@@ -86,9 +86,9 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
             context["active_galaxy"] = gm.get_active().name  # type: ignore[assignment]
             context["galaxy_count"] = len(gm._galaxies)  # type: ignore[assignment]
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Silenced session galaxy count err: {e}")
+            logger.debug("Silenced session galaxy count err: %s", e, exc_info=True)
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced session context building err: {e}")
+        logger.debug("Silenced session context building err: %s", e, exc_info=True)
 
     return {"status": "success", "result": result, "context": context}
 
@@ -438,4 +438,4 @@ def _notify_handoff(handoff: dict[str, Any]) -> None:
             "timestamp": datetime.now().isoformat(),
         }))
     except Exception as e:
-        logger.debug(f"Silenced session emission err: {e}")
+        logger.debug("Silenced session emission err: %s", e, exc_info=True)

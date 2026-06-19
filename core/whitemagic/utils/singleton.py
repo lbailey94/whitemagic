@@ -108,7 +108,7 @@ def reset_all_singletons() -> None:
                 except AttributeError:
                     pass  # Attribute already absent — harmless
                 except Exception as e:
-                    logger.debug(f"Unexpected error clearing singleton {wrapper_fn}: {e}")
+                    logger.debug("Unexpected error clearing singleton %s: %s", wrapper_fn, e, exc_info=True)
 
             # 2. Clear the module-level variable
             if module_name and var_name:

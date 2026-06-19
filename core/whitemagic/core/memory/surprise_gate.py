@@ -256,7 +256,7 @@ class SurpriseGate:
                 },
             ))
         except Exception as e:
-            logger.debug(f"Resonance event emission failed: {e}")
+            logger.debug("Resonance event emission failed: %s", e, exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """

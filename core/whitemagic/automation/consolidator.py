@@ -267,7 +267,7 @@ class MemoryConsolidator:
             return mem
 
         except Exception as e:
-            logger.warning(f"Failed to create semantic memory: {e}")
+            logger.warning("Failed to create semantic memory: %s", e, exc_info=True)
             return None
 
     def _archive_episodic(self, memories: list[NeuralMemory]) -> int:
@@ -293,7 +293,7 @@ class MemoryConsolidator:
                 archived += 1
 
             except Exception as e:
-                logger.warning(f"Failed to archive memory {mem.id}: {e}")
+                logger.warning("Failed to archive memory %s: %s", mem.id, e, exc_info=True)
 
         return archived
 

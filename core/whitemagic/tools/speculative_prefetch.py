@@ -230,7 +230,7 @@ class SpeculativePrefetcher:
                 try:
                     self._prefetch_tool(tool_name, gana_name, probability)
                 except Exception as e:
-                    logger.debug(f"Prefetch failed for {tool_name}: {e}")
+                    logger.debug("Prefetch failed for %s: %s", tool_name, e, exc_info=True)
 
     def _prefetch_tool(self, tool_name: str, gana_name: str, probability: float) -> None:
         """Pre-warm the retrieval pipeline for a specific tool.

@@ -86,7 +86,7 @@ class CommunityDharma:
         consensus = self._get_consensus_for_action(action)
 
         if consensus:
-            logger.info(f"☸️  Community consensus found: {consensus.assessment} ({consensus.consensus_score:.2f})")
+            logger.info("☸️  Community consensus found: %s ({consensus.consensus_score:.2f})", consensus.assessment, exc_info=True)
 
             return {
                 "action": action,

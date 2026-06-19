@@ -165,7 +165,7 @@ class PathValidator:
         """
         allowed, reason = self.is_path_allowed(path)
         if not allowed:
-            logger.warning(f"Path blocked: {path} - {reason}")
+            logger.warning("Path blocked: %s - %s", path, reason, exc_info=True)
             return None
         return Path(path).expanduser().resolve()
 
@@ -259,7 +259,7 @@ class ToolGate:
                 severity="high" if risk == ToolRisk.DANGEROUS else "medium",
             )
         except Exception as e:
-            logger.debug(f"Failed to report to immune system: {e}")
+            logger.debug("Failed to report to immune system: %s", e, exc_info=True)
 
     def validate_tool_params(
         self, tool_name: str, params: dict[str, Any],
@@ -311,7 +311,7 @@ class ToolGate:
                 severity="high",
             )
         except Exception as e:
-            logger.debug(f"Failed to report path violation: {e}")
+            logger.debug("Failed to report path violation: %s", e, exc_info=True)
 
     def _report_url_violation(self, tool_name: str, url: str) -> None:
         """Report URL violation to immune system."""
@@ -325,7 +325,7 @@ class ToolGate:
                 severity="high",
             )
         except Exception as e:
-            logger.debug(f"Failed to report URL violation: {e}")
+            logger.debug("Failed to report URL violation: %s", e, exc_info=True)
 
     def _is_url_allowed(self, url: str) -> bool:
         """Check if a URL is allowed for browser automation.

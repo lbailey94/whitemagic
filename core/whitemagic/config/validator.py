@@ -127,10 +127,10 @@ class ConfigValidator:
                 if not _silent_init():
                     logger.info("Set secrets file permissions to 0600")
             except Exception as e:
-                logger.warning(f"Failed to set file permissions: {e}")
+                logger.warning("Failed to set file permissions: %s", e, exc_info=True)
 
         if not _silent_init():
-            logger.info(f"Saved secrets to {self.secrets_file}")
+            logger.info("Saved secrets to %s", self.secrets_file, exc_info=True)
 
     def validate_deployment_mode(self) -> str:
         """Determine if running in local or cloud mode.
@@ -150,7 +150,7 @@ class ConfigValidator:
             )
 
         if not _silent_init():
-            logger.info(f"Deployment mode: {mode}")
+            logger.info("Deployment mode: %s", mode, exc_info=True)
         return mode
 
     def validate_production_config(self) -> None:
@@ -231,7 +231,7 @@ class ConfigValidator:
             json.dump(config, f, indent=2)
 
         if not _silent_init():
-            logger.info(f"Saved configuration to {self.config_file}")
+            logger.info("Saved configuration to %s", self.config_file, exc_info=True)
 
     def load_config(self) -> dict[str, Any]:
         """Load configuration from file.

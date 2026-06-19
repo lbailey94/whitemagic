@@ -90,7 +90,7 @@ class SharedMemoryBridge:
             self._header.total_read = 0
             self._header.last_write_ts = 0.0
             self._header.last_read_ts = 0.0
-            logger.info(f"Created shared memory: {self.name} ({SEGMENT_SIZE} bytes)")
+            logger.info("Created shared memory: %s (%s bytes)", self.name, SEGMENT_SIZE, exc_info=True)
         except Exception as e:
             logger.error("Failed to create shared memory: %s", e, exc_info=True)
             raise
@@ -104,7 +104,7 @@ class SharedMemoryBridge:
             self._header = SharedMemoryHeader.from_buffer(buf)
             if self._header.magic != 0x574D454D:
                 raise ValueError(f"Invalid segment magic: {hex(self._header.magic)}")
-            logger.debug(f"Opened shared memory: {self.name}")
+            logger.debug("Opened shared memory: %s", self.name, exc_info=True)
         except Exception as e:
             logger.error("Failed to open shared memory: %s", e, exc_info=True)
             raise
@@ -307,7 +307,7 @@ class SharedMemoryBridge:
                 shm = shared_memory.SharedMemory(name=self.name)
                 shm.unlink()
                 shm.close()
-                logger.info(f"Destroyed shared memory: {self.name}")
+                logger.info("Destroyed shared memory: %s", self.name, exc_info=True)
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
                 pass

@@ -153,7 +153,7 @@ class PDFProcessor:
                 pages=len(pages_text),
             )
         except Exception as e:
-            logger.warning(f"PDF extraction failed for {path}: {e}")
+            logger.warning("PDF extraction failed for %s: %s", path, e, exc_info=True)
             return None
 
 
@@ -233,7 +233,7 @@ class DocxProcessor:
                 source_path=str(path),
             )
         except Exception as e:
-            logger.warning(f"DOCX extraction failed for {path}: {e}")
+            logger.warning("DOCX extraction failed for %s: %s", path, e, exc_info=True)
             return None
 
 
@@ -326,7 +326,7 @@ class ImageProcessor:
                 dimensions=(width, height),
             )
         except Exception as e:
-            logger.warning(f"Image extraction failed for {path}: {e}")
+            logger.warning("Image extraction failed for %s: %s", path, e, exc_info=True)
             return None
 
     def _caption_ollama(self, path: Path) -> str:
@@ -454,7 +454,7 @@ class AudioProcessor:
                 duration_seconds=duration,
             )
         except Exception as e:
-            logger.warning(f"Audio extraction failed for {path}: {e}")
+            logger.warning("Audio extraction failed for %s: %s", path, e, exc_info=True)
             return None
 
     def _transcribe(self, path: Path) -> tuple[str, float]:
@@ -542,7 +542,7 @@ class SpreadsheetProcessor:
             elif ext in {".xlsx", ".xls"}:
                 return self._extract_xlsx(path)
         except Exception as e:
-            logger.warning(f"Spreadsheet extraction failed for {path}: {e}")
+            logger.warning("Spreadsheet extraction failed for %s: %s", path, e, exc_info=True)
         return None
 
     def _extract_csv(self, path: Path) -> ProcessedMedia | None:

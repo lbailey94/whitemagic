@@ -191,7 +191,7 @@ class MansionBridge:
                 similarity = getattr(whitemagic_rs, "fast_similarity")(text1, text2)
                 return float(similarity)
             except (ImportError, ModuleNotFoundError) as e:
-                logger.warning(f"Rust similarity failed: {e}")
+                logger.warning("Rust similarity failed: %s", e, exc_info=True)
 
         # Fallback to Python
         return self._similarity_python(text1, text2)
@@ -221,7 +221,7 @@ class MansionBridge:
                             normalized.append((str(item[0]), str(item[1]), str(item[2]), str(item[3])))
                     return normalized
             except Exception as e:
-                logger.warning(f"Rust pattern extraction failed: {e}")
+                logger.warning("Rust pattern extraction failed: %s", e, exc_info=True)
 
         # Python fallback
         return self._extract_patterns_python(content)
@@ -259,7 +259,7 @@ class MansionBridge:
         bin_path = self.project_root / "whitemagic-mojo" / "bin" / binary_name
 
         if not bin_path.exists():
-            logger.error(f"Mojo binary not found: {bin_path}")
+            logger.error("Mojo binary not found: %s", bin_path, exc_info=True)
             return None
 
         try:
@@ -272,7 +272,7 @@ class MansionBridge:
             )
 
             if result.returncode != 0:
-                logger.error(f"Mojo binary failed: {result.stderr}")
+                logger.error("Mojo binary failed: %s", result.stderr, exc_info=True)
                 return None
 
             return result.stdout.strip()

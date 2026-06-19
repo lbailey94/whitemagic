@@ -97,9 +97,9 @@ class DreamDaemon:
             report = consolidate_now(minutes=self.interval // 60 or 60)
             created = report.get("semantic_created", 0)
             archived = report.get("episodic_archived", 0)
-            logger.info(f"  - Consolidated memories: {created} semantic created, {archived} episodic archived")
+            logger.info("  - Consolidated memories: %s semantic created, %s episodic archived", created, archived, exc_info=True)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"  - Memory consolidation skipped: {e}")
+            logger.warning("  - Memory consolidation skipped: %s", e, exc_info=True)
 
     def _maintain_logs(self) -> None:
         """Compress old logs and prune oversized files."""
@@ -122,9 +122,9 @@ class DreamDaemon:
                     log_file.unlink()
                     compressed += 1
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.warning(f"  - Failed to compress {log_file.name}: {e}")
+                logger.warning("  - Failed to compress %s: %s", log_file.name, e, exc_info=True)
 
-        logger.info(f"  - Log maintenance: {compressed} files compressed")
+        logger.info("  - Log maintenance: %s files compressed", compressed, exc_info=True)
 
     def _generate_insights(self) -> None:
         """Generate insights from recent activity via bridge synthesis and resonance."""
@@ -138,13 +138,13 @@ class DreamDaemon:
             bridges = synth.find_bridges(top_k=3)
             insights_found = len(bridges) if bridges else 0
             if insights_found > 0:
-                logger.info(f"  - Bridge synthesis found {insights_found} cross-domain connections")
+                logger.info("  - Bridge synthesis found %s cross-domain connections", insights_found, exc_info=True)
         except Exception as e:
-            logger.debug(f"  - Bridge synthesis unavailable: {e}")
+            logger.debug("  - Bridge synthesis unavailable: %s", e, exc_info=True)
 
         # Calculate system resonance via Julia
         resonance = self._calculate_resonance("system_state_snapshot")
-        logger.info(f"  - Insights: {insights_found} bridges, resonance={resonance:.4f}")
+        logger.info("  - Insights: %s bridges, resonance={resonance:.4f}", insights_found, exc_info=True)
         if resonance > 0.8:
             logger.info("  🌟 HIGH RESONANCE DETECTED! Triggering deep consolidation.")
 

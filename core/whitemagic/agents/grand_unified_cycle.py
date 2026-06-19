@@ -234,7 +234,7 @@ class GrandUnifiedCycle:
             self._zodiacal_round = get_zodiacal_round()
             logger.info("✓ Zodiacal Round connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Zodiacal Round unavailable: {e}")
+            logger.warning("Zodiacal Round unavailable: %s", e, exc_info=True)
 
         # Wu Xing Engine
         try:
@@ -242,7 +242,7 @@ class GrandUnifiedCycle:
             self._wu_xing_engine = WuXingEngine()
             logger.info("✓ Wu Xing Engine connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Wu Xing Engine unavailable: {e}")
+            logger.warning("Wu Xing Engine unavailable: %s", e, exc_info=True)
 
         # Wu Xing System
         try:
@@ -250,7 +250,7 @@ class GrandUnifiedCycle:
             self._wu_xing_system = WuXingSystem()
             logger.info("✓ Wu Xing System connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Wu Xing System unavailable: {e}")
+            logger.warning("Wu Xing System unavailable: %s", e, exc_info=True)
 
         # Yin-Yang Tracker
         try:
@@ -258,7 +258,7 @@ class GrandUnifiedCycle:
             self._yin_yang_tracker = get_tracker()
             logger.info("✓ Yin-Yang Tracker connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Yin-Yang Tracker unavailable: {e}")
+            logger.warning("Yin-Yang Tracker unavailable: %s", e, exc_info=True)
 
         # War Room
         try:
@@ -266,7 +266,7 @@ class GrandUnifiedCycle:
             self._war_room = get_war_room()
             logger.info("✓ War Room connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"War Room unavailable: {e}")
+            logger.warning("War Room unavailable: %s", e, exc_info=True)
 
         # Doctrine
         try:
@@ -274,7 +274,7 @@ class GrandUnifiedCycle:
             self._doctrine = get_doctrine()
             logger.info("✓ Imperial Doctrine connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Imperial Doctrine unavailable: {e}")
+            logger.warning("Imperial Doctrine unavailable: %s", e, exc_info=True)
 
         # Gan Ying Bus
         try:
@@ -282,7 +282,7 @@ class GrandUnifiedCycle:
             self._gan_ying_bus = get_bus()
             logger.info("✓ Gan Ying Bus connected")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Gan Ying Bus unavailable: {e}")
+            logger.warning("Gan Ying Bus unavailable: %s", e, exc_info=True)
 
         self._initialized = True
         logger.info("🎖️ Grand Unified Cycle fully initialized")
@@ -305,7 +305,7 @@ class GrandUnifiedCycle:
         self._cycle_count += 1
 
         logger.info(f"\n{'='*60}")
-        logger.info(f"🌀 GRAND CYCLE {self._cycle_count} — Advancing all systems")
+        logger.info("🌀 GRAND CYCLE %s — Advancing all systems", self._cycle_count, exc_info=True)
         logger.info(f"{'='*60}")
 
         # 1. COSMIC LAYER: Advance Zodiac
@@ -327,7 +327,7 @@ class GrandUnifiedCycle:
 
         # 5. STRATEGIC/EXECUTION LAYER: Select Tactic
         tactic = self._select_tactic(pipeline_phase, balance)
-        logger.info(f"  🎖️  Tactic: {tactic}")
+        logger.info("  🎖️  Tactic: %s", tactic, exc_info=True)
 
         # 6. RESONANCE CASCADE: Emit unified event
         self._emit_resonance_cascade(zodiac_sign, element, balance, pipeline_phase, tactic)
@@ -387,7 +387,7 @@ class GrandUnifiedCycle:
             try:
                 self._wu_xing_engine.adjust_element(element.value, 0.1)
             except Exception as e:
-                logger.debug(f"Wu Xing adjustment failed: {e}")
+                logger.debug("Wu Xing adjustment failed: %s", e, exc_info=True)
 
     def _check_yin_yang_balance(self) -> dict[str, Any]:
         """Check current yin-yang balance"""
@@ -402,7 +402,7 @@ class GrandUnifiedCycle:
                     'stagnation_count': 0,
                 }
             except Exception as e:
-                logger.debug(f"Yin-Yang check failed: {e}")
+                logger.debug("Yin-Yang check failed: %s", e, exc_info=True)
 
         # Fallback: time-based heuristic
         hour = datetime.now().hour
@@ -492,7 +492,7 @@ class GrandUnifiedCycle:
             )
 
         except Exception as e:
-            logger.debug(f"Resonance emission failed: {e}")
+            logger.debug("Resonance emission failed: %s", e, exc_info=True)
 
     def _get_zodiac_cycle_count(self) -> int:
         """Get zodiac cycle count"""
@@ -574,7 +574,7 @@ class GrandUnifiedCycle:
             List of UnifiedState for each phase
         """
         logger.info(f"\n{'#'*60}")
-        logger.info(f"🌀 STARTING FULL ROUND — {num_phases} phases")
+        logger.info("🌀 STARTING FULL ROUND — %s phases", num_phases, exc_info=True)
         logger.info(f"{'#'*60}\n")
 
         states = []
@@ -584,7 +584,7 @@ class GrandUnifiedCycle:
             time.sleep(0.1)  # Brief pause for resonance propagation
 
         logger.info(f"\n{'#'*60}")
-        logger.info(f"✅ FULL ROUND COMPLETE — {num_phases} phases executed")
+        logger.info("✅ FULL ROUND COMPLETE — %s phases executed", num_phases, exc_info=True)
         logger.info(f"{'#'*60}\n")
 
         return states

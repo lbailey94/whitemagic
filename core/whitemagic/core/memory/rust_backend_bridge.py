@@ -31,7 +31,7 @@ class RustBackendBridge:
                 self._rust_backend = RustBackend(self.db_path)
                 logger.info("Rust backend initialized successfully")
             except Exception as e:
-                logger.warning(f"Failed to initialize Rust backend: {e}, falling back to Python")
+                logger.warning("Failed to initialize Rust backend: %s, falling back to Python", e, exc_info=True)
                 self._rust_backend = None
 
     def is_available(self) -> bool:
@@ -85,5 +85,5 @@ def get_rust_backend(db_path: Path) -> RustBackendBridge | None:
         try:
             return RustBackendBridge(db_path)
         except Exception as e:
-            logger.warning(f"Failed to create Rust backend bridge: {e}")
+            logger.warning("Failed to create Rust backend bridge: %s", e, exc_info=True)
     return None

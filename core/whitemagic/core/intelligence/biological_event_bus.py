@@ -106,10 +106,10 @@ class BiologicalEventBus:
                     )
             except Exception as e:
                 self._stats["errors"] += 1
-                logger.error(f"Event handler error in {subsystem}: {e}")
+                logger.error("Event handler error in %s: %s", subsystem, e, exc_info=True)
 
         self._subscribers[event_type].append(safe_handler)
-        logger.debug(f"📡 {subsystem} subscribed to {event_type.value}")
+        logger.debug("📡 %s subscribed to %s", subsystem, event_type.value, exc_info=True)
 
     async def publish(self, event_type: EventType, data: dict[str, Any],
                       source: str, priority: int = 1) -> bool:
@@ -155,7 +155,7 @@ class BiologicalEventBus:
                 self._circuit_breaker_state["state"] = "open"
 
             self._stats["errors"] += 1
-            logger.error(f"Event publish failed: {e}")
+            logger.error("Event publish failed: %s", e, exc_info=True)
             return False
 
     def _rust_dispatch(self, event: BiologicalEvent) -> None:
@@ -196,7 +196,7 @@ class BiologicalEventBus:
                 continue
             except Exception as e:
                 self._stats["errors"] += 1
-                logger.error(f"Event processing error: {e}")
+                logger.error("Event processing error: %s", e, exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """Get event bus statistics."""

@@ -201,7 +201,7 @@ class PatternDiscovery:
         for source in self.sources:
             sources_attempted += 1
             try:
-                logger.info(f"Running: {source.name}...")
+                logger.info("Running: %s...", source.name, exc_info=True)
                 result = self._run_source(source)
 
                 if result is not None:
@@ -213,12 +213,12 @@ class PatternDiscovery:
                     source_insights = self._extract_insights(source.name, result)
                     insights.extend(source_insights)
 
-                    logger.info(f"  -> Found {count} patterns")
+                    logger.info("  -> Found %s patterns", count, exc_info=True)
                 else:
-                    logger.debug(f"  -> No results from {source.name}")
+                    logger.debug("  -> No results from %s", source.name, exc_info=True)
 
             except Exception as e:
-                logger.info(f"  -> Error: {e}")
+                logger.info("  -> Error: %s", e, exc_info=True)
                 by_source[source.name] = 0
                 errors[source.name] = f"{type(e).__name__}: {e}"
 
@@ -252,10 +252,10 @@ class PatternDiscovery:
         try:
             module = importlib.import_module(source.module_path)
         except ImportError as e:
-            logger.debug(f"  (Module not available: {e})")
+            logger.debug("  (Module not available: %s)", e, exc_info=True)
             return None
         except Exception as e:
-            logger.debug(f"  (Module import failed: {e})")
+            logger.debug("  (Module import failed: %s)", e, exc_info=True)
             return None
 
         # Strategy 1: callable on the module itself
@@ -384,7 +384,7 @@ class PatternDiscovery:
                     "errors": report.errors,
                 }) + "\n")
         except Exception as e:
-            logger.debug(f"Could not write JSONL log: {e}")
+            logger.debug("Could not write JSONL log: %s", e, exc_info=True)
 
         # Markdown report
         try:
@@ -415,7 +415,7 @@ class PatternDiscovery:
                 for insight in report.insights:
                     f.write(f"- {insight}\n")
         except Exception as e:
-            logger.debug(f"Could not write markdown report: {e}")
+            logger.debug("Could not write markdown report: %s", e, exc_info=True)
 
 
 # Global singleton

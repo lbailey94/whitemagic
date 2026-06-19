@@ -156,7 +156,7 @@ class SerendipityEngine:
                     ))
             return surfaced
         except Exception as e:
-            logger.warning(f"Quantum serendipity failed: {e}")
+            logger.warning("Quantum serendipity failed: %s", e, exc_info=True)
             return self._surface_random(count)
 
     def _surface_dormant(self, count: int) -> list[SurfacedMemory]:
@@ -331,7 +331,7 @@ class SerendipityEngine:
             )
             bus.emit(event)
         except (ImportError, AttributeError) as e:
-            logger.debug(f"Gan Ying emit failed: {e}")
+            logger.debug("Gan Ying emit failed: %s", e, exc_info=True)
 
     def _get_core_access(self) -> Any:
         """Lazy-load the CoreAccessLayer."""
@@ -470,7 +470,7 @@ class SerendipityEngine:
             bus = get_bus()
             bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
         except (ImportError, AttributeError) as e:
-            logger.debug(f"Gan Ying listen failed: {e}")
+            logger.debug("Gan Ying listen failed: %s", e, exc_info=True)
 
     def _on_pattern_detected(self, event: Any) -> None:
         """Handle pattern detection - surface related dormant memories.

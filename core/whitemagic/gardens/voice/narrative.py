@@ -196,10 +196,10 @@ class NarrativeEngine:
                         title: Story.from_dict(s) for title, s in data.items()
                     }
         except json.JSONDecodeError as e:
-            logger.warning(f"Error loading stories from {self.stories_file}: {e}")
+            logger.warning("Error loading stories from %s: %s", self.stories_file, e, exc_info=True)
             self._stories = {}
         except Exception as e:
-            logger.warning(f"Unexpected error loading stories from {self.stories_file}: {e}")
+            logger.warning("Unexpected error loading stories from %s: %s", self.stories_file, e, exc_info=True)
             self._stories = {}
 
         try:
@@ -210,10 +210,10 @@ class NarrativeEngine:
                         name: Chapter.from_dict(c) for name, c in data.items()
                     }
         except json.JSONDecodeError as e:
-            logger.warning(f"Error loading chapters from {self.chapters_file}: {e}")
+            logger.warning("Error loading chapters from %s: %s", self.chapters_file, e, exc_info=True)
             self._chapters = {}
         except Exception as e:
-            logger.warning(f"Unexpected error loading chapters from {self.chapters_file}: {e}")
+            logger.warning("Unexpected error loading chapters from %s: %s", self.chapters_file, e, exc_info=True)
             self._chapters = {}
 
         try:
@@ -224,10 +224,10 @@ class NarrativeEngine:
                         id: Thread.from_dict(t) for id, t in data.items()
                     }
         except json.JSONDecodeError as e:
-            logger.warning(f"Error loading threads from {self.threads_file}: {e}")
+            logger.warning("Error loading threads from %s: %s", self.threads_file, e, exc_info=True)
             self._threads = {}
         except Exception as e:
-            logger.warning(f"Unexpected error loading threads from {self.threads_file}: {e}")
+            logger.warning("Unexpected error loading threads from %s: %s", self.threads_file, e, exc_info=True)
             self._threads = {}
 
     def _save(self) -> None:
@@ -346,10 +346,10 @@ class NarrativeEngine:
                 with open(entry_file) as f:
                     return cast(dict[str, Any], json.load(f))
             except json.JSONDecodeError as e:
-                logger.warning(f"Error loading entry {entry_id} from {entry_file}: {e}")
+                logger.warning("Error loading entry %s from %s: %s", entry_id, entry_file, e, exc_info=True)
                 return None
             except (OSError, FileNotFoundError, PermissionError) as e:
-                logger.warning(f"Unexpected error loading entry {entry_id} from {entry_file}: {e}")
+                logger.warning("Unexpected error loading entry %s from %s: %s", entry_id, entry_file, e, exc_info=True)
                 return None
         return None
 

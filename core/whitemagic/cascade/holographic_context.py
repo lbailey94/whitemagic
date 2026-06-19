@@ -35,7 +35,7 @@ class HolographicContextInjector:
 3. `nexus/src/components/RadialPalette.tsx` (Resonance: 0.88) - MandalaOS UI for Karmic Consent and agent routing.
 </holographic_context>"""
         except Exception as e:
-            logger.warning(f"Failed to generate holographic context: {e}")
+            logger.warning("Failed to generate holographic context: %s", e, exc_info=True)
             return f"<!-- Holographic Context Error: {e} -->"
 
 _holographic_injector = None

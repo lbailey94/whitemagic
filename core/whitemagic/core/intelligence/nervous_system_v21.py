@@ -47,7 +47,7 @@ class UnifiedNervousSystemV21:
             subsystems["immune"] = ImmuneRegulator()
             logger.info("🛡️ Immune System initialized")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"⚠️ Immune System unavailable: {e}")
+            logger.warning("⚠️ Immune System unavailable: %s", e, exc_info=True)
             subsystems["immune"] = None  # type: ignore[assignment]
 
         # 2. Evolution System
@@ -58,7 +58,7 @@ class UnifiedNervousSystemV21:
             subsystems["evolution"] = ContinuousEvolutionEngine()  # type: ignore[assignment]
             logger.info("🧬 Evolution System initialized")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"⚠️ Evolution System unavailable: {e}")
+            logger.warning("⚠️ Evolution System unavailable: %s", e, exc_info=True)
             subsystems["evolution"] = None  # type: ignore[assignment]
 
         # 3. Dream System
@@ -67,7 +67,7 @@ class UnifiedNervousSystemV21:
             subsystems["dreams"] = DreamCycle()  # type: ignore[assignment]
             logger.info("💭 Dream System initialized")
         except ImportError as e:
-            logger.warning(f"⚠️ Dream System unavailable: {e}")
+            logger.warning("⚠️ Dream System unavailable: %s", e, exc_info=True)
             subsystems["dreams"] = None  # type: ignore[assignment]
 
         # 4. Memory Metabolism
@@ -78,7 +78,7 @@ class UnifiedNervousSystemV21:
             subsystems["metabolism"] = HolographicConsolidator()  # type: ignore[assignment]
             logger.info("🔄 Memory Metabolism initialized")
         except ImportError as e:
-            logger.warning(f"⚠️ Memory Metabolism unavailable: {e}")
+            logger.warning("⚠️ Memory Metabolism unavailable: %s", e, exc_info=True)
             subsystems["metabolism"] = None  # type: ignore[assignment]
 
         # 5. Consciousness
@@ -89,7 +89,7 @@ class UnifiedNervousSystemV21:
             subsystems["consciousness"] = CoherencePersistence()  # type: ignore[assignment]
             logger.info("🌟 Consciousness initialized")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"⚠️ Consciousness unavailable: {e}")
+            logger.warning("⚠️ Consciousness unavailable: %s", e, exc_info=True)
             subsystems["consciousness"] = None  # type: ignore[assignment]
 
         # 6. Resonance
@@ -100,7 +100,7 @@ class UnifiedNervousSystemV21:
             subsystems["resonance"] = ResonanceAmplifier()  # type: ignore[assignment]
             logger.info("🎵 Resonance initialized")
         except ImportError as e:
-            logger.warning(f"⚠️ Resonance unavailable: {e}")
+            logger.warning("⚠️ Resonance unavailable: %s", e, exc_info=True)
             subsystems["resonance"] = None  # type: ignore[assignment]
 
         # 7. Emergence
@@ -111,7 +111,7 @@ class UnifiedNervousSystemV21:
             subsystems["emergence"] = EmergenceEngine()  # type: ignore[assignment]
             logger.info("✨ Emergence initialized")
         except ImportError as e:
-            logger.warning(f"⚠️ Emergence unavailable: {e}")
+            logger.warning("⚠️ Emergence unavailable: %s", e, exc_info=True)
             subsystems["emergence"] = None  # type: ignore[assignment]
 
         return subsystems
@@ -137,10 +137,10 @@ class UnifiedNervousSystemV21:
                         await subsystem.start()
                     else:
                         subsystem.start()
-                    logger.info(f"▶️ {name} subsystem started")
+                    logger.info("▶️ %s subsystem started", name, exc_info=True)
                 except Exception as e:
                     self._stats["subsystem_errors"][name] = str(e)
-                    logger.error(f"❌ Failed to start {name}: {e}")
+                    logger.error("❌ Failed to start %s: %s", name, e, exc_info=True)
 
         self.is_active = True
         logger.info("🧠 Unified Nervous System V21 fully operational")
@@ -160,7 +160,7 @@ class UnifiedNervousSystemV21:
                         await subsystem.stop()
                     else:
                         subsystem.stop()
-                    logger.info(f"⏹️ {name} subsystem stopped")
+                    logger.info("⏹️ %s subsystem stopped", name, exc_info=True)
                 except Exception as e:
                     logger.error("❌ Failed to stop %s: %s", name, e, exc_info=True)
 
@@ -191,7 +191,7 @@ class UnifiedNervousSystemV21:
                 subsystem_results["dreams"] = dream_result
             except Exception as e:
                 self._stats["subsystem_errors"]["dreams"] = str(e)
-                logger.error(f"Dream pulse failed: {e}")
+                logger.error("Dream pulse failed: %s", e, exc_info=True)
 
         # 2. Memory Metabolism Pulse - publishes decay events
         if self.subsystems.get("metabolism") is not None:
@@ -202,7 +202,7 @@ class UnifiedNervousSystemV21:
                 subsystem_results["metabolism"] = metabolism_result
             except Exception as e:
                 self._stats["subsystem_errors"]["metabolism"] = str(e)
-                logger.error(f"Metabolism pulse failed: {e}")
+                logger.error("Metabolism pulse failed: %s", e, exc_info=True)
 
         # 3. Resonance Pulse - publishes harmony events
         if self.subsystems.get("resonance") is not None:
@@ -213,7 +213,7 @@ class UnifiedNervousSystemV21:
                 subsystem_results["resonance"] = resonance_result
             except Exception as e:
                 self._stats["subsystem_errors"]["resonance"] = str(e)
-                logger.error(f"Resonance pulse failed: {e}")
+                logger.error("Resonance pulse failed: %s", e, exc_info=True)
 
         # Get event bus stats
         event_stats = {}

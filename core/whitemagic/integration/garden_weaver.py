@@ -91,11 +91,11 @@ class GardenWeaver:
                 self.garden_status[garden] = status
                 successful.append(garden)
 
-                logger.info(f"  ✅ {garden:20s} - {module_count} modules, resonance: {has_resonance}")
+                logger.info("  ✅ {garden:20s} - %s modules, resonance: %s", module_count, has_resonance, exc_info=True)
 
             except Exception as e:
                 failed.append((garden, str(e)))
-                logger.info(f"  ❌ {garden:20s} - {e}")
+                logger.info("  ❌ {garden:20s} - %s", e, exc_info=True)
 
         # Create connections between compatible gardens
         self._create_connections()
@@ -169,7 +169,7 @@ class GardenWeaver:
                     )
                     logger.info("📖 Breakthrough narrated in system thread.")
                 except Exception as e:
-                    logger.warning(f"Narrative bridge failed: {e}")
+                    logger.warning("Narrative bridge failed: %s", e, exc_info=True)
 
             # Register the bridge as an action for the breakthrough event name
             # Note: Orchestrator currently triggers actions based on pattern_title.
@@ -241,7 +241,7 @@ class GardenWeaver:
             return True
 
         except Exception as e:
-            logger.info(f"  ⚠️  Resonance activation pending: {e}")
+            logger.info("  ⚠️  Resonance activation pending: %s", e, exc_info=True)
             return False
 
 

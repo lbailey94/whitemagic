@@ -212,7 +212,7 @@ def meditate(depth: int = 0) -> "awareness":
         try:
             self.gallery_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            logger.warning(f"Could not create gallery dir: {e}")
+            logger.warning("Could not create gallery dir: %s", e, exc_info=True)
 
         self.creations: list[Creation] = []
 
@@ -332,7 +332,7 @@ def meditate(depth: int = 0) -> "awareness":
                     confidence=creation.joy_score,
                 ))
             except Exception as e:
-                logger.debug(f"Gan Ying emit failed (continuing): {e}")
+                logger.debug("Gan Ying emit failed (continuing): %s", e, exc_info=True)
 
         return creation
 
@@ -379,7 +379,7 @@ def meditate(depth: int = 0) -> "awareness":
             with open(filepath, "w") as f:
                 json.dump(creation.to_dict(), f, indent=2)
         except Exception as e:
-            logger.debug(f"Could not save creation to disk: {e}")
+            logger.debug("Could not save creation to disk: %s", e, exc_info=True)
 
     def _load_gallery(self) -> None:
         """Load existing creations from disk."""

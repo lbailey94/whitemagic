@@ -18,7 +18,7 @@ class DharmaConstraints:
             self.div = HaskellDivination()
             logger.info("☸️ Dharma Bridge: Connected to Haskell backend.")
         except Exception as e:
-            logger.warning(f"☸️ Dharma Bridge: Haskell backend unavailable: {e}")
+            logger.warning("☸️ Dharma Bridge: Haskell backend unavailable: %s", e, exc_info=True)
 
     def get_invariants(self, node_count: int) -> list[dict[str, Any]]:
         """Query the grimoire for invariants relevant to a system of the given size.
@@ -41,7 +41,7 @@ class DharmaConstraints:
                         })
                 return invariants
             except Exception as e:
-                logger.debug(f"Haskell query failed: {e}")
+                logger.debug("Haskell query failed: %s", e, exc_info=True)
 
         # 2. Python Fallback (Resilient Dharma)
         logger.debug("☸️ Dharma Bridge: Using Python native fallback logic.")

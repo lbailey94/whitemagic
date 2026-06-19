@@ -91,7 +91,7 @@ def load_plugins() -> list[PluginBase]:
                     loaded.append(plugin)
                     _registry.register(plugin)
             except Exception as e:
-                logger.info(f"Failed to load plugin {entry_point.name}: {e}")
+                logger.info("Failed to load plugin %s: %s", entry_point.name, e, exc_info=True)
     except ImportError:
         pass
 
@@ -124,7 +124,7 @@ def _load_plugin_file(plugin_path: Path) -> PluginBase | None:
         if plugin_classes:
             return plugin_classes[0]()
     except Exception as e:
-        logger.info(f"Failed to load plugin {plugin_path}: {e}")
+        logger.info("Failed to load plugin %s: %s", plugin_path, e, exc_info=True)
 
     return None
 
@@ -147,7 +147,7 @@ def reload_plugin(name: str) -> bool:
             plugin.reload()
             return True
         except Exception as e:
-            logger.info(f"Failed to reload plugin {name}: {e}")
+            logger.info("Failed to reload plugin %s: %s", name, e, exc_info=True)
     return False
 
 
@@ -160,7 +160,7 @@ def unload_plugin(name: str) -> bool:
             _registry.unregister(name)
             return True
         except Exception as e:
-            logger.info(f"Failed to unload plugin {name}: {e}")
+            logger.info("Failed to unload plugin %s: %s", name, e, exc_info=True)
     return False
 
 

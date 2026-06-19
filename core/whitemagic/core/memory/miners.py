@@ -95,7 +95,7 @@ class PatternEngine:
             try:
                 return self._extract_rust(min_confidence)
             except Exception as e:
-                logger.warning(f"Rust pattern extraction failed, falling back to Python: {e}")
+                logger.warning("Rust pattern extraction failed, falling back to Python: %s", e, exc_info=True)
 
         return self._extract_python(min_confidence)
 
@@ -508,7 +508,7 @@ class AssociationMiner:
 
             all_mems = core_mems + inner_mems + mid_mems + outer_mems
         except Exception as e:
-            logger.warning(f"Association mining: sampling failed, using recent: {e}")
+            logger.warning("Association mining: sampling failed, using recent: %s", e, exc_info=True)
             all_mems = um.backend.list_recent(limit=sample_size)
 
         if len(all_mems) < 2:
@@ -557,7 +557,7 @@ class AssociationMiner:
                 used_rust = True
                 logger.debug("Association mining used Rust accelerator")
         except Exception as e:
-            logger.debug(f"Rust association mining unavailable, using Python: {e}")
+            logger.debug("Rust association mining unavailable, using Python: %s", e, exc_info=True)
 
         # Python fallback path (with batch Rust keyword extraction)
         if not used_rust:
@@ -699,9 +699,9 @@ class AssociationMiner:
                 edges_created += 1
 
             if edges_created:
-                logger.info(f"KG enrichment: {edges_created} association edges created")
+                logger.info("KG enrichment: %s association edges created", edges_created, exc_info=True)
         except Exception as e:
-            logger.debug(f"KG enrichment skipped: {e}")
+            logger.debug("KG enrichment skipped: %s", e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Semantic mining (Leap 1a — replaces keyword Jaccard)
@@ -752,7 +752,7 @@ class AssociationMiner:
         if not pairs:
             elapsed = (time.perf_counter() - start) * 1000
             report.duration_ms = elapsed
-            logger.info(f"Semantic mining: no pairs above {min_similarity} threshold ({elapsed:.0f}ms)")
+            logger.info("Semantic mining: no pairs above %s threshold ({elapsed:.0f}ms)", min_similarity, exc_info=True)
             return report
 
         report.pairs_evaluated = len(pairs)
@@ -781,7 +781,7 @@ class AssociationMiner:
                         existing_assoc.add((row[0], row[1]))
                         existing_assoc.add((row[1], row[0]))
         except Exception as e:
-            logger.debug(f"Semantic mining: could not load existing associations: {e}")
+            logger.debug("Semantic mining: could not load existing associations: %s", e, exc_info=True)
 
         # Build proposals
         proposals: list[ProposedLink] = []
@@ -1163,7 +1163,7 @@ class CausalMiner:
                         "title": mem.title or "",
                     }
         except Exception as e:
-            logger.debug(f"Causal mining: hydration partially failed: {e}")
+            logger.debug("Causal mining: hydration partially failed: %s", e, exc_info=True)
 
         report.memories_sampled = len(mem_meta)
 
@@ -1362,7 +1362,7 @@ class CausalMiner:
                 f"from {len(parsed)} memories",
             )
         except Exception as e:
-            logger.debug(f"Temporal fallback failed: {e}")
+            logger.debug("Temporal fallback failed: %s", e, exc_info=True)
 
         return pairs[:self._max_edges * 5]
 

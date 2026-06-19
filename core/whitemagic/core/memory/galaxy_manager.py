@@ -128,7 +128,7 @@ class GalaxyManager:
                     self._galaxies[name] = GalaxyInfo.from_dict(info_dict)
                 self._active_galaxy = data.get("active", "default")
             except Exception as e:
-                logger.warning(f"Failed to load galaxy registry: {e}")
+                logger.warning("Failed to load galaxy registry: %s", e, exc_info=True)
 
         # Ensure "default" galaxy always exists
         if "default" not in self._galaxies:
@@ -189,7 +189,7 @@ class GalaxyManager:
         self._get_memory(name)
         info.memory_count = 0
 
-        logger.info(f"Created galaxy '{name}' at {db_path}")
+        logger.info("Created galaxy '%s' at %s", name, db_path, exc_info=True)
         return info
 
     def delete_galaxy(self, name: str) -> bool:
@@ -220,7 +220,7 @@ class GalaxyManager:
                 d["memory_count"] = stats.get("total_memories", 0)
                 info.memory_count = d["memory_count"]
             except Exception as e:
-                logger.debug(f"Galaxy stats lookup failed for {name}: {e}")
+                logger.debug("Galaxy stats lookup failed for %s: %s", name, e, exc_info=True)
             result.append(d)
         return result
 
@@ -236,7 +236,7 @@ class GalaxyManager:
         # Reset the global singleton so next get_unified_memory() uses the new galaxy
         self._reset_global_memory(name)
 
-        logger.info(f"Switched to galaxy '{name}'")
+        logger.info("Switched to galaxy '%s'", name, exc_info=True)
         return self._galaxies[name]
 
     def get_active(self) -> GalaxyInfo:
@@ -396,7 +396,7 @@ class GalaxyManager:
 
                 transferred += 1
             except Exception as e:
-                logger.warning(f"Transfer failed for {mem.id[:8]}: {e}")
+                logger.warning("Transfer failed for {mem.id[:8]}: %s", e, exc_info=True)
                 errors += 1
 
         # Update registry counts
@@ -634,7 +634,7 @@ class GalaxyManager:
                 )
                 ingested += 1
             except Exception as e:
-                logger.warning(f"Failed to ingest {f}: {e}")
+                logger.warning("Failed to ingest %s: %s", f, e, exc_info=True)
                 errors += 1
 
         # Update memory count

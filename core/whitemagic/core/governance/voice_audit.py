@@ -183,7 +183,7 @@ class VoiceAuditScanner:
             with ledger._lock:
                 ledger_entries = [e.to_dict() for e in ledger._entries[-5000:]]
         except Exception as exc:
-            logger.warning(f"VoiceAudit could not read karma ledger: {exc}")
+            logger.warning("VoiceAudit could not read karma ledger: %s", exc, exc_info=True)
 
         # Build a lookup of recent tool calls from ledger
         ledger_tools: set[str] = {e["tool"] for e in ledger_entries}

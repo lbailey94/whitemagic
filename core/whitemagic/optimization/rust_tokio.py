@@ -81,7 +81,7 @@ def tokio_deploy_clones(
         result_json = _rs.tokio_deploy_clones(prompt, num_clones, strategies or [])
         return cast(dict[str, Any], _json_loads(result_json))
     except Exception as e:
-        logger.debug(f"Rust tokio_deploy_clones failed: {e}")
+        logger.debug("Rust tokio_deploy_clones failed: %s", e, exc_info=True)
         return None
 
 
@@ -92,7 +92,7 @@ def tokio_clone_bench(num_clones: int = 1000) -> tuple[float, float] | None:
     try:
         return cast(tuple[float, float], _rs.tokio_clone_bench(num_clones))
     except Exception as e:
-        logger.debug(f"Rust tokio_clone_bench failed: {e}")
+        logger.debug("Rust tokio_clone_bench failed: %s", e, exc_info=True)
         return None
 
 
@@ -103,7 +103,7 @@ def tokio_clone_stats() -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], _json_loads(_rs.tokio_clone_stats()))
     except Exception as e:
-        logger.debug(f"Rust tokio_clone_stats failed: {e}")
+        logger.debug("Rust tokio_clone_stats failed: %s", e, exc_info=True)
         return None
 
 
@@ -123,5 +123,5 @@ def ipc_status() -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], _json_loads(_ipc_bridge.ipc_bridge_status()))
     except Exception as e:
-        logger.debug(f"Rust ipc_bridge_status failed: {e}")
+        logger.debug("Rust ipc_bridge_status failed: %s", e, exc_info=True)
         return None

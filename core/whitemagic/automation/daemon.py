@@ -290,7 +290,7 @@ class AutomationDaemon:
 
     def _execute_cascade_wrapper(self, cascade: ResonanceCascade, data: dict[str, Any]) -> None:
         """Wrapper to execute legacy cascades through the daemon's logic."""
-        logger.info(f"🌀 EXECUTING BRIDGED CASCADE: {cascade.name}")
+        logger.info("🌀 EXECUTING BRIDGED CASCADE: %s", cascade.name, exc_info=True)
         # Logic to iterate and run tasks
         for task_name in cascade.tasks:
             if task_name in self.tasks:
@@ -328,12 +328,12 @@ class AutomationDaemon:
     def register_task(self, task: AutomationTask) -> None:
         """Register an automation task."""
         self.tasks[task.name] = task
-        logger.debug(f"Registered task: {task.name}")
+        logger.debug("Registered task: %s", task.name, exc_info=True)
 
     def register_cascade(self, cascade: ResonanceCascade) -> None:
         """Register a resonance cascade."""
         self.cascades[cascade.name] = cascade
-        logger.debug(f"Registered cascade: {cascade.name}")
+        logger.debug("Registered cascade: %s", cascade.name, exc_info=True)
 
     def start(self) -> None:
         """Start the automation daemon."""
@@ -379,7 +379,7 @@ class AutomationDaemon:
     def _execute_task(self, task: AutomationTask) -> dict[str, Any]:
         """Execute a single task."""
         try:
-            logger.info(f"Executing task: {task.name}")
+            logger.info("Executing task: %s", task.name, exc_info=True)
             result = task.handler()
             task.last_run = datetime.now()
             task.run_count += 1
@@ -390,7 +390,7 @@ class AutomationDaemon:
             return result
         except Exception as e:
             task.error_count += 1
-            logger.error(f"Task {task.name} failed: {e}")
+            logger.error("Task %s failed: %s", task.name, e, exc_info=True)
             return {"error": str(e)}
 
     def _execute_event_task(self, event_info: dict[str, Any]) -> None:
@@ -699,10 +699,10 @@ if __name__ == "__main__":
                     from whitemagic.utils.fast_json import dumps_str as _json_dumps
                     logger.info(_json_dumps(result, indent=2, default=str))
                 else:
-                    logger.info(f"Unknown task: {task_name}")
+                    logger.info("Unknown task: %s", task_name, exc_info=True)
             else:
                 logger.info("Available tasks:")
                 for name in daemon.tasks:
-                    logger.info(f"  - {name}")
+                    logger.info("  - %s", name, exc_info=True)
     else:
         logger.info("Usage: python daemon.py [start|status|run <task>]")

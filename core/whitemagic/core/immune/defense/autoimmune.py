@@ -138,7 +138,7 @@ class AutoimmuneSystem:
                         ))
 
         except Exception as e:
-            logger.info(f"⚠️  Error scanning {file_path}: {e}")
+            logger.info("⚠️  Error scanning %s: %s", file_path, e, exc_info=True)
 
         return violations
 

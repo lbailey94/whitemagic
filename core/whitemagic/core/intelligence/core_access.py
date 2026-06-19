@@ -217,19 +217,19 @@ class CoreAccessLayer:
             except AttributeError:
                 logger.warning("SQLite extension loading not available in this Python build (requires sqlite3 compiled with enable-load-extension).")
             except (sqlite3.Error, sqlite3.OperationalError) as e:
-                logger.debug(f"Could not load native SQLite SIMD extension: {e}. Falling back to standard graph calculations.")
+                logger.debug("Could not load native SQLite SIMD extension: %s. Falling back to standard graph calculations.", e, exc_info=True)
             finally:
                 try:
                     self._conn.enable_load_extension(False)
                 except (sqlite3.Error, sqlite3.OperationalError) as e:
-                    logger.debug(f"Failed to disable load extension: {e}")
+                    logger.debug("Failed to disable load extension: %s", e, exc_info=True)
 
             try:
                 self._conn.execute("PRAGMA journal_mode = WAL")
                 self._conn.execute("PRAGMA synchronous = NORMAL")
                 self._conn.execute("PRAGMA busy_timeout = 30000")
             except (sqlite3.Error, sqlite3.OperationalError) as e:
-                logger.debug(f"Failed to set PRAGMA busy_timeout: {e}")
+                logger.debug("Failed to set PRAGMA busy_timeout: %s", e, exc_info=True)
         return self._conn
 
     # ------------------------------------------------------------------
@@ -255,7 +255,7 @@ class CoreAccessLayer:
             cached = detector.get_cached_or_detect(sample_limit=10000)
             report = cached.to_dict() if cached else None
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Constellation query failed: {e}")
+            logger.debug("Constellation query failed: %s", e, exc_info=True)
             return []
 
         if not report or not report.get("constellations"):
@@ -416,7 +416,7 @@ class CoreAccessLayer:
                         if src in frontier_neighbors:
                             frontier_neighbors[src].append((r["neighbor_id"], r["strength"]))
                 except Exception as e:
-                    logger.debug(f"Failed to process frontier neighbors: {e}")
+                    logger.debug("Failed to process frontier neighbors: %s", e, exc_info=True)
 
             # Collect all new neighbor IDs, then batch-fetch titles (N+1 fix)
             new_nids = [
@@ -435,7 +435,7 @@ class CoreAccessLayer:
                     ).fetchall()
                     neighbor_titles = {r["id"]: r["title"] for r in title_rows}
                 except (sqlite3.Error, sqlite3.OperationalError) as e:
-                    logger.debug(f"Failed to resolve neighbor titles: {e}")
+                    logger.debug("Failed to resolve neighbor titles: %s", e, exc_info=True)
 
             for neighbors in frontier_neighbors.values():
                 for nid, strength in neighbors:
@@ -479,7 +479,7 @@ class CoreAccessLayer:
                 """, batch_params)
                 conn.commit()
         except (sqlite3.Error, sqlite3.OperationalError) as e:
-            logger.debug(f"Non-critical commit error in core_access: {e}")
+            logger.debug("Non-critical commit error in core_access: %s", e, exc_info=True)
 
     def get_association_stats(self) -> dict[str, Any]:
         """Get association graph statistics."""
@@ -672,7 +672,7 @@ class CoreAccessLayer:
                 for r in rows
             ]
         except Exception as e:
-            logger.debug(f"Holographic neighbor query failed: {e}")
+            logger.debug("Holographic neighbor query failed: %s", e, exc_info=True)
             return []
 
     # ------------------------------------------------------------------
@@ -709,7 +709,7 @@ class CoreAccessLayer:
                 sim = hit.get("similarity", 0.0)
                 vector_results.append((mid, sim))
         except Exception as e:
-            logger.debug(f"Vector channel failed: {e}")
+            logger.debug("Vector channel failed: %s", e, exc_info=True)
 
         # --- Graph channel ---
         # Use top vector results as seeds, then walk associations
@@ -784,7 +784,7 @@ class CoreAccessLayer:
                     title = row["title"]
                     preview = row["preview"] or ""
             except Exception as e:
-                logger.debug(f"Failed to get row preview info: {e}")
+                logger.debug("Failed to get row preview info: %s", e, exc_info=True)
 
             results.append(HybridResult(
                 memory_id=mid,
@@ -869,7 +869,7 @@ class CoreAccessLayer:
                     if len(bridges) >= limit:
                         break
         except Exception as e:
-            logger.debug(f"Bridge search failed: {e}")
+            logger.debug("Bridge search failed: %s", e, exc_info=True)
 
         return bridges[:limit]
 
@@ -884,7 +884,7 @@ class CoreAccessLayer:
             detector = get_constellation_detector()
             return cast(list[dict[str, Any]], detector.get_drift_vectors(window_days=window_days))
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Drift query failed: {e}")
+            logger.debug("Drift query failed: %s", e, exc_info=True)
             return []
 
     def find_association_orphans(self, min_gravity: float = 0.6, limit: int = 20) -> list[dict[str, Any]]:

@@ -411,7 +411,7 @@ class ChariotArchaeologist:
         Returns:
             None
         """
-        logger.info(f"Chariot started execution in {self.root_path}")
+        logger.info("Chariot started execution in %s", self.root_path, exc_info=True)
         files_to_scan = []
 
         # Walk the earth
@@ -438,7 +438,7 @@ class ChariotArchaeologist:
         Returns:
             None
         """
-        logger.info(f"Excavation complete. Findings saved to {self.report_file}")
+        logger.info("Excavation complete. Findings saved to %s", self.report_file, exc_info=True)
         print(f"\n--- CHARIOT RUN COMPLETE ---\nScanned: {self.stats_data['scanned']}\nFound: {self.stats_data['found']}\nErrors: {self.stats_data['errors']}")
 
         # Append summary stats

@@ -80,7 +80,7 @@ def _get_cross_encoder() -> Any:
         logger.info("Cross-encoder model loaded: ms-marco-MiniLM-L-6-v2")
         return _cross_encoder
     except Exception as e:
-        logger.warning(f"Cross-encoder unavailable: {e}")
+        logger.warning("Cross-encoder unavailable: %s", e, exc_info=True)
         return None
 
 
@@ -302,7 +302,7 @@ def cross_encoder_rerank(
         return reranked[:top_k]
 
     except Exception as e:
-        logger.warning(f"Cross-encoder inference failed: {e}, falling back to lexical")
+        logger.warning("Cross-encoder inference failed: %s, falling back to lexical", e, exc_info=True)
         return lexical_rerank(query, results, top_k)
 
 

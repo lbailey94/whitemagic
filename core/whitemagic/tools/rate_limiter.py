@@ -173,7 +173,7 @@ class RateLimiter:
         if tool_count > tool_limit + self._config.burst_allowance:
             self._total_blocked += 1
             retry_after = self._estimate_retry(tool_window)
-            logger.warning(f"Rate limited: agent={agent_id} tool={tool_name} ({tool_count}/{tool_limit}/min)")
+            logger.warning("Rate limited: agent=%s tool=%s (%s/%s/min)", agent_id, tool_name, tool_count, tool_limit, exc_info=True)
             return {
                 "status": "error",
                 "error": f"Rate limited: {tool_name} ({tool_count} calls in last minute, limit={tool_limit})",
@@ -190,7 +190,7 @@ class RateLimiter:
         if global_count > self._config.global_rpm + self._config.burst_allowance:
             self._total_blocked += 1
             retry_after = self._estimate_retry(global_window)
-            logger.warning(f"Global rate limited: agent={agent_id} ({global_count}/{self._config.global_rpm}/min)")
+            logger.warning("Global rate limited: agent=%s (%s/%s/min)", agent_id, global_count, self._config.global_rpm, exc_info=True)
             return {
                 "status": "error",
                 "error": f"Global rate limit: {global_count} calls in last minute (limit={self._config.global_rpm})",

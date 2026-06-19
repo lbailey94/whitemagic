@@ -177,7 +177,7 @@ def galactic_batch_score(
             parsed: list[dict[str, Any]] = _json_loads(result_json)
             return parsed
         except Exception as e:
-            logger.debug(f"Rust galactic scoring failed, using Python: {e}")
+            logger.debug("Rust galactic scoring failed, using Python: %s", e, exc_info=True)
 
     # Python fallback
     return cast(list[dict[str, Any]], _galactic_batch_score_python(memories, quick))
@@ -222,7 +222,7 @@ def association_mine(
                         d["pair_count"] = len(d.get("overlaps", []))
                     return d
         except Exception as e:
-            logger.debug(f"Native association mining failed, trying JSON path: {e}")
+            logger.debug("Native association mining failed, trying JSON path: %s", e, exc_info=True)
 
     # JSON path (with serialization overhead)
     if _RUST_AVAILABLE:
@@ -234,7 +234,7 @@ def association_mine(
             parsed: dict[str, Any] = _json_loads(result_json)
             return parsed
         except Exception as e:
-            logger.debug(f"Rust association mining failed, using Python: {e}")
+            logger.debug("Rust association mining failed, using Python: %s", e, exc_info=True)
 
     # Python fallback
     return cast(dict[str, Any], _association_mine_python(texts, max_keywords, min_score, max_results))
@@ -334,7 +334,7 @@ def holographic_encode_batch(
         parsed: list[dict[str, float]] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust holographic batch encoding failed: {e}")
+        logger.debug("Rust holographic batch encoding failed: %s", e, exc_info=True)
         return None
 
 
@@ -357,7 +357,7 @@ def holographic_encode_single(
         parsed: dict[str, float] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust holographic single encoding failed: {e}")
+        logger.debug("Rust holographic single encoding failed: %s", e, exc_info=True)
         return None
 
 
@@ -389,7 +389,7 @@ def holographic_nearest_5d(
         parsed: list[dict[str, Any]] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust holographic nearest 5D failed: {e}")
+        logger.debug("Rust holographic nearest 5D failed: %s", e, exc_info=True)
         return None
 
 
@@ -421,7 +421,7 @@ def minhash_find_duplicates(
         parsed: list[dict[str, Any]] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust MinHash find_duplicates failed: {e}")
+        logger.debug("Rust MinHash find_duplicates failed: %s", e, exc_info=True)
         return None
 
 
@@ -445,7 +445,7 @@ def minhash_signatures(
         parsed: list[list[int]] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust MinHash signatures failed: {e}")
+        logger.debug("Rust MinHash signatures failed: %s", e, exc_info=True)
         return None
 
 
@@ -475,7 +475,7 @@ def sqlite_batch_update_galactic(
         parsed: dict[str, Any] = _json_loads(result_json)
         return parsed
     except (sqlite3.Error, sqlite3.OperationalError) as e:
-        logger.debug(f"Rust SQLite batch update failed: {e}")
+        logger.debug("Rust SQLite batch update failed: %s", e, exc_info=True)
         return None
 
 
@@ -497,7 +497,7 @@ def sqlite_decay_drift(
         parsed: dict[str, Any] = _json_loads(result_json)
         return parsed
     except (sqlite3.Error, sqlite3.OperationalError) as e:
-        logger.debug(f"Rust SQLite decay drift failed: {e}")
+        logger.debug("Rust SQLite decay drift failed: %s", e, exc_info=True)
         return None
 
 
@@ -520,7 +520,7 @@ def sqlite_fts_search(
         parsed: list[dict[str, Any]] = _json_loads(result_json)
         return parsed
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Rust SQLite FTS search failed: {e}")
+        logger.debug("Rust SQLite FTS search failed: %s", e, exc_info=True)
         return None
 
 
@@ -540,7 +540,7 @@ def sqlite_zone_stats(
         parsed: dict[str, Any] = _json_loads(result_json)
         return parsed
     except (sqlite3.Error, sqlite3.OperationalError) as e:
-        logger.debug(f"Rust SQLite zone stats failed: {e}")
+        logger.debug("Rust SQLite zone stats failed: %s", e, exc_info=True)
         return None
 
 
@@ -563,7 +563,7 @@ def sqlite_export_for_mining(
         parsed: list[dict[str, Any]] = _json_loads(result_json)
         return parsed
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Rust SQLite export for mining failed: {e}")
+        logger.debug("Rust SQLite export for mining failed: %s", e, exc_info=True)
         return None
 
 
@@ -605,7 +605,7 @@ def retrieval_pipeline(
             return [dict(item) for item in parsed if isinstance(item, dict)]
         return None
     except Exception as e:
-        logger.debug(f"Rust retrieval_pipeline failed: {e}")
+        logger.debug("Rust retrieval_pipeline failed: %s", e, exc_info=True)
         return None
 
 
@@ -641,7 +641,7 @@ def keyword_extract(text: str, max_keywords: int = 50) -> set[str] | None:
         result = _rs.keyword_extract(text, max_keywords)
         return cast(set[str], result)
     except Exception as e:
-        logger.debug(f"Rust keyword_extract failed: {e}")
+        logger.debug("Rust keyword_extract failed: %s", e, exc_info=True)
         return None
 
 
@@ -656,5 +656,5 @@ def keyword_extract_batch(texts: list[str], max_keywords: int = 50) -> list[set[
         result = _rs.keyword_extract_batch(texts, max_keywords)
         return cast(list[set[str]], result)
     except Exception as e:
-        logger.debug(f"Rust keyword_extract_batch failed: {e}")
+        logger.debug("Rust keyword_extract_batch failed: %s", e, exc_info=True)
         return None

@@ -108,7 +108,7 @@ class ContinuitySuite:
             # but atomic_write handles the swap safely.
             atomic_write(GROUNDING_FILE, _json_dumps(state, indent=2))
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.info(f"⚠️ Failed to update grounding file: {e}")
+            logger.info("⚠️ Failed to update grounding file: %s", e, exc_info=True)
 
     def _get_uptime(self) -> float:
         """Calculate system uptime in hours."""
@@ -174,7 +174,7 @@ def get_current_session() -> dict[str, Any]:
             with open(SESSION_FILE) as f:
                 return json.load(f) or {}
     except (OSError, FileNotFoundError, PermissionError) as e:
-        logger.info(f" Error reading session file: {e}")
+        logger.info(" Error reading session file: %s", e, exc_info=True)
         return {}
 
 def update_session(
@@ -211,7 +211,7 @@ def update_session(
         try:
             atomic_write(SESSION_FILE, _json_dumps(current, indent=2))
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.info(f" Error updating session file: {e}")
+            logger.info(" Error updating session file: %s", e, exc_info=True)
 
         return current
 
@@ -237,7 +237,7 @@ def log_event(
             with open(EVENTS_FILE, "a") as f:
                 f.write(_json_dumps(event) + "\n")
     except (OSError, FileNotFoundError, PermissionError) as e:
-        logger.info(f" Error logging event: {e}")
+        logger.info(" Error logging event: %s", e, exc_info=True)
 
 def get_recent_events(limit: int = 10) -> list[dict[str, Any]]:
     """Get recent events from the log."""
@@ -258,7 +258,7 @@ def get_recent_events(limit: int = 10) -> list[dict[str, Any]]:
                     except json.JSONDecodeError:
                         continue
     except Exception as e:
-        logger.info(f"⚠️ Error reading events: {e}")
+        logger.info("⚠️ Error reading events: %s", e, exc_info=True)
 
     return events
 
@@ -270,4 +270,4 @@ def mark_seen(path: str, interface: str, action: str = "view") -> None:
     try:
         get_seen_registry().mark_seen(path, context=context)
     except Exception as e:
-        logger.info(f"⚠️ Error updating seen registry: {e}")
+        logger.info("⚠️ Error updating seen registry: %s", e, exc_info=True)

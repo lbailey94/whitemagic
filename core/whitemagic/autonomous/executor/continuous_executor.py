@@ -200,7 +200,7 @@ class ContinuousExecutor:
         with open(self.log_path, "a") as f:
             f.write(log_line)
 
-        logger.info(f"{level}: {message}")
+        logger.info("%s: %s", level, message, exc_info=True)
 
     async def run_continuous(self) -> None:
         """Main autonomous loop with batch execution support."""
@@ -831,5 +831,5 @@ class ContinuousExecutor:
         logger.info(f"Pending: {len(self.objectives)}")
         logger.info("\nResources:")
         for key, value in self.limits.get_status().items():
-            logger.info(f"  {key}: {value}")
+            logger.info("  %s: %s", key, value, exc_info=True)
         logger.info("=" * 60)

@@ -266,7 +266,7 @@ class WarRoom:
             forces = summary["force_composition"]
             total_clones = summary["total_clones"]
         except Exception as e:
-            logger.debug(f"Doctrine unavailable, using defaults: {e}")
+            logger.debug("Doctrine unavailable, using defaults: %s", e, exc_info=True)
             tactic_name = "Chain of Stratagems"
             wu_xing_phase = "earth"
             forces = [{"type": "light_infantry", "count": 1000}]
@@ -534,7 +534,7 @@ class WarRoom:
                 "subtasks": len(plan.subtasks),
             }
         except Exception as e:
-            logger.debug(f"Swarm decomposition failed, defaulting to single subtask: {e}")
+            logger.debug("Swarm decomposition failed, defaulting to single subtask: %s", e, exc_info=True)
             filter_result = {"subtasks": 1}
         phases.append({"name": "Filter", "type": "officers", **filter_result})
 
@@ -599,7 +599,7 @@ class WarRoom:
                         "backend": "rust_tokio",
                     }
         except Exception as e:
-            logger.debug(f"Tokio deployment failed: {e}")
+            logger.debug("Tokio deployment failed: %s", e, exc_info=True)
 
         # Fallback: Python async simulation
         return {
@@ -694,7 +694,7 @@ class WarRoom:
                 "balance": balance,
             })
         except Exception as e:
-            logger.debug(f"Wu Xing phase lookup failed, using hour fallback: {e}")
+            logger.debug("Wu Xing phase lookup failed, using hour fallback: %s", e, exc_info=True)
             hour = datetime.now().hour
             phases = {
                 range(6, 10): "wood",
@@ -720,7 +720,7 @@ class WarRoom:
                 result["energy_override"] = "water"
                 result["recommendation"] = "Low energy detected. Favor reflection over action."
         except Exception as e:
-            logger.debug(f"Harmony vector read failed: {e}")
+            logger.debug("Harmony vector read failed: %s", e, exc_info=True)
 
         return result
 

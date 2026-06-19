@@ -113,7 +113,7 @@ class UnifiedPatternAPI:
 
                 results.extend(patterns)
             except Exception as e:
-                logger.debug(f"Pattern engine {engine_name!r} search failed: {e}")
+                logger.debug("Pattern engine {engine_name!r} search failed: %s", e, exc_info=True)
                 continue
 
         # Filter by pattern type if specified
@@ -177,7 +177,7 @@ class UnifiedPatternAPI:
                     metadata={"frequency": p.frequency},
                 ))
         except Exception as e:
-            logger.debug(f"Core pattern search failed: {e}")
+            logger.debug("Core pattern search failed: %s", e, exc_info=True)
 
         return patterns
 
@@ -215,7 +215,7 @@ class UnifiedPatternAPI:
                         },
                     ))
         except Exception as e:
-            logger.debug(f"Holographic pattern search failed: {e}")
+            logger.debug("Holographic pattern search failed: %s", e, exc_info=True)
 
         return patterns
 
@@ -239,7 +239,7 @@ class UnifiedPatternAPI:
                         metadata=rule,
                     ))
         except Exception as e:
-            logger.debug(f"Edge pattern search failed: {e}")
+            logger.debug("Edge pattern search failed: %s", e, exc_info=True)
 
         return patterns
 
@@ -288,7 +288,7 @@ class UnifiedPatternAPI:
                         "evidence_titles": evidence[:10],
                     }
             except Exception as e:
-                logger.debug(f"Holographic evidence fetch failed: {e}")
+                logger.debug("Holographic evidence fetch failed: %s", e, exc_info=True)
 
         # Get core patterns
         core_titles = {}
@@ -299,7 +299,7 @@ class UnifiedPatternAPI:
                     100]:
                     core_titles[p.title[:50]] = p
             except Exception as e:
-                logger.debug(f"Core pattern title fetch failed: {e}")
+                logger.debug("Core pattern title fetch failed: %s", e, exc_info=True)
 
         # Find overlaps where holographic evidence contains core pattern titles
         for holo_desc, holo_data in holo_evidence.items():

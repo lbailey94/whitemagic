@@ -207,7 +207,7 @@ class KokaRuntime:
             tx_id = res.get("tx_id", "")
             return str(tx_id)
         except Exception as e:
-            logger.debug(f"Koka begin_tx failed: {e}")
+            logger.debug("Koka begin_tx failed: %s", e, exc_info=True)
             return ""
 
     def commit_transaction(self, tx_id: str) -> bool:
@@ -219,7 +219,7 @@ class KokaRuntime:
             committed = res.get("committed", False)
             return bool(committed)
         except Exception as e:
-            logger.debug(f"Koka commit_tx failed: {e}")
+            logger.debug("Koka commit_tx failed: %s", e, exc_info=True)
             return False
 
     def rollback_transaction(self, tx_id: str) -> bool:
@@ -231,7 +231,7 @@ class KokaRuntime:
             rolled_back = res.get("rolled_back", False)
             return bool(rolled_back)
         except Exception as e:
-            logger.debug(f"Koka rollback_tx failed: {e}")
+            logger.debug("Koka rollback_tx failed: %s", e, exc_info=True)
             return False
 
 

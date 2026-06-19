@@ -164,7 +164,7 @@ def arrow_encode_memories(memories_json: str) -> bytes | None:
     try:
         return cast(bytes, _arrow_bridge.arrow_encode_memories(memories_json))
     except Exception as e:
-        logger.debug(f"Rust arrow_encode_memories failed: {e}")
+        logger.debug("Rust arrow_encode_memories failed: %s", e, exc_info=True)
         return None
 
 
@@ -178,7 +178,7 @@ def arrow_decode_memories(ipc_bytes: bytes) -> str | None:
     try:
         return cast(str, _arrow_bridge.arrow_decode_memories(ipc_bytes))
     except Exception as e:
-        logger.debug(f"Rust arrow_decode_memories failed: {e}")
+        logger.debug("Rust arrow_decode_memories failed: %s", e, exc_info=True)
         return None
 
 
@@ -189,7 +189,7 @@ def arrow_schema_info() -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], _json_loads(_arrow_bridge.arrow_schema_info()))
     except Exception as e:
-        logger.debug(f"Rust arrow_schema_info failed: {e}")
+        logger.debug("Rust arrow_schema_info failed: %s", e, exc_info=True)
         return None
 
 
@@ -203,5 +203,5 @@ def arrow_roundtrip_bench(n: int = 1000) -> tuple[int, int, int] | None:
     try:
         return cast(tuple[int, int, int], _arrow_bridge.arrow_roundtrip_bench(n))
     except Exception as e:
-        logger.debug(f"Rust arrow_roundtrip_bench failed: {e}")
+        logger.debug("Rust arrow_roundtrip_bench failed: %s", e, exc_info=True)
         return None

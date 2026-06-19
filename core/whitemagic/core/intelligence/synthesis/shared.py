@@ -47,7 +47,7 @@ def calculate_unified_velocity(db_path: str | None = None, task_file: Path | Non
             }
         conn.close()
     except Exception as e:
-        logger.warning(f"Failed to fetch memory velocity: {e}")
+        logger.warning("Failed to fetch memory velocity: %s", e, exc_info=True)
 
     # 2. Task Willpower (from task.md)
     task_stats = {"willpower": 0.0, "velocity": 0.0, "tasks_done": 0, "tasks_total": 0, "momentum": 0}
@@ -68,7 +68,7 @@ def calculate_unified_velocity(db_path: str | None = None, task_file: Path | Non
                 "momentum": in_progress,
             }
         except Exception as e:
-            logger.warning(f"Failed to parse task willpower: {e}")
+            logger.warning("Failed to parse task willpower: %s", e, exc_info=True)
 
     # 3. Combined Metrics
     # Normalize memory velocity to a 0-1 scale relative to a high watermark (e.g., 50 per week)

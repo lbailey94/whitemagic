@@ -131,7 +131,7 @@ class TagNormalizer:
         except ImportError:
             pass
         except Exception as e:
-            logger.debug(f"Rust string similarity failed, falling back to Python: {e}")
+            logger.debug("Rust string similarity failed, falling back to Python: %s", e, exc_info=True)
 
         # Python Fallback
         similar_pairs = []

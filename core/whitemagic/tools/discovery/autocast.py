@@ -46,7 +46,7 @@ class ToolDiscovery:
             self.gan_ying_enabled = True
             logger.debug("Tool discovery connected to Gan Ying bus")
         except Exception as e:
-            logger.debug(f"Gan Ying bus not available: {e}")
+            logger.debug("Gan Ying bus not available: %s", e, exc_info=True)
             self.gan_ying = None
 
     def record_call(

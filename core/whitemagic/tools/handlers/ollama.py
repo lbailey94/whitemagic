@@ -156,7 +156,7 @@ def _inject_context(
             else:
                 memories.append({"content": str(m)})
     except Exception as e:
-        logger.debug(f"Context injection failed (non-fatal): {e}")
+        logger.debug("Context injection failed (non-fatal): %s", e, exc_info=True)
         return prompt, []
 
     if not memories:
@@ -206,7 +206,7 @@ def _maybe_store_output(
         )
         return mem.id if hasattr(mem, "id") else str(mem)
     except Exception as e:
-        logger.debug(f"MAG store failed (non-fatal): {e}")
+        logger.debug("MAG store failed (non-fatal): %s", e, exc_info=True)
         return None
 
 

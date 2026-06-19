@@ -34,7 +34,7 @@ class HaskellBridge:
             self._available = True
             logger.info("Haskell divination bridge initialized")
         except (FileNotFoundError, OSError, ImportError) as e:
-            logger.warning(f"Haskell bridge unavailable: {e}")
+            logger.warning("Haskell bridge unavailable: %s", e, exc_info=True)
             self._available = False
 
     @property

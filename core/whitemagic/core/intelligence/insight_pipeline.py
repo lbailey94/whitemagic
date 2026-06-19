@@ -362,7 +362,7 @@ class InsightPipeline:
                 ))
             return items
         except Exception as e:
-            logger.warning(f"PredictiveEngine failed: {e}")
+            logger.warning("PredictiveEngine failed: %s", e, exc_info=True)
             return []
 
     def _run_kaizen(self) -> list[BriefingItem]:
@@ -394,7 +394,7 @@ class InsightPipeline:
                 ))
             return items
         except Exception as e:
-            logger.warning(f"KaizenEngine failed: {e}")
+            logger.warning("KaizenEngine failed: %s", e, exc_info=True)
             return []
 
     def _run_serendipity(self, count: int = 5) -> list[BriefingItem]:
@@ -424,7 +424,7 @@ class InsightPipeline:
                 ))
             return items
         except Exception as e:
-            logger.warning(f"SerendipityEngine failed: {e}")
+            logger.warning("SerendipityEngine failed: %s", e, exc_info=True)
             return []
 
     def _run_emergence(self) -> list[BriefingItem]:
@@ -470,7 +470,7 @@ class InsightPipeline:
 
             return items
         except Exception as e:
-            logger.warning(f"EmergenceEngine failed: {e}")
+            logger.warning("EmergenceEngine failed: %s", e, exc_info=True)
             return []
 
     # ------------------------------------------------------------------
@@ -559,9 +559,9 @@ class InsightPipeline:
                     "velocity": briefing.velocity_metrics,
                 },
             )
-            logger.debug(f"Persisted briefing #{self._briefing_count} as memory")
+            logger.debug("Persisted briefing #%s as memory", self._briefing_count, exc_info=True)
         except Exception as e:
-            logger.debug(f"Failed to persist briefing as memory: {e}")
+            logger.debug("Failed to persist briefing as memory: %s", e, exc_info=True)
 
     @staticmethod
     def _deduplicate(items: list[BriefingItem]) -> list[BriefingItem]:

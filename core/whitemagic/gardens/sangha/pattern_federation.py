@@ -118,7 +118,7 @@ class PatternFederation:
             except (ImportError, AttributeError):
                 pass
 
-        logger.info(f"📚 Pattern '{name}' added to federation")
+        logger.info("📚 Pattern '%s' added to federation", name, exc_info=True)
         return pattern_id
 
     def validate_pattern(
@@ -160,7 +160,7 @@ class PatternFederation:
         self._update_index(pattern)
 
         status = "✅ success" if success else "❌ failure"
-        logger.info(f"📊 Pattern '{pattern.name}' validated: {status} (confidence: {pattern.confidence:.2f})")
+        logger.info("📊 Pattern '%s' validated: %s (confidence: {pattern.confidence:.2f})", pattern.name, status, exc_info=True)
 
     def search_patterns(
         self,

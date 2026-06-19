@@ -217,7 +217,7 @@ class SafeExecutor:
             return result
 
         except subprocess.TimeoutExpired:
-            logger.warning(f"Command timed out after {timeout}s: {' '.join(cmd_array)}")
+            logger.warning("Command timed out after %ss: {' '.join(cmd_array)}", timeout, exc_info=True)
             raise
         except subprocess.CalledProcessError as e:
             logger.error("Command failed with code %s: {' '.join(cmd_array)}", e.returncode, exc_info=True)

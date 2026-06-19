@@ -134,7 +134,7 @@ def _persist_anchor(snapshot: AnchorSnapshot, result: AnchorResult) -> None:
         with open(history_file, "a", encoding="utf-8") as f:
             f.write(_json_dumps(record) + "\n")
     except (OSError, FileNotFoundError, PermissionError) as e:
-        logger.debug(f"Anchor history persist failed: {e}")
+        logger.debug("Anchor history persist failed: %s", e, exc_info=True)
 
 
 def get_anchor_history(limit: int = 20) -> list[dict[str, Any]]:
@@ -155,7 +155,7 @@ def get_anchor_history(limit: int = 20) -> list[dict[str, Any]]:
                     continue
         return records
     except Exception as e:
-        logger.debug(f"Anchor history read failed: {e}")
+        logger.debug("Anchor history read failed: %s", e, exc_info=True)
         return []
 
 

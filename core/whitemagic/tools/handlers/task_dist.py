@@ -30,7 +30,7 @@ def _emit(event_type_name: str, data: dict) -> None:
         from whitemagic.core.resonance import emit_event
         emit_event(event_type_name, data, source="task_dist")
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced task dist emit err: {e}")
+        logger.debug("Silenced task dist emit err: %s", e, exc_info=True)
 
 
 def _tasks_dir() -> Path:

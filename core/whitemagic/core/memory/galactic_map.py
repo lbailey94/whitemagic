@@ -370,7 +370,7 @@ class GalacticMap:
                         "backend": "rust",
                     }
         except Exception as e:
-            logger.debug(f"Rust decay drift unavailable, using Python: {e}")
+            logger.debug("Rust decay drift unavailable, using Python: %s", e, exc_info=True)
 
         # Python fallback
         cutoff = datetime.now()
@@ -414,7 +414,7 @@ class GalacticMap:
             backend = um.backend
             backend.update_galactic_distance(memory_id, distance)
         except Exception as exc:
-            logger.debug(f"set_distance failed: {exc}")
+            logger.debug("set_distance failed: %s", exc, exc_info=True)
 
     # ------------------------------------------------------------------
     # Lightweight zone counting (for Harmony Vector A4 synthesis)
@@ -458,7 +458,7 @@ class GalacticMap:
 
             return counts
         except Exception as e:
-            logger.debug(f"get_zone_counts failed: {e}")
+            logger.debug("get_zone_counts failed: %s", e, exc_info=True)
             return {}
 
     # ------------------------------------------------------------------
@@ -628,7 +628,7 @@ class GalacticMap:
 
             return await loop.run_in_executor(None, query_zones)
         except Exception as e:
-            logger.debug(f"get_zone_counts_async failed: {e}")
+            logger.debug("get_zone_counts_async failed: %s", e, exc_info=True)
             return {}
 
 

@@ -168,7 +168,7 @@ class APIKeySystem:
                 except Exception as e:
                     logger.error("Failed to parse metadata for key %s: %s", k, e, exc_info=True)
 
-            logger.info(f"Loaded {len(self._metadata)} API keys from {self.storage_path}")
+            logger.info("Loaded {len(self._metadata)} API keys from %s", self.storage_path, exc_info=True)
 
         except Exception as e:
             logger.error("Failed to load API keys: %s", e, exc_info=True)

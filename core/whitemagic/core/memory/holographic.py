@@ -43,7 +43,7 @@ class HolographicMemory:
                     if not os.getenv("WM_SILENT_INIT"):
                         logger.info("✅ Rust SpatialIndex5D initialized (full 5D)")
             except Exception as e:
-                logger.debug(f"SpatialIndex5D unavailable: {e}")
+                logger.debug("SpatialIndex5D unavailable: %s", e, exc_info=True)
             # Fallback to legacy 4D
             if not self._index_5d:
                 try:

@@ -158,14 +158,14 @@ class AsyncGanYingBus:
         if event_type not in self._handlers:
             self._handlers[event_type] = []
         self._handlers[event_type].append(handler)
-        logger.debug(f"Registered handler for {event_type}")
+        logger.debug("Registered handler for %s", event_type, exc_info=True)
 
     def off(self, event_type: str, handler: Callable[..., Any]) -> None:
         """Remove event handler."""
         if event_type in self._handlers:
             try:
                 self._handlers[event_type].remove(handler)
-                logger.debug(f"Removed handler for {event_type}")
+                logger.debug("Removed handler for %s", event_type, exc_info=True)
             except ValueError:
                 pass
 
@@ -199,7 +199,7 @@ class AsyncGanYingBus:
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in results:
                 if isinstance(result, Exception):
-                    logger.error(f"Handler error: {result}")
+                    logger.error("Handler error: %s", result, exc_info=True)
                     self._metrics["errors"] += 1
                 else:
                     self._metrics["handlers_called"] += 1

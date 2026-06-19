@@ -151,7 +151,7 @@ class WorkerDaemon:
         """Execute a single task."""
         task_id = task.get("id", "unknown")
         mode = task.get("mode", "tool")
-        logger.info(f"Executing task {task_id} (mode={mode})")
+        logger.info("Executing task %s (mode=%s)", task_id, mode, exc_info=True)
 
         # Mark as running
         task["status"] = "running"
@@ -188,7 +188,7 @@ class WorkerDaemon:
                 "completed_at": task["completed_at"],
             }, indent=2, default=str), encoding="utf-8")
         except (OSError, PermissionError) as e:
-            logger.warning(f"Failed to write result for {task_id}: {e}")
+            logger.warning("Failed to write result for %s: %s", task_id, e, exc_info=True)
 
         if result.get("success"):
             self._tasks_completed += 1
@@ -290,7 +290,7 @@ class WorkerDaemon:
                 metadata={"type": "worker_daemon", "host": os.uname().nodename},
             )
         except Exception as e:
-            logger.debug(f"Agent registration failed: {e}")
+            logger.debug("Agent registration failed: %s", e, exc_info=True)
 
     def _heartbeat(self) -> None:
         """Send heartbeat to agent registry."""
@@ -302,7 +302,7 @@ class WorkerDaemon:
                 current_task=None,
             )
         except Exception as e:
-            logger.debug(f"Heartbeat failed for {self.worker_name}: {e}")
+            logger.debug("Heartbeat failed for %s: %s", self.worker_name, e, exc_info=True)
 
     def _deregister(self) -> None:
         """Deregister from agent registry."""

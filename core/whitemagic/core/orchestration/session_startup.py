@@ -62,7 +62,7 @@ class SessionStartupOrchestrator:
             logger.info(f"✅ {name} activated")
         except Exception as e:
             status.error = str(e)
-            logger.warning(f"⚠️ {name} failed: {e}")
+            logger.warning("⚠️ %s failed: %s", name, e, exc_info=True)
         self.systems[name] = status
         return status
 
@@ -82,7 +82,7 @@ class SessionStartupOrchestrator:
         thread.join(timeout_s)
 
         if thread.is_alive():
-            logger.warning(f"⚠️ {name} startup still running after {timeout_s:.1f}s; continuing in background")
+            logger.warning("⚠️ %s startup still running after {timeout_s:.1f}s; continuing in background", name, exc_info=True)
             return
 
         if not result_queue.empty():
@@ -105,7 +105,7 @@ class SessionStartupOrchestrator:
             try:
                 import whitemagic_rs
                 n = len([f for f in dir(whitemagic_rs) if not f.startswith("_")])
-                logger.info(f"✅ Rust bridge available ({n} functions)")
+                logger.info("✅ Rust bridge available (%s functions)", n, exc_info=True)
             except ImportError:
                 if os.getenv("WM_AUTO_BUILD_RUST_BRIDGE", "1") == "0":
                     logger.info("ℹ️  Rust bridge not available. Set WM_AUTO_BUILD_RUST_BRIDGE=1 to auto-build.")
@@ -259,7 +259,7 @@ class SessionStartupOrchestrator:
             from whitemagic.core.memory.embedding_daemon import get_embedding_daemon
             daemon = get_embedding_daemon()
             self._run_with_timeout("embedding_daemon", daemon.start, timeout_s=1.5)
-            logger.info(f"Embedding Daemon activation triggered (rust={daemon._stats.rust_available})")
+            logger.info("Embedding Daemon activation triggered (rust=%s)", daemon._stats.rust_available, exc_info=True)
         results.append(self._safe_activate("Embedding Daemon", start_embedding))
 
         # 3. Predictive Cache (Markov chain pre-warming, 91% accuracy)
@@ -272,7 +272,7 @@ class SessionStartupOrchestrator:
             """
             from whitemagic.optimization.predictive_cache import get_memory_cache
             cache = get_memory_cache()
-            logger.info(f"Predictive cache ready (max_size={cache.cache.max_size})")
+            logger.info("Predictive cache ready (max_size=%s)", cache.cache.max_size, exc_info=True)
         results.append(self._safe_activate("Predictive Cache", start_predictive_cache))
 
         return results
@@ -516,7 +516,7 @@ class SessionStartupOrchestrator:
             from whitemagic.core.user import get_user_manager
             manager = get_user_manager()
             profile = manager.profile
-            logger.info(f"👤 User Profile Loaded: {profile.name} (Style: {profile.learning_style})")
+            logger.info("👤 User Profile Loaded: %s (Style: %s)", profile.name, profile.learning_style, exc_info=True)
 
             # Emit event to merge into session context
             emit_event("session.context_update", {
@@ -671,7 +671,7 @@ class SessionStartupOrchestrator:
             from whitemagic.core.governance.maturity_gates import get_maturity_engine
             engine = get_maturity_engine()
             report = engine.assess()
-            logger.info(f"Maturity: stage={report.current_stage.name} (level {report.current_stage.value})")
+            logger.info("Maturity: stage=%s (level %s)", report.current_stage.name, report.current_stage.value, exc_info=True)
         results.append(self._safe_activate("Maturity Gates", init_maturity))
 
         # 7. Stoic Circuit Breaker Registry — pre-warm
@@ -788,7 +788,7 @@ class SessionStartupOrchestrator:
                     logger.warning("⚠️ GanaSwarm breath cycle still initializing; continuing in background")
                 logger.info("🫁 GanaSwarm breath cycle activated")
             except ImportError as e:
-                logger.warning(f"⚠️ GanaSwarm could not be activated: {e}")
+                logger.warning("⚠️ GanaSwarm could not be activated: %s", e, exc_info=True)
                 raise
 
         results.append(self._safe_activate("Gana Swarm", activate_swarm))
@@ -829,7 +829,7 @@ class SessionStartupOrchestrator:
                 if critical > 0:
                     for item in briefing.critical_items[:
                         3]:
-                        logger.info(f"   ‼️ {item.title}")
+                        logger.info("   ‼️ %s", item.title, exc_info=True)
 
         results.append(self._safe_activate("Insight Briefing", run_briefing))
         return results
@@ -917,7 +917,7 @@ class SessionStartupOrchestrator:
             }
 
             if verbose:
-                logger.info(f"\n✅ Startup complete: {activated} systems activated, {failed} failed in {duration:.2f}s")
+                logger.info("\n✅ Startup complete: %s systems activated, %s failed in {duration:.2f}s", activated, failed, exc_info=True)
 
             return summary
 

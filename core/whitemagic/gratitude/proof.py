@@ -214,7 +214,7 @@ def verify_x402_payment(tx_hash: str, expected_amount_usdc: float = 0.0) -> dict
                 "note": "USDC amount requires ERC-20 transfer log decoding" if success else "Transaction failed on-chain",
             }
     except Exception as exc:
-        logger.warning(f"Basescan verification failed: {exc}")
+        logger.warning("Basescan verification failed: %s", exc, exc_info=True)
         return {
             "verified": False,
             "reason": f"Basescan API error: {exc}",

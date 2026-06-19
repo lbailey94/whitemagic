@@ -198,7 +198,7 @@ class DreamCycle:
                     loop.run_until_complete(self._run_phase())
 
             except (RuntimeError, asyncio.CancelledError, OSError) as e:
-                logger.debug(f"Dream cycle error: {e}")
+                logger.debug("Dream cycle error: %s", e, exc_info=True)
 
             time.sleep(self._cycle_interval)
         loop.close()
@@ -242,7 +242,7 @@ class DreamCycle:
         except Exception as e:
             report.success = False
             report.error = str(e)
-            logger.debug(f"Dream phase {phase.value} error: {e}")
+            logger.debug("Dream phase %s error: %s", phase.value, e, exc_info=True)
 
         report.duration_ms = (time.perf_counter() - start) * 1000
 
@@ -444,7 +444,7 @@ class DreamCycle:
 
         except (sqlite3.Error, sqlite3.OperationalError) as e:
             result["triage_error"] = str(e)
-            logger.debug(f"Dream triage error: {e}")
+            logger.debug("Dream triage error: %s", e, exc_info=True)
 
         return result
 
@@ -931,7 +931,7 @@ class DreamCycle:
                     logger.debug("Operation failed: %s", e)
                     pass
         except Exception as e:
-            logger.debug(f"Failed to persist dream insights: {e}")
+            logger.debug("Failed to persist dream insights: %s", e, exc_info=True)
         return persisted
 
     def _emit_event(self, event_name: str, data: dict[str, Any]) -> None:

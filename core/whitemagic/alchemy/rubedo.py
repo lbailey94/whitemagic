@@ -80,7 +80,7 @@ class RubedoSynthesizer:
                     # Improve title based on body
                     rule_title = self.llm.complete(f"Generate a 3-5 word title for this rule: {rule_body}", max_tokens=10).strip().strip('"')
             except Exception as e:
-                logger.warning(f"LLM synthesis failed: {e}")
+                logger.warning("LLM synthesis failed: %s", e, exc_info=True)
 
         return {
             "id": f"rule_{cluster['cluster_id']}",

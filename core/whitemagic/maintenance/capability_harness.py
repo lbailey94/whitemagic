@@ -341,7 +341,7 @@ class CapabilityHarness:
             result = self.run_combo(name)
             results.append(result)
             status = "✅" if result.success else "❌"
-            logger.info(f"{status} {name}: {result.duration_ms:.1f}ms")
+            logger.info("%s %s: {result.duration_ms:.1f}ms", status, name, exc_info=True)
 
         passed = sum(1 for r in results if r.success)
 
@@ -357,7 +357,7 @@ class CapabilityHarness:
         path = path or self.base_path / "reports" / "status" / "CAPABILITY_HARNESS_LATEST.md"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(report.to_markdown())
-        logger.info(f"📊 Harness report saved to {path}")
+        logger.info("📊 Harness report saved to %s", path, exc_info=True)
 
 
 def run_harness() -> Any:

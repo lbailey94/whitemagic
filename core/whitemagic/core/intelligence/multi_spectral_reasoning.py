@@ -119,20 +119,20 @@ class MultiSpectralReasoner:
             from whitemagic.gardens.wisdom.i_ching import get_i_ching
             self.i_ching = get_i_ching()
         except Exception as e:
-            logger.debug(f"I Ching system not available: {e}")
+            logger.debug("I Ching system not available: %s", e, exc_info=True)
 
         try:
             # Use new path for Wu Xing
             from whitemagic.core.intelligence.wisdom.wu_xing import get_wu_xing
             self.wu_xing = get_wu_xing()
         except Exception as e:
-            logger.debug(f"Wu Xing system not available: {e}")
+            logger.debug("Wu Xing system not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.zodiac.zodiac_cores import get_zodiac_cores
             self.zodiac_cores = get_zodiac_cores()
         except Exception as e:
-            logger.debug(f"Zodiac cores matching not available: {e}")
+            logger.debug("Zodiac cores matching not available: %s", e, exc_info=True)
 
         try:
             try:
@@ -143,13 +143,13 @@ class MultiSpectralReasoner:
             if callable(get_war_wisdom):
                 self.art_of_war = get_war_wisdom
         except Exception as e:
-            logger.debug(f"Art of War wisdom not available: {e}")
+            logger.debug("Art of War wisdom not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.resonance.gan_ying import get_bus
             self.bus = get_bus()
         except Exception as e:
-            logger.debug(f"Gan Ying resonance bus not available: {e}")
+            logger.debug("Gan Ying resonance bus not available: %s", e, exc_info=True)
 
         try:
             from whitemagic.core.memory.holographic import get_holographic_memory
@@ -157,7 +157,7 @@ class MultiSpectralReasoner:
             self.holographic = get_holographic_memory()
             self.unified_memory = get_unified_memory()
         except Exception as e:
-            logger.debug(f"Memory systems not available: {e}")
+            logger.debug("Memory systems not available: %s", e, exc_info=True)
 
     def reason(self, question: str, lenses: Sequence[ReasoningLens] | None = None,
                context: ReasoningContext | None = None,
@@ -184,7 +184,7 @@ class MultiSpectralReasoner:
                     details={"hexagram": hexagram.number, "name": hexagram.name, "image": hexagram.image},
                 ))
             except Exception as e:
-                logger.info(f"⚠️ I Ching reasoning failed: {e}")
+                logger.info("⚠️ I Ching reasoning failed: %s", e, exc_info=True)
 
         # 2. Wu Xing Lens
         if ReasoningLens.WU_XING in lenses_list and self.wu_xing:
@@ -199,7 +199,7 @@ class MultiSpectralReasoner:
                     details={"element": element.value},
                 ))
             except Exception as e:
-                logger.info(f"⚠️ Wu Xing reasoning failed: {e}")
+                logger.info("⚠️ Wu Xing reasoning failed: %s", e, exc_info=True)
 
         # 3. Art of War Lens
         if ReasoningLens.ART_OF_WAR in lenses_list and self.art_of_war:
@@ -214,7 +214,7 @@ class MultiSpectralReasoner:
                     details={"chapter": wisdom.chapter},
                 ))
             except Exception as e:
-                logger.info(f"⚠️ Art of War reasoning failed: {e}")
+                logger.info("⚠️ Art of War reasoning failed: %s", e, exc_info=True)
 
         # 4. Zodiac Lens
         if ReasoningLens.ZODIAC in lenses_list and self.zodiac_cores:
@@ -237,7 +237,7 @@ class MultiSpectralReasoner:
                                  "mode": best_core.mode, "resonance": resp.resonance},
                     ))
             except Exception as e:
-                logger.info(f"\u26a0\ufe0f Zodiac reasoning failed: {e}")
+                logger.info("\u26a0\ufe0f Zodiac reasoning failed: %s", e, exc_info=True)
 
         # 5. Pattern Matching (Memory Lens)
         patterns_matched = self._match_patterns(context, perspectives)
@@ -277,7 +277,7 @@ class MultiSpectralReasoner:
                     confidence=confidence,
                 ))
             except Exception as e:
-                logger.warning(f"Failed to emit reasoning event: {e}")
+                logger.warning("Failed to emit reasoning event: %s", e, exc_info=True)
 
         return result
 

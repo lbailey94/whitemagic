@@ -124,7 +124,7 @@ def _audit_tool_call(
                     ),
                 )
         except Exception as e:
-            logger.debug(f"Dharma audit logging skipped: {e}")
+            logger.debug("Dharma audit logging skipped: %s", e, exc_info=True)
 
     except Exception as e:
-        logger.debug(f"Dharma audit error: {e}")
+        logger.debug("Dharma audit error: %s", e, exc_info=True)

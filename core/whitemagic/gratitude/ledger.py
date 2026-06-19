@@ -91,7 +91,7 @@ class GratitudeLedger:
                         data = _json_loads(line)
                         self._events.append(GratitudeEvent(**data))
         except Exception as exc:
-            logger.warning(f"Failed to load gratitude ledger: {exc}")
+            logger.warning("Failed to load gratitude ledger: %s", exc, exc_info=True)
 
     def record(self, event: GratitudeEvent) -> None:
         """Record a new gratitude event."""
@@ -101,7 +101,7 @@ class GratitudeLedger:
                 with open(self._path, "a", encoding="utf-8") as f:
                     f.write(_json_dumps(event.to_dict(), default=str) + "\n")
             except Exception as exc:
-                logger.warning(f"Failed to persist gratitude event: {exc}")
+                logger.warning("Failed to persist gratitude event: %s", exc, exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """Aggregate gratitude statistics."""

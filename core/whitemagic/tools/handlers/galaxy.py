@@ -66,7 +66,7 @@ def handle_galaxy_list(**kwargs: Any) -> dict[str, Any]:
         if cached is not None:
             return cached
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced galaxy fast_read cache error: {e}")
+        logger.debug("Silenced galaxy fast_read cache error: %s", e, exc_info=True)
 
     from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
 
@@ -83,7 +83,7 @@ def handle_galaxy_list(**kwargs: Any) -> dict[str, Any]:
     try:
         cache.set("galaxy_list", result, ttl=30)
     except Exception as e:
-        logger.debug(f"Silenced galaxy list cache error: {e}")
+        logger.debug("Silenced galaxy list cache error: %s", e, exc_info=True)
 
     return result
 
@@ -98,7 +98,7 @@ def handle_galaxy_status(**kwargs: Any) -> dict[str, Any]:
         if cached is not None:
             return cached
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced galaxy get_status cache check error: {e}")
+        logger.debug("Silenced galaxy get_status cache check error: %s", e, exc_info=True)
 
     from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
 
@@ -109,7 +109,7 @@ def handle_galaxy_status(**kwargs: Any) -> dict[str, Any]:
     try:
         cache.set("galaxy_status", result, ttl=30)
     except Exception as e:
-        logger.debug(f"Silenced galaxy get_status cache write error: {e}")
+        logger.debug("Silenced galaxy get_status cache write error: %s", e, exc_info=True)
 
     return result
 

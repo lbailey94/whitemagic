@@ -129,7 +129,7 @@ class PolyglotRouter:
                 lib.wm_iching_cast.restype = None
                 self._lib_cache["zig"] = lib
         except Exception as e:
-            logger.warning(f"Failed to pre-load Zig FFI: {e}")
+            logger.warning("Failed to pre-load Zig FFI: %s", e, exc_info=True)
 
     def _get_lib(self, name: str) -> Any | None:
         """Get a cached shared library handle."""
@@ -202,21 +202,21 @@ class PolyglotRouter:
                 return self._call_mojo(operation_name, mojo_fn, *args, **kwargs)
             except Exception as e:
                 self.metrics.mojo_failures += 1
-                logger.warning(f"Mojo {operation_name} failed: {e}")
+                logger.warning("Mojo %s failed: %s", operation_name, e, exc_info=True)
 
         if zig_fn is not None and self._zig_available:
             try:
                 return self._call_zig(operation_name, zig_fn, *args, **kwargs)
             except Exception as e:
                 self.metrics.zig_failures += 1
-                logger.warning(f"Zig {operation_name} failed: {e}")
+                logger.warning("Zig %s failed: %s", operation_name, e, exc_info=True)
 
         if rust_fn is not None and self._rust_available:
             try:
                 return self._call_rust(operation_name, rust_fn, *args, **kwargs)
             except Exception as e:
                 self.metrics.rust_failures += 1
-                logger.warning(f"Rust {operation_name} failed: {e}")
+                logger.warning("Rust %s failed: %s", operation_name, e, exc_info=True)
 
         return self._call_python(operation_name, python_fn, *args, **kwargs)
 
@@ -226,7 +226,7 @@ class PolyglotRouter:
         duration_ms = (time.time() - start) * 1000
         self.metrics.rust_calls += 1
         self.metrics.rust_time_ms += duration_ms
-        logger.debug(f"🦀 Rust {operation}: {duration_ms:.2f}ms")
+        logger.debug("🦀 Rust %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
     def _call_mojo(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
@@ -235,7 +235,7 @@ class PolyglotRouter:
         duration_ms = (time.time() - start) * 1000
         self.metrics.mojo_calls += 1
         self.metrics.mojo_time_ms += duration_ms
-        logger.debug(f"🔥 Mojo {operation}: {duration_ms:.2f}ms")
+        logger.debug("🔥 Mojo %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
     def _call_zig(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
@@ -244,7 +244,7 @@ class PolyglotRouter:
         duration_ms = (time.time() - start) * 1000
         self.metrics.zig_calls += 1
         self.metrics.zig_time_ms += duration_ms
-        logger.debug(f"⚡ Zig {operation}: {duration_ms:.2f}ms")
+        logger.debug("⚡ Zig %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
     def _call_python(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
@@ -253,7 +253,7 @@ class PolyglotRouter:
         duration_ms = (time.time() - start) * 1000
         self.metrics.python_calls += 1
         self.metrics.python_time_ms += duration_ms
-        logger.debug(f"🐍 Python {operation}: {duration_ms:.2f}ms")
+        logger.debug("🐍 Python %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
     # --- High-level Tiered Operations ---
@@ -315,7 +315,7 @@ class PolyglotRouter:
             Returns:
                 bool
             """
-            logger.info(f"Sangha Signal (Python Fallback) - {sender_id} in #{channel}: {content[:50]}... @ {coords}")
+            logger.info("Sangha Signal (Python Fallback) - %s in #%s: {content[:50]}... @ %s", sender_id, channel, coords, exc_info=True)
             return True
 
         return self._route_operation("send_sangha_signal", python_impl, rust_fn=rust_impl)

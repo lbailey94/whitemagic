@@ -85,7 +85,7 @@ class GanaSwarm:
                 return  # Do not add to queue
 
             elif decision.action == GovernanceAction.WARN:
-                logger.info(f"⚠️ Dharma Governor WARNED task: {task[:50]}... Concerns: {decision.concerns}")
+                logger.info("⚠️ Dharma Governor WARNED task: {task[:50]}... Concerns: %s", decision.concerns, exc_info=True)
                 # We could attach a warning flag to the state if we wanted
                 if state is None:
                     state = {}
@@ -104,7 +104,7 @@ class GanaSwarm:
         Main event loop for living system.
         """
         self.breathing = True
-        logger.debug(f"🫁 GanaSwarm breathing at {self.pulse_hz}Hz...")
+        logger.debug("🫁 GanaSwarm breathing at %sHz...", self.pulse_hz, exc_info=True)
 
         while self.breathing:
             start_time = time.time()
@@ -140,7 +140,7 @@ class GanaSwarm:
                 pass
 
             if batch:
-                logger.info(f"🫁 Inhale ({adaptation}): Processing {len(batch)} tasks...")
+                logger.info("🫁 Inhale (%s): Processing {len(batch)} tasks...", adaptation, exc_info=True)
                 # Spawn parallel executions
                 results = await self._process_batch(batch)
 
@@ -177,7 +177,7 @@ class GanaSwarm:
         valid_results: list[list[GanaResult]] = []
         for res in results:
             if isinstance(res, Exception):
-                logger.info(f"⚠️ Swarm task failed: {res}")
+                logger.info("⚠️ Swarm task failed: %s", res, exc_info=True)
             else:
                 # Ensure Mypy knows this is List[GanaResult]
                 valid_results.append(cast("list[GanaResult]", res))
@@ -202,9 +202,9 @@ class GanaSwarm:
         try:
             consolidated_count = manager.consolidate()
             if consolidated_count > 0:
-                logger.info(f"🫁 GanaSwarm: Consolidated {consolidated_count} memory items in SQLite.")
+                logger.info("🫁 GanaSwarm: Consolidated %s memory items in SQLite.", consolidated_count, exc_info=True)
         except Exception as e:
-            logger.info(f"⚠️ Swarm consolidation error: {e}")
+            logger.info("⚠️ Swarm consolidation error: %s", e, exc_info=True)
 
         # 2. Extract patterns from results
         for result_list in results:

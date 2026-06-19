@@ -79,7 +79,7 @@ class KarmaTraceLogger:
             with open(self.trace_file, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(trace_entry) + "\n")
         except Exception as e:
-            logger.info(f"⚠️ Failed to write karma trace: {e}")
+            logger.info("⚠️ Failed to write karma trace: %s", e, exc_info=True)
 
     async def log_async(self, gana_result: Any) -> None:
         """Async wrapper for logging."""
@@ -106,7 +106,7 @@ class KarmaTraceLogger:
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            logger.info(f"⚠️ Failed to read karma traces: {e}")
+            logger.info("⚠️ Failed to read karma traces: %s", e, exc_info=True)
 
         return traces
 

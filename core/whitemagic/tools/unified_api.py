@@ -95,7 +95,7 @@ def _nervous_system_post(tool_name: str, duration: float, success: bool) -> None
             energy=snap.energy,
         )
     except Exception as e:
-        logger.debug(f"Failed to publish tool completion to EventRing: {e}")
+        logger.debug("Failed to publish tool completion to EventRing: %s", e, exc_info=True)
     # Publish tool completion to EventRing
     try:
         from whitemagic.core.acceleration.event_ring_bridge import get_event_ring
@@ -107,7 +107,7 @@ def _nervous_system_post(tool_name: str, duration: float, success: bool) -> None
             data=f"{duration:.3f}s".encode()[:80],
         )
     except Exception as e:
-        logger.debug(f"Failed to publish tool start to EventRing: {e}")
+        logger.debug("Failed to publish tool start to EventRing: %s", e, exc_info=True)
 
 
 def _emit_gan_ying(event_type_name: str, data: dict[str, Any], source: str = "mcp") -> None:
@@ -118,7 +118,7 @@ def _emit_gan_ying(event_type_name: str, data: dict[str, Any], source: str = "mc
 
         emit_event(event_type_name, data, source=source, confidence=1.0)
     except Exception as exc:
-        logger.info(f"Gan Ying event ({event_type_name}) failed: {exc}")
+        logger.info("Gan Ying event (%s) failed: %s", event_type_name, exc, exc_info=True)
 
 def _load_rust() -> tuple[object | None, str | None]:
     """Load the Rust bridge if available."""
@@ -280,7 +280,7 @@ def _dispatch_lightweight_tool(tool_name: str, **kwargs: Any) -> Any:
                 if name.startswith("ext.") or name.startswith("custom.")
             ]
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to load TOOL_TO_GANA: {e}")
+            logger.debug("Failed to load TOOL_TO_GANA: %s", e, exc_info=True)
         return {
             "status": "success",
             "extensions_dir": str(ext_dir),
@@ -452,14 +452,14 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             from whitemagic.core.dreaming import get_dream_cycle
             get_dream_cycle().touch()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Dream cycle touch failed: {e}")
+            logger.debug("Dream cycle touch failed: %s", e, exc_info=True)
 
         # Cross-session learning — record tool usage
         try:
             from whitemagic.core.learning import get_session_learner
             get_session_learner().record_tool_use(canonical)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Session learner record_tool_use failed: {e}")
+            logger.debug("Session learner record_tool_use failed: %s", e, exc_info=True)
 
     def _record_telemetry(out: dict[str, Any]) -> None:
         duration = time.time() - call_started_at
@@ -470,12 +470,12 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             from whitemagic.core.monitoring.telemetry import get_telemetry
             get_telemetry().record_call(canonical, duration, telemetry_status, telemetry_error)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Telemetry record_call failed: {e}")
-            logger.debug(f"Telemetry record_call failed: {e}")
+            logger.debug("Telemetry record_call failed: %s", e, exc_info=True)
+            logger.debug("Telemetry record_call failed: %s", e, exc_info=True)
             from whitemagic.core.monitoring.otel_export import record_tool_span
             record_tool_span(canonical, duration, telemetry_status)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"OTel record_tool_span failed: {e}")
+            logger.debug("OTel record_tool_span failed: %s", e, exc_info=True)
         if canonical in LIGHTWEIGHT_STATUS_TOOLS:
             return
         if canonical in FAST_INTERACTIVE_WRITE_TOOLS:
@@ -499,7 +499,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 metrics["harmony_score"] = snap.harmony_score
                 metrics["guna"] = snap.guna_rajasic_pct
         except Exception as e:
-            logger.debug(f"Failed to add harmony snapshot to metrics: {e}")
+            logger.debug("Failed to add harmony snapshot to metrics: %s", e, exc_info=True)
         try:
             from whitemagic.core.monitoring.neurotransmitter_vector import (
                 get_neurotransmitter_vector,
@@ -510,7 +510,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 result=out,
             )
         except Exception as e:
-            logger.debug(f"Failed to record neurotransmitter snapshot: {e}")
+            logger.debug("Failed to record neurotransmitter snapshot: %s", e, exc_info=True)
         try:
             from whitemagic.dharma.karma_ledger import get_karma_ledger
             get_karma_ledger().record(
@@ -520,7 +520,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 success=(telemetry_status == "success"),
             )
         except Exception as e:
-            logger.debug(f"Failed to publish tool metrics: {e}")
+            logger.debug("Failed to publish tool metrics: %s", e, exc_info=True)
         # Jaynes Voice Audit: verify claim after ledger record
         try:
             if _voice_audit_claim_id:
@@ -529,7 +529,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 )
                 get_voice_audit_scanner().verify_claim(tool=canonical)
         except Exception as e:
-            logger.debug(f"VoiceAudit claim verification failed: {e}")
+            logger.debug("VoiceAudit claim verification failed: %s", e, exc_info=True)
 
     def _finish(out: dict[str, Any]) -> dict[str, Any]:
         _record_telemetry(out)
@@ -599,7 +599,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 params={"dry_run": dry_run},
             )
         except Exception as e:
-            logger.debug(f"VoiceAudit claim registration failed: {e}")
+            logger.debug("VoiceAudit claim registration failed: %s", e, exc_info=True)
 
         # Nervous System pre-dispatch check (circuit breakers, rate limits)
         ns_allowed = True
@@ -691,7 +691,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 put_record(canonical, str(idempotency_key), out)
             except (ImportError, ModuleNotFoundError) as e:
                 # Never fail a tool call due to idempotency persistence.
-                logger.debug(f"Failed to persist idempotency record for {canonical}: {e}")
+                logger.debug("Failed to persist idempotency record for %s: %s", canonical, e, exc_info=True)
 
         # Nervous System post-dispatch sync
         if (

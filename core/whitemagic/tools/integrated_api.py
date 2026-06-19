@@ -72,7 +72,7 @@ def call_tool(
                 "timestamp": time.time(),
             })
         except Exception as e:
-            logger.debug(f"Blackboard post failed: {e}")
+            logger.debug("Blackboard post failed: %s", e, exc_info=True)
 
     # Call the actual tool
     try:
@@ -97,7 +97,7 @@ def call_tool(
                     confidence=0.9 if success else 0.5,
                 )
             except Exception as e:
-                logger.debug(f"Gan ying emit failed: {e}")
+                logger.debug("Gan ying emit failed: %s", e, exc_info=True)
 
         # Post to blackboard (post-call)
         if blackboard:
@@ -109,7 +109,7 @@ def call_tool(
                     "timestamp": time.time(),
                 })
             except Exception as e:
-                logger.debug(f"Blackboard post failed: {e}")
+                logger.debug("Blackboard post failed: %s", e, exc_info=True)
 
         # Return compact or full response
         if _compact and isinstance(result, dict):

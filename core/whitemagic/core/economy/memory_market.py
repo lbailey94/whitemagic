@@ -44,7 +44,7 @@ class MemoryMarket:
                         data = _json_loads(line)
                         self._rentals.append(GalaxyAccess(**data))
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.warning(f"Failed to load memory market: {e}")
+            logger.warning("Failed to load memory market: %s", e, exc_info=True)
 
     def grant_access(self, galaxy_name: str, agent_id: str, duration_hours: int = 24, tx_hash: str = "") -> GalaxyAccess:
         """Grant access to an agent for a specified duration."""

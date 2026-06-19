@@ -56,7 +56,7 @@ class PolyglotDB:
             self.rust_db = GalacticDB()
             logger.debug("Rust GalacticDB initialized")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Rust backend unavailable: {e}")
+            logger.debug("Rust backend unavailable: %s", e, exc_info=True)
 
     def _init_elixir(self):
         """Initialize Elixir backend (ETS + GenServer)."""
@@ -70,9 +70,9 @@ class PolyglotDB:
 
             # Test connection
             result = call(Atom(b'Elixir.WhiteMagicCore.GalacticStore'), Atom(b'stats'), [])
-            logger.debug(f"Elixir GalacticStore initialized: {result}")
+            logger.debug("Elixir GalacticStore initialized: %s", result, exc_info=True)
         except Exception as e:
-            logger.debug(f"Elixir backend unavailable: {e}")
+            logger.debug("Elixir backend unavailable: %s", e, exc_info=True)
 
     def _init_sqlite(self):
         """Initialize SQLite backend with connection pooling."""
@@ -95,7 +95,7 @@ class PolyglotDB:
             )
             logger.debug("SQLite connection pool initialized")
         except Exception as e:
-            logger.warning(f"SQLite pool initialization failed: {e}")
+            logger.warning("SQLite pool initialization failed: %s", e, exc_info=True)
             # Fallback to direct connection
             try:
                 import sqlite3
@@ -114,7 +114,7 @@ class PolyglotDB:
             self.blackboard = get_blackboard()
             logger.debug("Blackboard integration enabled")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Blackboard unavailable: {e}")
+            logger.debug("Blackboard unavailable: %s", e, exc_info=True)
 
     def _select_best_backend(self) -> BackendType:
         """Select best available backend."""

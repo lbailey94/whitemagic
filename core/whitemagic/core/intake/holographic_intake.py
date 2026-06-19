@@ -148,7 +148,7 @@ class HolographicIntake:
                 data = _json_loads(self.config_path.read_text())
                 self._watch_dirs = data.get("watch_dirs", [])
             except Exception as e:
-                logger.warning(f"Failed to load intake config: {e}")
+                logger.warning("Failed to load intake config: %s", e, exc_info=True)
 
     def _save_config(self) -> None:
         """Save configuration."""
@@ -177,7 +177,7 @@ class HolographicIntake:
                     )
                     self._queue[item.path] = item
             except Exception as e:
-                logger.warning(f"Failed to load intake queue: {e}")
+                logger.warning("Failed to load intake queue: %s", e, exc_info=True)
 
     def _save_queue(self) -> None:
         """Save intake queue to disk."""
@@ -217,7 +217,7 @@ class HolographicIntake:
 
             logger.info(f"Loaded {len(self._known_hashes)} known content hashes")
         except Exception as e:
-            logger.warning(f"Failed to load known hashes: {e}")
+            logger.warning("Failed to load known hashes: %s", e, exc_info=True)
 
     def _compute_hash(self, path: Path) -> str:
         """Compute content hash for a file."""
@@ -241,7 +241,7 @@ class HolographicIntake:
         if abs_path not in self._watch_dirs:
             self._watch_dirs.append(abs_path)
             self._save_config()
-            logger.info(f"Added watch: {abs_path}")
+            logger.info("Added watch: %s", abs_path, exc_info=True)
         return True
 
     def remove_watch(self, path: str) -> bool:
@@ -306,7 +306,7 @@ class HolographicIntake:
 
         if new_items:
             self._save_queue()
-            logger.info(f"Found {len(new_items)} new files in {path}")
+            logger.info("Found {len(new_items)} new files in %s", path, exc_info=True)
 
         return new_items
 
@@ -411,14 +411,14 @@ class HolographicIntake:
             if item.content_hash is not None:
                 self._known_hashes.add(item.content_hash)
 
-            logger.info(f"Ingested: {file_path.name} -> {memory_id}")
+            logger.info("Ingested: %s -> %s", file_path.name, memory_id, exc_info=True)
             self._save_queue()
             return True
 
         except Exception as e:
             item.status = IntakeStatus.ERROR
             item.error_message = str(e)
-            logger.error(f"Failed to process {path}: {e}")
+            logger.error("Failed to process %s: %s", path, e, exc_info=True)
             self._save_queue()
             return False
 

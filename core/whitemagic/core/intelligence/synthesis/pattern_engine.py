@@ -29,7 +29,7 @@ class PatternEngine:
                 )
                 self._unified = UnifiedPatternAPI()  # type: ignore[assignment]
             except Exception as e:
-                logger.debug(f"UnifiedPatternAPI unavailable: {e}")
+                logger.debug("UnifiedPatternAPI unavailable: %s", e, exc_info=True)
                 self._unified = None
         return self._unified
 
@@ -41,7 +41,7 @@ class PatternEngine:
                 )
                 self._holographic = HolographicPatternEngine()  # type: ignore[assignment]
             except Exception as e:
-                logger.debug(f"HolographicPatternEngine unavailable: {e}")
+                logger.debug("HolographicPatternEngine unavailable: %s", e, exc_info=True)
                 self._holographic = None
         return self._holographic
 
@@ -51,7 +51,7 @@ class PatternEngine:
                 from whitemagic.core.memory.pattern_engine import MemoryPatternEngine
                 self._memory = MemoryPatternEngine()
             except Exception as e:
-                logger.debug(f"MemoryPatternEngine unavailable: {e}")
+                logger.debug("MemoryPatternEngine unavailable: %s", e, exc_info=True)
                 self._memory = None
         return self._memory
 
@@ -66,7 +66,7 @@ class PatternEngine:
                 unified_results = unified.search_patterns(query, limit=kwargs.get("limit", 20))
                 results.extend(unified_results)
             except Exception as e:
-                logger.debug(f"Unified pattern search failed: {e}")
+                logger.debug("Unified pattern search failed: %s", e, exc_info=True)
 
         # Try holographic patterns
         holographic = self._get_holographic()
@@ -75,7 +75,7 @@ class PatternEngine:
                 holo_results = holographic.find_patterns(query, **kwargs)
                 results.extend(holo_results)
             except Exception as e:
-                logger.debug(f"Holographic pattern search failed: {e}")
+                logger.debug("Holographic pattern search failed: %s", e, exc_info=True)
 
         # Try memory patterns
         memory = self._get_memory()
@@ -84,7 +84,7 @@ class PatternEngine:
                 mem_results = memory.extract_patterns(**kwargs)
                 results.extend(mem_results)
             except Exception as e:
-                logger.debug(f"Memory pattern extraction failed: {e}")
+                logger.debug("Memory pattern extraction failed: %s", e, exc_info=True)
 
         return results
 
@@ -95,14 +95,14 @@ class PatternEngine:
             try:
                 return unified.analyze_pattern(pattern_id, **kwargs)
             except Exception as e:
-                logger.debug(f"Unified pattern analysis failed: {e}")
+                logger.debug("Unified pattern analysis failed: %s", e, exc_info=True)
 
         holographic = self._get_holographic()
         if holographic:
             try:
                 return holographic.analyze_pattern(pattern_id, **kwargs)
             except Exception as e:
-                logger.debug(f"Holographic pattern analysis failed: {e}")
+                logger.debug("Holographic pattern analysis failed: %s", e, exc_info=True)
 
         return {"status": "not_found", "pattern_id": pattern_id}
 
@@ -115,21 +115,21 @@ class PatternEngine:
             try:
                 stats["engines"]["unified"] = unified.get_stats()
             except Exception as e:
-                logger.debug(f"Unified pattern stats failed: {e}")
+                logger.debug("Unified pattern stats failed: %s", e, exc_info=True)
 
         holographic = self._get_holographic()
         if holographic:
             try:
                 stats["engines"]["holographic"] = holographic.get_stats()
             except Exception as e:
-                logger.debug(f"Holographic pattern stats failed: {e}")
+                logger.debug("Holographic pattern stats failed: %s", e, exc_info=True)
 
         memory = self._get_memory()
         if memory:
             try:
                 stats["engines"]["memory"] = memory.get_stats()
             except Exception as e:
-                logger.debug(f"Memory pattern stats failed: {e}")
+                logger.debug("Memory pattern stats failed: %s", e, exc_info=True)
 
         return stats
 

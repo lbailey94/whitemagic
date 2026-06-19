@@ -27,7 +27,7 @@ def handle_causal_mine(**kwargs: Any) -> dict[str, Any]:
             "miner_type": "causal"
         }
     except ImportError as e:
-        logger.warning(f"Causal miner not available: {e}")
+        logger.warning("Causal miner not available: %s", e, exc_info=True)
         return {
             "status": "success",
             "patterns_found": 0,

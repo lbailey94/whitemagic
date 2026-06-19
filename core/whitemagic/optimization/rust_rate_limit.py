@@ -58,7 +58,7 @@ def rate_check(tool_name: str) -> dict[str, Any] | None:
         parsed: dict[str, Any] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust rate_check failed: {e}")
+        logger.debug("Rust rate_check failed: %s", e, exc_info=True)
         return None
 
 
@@ -75,7 +75,7 @@ def rate_set_override(tool_name: str, rpm: int) -> bool:
         _rs.rate_set_override(tool_name, rpm)
         return True
     except Exception as e:
-        logger.debug(f"Rust rate_set_override failed: {e}")
+        logger.debug("Rust rate_set_override failed: %s", e, exc_info=True)
         return False
 
 
@@ -99,7 +99,7 @@ def rate_stats() -> dict[str, Any] | None:
         parsed: dict[str, Any] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust rate_stats failed: {e}")
+        logger.debug("Rust rate_stats failed: %s", e, exc_info=True)
         return None
 
 
@@ -131,5 +131,5 @@ def rate_check_batch(tool_names: list[str]) -> list[dict[str, Any]] | None:
         parsed: list[dict[str, Any]] = _json_loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust rate_check_batch failed: {e}")
+        logger.debug("Rust rate_check_batch failed: %s", e, exc_info=True)
         return None

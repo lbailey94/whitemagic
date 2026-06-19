@@ -287,13 +287,13 @@ class HNSWIndex:
                     self.add_item(memory_id, vector)
                     count += 1
                     if count % 1000 == 0:
-                        logger.info(f"Indexed {count} vectors...")
+                        logger.info("Indexed %s vectors...", count, exc_info=True)
             except Exception as e:
-                logger.warning(f"Failed to index {memory_id}: {e}")
+                logger.warning("Failed to index %s: %s", memory_id, e, exc_info=True)
 
         conn.close()
         self.save()
-        logger.info(f"HNSW index built: {count} vectors")
+        logger.info("HNSW index built: %s vectors", count, exc_info=True)
 
 
 # Singleton instance

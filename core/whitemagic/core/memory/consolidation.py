@@ -205,7 +205,7 @@ class MemoryConsolidator:
             um = get_unified_memory()
             return um.list_recent(limit=self._max_memories)
         except Exception as e:
-            logger.debug(f"Consolidation: could not load memories: {e}")
+            logger.debug("Consolidation: could not load memories: %s", e, exc_info=True)
             return []
 
     # ------------------------------------------------------------------
@@ -235,7 +235,7 @@ class MemoryConsolidator:
                 logger.debug(f"MinHash found {len(candidates)} near-duplicate candidates")
             return candidates or []
         except Exception as e:
-            logger.debug(f"MinHash near-duplicate detection skipped: {e}")
+            logger.debug("MinHash near-duplicate detection skipped: %s", e, exc_info=True)
             return []
 
     def resolve_entities(self, similarity_threshold: float = 0.92, batch_limit: int = 500) -> dict[str, Any]:
@@ -347,7 +347,7 @@ class MemoryConsolidator:
                 resolved_ids.add(duplicate.id)
                 result["duplicates_resolved"] += 1
             except Exception as e:
-                logger.warning(f"Duplicate resolution failed for {duplicate.id}: {e}")
+                logger.warning("Duplicate resolution failed for %s: %s", duplicate.id, e, exc_info=True)
 
         result["duration_ms"] = round((time.perf_counter() - start) * 1000, 1)
 
@@ -479,7 +479,7 @@ class MemoryConsolidator:
                 )
                 strategies.append(strategy_content)
             except Exception as e:
-                logger.debug(f"Could not persist strategy: {e}")
+                logger.debug("Could not persist strategy: %s", e, exc_info=True)
 
         return strategies
 
@@ -648,9 +648,9 @@ class MemoryConsolidator:
                         edges += 1
 
             if edges:
-                logger.info(f"KG enrichment: {edges} consolidation edges created")
+                logger.info("KG enrichment: %s consolidation edges created", edges, exc_info=True)
         except Exception as e:
-            logger.debug(f"KG enrichment skipped: {e}")
+            logger.debug("KG enrichment skipped: %s", e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Galactic zone promotion (Gap A1 synthesis)
@@ -680,9 +680,9 @@ class MemoryConsolidator:
                         um.backend.update_galactic_distance(mem.id, 0.12)
                         promoted += 1
             if promoted:
-                logger.info(f"Galactic promotion: {promoted} strategy memories → INNER_RIM")
+                logger.info("Galactic promotion: %s strategy memories → INNER_RIM", promoted, exc_info=True)
         except Exception as e:
-            logger.debug(f"Galactic promotion skipped: {e}")
+            logger.debug("Galactic promotion skipped: %s", e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Harmony Vector feedback

@@ -162,7 +162,7 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
         except ImportError:
             pass  # Optional local inference commands not available
         except Exception as e:
-            logger.debug(f"Unexpected error loading local inference commands: {e}")
+            logger.debug("Unexpected error loading local inference commands: %s", e, exc_info=True)
     else:
         try:
             if os.getenv("WHITEMAGIC_ENABLE_LOCAL_MODELS", "").strip().lower() in {"1", "true", "yes", "on"}:
@@ -175,7 +175,7 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
         except ImportError:
             pass  # Optional local inference commands not available
         except Exception as e:
-            logger.debug(f"Unexpected error loading local inference commands: {e}")
+            logger.debug("Unexpected error loading local inference commands: %s", e, exc_info=True)
 
     # 4. Hardware
     try:

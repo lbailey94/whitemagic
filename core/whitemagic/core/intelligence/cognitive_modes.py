@@ -269,7 +269,7 @@ class CognitiveModes:
                 return CognitiveMode.BALANCED
 
         except Exception as e:
-            logger.debug(f"Cognitive mode detection failed, defaulting to BALANCED: {e}")
+            logger.debug("Cognitive mode detection failed, defaulting to BALANCED: %s", e, exc_info=True)
             return CognitiveMode.BALANCED
 
     def _effective_mode(self) -> CognitiveMode:

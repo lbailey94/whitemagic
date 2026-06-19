@@ -86,7 +86,7 @@ class DGAEngine:
                 "core_version": "6.0.0",
             }
         except OSError as e:
-            logger.debug(f"Genotype capture failed: {e}")
+            logger.debug("Genotype capture failed: %s", e, exc_info=True)
             return {"error": "failed_genotype_capture"}
 
     def _capture_phenotype(self) -> dict[str, Any]:

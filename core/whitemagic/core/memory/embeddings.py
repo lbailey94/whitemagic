@@ -205,7 +205,7 @@ class EmbeddingEngine:
                 from whitemagic.inference.local_embedder import LocalEmbedder
                 embedder = LocalEmbedder(model_name="BAAI/bge-small-en-v1.5")
                 if embedder.is_available:
-                    logger.info(f"Loaded LocalEmbedder (FastEmbed): {embedder.model_name}")
+                    logger.info("Loaded LocalEmbedder (FastEmbed): %s", embedder.model_name, exc_info=True)
                     self._model = embedder
                     # Monkey-patch or wrap to match expected interface if needed
                     # LocalEmbedder.embed returns arrays, we need list[float]
@@ -216,11 +216,11 @@ class EmbeddingEngine:
             # 2. Fallback to SentenceTransformer
             try:
                 from sentence_transformers import SentenceTransformer
-                logger.info(f"Loading embedding model: {MODEL_NAME}")
+                logger.info("Loading embedding model: %s", MODEL_NAME, exc_info=True)
                 self._model = SentenceTransformer(MODEL_NAME)
-                logger.info(f"Embedding model loaded ({EMBEDDING_DIM} dims)")
+                logger.info("Embedding model loaded (%s dims)", EMBEDDING_DIM, exc_info=True)
             except Exception as e:
-                logger.warning(f"Failed to load embedding model: {e}")
+                logger.warning("Failed to load embedding model: %s", e, exc_info=True)
                 self._available = False
                 return None
         return self._model
@@ -250,7 +250,7 @@ class EmbeddingEngine:
             self._db_conn = conn
             logger.debug("DB embedding connection established")
         except Exception as e:
-            logger.debug(f"DB embedding init failed: {e}")
+            logger.debug("DB embedding init failed: %s", e, exc_info=True)
             return None
         return self._db_conn
 
@@ -276,7 +276,7 @@ class EmbeddingEngine:
                 return None
             self._db_conn = conn
         except Exception as e:
-            logger.debug(f"DB embedding init failed: {e}")
+            logger.debug("DB embedding init failed: %s", e, exc_info=True)
             return None
         return self._db_conn
 
@@ -309,7 +309,7 @@ class EmbeddingEngine:
             self._cold_db_conn = conn
             logger.debug("Cold DB embedding connection established")
         except Exception as e:
-            logger.debug(f"Cold DB embedding init failed: {e}")
+            logger.debug("Cold DB embedding init failed: %s", e, exc_info=True)
             return None
         return self._cold_db_conn
 
@@ -359,7 +359,7 @@ class EmbeddingEngine:
             self._cold_vec_cache_vecs = vecs
             self._cold_vec_cache_count = current_count
 
-            logger.debug(f"Cold vector cache loaded: {len(ids)} embeddings ({size_info})")
+            logger.debug("Cold vector cache loaded: {len(ids)} embeddings (%s)", size_info, exc_info=True)
             return ids, vecs
 
     def encode(self, text: str) -> list[float] | None:
@@ -376,7 +376,7 @@ class EmbeddingEngine:
                 return None
             return cast(list[float], vec.tolist())
         except Exception as e:
-            logger.debug(f"Encoding failed: {e}")
+            logger.debug("Encoding failed: %s", e, exc_info=True)
             return None
 
     def encode_batch(self, texts: list[str], batch_size: int = 64) -> list[list[float]] | None:
@@ -391,7 +391,7 @@ class EmbeddingEngine:
                 return [v.tolist() for v in vecs]
             return [v.tolist() for v in vecs]
         except Exception as e:
-            logger.debug(f"Batch encoding failed: {e}")
+            logger.debug("Batch encoding failed: %s", e, exc_info=True)
             return None
 
     async def get_cached_embedding_async(self, memory_id: str) -> list[float] | None:
@@ -520,7 +520,7 @@ class EmbeddingEngine:
             logger.debug(f"HNSW index built: {len(ids)} vectors, dim={vectors.shape[1]}")
             return index, ids
         except Exception as e:
-            logger.debug(f"HNSW build failed: {e}")
+            logger.debug("HNSW build failed: %s", e, exc_info=True)
             self._hnsw_available = False
             return None
 
@@ -543,7 +543,7 @@ class EmbeddingEngine:
             logger.debug(f"Cold HNSW index built: {len(cold_ids)} vectors")
             return index, cold_ids
         except Exception as e:
-            logger.debug(f"Cold HNSW build failed: {e}")
+            logger.debug("Cold HNSW build failed: %s", e, exc_info=True)
             return None
 
     def _hnsw_search(self, query_vec: Any, index: Any, ids: list[str],
@@ -627,7 +627,7 @@ class EmbeddingEngine:
             self._vec_cache_vecs = vecs
             self._vec_cache_count = current_count
 
-            logger.debug(f"Vector cache loaded: {len(ids)} embeddings ({size_info})")
+            logger.debug("Vector cache loaded: {len(ids)} embeddings (%s)", size_info, exc_info=True)
             return ids, vecs
 
     def index_memories(
@@ -939,11 +939,11 @@ class EmbeddingEngine:
                     "similarity": round(dup["similarity"], 4),
                 })
 
-            logger.info(f"🦀 Rust SimHash LSH found {len(pairs)} duplicates (threshold={threshold})")
+            logger.info("🦀 Rust SimHash LSH found {len(pairs)} duplicates (threshold=%s)", threshold, exc_info=True)
             return pairs
 
         except Exception as e:
-            logger.debug(f"Rust SimHash unavailable ({e}), falling back to Python cosine similarity")
+            logger.debug("Rust SimHash unavailable (%s), falling back to Python cosine similarity", e, exc_info=True)
             # Fallback to Python implementation
             return self.find_similar_pairs(
                 min_similarity=threshold,

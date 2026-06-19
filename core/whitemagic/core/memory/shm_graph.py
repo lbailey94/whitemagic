@@ -119,7 +119,7 @@ class SHMGraphTopology:
                             break
 
                     struct.pack_into("=i", mmap_file, 12, self._count)
-                    logger.info(f"Synchronized {self._count} graph edges to SHM.")
+                    logger.info("Synchronized %s graph edges to SHM.", self._count, exc_info=True)
 
 _global_shm_graph = None
 def get_shm_graph() -> SHMGraphTopology:

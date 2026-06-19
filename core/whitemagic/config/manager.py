@@ -325,10 +325,10 @@ class ConfigManager:
         except ImportError:
             # Fallback if yaml is not installed
             if filename.endswith(".yaml") or filename.endswith(".yml"):
-                logger.info(f"Warning: PyYAML not installed, skipping {filename}")
+                logger.info("Warning: PyYAML not installed, skipping %s", filename, exc_info=True)
                 return None
         except (ImportError, ModuleNotFoundError) as e:
-            logger.info(f"Error loading config file {filename}: {e}")
+            logger.info("Error loading config file %s: %s", filename, e, exc_info=True)
             return None
 
         return None  # Ensure we always return a value

@@ -181,7 +181,7 @@ class AdaptiveSystem:
             True if applied successfully
         """
         if adaptation_index >= len(self.pending_approvals):
-            logger.error(f"Invalid adaptation index: {adaptation_index}")
+            logger.error("Invalid adaptation index: %s", adaptation_index, exc_info=True)
             return False
 
         pending = self.pending_approvals.pop(adaptation_index)
@@ -190,7 +190,7 @@ class AdaptiveSystem:
     def reject_adaptation(self, adaptation_index: int):
         """Reject a pending adaptation."""
         if adaptation_index >= len(self.pending_approvals):
-            logger.error(f"Invalid adaptation index: {adaptation_index}")
+            logger.error("Invalid adaptation index: %s", adaptation_index, exc_info=True)
             return
 
         pending = self.pending_approvals.pop(adaptation_index)

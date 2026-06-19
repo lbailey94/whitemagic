@@ -169,7 +169,7 @@ def setup_gan_ying_listeners() -> None:
                         memory.neuro_score = min(1.0, memory.neuro_score + 0.1)
                         logger.info(f"🧠 Neural reinforcement: {memory.title} boosted by user confirmation")
                 except Exception as e:
-                    logger.info(f"⚠️ Neural reinforcement failed: {e}")
+                    logger.info("⚠️ Neural reinforcement failed: %s", e, exc_info=True)
 
         # 2. Weaken patterns when rejected
         def on_pattern_rejected(event: ResonanceEvent) -> None:
@@ -191,7 +191,7 @@ def setup_gan_ying_listeners() -> None:
                     if memory:
                         # Decay significantly
                         memory.neuro_score = max(0.0, memory.neuro_score - 0.15)
-                        logger.info(f"🧠 Neural decay: {memory.title} weakened by rejection")
+                        logger.info("🧠 Neural decay: %s weakened by rejection", memory.title, exc_info=True)
                 except (ImportError, AttributeError):
                     pass
 
@@ -234,13 +234,13 @@ def setup_gan_ying_listeners() -> None:
                     if source_memory:
                         source_memory.emotional_weight = min(1.0, source_memory.emotional_weight + 0.3)
                         source_memory.neuro_score = min(1.0, source_memory.neuro_score + 0.2)
-                        logger.info(f"💖 Joy boost: {source_memory.title} +{intensity:.2f}")
+                        logger.info("💖 Joy boost: %s +{intensity:.2f}", source_memory.title, exc_info=True)
 
                 if boosted > 0:
-                    logger.info(f"💖 Joy event: {reason} - boosted {boosted} recent memories")
+                    logger.info("💖 Joy event: %s - boosted %s recent memories", reason, boosted, exc_info=True)
 
             except Exception as e:
-                logger.info(f"⚠️ Joy boost failed: {e}")
+                logger.info("⚠️ Joy boost failed: %s", e, exc_info=True)
 
         # 4. Strengthen memories found in clone searches
         def on_clone_search_complete_listener(event: ResonanceEvent) -> None:
@@ -284,7 +284,7 @@ def setup_gan_ying_listeners() -> None:
         logger.info("🧠 Neural Memory listening for Gan Ying feedback (NM_GY active)")
 
     except Exception as e:
-        logger.info(f"⚠️ Failed to setup Gan Ying listeners: {e}")
+        logger.info("⚠️ Failed to setup Gan Ying listeners: %s", e, exc_info=True)
 
 
 def setup_neural_gan_ying() -> None:

@@ -77,7 +77,7 @@ async def ingest_all_async() -> dict[str, int]:
                     else:
                         stats["failed"] += 1
             except Exception as e:
-                logger.info(f"✗ {text.name}: {e}")
+                logger.info("✗ %s: %s", text.name, e, exc_info=True)
                 stats["failed"] += 1
 
     return stats
@@ -110,7 +110,7 @@ def ingest_all_sync() -> dict[str, int]:
                 else:
                     stats["failed"] += 1
         except Exception as e:
-            logger.info(f"✗ {text.name}: {e}")
+            logger.info("✗ %s: %s", text.name, e, exc_info=True)
             stats["failed"] += 1
 
     return stats

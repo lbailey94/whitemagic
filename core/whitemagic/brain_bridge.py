@@ -158,7 +158,7 @@ def main():
             send_response(response)
 
         except json.JSONDecodeError:
-            logger.error(f"Invalid JSON: {line}")
+            logger.error("Invalid JSON: %s", line, exc_info=True)
         except Exception as e:
             logger.debug("Operation failed: %s", e)
             logger.error(f"Unexpected error: {traceback.format_exc()}")

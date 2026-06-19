@@ -140,7 +140,7 @@ class DharmaSystem:
                 from whitemagic.dharma.rules import get_rules_engine
                 self._rules_engine = get_rules_engine()  # type: ignore[assignment]
             except (ImportError, ModuleNotFoundError) as e:
-                logger.debug(f"Rules engine unavailable, using legacy evaluation: {e}")
+                logger.debug("Rules engine unavailable, using legacy evaluation: %s", e, exc_info=True)
         return self._rules_engine
 
     def evaluate_action(self, action: dict[str, Any]) -> tuple[float, list[str]]:
@@ -168,7 +168,7 @@ class DharmaSystem:
                         f"[Dharma/{decision.action.value.upper()}] {decision.explain}",
                     )
             except Exception as e:
-                logger.debug(f"Rules engine evaluation failed: {e}")
+                logger.debug("Rules engine evaluation failed: %s", e, exc_info=True)
 
         # --- Layer 2: Legacy principle-based scoring (fallback) ---
         for principle_name, principle in self.principles.items():
@@ -189,7 +189,7 @@ class DharmaSystem:
                     decision=audit_decision,
                 )
             except Exception as e:
-                logger.debug(f"Audit log failed: {e}")
+                logger.debug("Audit log failed: %s", e, exc_info=True)
 
         return score, concerns
 
@@ -252,7 +252,7 @@ class DharmaSystem:
                         suggested_action=decision.explain,
                     ))
             except Exception as e:
-                logger.debug(f"Rules engine boundary check failed: {e}")
+                logger.debug("Rules engine boundary check failed: %s", e, exc_info=True)
 
         # --- Legacy boundary checks ---
         for boundary_name, boundary in self.boundaries.items():
@@ -413,7 +413,7 @@ def get_dharma_system(with_audit: bool = True) -> DharmaSystem:
                 _dharma_system._backend = get_unified_memory().backend  # type: ignore[assignment]
                 logger.info("Dharma System initialized with SQLite audit logging")
             except (ImportError, ModuleNotFoundError) as e:
-                logger.warning(f"Dharma audit logging unavailable: {e}")
+                logger.warning("Dharma audit logging unavailable: %s", e, exc_info=True)
                 _dharma_system._backend = None
         else:
             _dharma_system._backend = None

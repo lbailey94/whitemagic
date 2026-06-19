@@ -388,7 +388,7 @@ class ImmortalClone:
                     'timestamp': time.time()
                 })
 
-        logger.warning(f"⚠️ Clone {self.clone_id} reached max iterations ({self.max_iterations})")
+        logger.warning("⚠️ Clone %s reached max iterations (%s)", self.clone_id, self.max_iterations, exc_info=True)
         return ActionResult(
             success=False,
             error=f"Max iterations ({self.max_iterations}) reached",
@@ -782,7 +782,7 @@ class GasTownOrchestrator:
                 with Live(self.dashboard.generate_table(), refresh_per_second=2) as live:
                     results = self._execute_deployment(live)
             except Exception as e:
-                logger.warning(f"Dashboard failed, falling back to logging: {e}")
+                logger.warning("Dashboard failed, falling back to logging: %s", e, exc_info=True)
                 results = self._execute_deployment(None)
         else:
             results = self._execute_deployment(None)
@@ -853,7 +853,7 @@ class GasTownOrchestrator:
                             result = future.result()
                             self.completed_work.append((meow, result))
                             results.append(result)
-                            logger.debug(f"✅ MEOW {meow.type}:{meow.target} completed by clone {clone.clone_id}")
+                            logger.debug("✅ MEOW %s:%s completed by clone %s", meow.type, meow.target, clone.clone_id, exc_info=True)
                         except Exception as e:
                             logger.error("❌ Clone %s failed: %s", clone.clone_id, e, exc_info=True)
                             results.append(ActionResult(success=False, error=str(e)))
@@ -863,7 +863,7 @@ class GasTownOrchestrator:
                         try:
                             live.update(self.dashboard.generate_table())
                         except Exception as e:
-                            logger.debug(f"Dashboard update failed: {e}")
+                            logger.debug("Dashboard update failed: %s", e, exc_info=True)
 
         except KeyboardInterrupt:
             logger.warning("⚠️ Deployment interrupted by user")

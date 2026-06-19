@@ -209,7 +209,7 @@ class CloneArmy:
         except ImportError:
             pass
         except (ImportError, ModuleNotFoundError) as e:
-            logger.info(f"⚠️ Rust search failed, falling back to Python: {e}")
+            logger.info("⚠️ Rust search failed, falling back to Python: %s", e, exc_info=True)
 
         if allocation is None:
             allocation = DEFAULT_ARMY_ALLOCATION
@@ -368,7 +368,7 @@ class CloneArmy:
         except ImportError:
             pass
         except (ImportError, ModuleNotFoundError) as e:
-            logger.info(f"⚠️ Async Rust search failed, falling back to Python async: {e}")
+            logger.info("⚠️ Async Rust search failed, falling back to Python async: %s", e, exc_info=True)
 
         # Python async fallback
         if allocation is None:

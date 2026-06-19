@@ -468,7 +468,7 @@ Wind blows away the chaff.
                     count = manager.consolidate()
                 except Exception as e:
                     count = 0
-                    logger.warning(f"SQLite consolidation skipped: {e}")
+                    logger.warning("SQLite consolidation skipped: %s", e, exc_info=True)
 
                 # 2. Holographic Sector Summarization (Cluster -> Summary)
                 holo_stats = {}

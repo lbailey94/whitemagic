@@ -229,7 +229,7 @@ class ReconsolidationEngine:
                 )
                 logger.info(f"Reconsolidated memory {memory_id}: +{len(content_additions)} contexts, +{len(tag_additions)} tags")
             except Exception as e:
-                logger.warning(f"Failed to persist reconsolidation for {memory_id}: {e}")
+                logger.warning("Failed to persist reconsolidation for %s: %s", memory_id, e, exc_info=True)
 
         labile.reconsolidated = True
         del self._labile[memory_id]

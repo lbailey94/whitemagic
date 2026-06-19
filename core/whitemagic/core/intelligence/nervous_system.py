@@ -118,7 +118,7 @@ class BiologicalEventBus:
                     await asyncio.get_event_loop().run_in_executor(self._executor, handler, event)
             except Exception as e:
                 self._stats["errors"] += 1
-                logger.error(f"Event handler error in {subsystem}: {e}")
+                logger.error("Event handler error in %s: %s", subsystem, e, exc_info=True)
 
         self._subscribers[event_type].append(safe_handler)
 
@@ -154,7 +154,7 @@ class BiologicalEventBus:
             except TimeoutError:
                 continue
             except Exception as e:
-                logger.error(f"Event processing error: {e}")
+                logger.error("Event processing error: %s", e, exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """

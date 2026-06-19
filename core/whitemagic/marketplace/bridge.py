@@ -190,7 +190,7 @@ class MarketplaceBridge:
                 for listing in self._listings.values():
                     f.write(_json_dumps(listing.to_dict()) + "\n")
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.debug(f"Listing persist failed: {e}")
+            logger.debug("Listing persist failed: %s", e, exc_info=True)
 
     def _load_listings(self) -> None:
         """Load listings from disk."""
@@ -220,7 +220,7 @@ class MarketplaceBridge:
                 )
                 self._listings[listing.listing_id] = listing
         except Exception as e:
-            logger.debug(f"Listing load failed: {e}")
+            logger.debug("Listing load failed: %s", e, exc_info=True)
 
     def publish(
         self,
@@ -278,7 +278,7 @@ class MarketplaceBridge:
             self._listings[listing_id] = listing
         self._persist_listings()
 
-        logger.info(f"🏪 Published listing: {listing.title} ({listing_id})")
+        logger.info("🏪 Published listing: %s (%s)", listing.title, listing_id, exc_info=True)
 
         return {"status": "ok", **listing.to_dict()}
 

@@ -115,7 +115,7 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
     # 1. Structural checks
     err = _check_structure(kwargs)
     if err:
-        logger.warning(f"Sanitizer blocked {tool_name}: {err}")
+        logger.warning("Sanitizer blocked %s: %s", tool_name, err, exc_info=True)
         return {"status": "error", "error": f"Input validation: {err}", "error_code": "input_invalid"}
 
     # 2. Content checks (skip for exempt tools)
@@ -132,7 +132,7 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
                 critical = [v for v in violations if v.get("severity", 0) >= 3]
                 if critical:
                     msg = critical[0].get("message", "Boundary violation")
-                    logger.warning(f"Haskell boundary check blocked {tool_name}: {msg}")
+                    logger.warning("Haskell boundary check blocked %s: %s", tool_name, msg, exc_info=True)
                     return {"status": "error", "error": f"Input rejected: {msg}", "error_code": "input_rejected"}
         except Exception as e:
             import logging
@@ -140,7 +140,7 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
 
         err = _scan_content(kwargs)
         if err:
-            logger.warning(f"Sanitizer blocked {tool_name}: {err}")
+            logger.warning("Sanitizer blocked %s: %s", tool_name, err, exc_info=True)
             return {"status": "error", "error": f"Input rejected: {err}", "error_code": "input_rejected"}
 
     # 3. Strip internal keys that shouldn't come from external callers

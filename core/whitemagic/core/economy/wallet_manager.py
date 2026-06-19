@@ -109,7 +109,7 @@ class WalletManager:
                             self.last_balance = new_balance
                             return tip
         except Exception as e:
-            logger.warning(f"Failed to scan XRPL: {e}")
+            logger.warning("Failed to scan XRPL: %s", e, exc_info=True)
         return None
 
     def get_gratitude_payload(self, amount: float) -> dict[str, Any]:

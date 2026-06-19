@@ -68,7 +68,7 @@ class BenchmarkHistoryTracker:
         try:
             with open(self.history_file, 'w') as f:
                 json.dump(self.history, f, indent=2)
-            logger.info(f"💾 Saved benchmark history to {self.history_file}")
+            logger.info("💾 Saved benchmark history to %s", self.history_file, exc_info=True)
         except Exception as e:
             logger.error("Failed to save history: %s", e, exc_info=True)
 

@@ -51,7 +51,7 @@ def init_ipc(node_name: str | None = None) -> dict[str, Any]:
         atexit.register(shutdown_ipc)
         return {"initialized": True, "node": node_name}
     except Exception as e:
-        logger.warning(f"IPC init failed (using fallback): {e}")
+        logger.warning("IPC init failed (using fallback): %s", e, exc_info=True)
         return {"initialized": False, "error": str(e)}
 
 def publish(channel: str, payload: bytes) -> dict[str, Any]:
@@ -91,7 +91,7 @@ def try_receive(channel: str, max_samples: int = 16) -> list[bytes]:
     try:
         return list(rs.ipc_bridge.ipc_try_receive(channel, int(max_samples)))
     except Exception as e:
-        logger.debug(f"ipc_try_receive({channel}) failed: {e}")
+        logger.debug("ipc_try_receive(%s) failed: %s", channel, e, exc_info=True)
         return []
 
 def try_receive_json(channel: str, max_samples: int = 16) -> list[dict]:

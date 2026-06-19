@@ -83,7 +83,7 @@ class FastBatchEncoder:
                 coord = self._encode_single(mem)
                 results.append(coord)
             except Exception as e:
-                logger.debug(f"Batch encode single memory failed, using neutral: {e}")
+                logger.debug("Batch encode single memory failed, using neutral: %s", e, exc_info=True)
                 results.append(HolographicCoord(0.0, 0.0, 0.0, 0.5))
         return results
 

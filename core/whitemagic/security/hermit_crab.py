@@ -418,7 +418,7 @@ class HermitCrab:
             with open(self._ledger_path, "a", encoding="utf-8") as f:
                 f.write(_json_dumps(entry, default=str) + "\n")
         except (OSError, FileNotFoundError, PermissionError) as e:
-            logger.debug(f"Failed to persist ledger entry: {e}")
+            logger.debug("Failed to persist ledger entry: %s", e, exc_info=True)
 
     def _record_withdrawal(
         self, assessment: ThreatAssessment, old_state: HermitState,
@@ -515,7 +515,7 @@ class HermitCrab:
                 _json_dumps(state, indent=2), encoding="utf-8",
             )
         except Exception as e:
-            logger.debug(f"Failed to save hermit state: {e}")
+            logger.debug("Failed to save hermit state: %s", e, exc_info=True)
 
     def _load_state(self) -> None:
         """Load persisted state from disk."""
@@ -530,7 +530,7 @@ class HermitCrab:
                     "access_attempts_while_locked", 0,
                 )
         except Exception as e:
-            logger.debug(f"Failed to load hermit state: {e}")
+            logger.debug("Failed to load hermit state: %s", e, exc_info=True)
 
     # ------------------------------------------------------------------
     # Introspection

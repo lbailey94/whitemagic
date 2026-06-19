@@ -112,7 +112,7 @@ class GalacticTelepathyEngine:
                     for pair, wm in data.items():
                         self._watermarks[pair] = SyncWatermark(**wm)
             except Exception as e:
-                logger.warning(f"Failed to load sync watermarks: {e}")
+                logger.warning("Failed to load sync watermarks: %s", e, exc_info=True)
 
     def _save_watermarks(self) -> None:
         """Persist sync watermarks to disk."""
@@ -133,7 +133,7 @@ class GalacticTelepathyEngine:
                     indent=2
                 )
         except Exception as e:
-            logger.warning(f"Failed to save sync watermarks: {e}")
+            logger.warning("Failed to save sync watermarks: %s", e, exc_info=True)
 
     def _get_watermark_key(self, source: str, target: str) -> str:
         """Canonical ordering for watermark keys."""
@@ -343,7 +343,7 @@ class GalacticTelepathyEngine:
                         created_at=row[3],
                     ))
         except Exception as e:
-            logger.debug(f"Failed to extract embeddings for {memory_id}: {e}")
+            logger.debug("Failed to extract embeddings for %s: %s", memory_id, e, exc_info=True)
         return embeddings
 
     def _extract_associations(self, memory_id: str, um: Any) -> list[AssociationBundle]:
@@ -383,7 +383,7 @@ class GalacticTelepathyEngine:
                         edge_type=row[4],
                     ))
         except Exception as e:
-            logger.debug(f"Failed to extract associations for {memory_id}: {e}")
+            logger.debug("Failed to extract associations for %s: %s", memory_id, e, exc_info=True)
         return associations
 
     def _restore_embedding(
@@ -407,7 +407,7 @@ class GalacticTelepathyEngine:
                 conn.commit()
                 return True
         except Exception as e:
-            logger.debug(f"Failed to restore embedding: {e}")
+            logger.debug("Failed to restore embedding: %s", e, exc_info=True)
             return False
 
     def _restore_association(
@@ -453,7 +453,7 @@ class GalacticTelepathyEngine:
                 conn.commit()
                 return True
         except Exception as e:
-            logger.debug(f"Failed to restore association: {e}")
+            logger.debug("Failed to restore association: %s", e, exc_info=True)
             return False
 
     def _remap_memory_id(
@@ -553,7 +553,7 @@ class GalacticTelepathyEngine:
 
             return None
         except Exception as e:
-            logger.debug(f"Conflict detection failed: {e}")
+            logger.debug("Conflict detection failed: %s", e, exc_info=True)
             return None
 
     def _resolve_conflict(
@@ -695,7 +695,7 @@ class GalacticTelepathyEngine:
 
                 conn.commit()
         except Exception as e:
-            logger.debug(f"Failed to resolve pending associations: {e}")
+            logger.debug("Failed to resolve pending associations: %s", e, exc_info=True)
 
         return {
             "galaxy": galaxy,

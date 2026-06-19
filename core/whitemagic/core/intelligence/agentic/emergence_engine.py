@@ -110,7 +110,7 @@ class EmergenceEngine:
                 LIMIT 10
             """, (cutoff,))
         except Exception as e:
-            logger.debug(f"Tag cluster detection skipped: {e}")
+            logger.debug("Tag cluster detection skipped: %s", e, exc_info=True)
             return []
 
         rows = cur.fetchall()
@@ -147,7 +147,7 @@ class EmergenceEngine:
                 LIMIT 10
             """)
         except Exception as e:
-            logger.debug(f"Resonance cascade detection skipped: {e}")
+            logger.debug("Resonance cascade detection skipped: %s", e, exc_info=True)
             return []
 
         rows = cur.fetchall()
@@ -196,7 +196,7 @@ class EmergenceEngine:
                 LIMIT 10
             """)
         except Exception as e:
-            logger.debug(f"Novelty spike detection skipped: {e}")
+            logger.debug("Novelty spike detection skipped: %s", e, exc_info=True)
             return []
 
         rows = cur.fetchall()
@@ -224,7 +224,7 @@ class EmergenceEngine:
             from whitemagic.core.intelligence.core_access import get_core_access
             cal = get_core_access()
         except Exception as e:
-            logger.debug(f"Cross-domain bridge detection skipped (no CoreAccess): {e}")
+            logger.debug("Cross-domain bridge detection skipped (no CoreAccess): %s", e, exc_info=True)
             return []
 
         bridges = cal.find_constellation_bridges(limit=10) if cal else []

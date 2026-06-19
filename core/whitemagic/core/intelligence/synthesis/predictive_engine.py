@@ -904,7 +904,7 @@ class PredictiveEngine:
             stats = api.get_stats()
             return int(stats["total_patterns"])
         except Exception as e:
-            logger.debug(f"Pattern count failed: {e}")
+            logger.debug("Pattern count failed: %s", e, exc_info=True)
             return 0
 
     def _get_knowledge_gaps(self) -> list[dict[str, Any]]:

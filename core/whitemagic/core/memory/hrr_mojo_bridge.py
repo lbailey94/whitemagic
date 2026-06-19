@@ -53,7 +53,7 @@ class HRRMojoBridge:
             try:
                 return self._bind_mojo(a, b)
             except Exception as e:
-                logger.warning(f"Mojo bind failed: {e}, falling back to Python")
+                logger.warning("Mojo bind failed: %s, falling back to Python", e, exc_info=True)
                 return self._bind_python(a, b)
         return self._bind_python(a, b)
 
@@ -103,7 +103,7 @@ class HRRMojoBridge:
             try:
                 return self._unbind_mojo(bound, b)
             except Exception as e:
-                logger.warning(f"Mojo unbind failed: {e}, falling back to Python")
+                logger.warning("Mojo unbind failed: %s, falling back to Python", e, exc_info=True)
                 return self._unbind_python(bound, b)
         return self._unbind_python(bound, b)
 
@@ -172,7 +172,7 @@ class HRRMojoBridge:
                     _ = self._bind_mojo(a, b)
                 mojo_time = time.time() - start
             except Exception as e:
-                logger.warning(f"Mojo benchmark failed: {e}")
+                logger.warning("Mojo benchmark failed: %s", e, exc_info=True)
 
         return {
             "python_ops_per_sec": iterations / python_time,
@@ -224,7 +224,7 @@ def patch_hrr_engine():
         logger.info(f"HRR engine patched with Mojo bridge (available: {bridge.mojo_available})")
         return True
     except Exception as e:
-        logger.warning(f"Failed to patch HRR engine: {e}")
+        logger.warning("Failed to patch HRR engine: %s", e, exc_info=True)
         return False
 
 if __name__ == "__main__":

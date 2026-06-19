@@ -194,7 +194,7 @@ class CollectiveMemory:
             context.active_goals.append(goal)
             context.last_updated = datetime.now()
             self._save_context(context)
-            logger.info(f"🎯 Goal added to collective: {goal}")
+            logger.info("🎯 Goal added to collective: %s", goal, exc_info=True)
 
     def complete_goal(self, session_id: str, goal: str) -> None:
         """Mark goal as complete.
@@ -220,7 +220,7 @@ class CollectiveMemory:
 
             context.last_updated = datetime.now()
             self._save_context(context)
-            logger.info(f"✅ Goal completed: {goal}")
+            logger.info("✅ Goal completed: %s", goal, exc_info=True)
 
     def record_gratitude(self, target_id: str, intensity: float) -> None:
         """Record gratitude resonance in the collective index."""
@@ -229,7 +229,7 @@ class CollectiveMemory:
         context.resonance_index[target_id] = current + intensity
         context.last_updated = datetime.now()
         self._save_context(context)
-        logger.info(f"🙏 Gratitude resonance recorded for {target_id}: +{intensity}")
+        logger.info("🙏 Gratitude resonance recorded for %s: +%s", target_id, intensity, exc_info=True)
 
     def record_lineage(self, parent_sig: str, child_sig: str) -> None:
         """Record a new fork in the phylogenetic tree."""

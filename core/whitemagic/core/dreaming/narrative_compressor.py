@@ -151,7 +151,7 @@ class NarrativeCompressor:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Narrative compressor: cannot access memory: {e}")
+            logger.debug("Narrative compressor: cannot access memory: %s", e, exc_info=True)
             result.duration_ms = (time.perf_counter() - start) * 1000
             return result
 
@@ -263,7 +263,7 @@ class NarrativeCompressor:
                 })
             return candidates
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to load candidates: {e}")
+            logger.debug("Failed to load candidates: %s", e, exc_info=True)
             return []
 
     # ------------------------------------------------------------------
@@ -398,7 +398,7 @@ class NarrativeCompressor:
                 )
                 narrative_id = getattr(stored, "id", None) if stored else None
             except Exception as e:
-                logger.debug(f"Failed to store narrative: {e}")
+                logger.debug("Failed to store narrative: %s", e, exc_info=True)
 
         return {
             "title": narrative_title,
@@ -479,7 +479,7 @@ class NarrativeCompressor:
                     )
                     demoted = len(cluster.memory_ids)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to demote sources: {e}")
+            logger.debug("Failed to demote sources: %s", e, exc_info=True)
         return demoted
 
     # ------------------------------------------------------------------

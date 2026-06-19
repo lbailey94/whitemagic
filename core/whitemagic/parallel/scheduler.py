@@ -218,7 +218,7 @@ class ParallelScheduler:
                     break
 
             except Exception as e:
-                logger.info(f"Worker error: {e}")
+                logger.info("Worker error: %s", e, exc_info=True)
 
     async def run(self, num_workers: int | None = None) -> SchedulerStats:
         """Run scheduler until all tasks complete.

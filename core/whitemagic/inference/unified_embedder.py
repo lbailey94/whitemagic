@@ -140,14 +140,14 @@ class UnifiedEmbedder:
             try:
                 return self._encode_mojo_gpu(texts)
             except Exception as e:
-                logger.warning(f"Mojo GPU failed, falling back: {e}")
+                logger.warning("Mojo GPU failed, falling back: %s", e, exc_info=True)
 
         # Route 2: Rust ONNX (fast)
         if self.rust_onnx_available:
             try:
                 return self._encode_rust_onnx(texts)
             except Exception as e:
-                logger.warning(f"Rust ONNX failed, falling back: {e}")
+                logger.warning("Rust ONNX failed, falling back: %s", e, exc_info=True)
 
         # Route 3: Python FastEmbed (slow but reliable)
         return self._encode_python_fastembed(texts)

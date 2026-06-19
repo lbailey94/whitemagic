@@ -59,7 +59,7 @@ def search_build_index(
         result: str = _rs.search_build_index(docs_json)
         return result
     except Exception as e:
-        logger.debug(f"Rust search_build_index failed: {e}")
+        logger.debug("Rust search_build_index failed: %s", e, exc_info=True)
         return None
 
 
@@ -83,7 +83,7 @@ def search_query(
             return [item for item in parsed if isinstance(item, dict)]
         return None
     except Exception as e:
-        logger.debug(f"Rust search_query failed: {e}")
+        logger.debug("Rust search_query failed: %s", e, exc_info=True)
         return None
 
 
@@ -108,7 +108,7 @@ def search_fuzzy(
             return [item for item in parsed if isinstance(item, dict)]
         return None
     except Exception as e:
-        logger.debug(f"Rust search_fuzzy failed: {e}")
+        logger.debug("Rust search_fuzzy failed: %s", e, exc_info=True)
         return None
 
 
@@ -132,7 +132,7 @@ def search_and_query(
             return [item for item in parsed if isinstance(item, dict)]
         return None
     except Exception as e:
-        logger.debug(f"Rust search_and_query failed: {e}")
+        logger.debug("Rust search_and_query failed: %s", e, exc_info=True)
         return None
 
 
@@ -153,5 +153,5 @@ def search_stats() -> dict[str, Any] | None:
             return parsed
         return None
     except Exception as e:
-        logger.debug(f"Rust search_stats failed: {e}")
+        logger.debug("Rust search_stats failed: %s", e, exc_info=True)
         return None

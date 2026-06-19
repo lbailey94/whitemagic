@@ -130,7 +130,7 @@ class Narrator:
             # print(f"🗣️ {text}")
 
         except Exception as e:
-            logger.info(f"⚠️ Narrator error: {e}")
+            logger.info("⚠️ Narrator error: %s", e, exc_info=True)
 
 # Singleton
 _narrator = None

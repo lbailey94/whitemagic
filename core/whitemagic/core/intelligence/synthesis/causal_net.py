@@ -83,7 +83,7 @@ class CausalNet:
                     logger.info(f"Rust fast-path: {len(edges)} edges from {len(active_clusters)} clusters")
                     return cast(dict[str, list[str]], edges)
         except Exception as e:
-            logger.debug(f"Rust fast-path unavailable, using Python fallback: {e}")
+            logger.debug("Rust fast-path unavailable, using Python fallback: %s", e, exc_info=True)
 
         # Python fallback
         cluster_data_py: dict[str, dict[str, Any]] = {}

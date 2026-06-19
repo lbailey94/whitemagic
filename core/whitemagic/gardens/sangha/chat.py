@@ -394,7 +394,7 @@ class SanghaChat:
                     continue
 
         except Exception as e:
-            logger.info(f"Error reading chat {channel}: {e}")
+            logger.info("Error reading chat %s: %s", channel, e, exc_info=True)
 
         return messages
 
@@ -528,7 +528,7 @@ class SanghaChat:
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            logger.info(f"Error reading tasks: {e}")
+            logger.info("Error reading tasks: %s", e, exc_info=True)
         return tasks
 
     def generate_summary(self, channel: str = "general", days: int = 1, priority_filter: str | None = None) -> str:

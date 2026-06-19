@@ -201,9 +201,9 @@ class DispatchPipeline:
             try:
                 result = _compact_fn(result)
             except (ValueError, TypeError, AttributeError) as e:
-                logger.debug(f"Middleware: compaction failed for {ctx.tool_name}: {e}")
+                logger.debug("Middleware: compaction failed for %s: %s", ctx.tool_name, e, exc_info=True)
             except RuntimeError as e:
-                logger.warning(f"Middleware: unexpected compaction runtime error for {ctx.tool_name}: {e}")
+                logger.warning("Middleware: unexpected compaction runtime error for %s: %s", ctx.tool_name, e, exc_info=True)
 
         return result
 
@@ -245,7 +245,7 @@ def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
             if e.__class__.__name__ == "ToolExecutionError":
                 raise
             # Log middleware errors at WARNING level for visibility
-            logger.warning(f"Middleware '{name}' error: {e.__class__.__name__}: {e}")
+            logger.warning("Middleware '%s' error: %s: %s", name, e.__class__.__name__, e, exc_info=True)
             # Record error in context for downstream inspection
             if "middleware_errors" not in ctx.meta:
                 ctx.meta["middleware_errors"] = []
@@ -267,7 +267,7 @@ def mw_input_sanitizer(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
             if result is not None:
                 return cast(dict[str, Any], result)
         except Exception as e:
-            logger.debug(f"Input sanitizer failed for {ctx.tool_name}: {e}")
+            logger.debug("Input sanitizer failed for %s: %s", ctx.tool_name, e, exc_info=True)
     return next_fn(ctx)
 
 
@@ -284,7 +284,7 @@ def mw_circuit_breaker(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
                 if calm is not None:
                     return cast(dict[str, Any], calm)
         except (ImportError, AttributeError, ValueError, RuntimeError) as e:
-            logger.debug(f"Middleware: circuit breaker lookup failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: circuit breaker lookup failed for %s: %s", ctx.tool_name, e, exc_info=True)
             breaker = None
 
     result = next_fn(ctx)
@@ -324,14 +324,14 @@ def mw_observability(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
         try:
             _get_prometheus().record_tool_call(ctx.tool_name, duration, status)
         except (AttributeError, RuntimeError) as e:
-            logger.debug(f"Middleware: prometheus recording failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: prometheus recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
 
     # Record to OTel
     if _get_otel is not None:
         try:
             _get_otel().record_tool_span(ctx.tool_name, duration, status)
         except (AttributeError, RuntimeError) as e:
-            logger.debug(f"Middleware: otel recording failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: otel recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
 
     return result
 
@@ -348,7 +348,7 @@ def mw_rate_limiter(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | N
             if result is not None:
                 return result
         except (AttributeError, RuntimeError) as e:
-            logger.debug(f"Middleware: rate limit check failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: rate limit check failed for %s: %s", ctx.tool_name, e, exc_info=True)
     return next_fn(ctx)
 
 
@@ -361,7 +361,7 @@ def mw_tool_permissions(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             if perm_result is not None:
                 return perm_result  # type: ignore[return-value]
         except (AttributeError, RuntimeError) as e:
-            logger.debug(f"Middleware: permission check failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: permission check failed for %s: %s", ctx.tool_name, e, exc_info=True)
     return next_fn(ctx)
 
 
@@ -376,7 +376,7 @@ def mw_maturity_gate(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
             if mat_result is not None:
                 return mat_result  # type: ignore[return-value]
         except (AttributeError, RuntimeError) as e:
-            logger.debug(f"Middleware: maturity check failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: maturity check failed for %s: %s", ctx.tool_name, e, exc_info=True)
     return next_fn(ctx)
 
 
@@ -403,9 +403,9 @@ def mw_security_monitor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
                     "alert": alert,
                 }
         except (AttributeError, KeyError, ValueError) as e:
-            logger.debug(f"Security monitor call recording failed for {ctx.tool_name}: {e}")
+            logger.debug("Security monitor call recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
         except RuntimeError as e:
-            logger.warning(f"Security monitor runtime failure: {e}")
+            logger.warning("Security monitor runtime failure: %s", e, exc_info=True)
     return next_fn(ctx)
 
 
@@ -423,14 +423,14 @@ def mw_governor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
                         "tool": ctx.tool_name, "reason": validation.reason,
                     })
                 except (ImportError, AttributeError, RuntimeError) as e:
-                    logger.debug(f"Middleware: governor gan-ying emit failed: {e}")
+                    logger.debug("Middleware: governor gan-ying emit failed: %s", e, exc_info=True)
                 return {
                     "status": "error",
                     "error": f"Governor Blocked: {validation.reason}",
                     "risk_level": validation.risk_level.name,
                 }
         except (AttributeError, RuntimeError) as e:
-            logger.debug(f"Middleware: governor validation failed for {ctx.tool_name}: {e}")
+            logger.debug("Middleware: governor validation failed for %s: %s", ctx.tool_name, e, exc_info=True)
     return next_fn(ctx)
 
 
@@ -469,7 +469,7 @@ def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, An
                     "reason": verdict
                 })
             except Exception as e:
-                logger.warning(f"Failed to push consent to Nexus UI: {e}")
+                logger.warning("Failed to push consent to Nexus UI: %s", e, exc_info=True)
 
             return {
                 "status": "paused",
@@ -477,10 +477,10 @@ def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, An
                 "action_required": "user_approval"
             }
     except ImportError as e:
-        logger.debug(f"Middleware: sutra_bridge missing for {ctx.tool_name}: {e}")
+        logger.debug("Middleware: sutra_bridge missing for %s: %s", ctx.tool_name, e, exc_info=True)
     except (ImportError, ModuleNotFoundError) as e:
-        logger.warning(f"Middleware: sutra_auto_execute unexpected error: {e}")
-        logger.warning(f"Sutra Auto-Execute Middleware failed: {e}")
+        logger.warning("Middleware: sutra_auto_execute unexpected error: %s", e, exc_info=True)
+        logger.warning("Sutra Auto-Execute Middleware failed: %s", e, exc_info=True)
 
     return next_fn(ctx)
 
@@ -510,7 +510,7 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
                     ctx.meta["zodiac_amplified"] = True
                     ctx.meta["resonance_multiplier"] = 1.5
     except Exception as e:
-        logger.debug(f"Zodiac Resonance middleware pre-processing failed: {e}")
+        logger.debug("Zodiac Resonance middleware pre-processing failed: %s", e, exc_info=True)
 
     result = next_fn(ctx)
 
@@ -531,8 +531,8 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             boost_msg = f"🌌 Zodiacal Resonance: {zodiac} Amplification detected."
             result["note"] = f"{boost_msg} {note}".strip()
         except (ImportError, AttributeError, KeyError) as e:
-            logger.debug(f"Zodiac Resonance middleware post-processing failed: {e}")
+            logger.debug("Zodiac Resonance middleware post-processing failed: %s", e, exc_info=True)
         except RuntimeError as e:
-            logger.warning(f"Zodiac Resonance post-processor runtime failure: {e}")
+            logger.warning("Zodiac Resonance post-processor runtime failure: %s", e, exc_info=True)
 
     return result

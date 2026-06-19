@@ -38,7 +38,7 @@ def emit_fusion_event(event_name: str, data: dict[str, Any]) -> None:
         bus.emit(event)
         logger.debug(f"Fusion event emitted: {event_name}")
     except Exception as e:
-        logger.warning(f"Failed to emit fusion event {event_name}: {e}")
+        logger.warning("Failed to emit fusion event %s: %s", event_name, e, exc_info=True)
 
 
 def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
@@ -168,7 +168,7 @@ def _get_dominant_element() -> tuple:
         best = max(engine.elements.values(), key=lambda s: s.energy)
         return (best.element.value, best.energy)
     except (ImportError, ModuleNotFoundError) as e:
-        logger.warning(f"Wu Xing engine unavailable: {e}")
+        logger.warning("Wu Xing engine unavailable: %s", e, exc_info=True)
         return ("wood", 0.5)
 
 

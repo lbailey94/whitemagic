@@ -77,16 +77,16 @@ class AutonomousArmyManager:
         # 2. Check for Self-Model alerts
         for alert in alerts:
             if "error_rate" in alert.metric and alert.current > 0.1:
-                logger.error(f"⚠️ High error rate detected ({alert.current}). Deploying Tier 1 Security Audit.")
+                logger.error("⚠️ High error rate detected (%s). Deploying Tier 1 Security Audit.", alert.current, exc_info=True)
                 await self.deploy_army("alpha", "security_classification")
 
             if "energy" in alert.metric and alert.current < 0.3:
-                logger.warning(f"📉 Low system energy ({alert.current}). Deploying Tier 1 Quality Assessment.")
+                logger.warning("📉 Low system energy (%s). Deploying Tier 1 Quality Assessment.", alert.current, exc_info=True)
                 await self.deploy_army("alpha", "quality_assessment")
 
     async def deploy_army(self, army_type: str, objective: str):
         """Deploy a specialized army to address a specific objective using deploy_grand_army.py."""
-        logger.info(f"🎖️ Deploying Army {army_type.upper()} for objective: {objective}")
+        logger.info("🎖️ Deploying Army {army_type.upper()} for objective: %s", objective, exc_info=True)
 
         try:
             # Objective map for deploy_grand_army.py
@@ -111,7 +111,7 @@ class AutonomousArmyManager:
                 "utility_score": 1.0,  # Initial utility
             })
 
-            logger.info(f"✅ Deployment {deployment_id} launched.")
+            logger.info("✅ Deployment %s launched.", deployment_id, exc_info=True)
             return deployment_id
 
         except Exception as e:
@@ -151,7 +151,7 @@ class AutonomousArmyManager:
                     "reason": "Proof-of-Utility: deployment exceeded max_age or utility fell below 0.2",
                 })
             except Exception as e:
-                logger.debug(f"Gan Ying emit failed for army pruning: {e}")
+                logger.debug("Gan Ying emit failed for army pruning: %s", e, exc_info=True)
 
         return {
             "status": "success",

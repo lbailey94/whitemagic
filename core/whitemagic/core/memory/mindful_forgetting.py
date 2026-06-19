@@ -246,7 +246,7 @@ class RetentionEngine:
                 sig = evaluator(mem)
                 signals.append(sig)
             except Exception as exc:
-                logger.warning(f"Retention evaluator {evaluator.__name__} failed: {exc}")
+                logger.warning("Retention evaluator %s failed: %s", evaluator.__name__, exc, exc_info=True)
 
         # Compute weighted average
         total_weight = sum(s.weight for s in signals if s.weight > 0)
@@ -314,7 +314,7 @@ class RetentionEngine:
                 from whitemagic.core.memory.unified import get_unified_memory
                 backend = get_unified_memory().backend
             except ImportError as e:
-                logger.debug(f"Unified memory unavailable for persistence: {e}")
+                logger.debug("Unified memory unavailable for persistence: %s", e, exc_info=True)
 
         report = SweepReport()
         for mem in memories:

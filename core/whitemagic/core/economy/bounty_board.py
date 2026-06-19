@@ -64,7 +64,7 @@ class BountyBoard:
                         bounty = Bounty(**data)
                         self._bounties[bounty.id] = bounty
         except Exception as e:
-            logger.warning(f"Failed to load bounty board: {e}")
+            logger.warning("Failed to load bounty board: %s", e, exc_info=True)
 
     def create_bounty(self, task: str, amount: float, expires_in: int = 86400) -> Bounty:
         """Create a new bounty record (link to XRPL Escrow happens later)."""

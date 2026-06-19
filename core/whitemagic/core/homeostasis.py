@@ -152,7 +152,7 @@ class HomeostasisSystem:
                     "proposal_id": best_prop["proposal_id"],
                 }
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to calculate harmonic bias: {e}")
+            logger.debug("Failed to calculate harmonic bias: %s", e, exc_info=True)
 
         return None
 

@@ -161,7 +161,7 @@ class SolutionLibrary:
                 return False
 
         # 3. Fallback: Log that solution was validated but had no executable code
-        logger.info(f"Solution {sol.id} validated but contains no executable snippet.")
+        logger.info("Solution %s validated but contains no executable snippet.", sol.id, exc_info=True)
         return True
 
     def migrate_from_cluster_patterns(self) -> Any:

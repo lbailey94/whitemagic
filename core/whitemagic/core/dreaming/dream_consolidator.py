@@ -119,14 +119,14 @@ class DreamConsolidator:
                         result = promote_dream(dream_id)
                         if result:
                             report.promoted.append(dream_id)
-                            logger.info(f"Promoted dream {dream_id} (revisits={revisit_count})")
+                            logger.info("Promoted dream %s (revisits=%s)", dream_id, revisit_count, exc_info=True)
                         else:
                             report.errors += 1
                     elif idle_days >= self.archive_after_days:
                         result = archive_dream(dream_id)
                         if result:
                             report.archived.append(dream_id)
-                            logger.info(f"Archived dream {dream_id} (idle={idle_days:.1f}d)")
+                            logger.info("Archived dream %s (idle={idle_days:.1f}d)", dream_id, exc_info=True)
                         else:
                             report.errors += 1
                     else:
@@ -137,7 +137,7 @@ class DreamConsolidator:
                         result = expire_dream(dream_id)
                         if result:
                             report.expired.append(dream_id)
-                            logger.info(f"Expired dream {dream_id} (age={age_days:.1f}d)")
+                            logger.info("Expired dream %s (age={age_days:.1f}d)", dream_id, exc_info=True)
                         else:
                             report.errors += 1
                     else:
@@ -147,7 +147,7 @@ class DreamConsolidator:
                     report.skipped += 1
 
             except Exception as exc:
-                logger.warning(f"Consolidation error for {path.name}: {exc}")
+                logger.warning("Consolidation error for %s: %s", path.name, exc, exc_info=True)
                 report.errors += 1
 
         return report

@@ -128,7 +128,7 @@ class WillowHealthChecker:
 
         logger.info(f"🌿 Willow health check complete: {'✅' if is_healthy else '❌'}")
         if issues:
-            logger.warning(f"🌿 Issues found: {issues}")
+            logger.warning("🌿 Issues found: %s", issues, exc_info=True)
 
         return status
 
@@ -150,13 +150,13 @@ class WillowHealthChecker:
             logger.warning("🌿 Grimoire handler timeout")
             return False
         except Exception as e:
-            logger.warning(f"🌿 Grimoire handler test error: {e}")
+            logger.warning("🌿 Grimoire handler test error: %s", e, exc_info=True)
             return False
 
     async def attempt_recovery(self) -> bool:
         """Attempt to recover Willow functionality."""
         self._recovery_attempts += 1
-        logger.info(f"🌿 Attempting Willow recovery (attempt #{self._recovery_attempts})")
+        logger.info("🌿 Attempting Willow recovery (attempt #%s)", self._recovery_attempts, exc_info=True)
 
         recovery_success = False
 
@@ -174,7 +174,7 @@ class WillowHealthChecker:
                 breaker = registry.get_breaker(breaker_name)
                 if breaker and breaker.is_open():
                     breaker.reset()
-                    logger.info(f"🌿 Reset circuit breaker: {breaker_name}")
+                    logger.info("🌿 Reset circuit breaker: %s", breaker_name, exc_info=True)
                     recovery_success = True
 
         except (OSError, FileNotFoundError, PermissionError) as e:
@@ -275,8 +275,8 @@ async def koka_timeout_wrapper(operation: Any, timeout_seconds: float = 5.0) -> 
         result = await asyncio.wait_for(operation, timeout=timeout_seconds)
         return {"status": "success", "result": result}
     except TimeoutError:
-        logger.warning(f"🌿 Koka operation timed out after {timeout_seconds}s")
+        logger.warning("🌿 Koka operation timed out after %ss", timeout_seconds, exc_info=True)
         return {"status": "error", "error": "timeout"}
     except Exception as e:
-        logger.warning(f"🌿 Koka operation failed: {e}")
+        logger.warning("🌿 Koka operation failed: %s", e, exc_info=True)
         return {"status": "error", "error": str(e)}

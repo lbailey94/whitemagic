@@ -89,7 +89,7 @@ def handle_maturity_assess(**kwargs: Any) -> dict[str, Any]:
         result["locked_tools"] = locked
         result["unlocked_tools"] = unlocked
     except Exception as e:
-        logger.debug(f"Silenced governance unlocked check error: {e}")
+        logger.debug("Silenced governance unlocked check error: %s", e, exc_info=True)
 
     return result
 

@@ -184,7 +184,7 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
                 "perspectives_used": len(analysis.perspectives),
             }
         except Exception as e:
-            logger.warning(f"Multi-spectral analysis failed: {e}")
+            logger.warning("Multi-spectral analysis failed: %s", e, exc_info=True)
             lines = [f"# Scratchpad: {pad.name}"]
             if pad.focus:
                 lines.append(f"Focus: {pad.focus}")

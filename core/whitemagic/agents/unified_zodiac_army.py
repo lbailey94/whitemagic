@@ -311,7 +311,7 @@ class UnifiedZodiacCommander:
         else:
             selected_armies = armies or [ArmyType.IMMORTAL]
 
-        logger.info(f"🎯 Unified Zodiac Deployment: {objective}")
+        logger.info("🎯 Unified Zodiac Deployment: %s", objective, exc_info=True)
         logger.info(f"   Selected armies: {[a.value for a in selected_armies]}")
 
         # Try Rust implementation first
@@ -323,7 +323,7 @@ class UnifiedZodiacCommander:
                 self.deployment_history.append(deployment)
                 return deployment
             except Exception as e:
-                logger.warning(f"Rust deployment failed, falling back to Python: {e}")
+                logger.warning("Rust deployment failed, falling back to Python: %s", e, exc_info=True)
 
         # Python fallback
         deployment = await self._deploy_python(

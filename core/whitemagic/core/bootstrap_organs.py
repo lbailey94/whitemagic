@@ -21,14 +21,14 @@ def bootstrap_nervous_system():
         from whitemagic.core.immune.pattern_immunity import get_immune_system
         ns.register_organ(OrganType.IMMUNE, get_immune_system())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Immune System: {e}")
+        logger.warning("Failed to bootstrap Immune System: %s", e, exc_info=True)
 
     # 2. Genetics (Phylogenetics)
     try:
         from whitemagic.core.memory.phylogenetics import get_phylogenetics
         ns.register_organ(OrganType.GENETICS, get_phylogenetics())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Genetics: {e}")
+        logger.warning("Failed to bootstrap Genetics: %s", e, exc_info=True)
 
     # 3. Dream Cycle
     try:
@@ -43,35 +43,35 @@ def bootstrap_nervous_system():
         # No, I can import it if it exists. If not, I'll catch the error.
         ns.register_organ(OrganType.DREAM, get_dream_cycle())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Dream Cycle: {e}")
+        logger.warning("Failed to bootstrap Dream Cycle: %s", e, exc_info=True)
 
     # 4. Metabolism (Consolidation)
     try:
         from whitemagic.core.memory.consolidation import get_consolidator
         ns.register_organ(OrganType.METABOLISM, get_consolidator())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Metabolism: {e}")
+        logger.warning("Failed to bootstrap Metabolism: %s", e, exc_info=True)
 
     # 5. Consciousness (Embodiment/Harmony)
     try:
         from whitemagic.core.embodiment import get_harmony_monitor
         ns.register_organ(OrganType.CONSCIOUSNESS, get_harmony_monitor())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Consciousness: {e}")
+        logger.warning("Failed to bootstrap Consciousness: %s", e, exc_info=True)
 
     # 6. Resonance (Gan Ying Bus)
     try:
         from whitemagic.core.resonance.gan_ying_enhanced import get_bus
         ns.register_organ(OrganType.RESONANCE, get_bus())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Resonance: {e}")
+        logger.warning("Failed to bootstrap Resonance: %s", e, exc_info=True)
 
     # 7. Emergence (Detector)
     try:
         from whitemagic.core.patterns.emergence.detector import get_detector
         ns.register_organ(OrganType.EMERGENCE, get_detector())
     except ImportError as e:
-        logger.warning(f"Failed to bootstrap Emergence: {e}")
+        logger.warning("Failed to bootstrap Emergence: %s", e, exc_info=True)
 
     # Wire Feedback Loops (Subscribers)
     _wire_feedback_loops(ns)

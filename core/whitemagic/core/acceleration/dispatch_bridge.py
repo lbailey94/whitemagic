@@ -165,7 +165,7 @@ class DispatchBridge:
                 logger.info("⚡ DispatchCore: Zig FFI path active")
                 return
             except Exception as e:
-                logger.warning(f"Zig dispatch load failed: {e}")
+                logger.warning("Zig dispatch load failed: %s", e, exc_info=True)
 
         logger.info("🐍 DispatchCore: Python fallback")
 

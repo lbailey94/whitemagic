@@ -134,7 +134,7 @@ class LibraryLoader:
                 logger.info(f"Library {self.lib_name} loaded from: {path}")
                 return lib
             except Exception as e:
-                logger.warning(f"Failed to load library {self.lib_name}: {e}")
+                logger.warning("Failed to load library %s: %s", self.lib_name, e, exc_info=True)
                 self._available = False
                 return None
 

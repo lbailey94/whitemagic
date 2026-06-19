@@ -126,7 +126,7 @@ class AdaptiveToolPortal:
             injector = get_holographic_injector()
             context.attributes["holographic_system_map"] = injector.generate_system_prompt_injection(str(params))
         except Exception as e:
-            logger.debug(f"Holographic injection failed: {e}")
+            logger.debug("Holographic injection failed: %s", e, exc_info=True)
 
         # 2. Determine morphology
         if force_morphology:
@@ -241,7 +241,7 @@ class AdaptiveToolPortal:
                 },
             )
         except Exception as e:
-            logger.debug(f"Resonance emission skipped: {e}")
+            logger.debug("Resonance emission skipped: %s", e, exc_info=True)
 
     # =========================================================================
     # RECALL MORPHOLOGIES
@@ -649,7 +649,7 @@ class AdaptiveToolPortal:
         except ImportError:
             logger.debug("whitemagic_rs not available, falling back to UnifiedMemory")
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Rust search failed: {e}, falling back to UnifiedMemory")
+            logger.debug("Rust search failed: %s, falling back to UnifiedMemory", e, exc_info=True)
 
         # Fallback to UnifiedMemory
         try:
@@ -676,7 +676,7 @@ class AdaptiveToolPortal:
                             pass  # Item has no __dict__ — skip silently
             return cleaned_results
         except Exception as e:
-            logger.warning(f"Semantic search failed: {e}")
+            logger.warning("Semantic search failed: %s", e, exc_info=True)
             return []
 
     async def _store_memory(
@@ -692,7 +692,7 @@ class AdaptiveToolPortal:
             stored = memory.store(title=title, content=content, tags=set(tags))
             return str(stored.id)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(f"Memory storage failed: {e}")
+            logger.warning("Memory storage failed: %s", e, exc_info=True)
             return f"mock_id_{hash(content) % 10000}"
 
     def _extract_patterns(self, memories: list[dict]) -> list[str]:

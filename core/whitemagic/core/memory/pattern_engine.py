@@ -93,7 +93,7 @@ class PatternEngine:
             try:
                 return self._extract_rust(min_confidence)
             except Exception as e:
-                logger.warning(f"Rust pattern extraction failed, falling back to Python: {e}")
+                logger.warning("Rust pattern extraction failed, falling back to Python: %s", e, exc_info=True)
 
         return self._extract_python(min_confidence)
 

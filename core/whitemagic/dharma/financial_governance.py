@@ -137,7 +137,7 @@ class WalletGovernor:
                             self._rules[key] = overrides[key]
                     logger.info(f"Financial governance: loaded YAML overrides from {yaml_path}")
         except Exception as e:
-            logger.debug(f"Financial governance YAML load: {e}")
+            logger.debug("Financial governance YAML load: %s", e, exc_info=True)
 
     def check_spend(
         self, action: str, amount: float, currency: str | None = None,

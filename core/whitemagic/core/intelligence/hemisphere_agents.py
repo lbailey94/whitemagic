@@ -48,14 +48,14 @@ class HemisphereAgent:
                 self._listening = True
                 logger.info(f"{self.name} hemisphere agent registered on Gan Ying bus")
             except Exception as exc:
-                logger.warning(f"{self.name} failed to register: {exc}")
+                logger.warning("%s failed to register: %s", self.name, exc, exc_info=True)
 
     def _on_reasoning(self, event: Any) -> None:
         """React to reasoning completion events."""
         data = getattr(event, "data", {})
         tension = data.get("tension", 0.0)
         if tension > 0.7:
-            logger.info(f"{self.name} noticed high tension ({tension:.2f}) — debate may be needed")
+            logger.info("%s noticed high tension ({tension:.2f}) — debate may be needed", self.name, exc_info=True)
 
     def propose(self, topic: str) -> str:
         """Generate a position statement on a topic."""

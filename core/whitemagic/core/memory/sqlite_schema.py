@@ -118,20 +118,20 @@ class SQLiteSchemaManager:
         for col_name, col_type in new_columns.items():
             if col_name not in existing_columns:
                 if not _valid_ident.match(col_name) or not _valid_ident.match(col_type.split()[0]):
-                    logger.warning(f"Skipping invalid identifier: {col_name}")
+                    logger.warning("Skipping invalid identifier: %s", col_name, exc_info=True)
                     continue
                 # Deferred backup: only backup before first actual schema change
                 if self._needs_backup:
                     self.auto_backup()
                     self._needs_backup = False
-                logger.debug(f"Adding column {col_name} to memories table")
+                logger.debug("Adding column %s to memories table", col_name, exc_info=True)
                 try:
                     safe_col = self._quote_identifier(col_name)
                     safe_type = self._quote_identifier(col_type.split()[0])
                     stmt = f'ALTER TABLE memories ADD COLUMN {safe_col} {safe_type}'
                     conn.execute(stmt)
                 except sqlite3.OperationalError as e:
-                    logger.warning(f"Could not add column {col_name}: {e}")
+                    logger.warning("Could not add column %s: %s", col_name, e, exc_info=True)
 
         # 2. Tags table
         conn.execute("""
@@ -248,7 +248,7 @@ class SQLiteSchemaManager:
                     # Use full col_def to include DEFAULT values
                     stmt = f'ALTER TABLE associations ADD COLUMN {safe_col} {col_def}'
                     conn.execute(stmt)
-                    logger.info(f"Added {col_name} column to associations table")
+                    logger.info("Added %s column to associations table", col_name, exc_info=True)
                 except sqlite3.OperationalError:
                     pass
 

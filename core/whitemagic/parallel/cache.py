@@ -91,7 +91,7 @@ class DistributedCache:
                 if value:
                     return json.loads(value)
             except Exception as e:
-                logger.warning(f"Redis cache get failed for {cache_key}: {e}")
+                logger.warning("Redis cache get failed for %s: %s", cache_key, e, exc_info=True)
 
         # Fallback to in-memory
         entry = self._cache.get(cache_key)
@@ -121,7 +121,7 @@ class DistributedCache:
                 self._redis_client.setex(cache_key, ttl, json.dumps(value))
                 return True
             except Exception as e:
-                logger.warning(f"Redis cache set failed for {cache_key}: {e}")
+                logger.warning("Redis cache set failed for %s: %s", cache_key, e, exc_info=True)
 
         # Fallback to in-memory
         if len(self._cache) >= self.max_size:
@@ -139,7 +139,7 @@ class DistributedCache:
             try:
                 self._redis_client.delete(cache_key)
             except Exception as e:
-                logger.warning(f"Redis cache delete failed for {cache_key}: {e}")
+                logger.warning("Redis cache delete failed for %s: %s", cache_key, e, exc_info=True)
 
         self._cache.pop(cache_key, None)
         return True
@@ -162,7 +162,7 @@ class DistributedCache:
                     if keys:
                         return self._redis_client.delete(*keys)
                 except Exception as e:
-                    logger.warning(f"Redis pattern clear failed for {pattern}: {e}")
+                    logger.warning("Redis pattern clear failed for %s: %s", pattern, e, exc_info=True)
 
             # In-memory pattern clear
             to_delete = [k for k in self._cache.keys() if pattern in k]
@@ -175,7 +175,7 @@ class DistributedCache:
             try:
                 self._redis_client.flushdb()
             except Exception as e:
-                logger.warning(f"Redis flushdb failed: {e}")
+                logger.warning("Redis flushdb failed: %s", e, exc_info=True)
 
         count = len(self._cache)
         self._cache.clear()

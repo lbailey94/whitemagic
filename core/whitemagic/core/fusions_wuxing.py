@@ -119,5 +119,5 @@ def _get_dominant_element() -> tuple:
         best = max(engine.elements.values(), key=lambda s: s.energy)
         return (best.element.value, best.energy)
     except Exception as e:
-        logger.warning(f"Wu Xing engine unavailable: {e}")
+        logger.warning("Wu Xing engine unavailable: %s", e, exc_info=True)
         return ("wood", 0.5)  # Safe default

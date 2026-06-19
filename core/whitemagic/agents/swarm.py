@@ -247,7 +247,7 @@ class AgentSwarm:
                             }
                         )
         except Exception as e:
-            logger.debug(f"Agent listing failed: {e}")
+            logger.debug("Agent listing failed: %s", e, exc_info=True)
 
         assignments = []
         for task in plan.subtasks:
@@ -413,7 +413,7 @@ class AgentSwarm:
             dharma_ok = decision.action.value != "block"
             dharma_reason = decision.explain
         except Exception as e:
-            logger.debug(f"Dharma engine evaluation failed for tricameral: {e}")
+            logger.debug("Dharma engine evaluation failed for tricameral: %s", e, exc_info=True)
 
         # Phase 3: Younger Brothers resolve their own weighted preference
         younger_weighted: dict[str, float] = {}
@@ -451,7 +451,7 @@ class AgentSwarm:
                     firekeeper_verdict = "block"
                     firekeeper_reason = f"Sutra Kernel intervention: {verdict}"
             except Exception as e:
-                logger.debug(f"Sutra Kernel evaluation failed for tricameral: {e}")
+                logger.debug("Sutra Kernel evaluation failed for tricameral: %s", e, exc_info=True)
 
         # Firekeeper override check
         if firekeeper_votes:
@@ -491,7 +491,7 @@ class AgentSwarm:
                 "firekeeper_verdict": firekeeper_verdict,
             })
         except Exception as e:
-            logger.debug(f"Gan Ying emit failed for tricameral: {e}")
+            logger.debug("Gan Ying emit failed for tricameral: %s", e, exc_info=True)
 
         return result
 
@@ -553,7 +553,7 @@ class AgentSwarm:
                     "reason": "Proof-of-Utility: entities exceeded max_age without contributing",
                 })
             except Exception as e:
-                logger.debug(f"Gan Ying emit failed for pruning: {e}")
+                logger.debug("Gan Ying emit failed for pruning: %s", e, exc_info=True)
 
         return {
             "status": "success",

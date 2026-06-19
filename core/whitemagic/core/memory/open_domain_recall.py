@@ -145,7 +145,7 @@ class OpenDomainRecall:
                 ))
 
             except Exception as e:
-                logger.warning(f"Failed to score {memory_id}: {e}")
+                logger.warning("Failed to score %s: %s", memory_id, e, exc_info=True)
                 continue
 
         conn.close()

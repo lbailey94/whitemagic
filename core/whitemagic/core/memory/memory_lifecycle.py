@@ -68,7 +68,7 @@ class MemoryLifecycleManager:
                 conn.commit()
             except Exception as e:
                 conn.rollback()
-                logger.error(f"Consolidation failed: {e}")
+                logger.error("Consolidation failed: %s", e, exc_info=True)
                 raise
 
         return consolidated_count
@@ -202,5 +202,5 @@ class MemoryLifecycleManager:
             "associations_pruned": count,
             "min_strength_threshold": min_strength,
         }
-        logger.info(f"🔗 Pruned {count} associations below strength {min_strength}")
+        logger.info("🔗 Pruned %s associations below strength %s", count, min_strength, exc_info=True)
         return result

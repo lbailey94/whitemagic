@@ -336,7 +336,7 @@ class BreakerRegistry:
                             f"tightened {len(tightened)} breakers",
                         )
         except Exception as e:
-            logger.debug(f"Predictive check skipped: {e}")
+            logger.debug("Predictive check skipped: %s", e, exc_info=True)
 
         return {
             "tightened": tightened,

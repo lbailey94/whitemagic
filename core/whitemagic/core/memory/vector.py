@@ -44,7 +44,7 @@ class EmbeddingEngine:
                 )
                 self._engine = RealEngine()
             except Exception as e:
-                logger.warning(f"Real EmbeddingEngine unavailable: {e}")
+                logger.warning("Real EmbeddingEngine unavailable: %s", e, exc_info=True)
                 self._engine = None
         return self._engine
 
@@ -144,7 +144,7 @@ class VectorSearch:
                 )
                 self._search = RealSearch()
             except Exception as e:
-                logger.warning(f"Real VectorSearch unavailable: {e}")
+                logger.warning("Real VectorSearch unavailable: %s", e, exc_info=True)
                 self._search = None
         return self._search
 
@@ -198,7 +198,7 @@ class HNSWIndex:
                 from whitemagic.core.memory.hnsw_index import HNSWIndex as RealIndex
                 self._index = RealIndex(dim=self.dim)
             except Exception as e:
-                logger.warning(f"Real HNSWIndex unavailable: {e}")
+                logger.warning("Real HNSWIndex unavailable: %s", e, exc_info=True)
                 self._index = None
         return self._index
 

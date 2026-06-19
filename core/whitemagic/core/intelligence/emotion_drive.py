@@ -315,7 +315,7 @@ class DriveCore:
             )
             get_bus().emit(event, async_dispatch=True)  # type: ignore[call-arg]
         except Exception as e:
-            logger.debug(f"Failed to emit emotion event: {e}")
+            logger.debug("Failed to emit emotion event: %s", e, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
