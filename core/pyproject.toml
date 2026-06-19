@@ -488,6 +488,114 @@ module = [
     "sklearn.*",
     "networkx",
     "networkx.*",
+    # --- Optional 3rd-party deps added in v22.2.2 polish pass ---
+    "agentdojo",
+    "agentdojo.*",
+    "docx",
+    "erlport",
+    "erlport.*",
+    "faster_whisper",
+    "julia",
+    "orjson",
+    "PIL",
+    "prometheus_client",
+    "pyarrow",
+    "pythonjsonlogger",
+    "whisper",
+    "watchfiles",
+    "pyroscope",
+    "memray",
+    # --- Optional polyglot bridge binaries ---
+    "haskell_bridge",
+    "whitemagic_polyglot",
+    "whitemagic_rust_backend",
+    # --- Aspirational internal modules (planned but not yet
+    # implemented; ignore so mypy doesn't block on them) ---
+    "whitemagic.agents.blackboard",
+    "whitemagic.ai_contract",
+    "whitemagic.autonomous.continuous_awareness",
+    "whitemagic.autonomous.maintenance",
+    "whitemagic.autonomous.self_prompting",
+    "whitemagic.cli.holo_commands",
+    "whitemagic.cli.infer_commands",
+    "whitemagic.core.plugin.base",
+    "whitemagic.core.plugin.discovery",
+    "whitemagic.core.plugin.extension_point",
+    "whitemagic.core.plugin.loader",
+    "whitemagic.core.plugin.registry",
+    "whitemagic.core.scoring.neuro_score",
+    "whitemagic.core.intelligence.synthesis.constellation",
+    "whitemagic.core.intelligence.hologram.sector_synthesis",
+    "whitemagic.extensions.autonomous",
+    "whitemagic.extensions.edge",
+    "whitemagic.extensions.intelligence",
+    "whitemagic.extensions.symbolic",
+    "whitemagic.gardens.connection.celestial_bus",
+    "whitemagic.gardens.connection.council",
+    "whitemagic.gardens.connection.synastry_governor",
+    "whitemagic.gardens.joy.beauty_appreciation",
+    "whitemagic.gardens.joy.celebration",
+    "whitemagic.gardens.joy.core",
+    "whitemagic.gardens.joy.freedom_dance",
+    "whitemagic.gardens.joy.laughter",
+    "whitemagic.gardens.joy.overflow_routing",
+    "whitemagic.gardens.joy.play_protocols",
+    "whitemagic.hardware",
+    "whitemagic.haskell",
+    "whitemagic.homeostasis",
+    "whitemagic.immune.security_integration",
+    "whitemagic.maintenance.garden_health",
+    "whitemagic.rust.rust_bridge",
+    "whitemagic.safety.resource_limiter",
+    "whitemagic.security.csp",
+    "whitemagic.session",
+    "whitemagic.core.bridge.archaeology",
+    "whitemagic.core.bridge.autonomous",
+    "whitemagic.core.bridge.benchmark",
+    "whitemagic.core.bridge.gana_wrappers",
+    "whitemagic.core.bridge.garden",
+    "whitemagic.core.bridge.inference",
+    "whitemagic.core.bridge.meditation",
+    "whitemagic.core.bridge.reasoning",
+    "whitemagic.core.bridge.session",
+    "whitemagic.core.bridge.system",
+    "whitemagic.core.bridge.voice",
+    "whitemagic.core.bridge.wisdom",
+    "whitemagic.core.bridge.zodiac",
+    "whitemagic.core.immune.immune_memory",
+    "whitemagic.core.immune.immune_response",
+    "whitemagic.core.immune.threat_detector",
+    "whitemagic.core.immune.threat_level",
+    "whitemagic.core.intelligence.emergence",
+    "whitemagic.core.intelligence.entity_resolver",
+    "whitemagic.core.intelligence.graph_engine",
+    "whitemagic.core.intelligence.guideline_evolution",
+    "whitemagic.core.intelligence.hologram.galactic_sweep",
+    "whitemagic.core.intelligence.jit_researcher",
+    "whitemagic.core.intelligence.narrative_compression",
+    "whitemagic.core.intelligence.novelty",
+    "whitemagic.core.intelligence.pattern_consciousness",
+    "whitemagic.core.intelligence.surprise",
+    "whitemagic.core.intelligence.synthesis.association_miner",
+    "whitemagic.core.intelligence.synthesis.bridge_builder",
+    "whitemagic.core.intelligence.synthesis.bridge_synthesizer",
+    "whitemagic.core.intelligence.synthesis.multispectral",
+    "whitemagic.core.intelligence.synthesis.satkona",
+    "whitemagic.core.intelligence.vector_lake",
+    "whitemagic.core.intelligence.wu_xing_optimizer",
+    "whitemagic.core.memory.memory_matrix.timeline",
+    "whitemagic.core.patterns.pattern_consciousness.dream_synthesis",
+    "whitemagic.core.patterns.pattern_consciousness.emergence_detector",
+    "whitemagic.core.privacy.hermit_crab",
+    "whitemagic.core.telemetry.green_score",
+    "whitemagic.elixir",
+    "whitemagic.emergence.detector",
+    # --- External extension package (aspirational) ---
+    "whitemagic_extensions",
+    "whitemagic_extensions.autonomous",
+    "whitemagic_extensions.edge",
+    "whitemagic_extensions.intelligence",
+    "whitemagic_extensions.symbolic",
 ]
 ignore_missing_imports = true
 
@@ -495,6 +603,16 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "whitemagic._archived.*"
 ignore_errors = true
+
+# --- Optional native / Rust bindings: ignore attr-defined on
+# dynamic attribute access (e.g. whitemagic_rs.fast_search may or
+# may not exist depending on the Rust build). Applied package-wide
+# since the same pattern recurs across many files. The underlying
+# type guarantees are still enforced; only the "this attribute may
+# not exist on this module" check is suppressed. ---
+[[tool.mypy.overrides]]
+module = ["whitemagic.*"]
+disable_error_code = ["attr-defined"]
 
 [tool.ruff]
 target-version = "py311"

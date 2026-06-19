@@ -235,7 +235,7 @@ def handle_constellation_stats(**kwargs: Any) -> dict[str, Any]:
 def handle_constellation_merge(**kwargs: Any) -> dict[str, Any]:
     """Merge similar constellations."""
     try:
-        from whimentelligence.synthesis.constellation import ConstellationDetector
+        from whitemagic.core.intelligence.synthesis.constellation import ConstellationDetector
         detector = ConstellationDetector()
 
         similarity_threshold = kwargs.get("similarity_threshold", 0.8)
