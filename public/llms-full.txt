@@ -208,6 +208,9 @@ WhiteMagic treats the public web as a discovery surface for AI agents. The follo
 | `/api/prescience.json` | Forecast track record | JSON |
 | `/api/well-known/agent-economy.json` | Payment rails, tip addresses | JSON |
 | `/api/sangha.json` | Collective intelligence snapshot | JSON |
+| `/api/zodiac.json` | 12 zodiac cores catalog | JSON |
+| `/api/mcp-bridge.json` | whitemagic.core.bridge surface (13 modules, 29 functions, recovered v22.2.3) | JSON |
+| `/mcp-bridge` | Human-facing catalog of the 13 fixed bridge modules | HTML |
 | `/sitemap.xml` | Site map | XML |
 | `/robots.txt` | Crawler directives | text/plain |
 

@@ -86,6 +86,16 @@ const ROUTES = [
     priority: 0.4,
     changeFrequency: "weekly" as const,
   },
+  {
+    path: "/api/mcp-bridge.json",
+    priority: 0.5,
+    changeFrequency: "weekly" as const,
+  },
+  {
+    path: "/mcp-bridge",
+    priority: 0.7,
+    changeFrequency: "monthly" as const,
+  },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
