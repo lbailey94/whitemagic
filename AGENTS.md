@@ -163,6 +163,8 @@ Vercel auto-deploys from `main`. The build takes ~2-3 min. Vercel Hobby has a 10
 3. **Updating `lib/facts.ts` without updating the core repo docs** — the doc-drift check will fail.
 4. **Adding a new service page without adding to `lib/data/services.ts`** — the librarian will not know about it.
 5. **Forgetting to add a new endpoint to `app/sitemap.ts`** — agents won't find it.
+6. **Vercel CLI shows `[0ms]` UNKNOWN builds** — the dashboard will show a red **"Blocked"** badge. The CLI never surfaces the reason. Cause: git commit author email not verified on the GitHub account connected to the Vercel project's Git integration. Fix: rewrite the author via `git filter-branch` (or opencode's `~/.config/opencode/plugin/git-identity.ts` plugin will prevent it going forward). See `docs/site-ops/VERCEL_RECOVERY_WALKTHROUGH_2026-06-19.md` for the full recipe.
+7. **`vercel project remove` interactive loop** — piping `yes` to it causes an infinite re-prompt. Use `printf 'y\n' | vercel project remove <name>` for a single confirmation.
 
 ---
 
