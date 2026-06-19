@@ -145,6 +145,8 @@ Private filenames are intentionally not enumerated in this public index.
 | `SESSION_REPORT_2026-06-18.md` | Session report — comprehensive documentation sweep: 888 docstrings added (1,270→40 undocumented public functions), polyglot survey of 8 cores, standalone paper, 4 reverted files for manual fix | Jun 18 |
 | `WHATS_NEXT_2026-06-18.md` | What's-next recommendation: ship v22.3.0 with this session's wins, then start v23.0.0 work on multi-user + WASM runtime per the strategic roadmap | Jun 18 |
 | `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 PATCH scope proposal — Tier 1 (version drift guardrail fix) + Tier 2 (roadmap polish items) recommended; ~6 hours; discoverable from a real test failure (TestH1_VersionDrift) caught by the release_readiness guardrail | Jun 18 |
+| `SESSION_REPORT_POLISH_MARATHON_2026-06-18.md` | Session report — polish marathon that produced v22.2.3: ruff 1,833→0, mypy 800→0, 814 logger calls with exc_info, 9 real bugs found and fixed, 8 commits pushed | Jun 18 |
+| `MISSING_MODULES_REPORT_2026-06-18.md` | Missing-modules report — the 87 internal Whitemagic modules referenced in code but absent from the tree, classified into Resurface-from-archives (30), Reimplement-in-v22.3 (40), and Remove-stale-references (17); companion to the planned archaeological excavation session | Jun 18 |
 
 ---
 
