@@ -47,7 +47,7 @@ _get_rate_limiter: Callable[..., Any] | None = None
 _check_tool_permission: Callable[..., bool] | None = None
 _check_maturity_for_tool: Callable[..., bool] | None = None
 _get_security_monitor: Callable[[], Any] | None = None
-_get_governor: Callable[[], Any] | None = None
+_get_governor: Callable[..., Any] | None = None
 _compact_fn: Callable[..., dict[str, Any]] | None = None
 _get_prometheus: Callable[[], Any] | None = None
 _get_otel: Callable[[], Any] | None = None
@@ -97,8 +97,8 @@ def _ensure_cached() -> None:
         _get_governor = get_governor
     except Exception as e:
         try:
-            from whitemagic.dharma.governor import (
-                get_governor,  # type: ignore[assignment]
+            from whitemagic.dharma.governor import (  # type: ignore[assignment]
+                get_governor,
             )
             _get_governor = get_governor
         except (ImportError, AttributeError):
