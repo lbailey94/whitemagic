@@ -68,7 +68,7 @@ Any new public agent surface **must** be added to `app/sitemap.ts` and ideally t
 
 ```ts
 export const WM_FACTS = {
-  version: "22.2.3",
+  version: "22.2.4",
   verifiedDate: "June 19, 2026",
   linesShort: "178K",
   linesLong: "178,000",

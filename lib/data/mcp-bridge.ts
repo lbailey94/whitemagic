@@ -1,9 +1,9 @@
 /**
- * MCP Bridge — 13 fixed modules recovered in v22.2.3.
+ * MCP Bridge — 13 fixed modules recovered in v22.2.4.
  *
  * These are the bridge functions exposed via whitemagic.mcp_api_bridge.
  * In v22.2.2 and earlier, the bridge was completely broken due to
- * 14 unguarded star imports of these modules. In v22.2.3 all 13
+ * 14 unguarded star imports of these modules. In v22.2.4 all 13
  * modules were resurfaced from the SD-card archive.
  *
  * This file is the static catalog used by:
@@ -314,7 +314,7 @@ export const BRIDGE_MODULES: BridgeFunction[] = [
     name: "archaeology_stats",
     module: "whitemagic.core.bridge.archaeology",
     signature: "archaeology_stats(scan_disk: bool = False, **kwargs) -> dict",
-    description: "Get archaeology statistics. Defensive: requires whitemagic.archaeology (Group B in v22.2.3).",
+    description: "Get archaeology statistics. Defensive: requires whitemagic.archaeology (Group B in v22.2.4).",
     category: "archaeology",
     stability: "stable",
     example_payload: {},
@@ -350,13 +350,33 @@ export const BRIDGE_MODULES: BridgeFunction[] = [
     example_payload: {},
     example_response: { available: false, backends: {}, default_backend: null, models: {}, archived: true },
   },
+  // ── v22.2.4 additions ───────────────────────────────────────────────
+  {
+    name: "gana_dipper",
+    module: "whitemagic.core.bridge.gana_wrappers",
+    signature: "async gana_dipper(operation: str = 'invoke', **kwargs) -> dict",
+    description: "Dipper (Dou) Gana — governance, deep search, intelligence briefing, and predictive strategy. Routes to: intelligence_briefing (InsightPipeline), predict (PredictiveEngine + CoreAccessLayer), search_memories (MemoryManager), serendipity_surface (SerendipityEngine), or default 'measuring' status.",
+    category: "gana",
+    stability: "stable",
+    example_payload: { operation: "invoke", task: "intelligence_briefing", serendipity_count: 3 },
+    example_response: {
+      mansion: "dipper",
+      garden: "awe",
+      action: "intelligence_briefing",
+      briefing: { generated_at: "2026-06-19T19:30:00Z", items: [] },
+      text_summary: "0 active briefings",
+      status: "governing",
+    },
+  },
 ];
 
 export const BRIDGE_SUMMARY = {
-  version_recovered: "22.2.3",
+  version_recovered: "22.2.4",
   recovered_in: "June 19, 2026 session (archaeological excavation)",
   modules_recovered: 13,
   functions_total: BRIDGE_MODULES.length,
   bug_fixed: "whitemagic.mcp_api_bridge.py had 14 unguarded star imports; the entire MCP API surface was crashing on import. All 13 modules were resurfaced from ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.1/tar_archives/SD_CARD_WM/whitemagic/core/bridge/.",
+  gana_dipper_added: "v22.2.4: Dipper (Dou) Gana now exposed via the public MCP API. Supports intelligence_briefing, predict, search_memories, serendipity_surface, and default 'measuring' modes. Python impl is in whitemagic.core.ganas.northern_quadrant.DipperGana.",
+  surface_gap_audit: "v22.2.4 audit: whitemagic.mcp_api_bridge exposes 140+ public functions; this catalog documents 30 (the curated subset). The remaining 110 (22 gana wrappers, 13 archaeology, 6 dharma, and 70+ others) are importable and callable from Python but not yet documented here. They'll be added in v22.3.0 as a public discovery pass.",
   categories: Array.from(new Set(BRIDGE_MODULES.map((m) => m.category))).sort(),
 } as const;

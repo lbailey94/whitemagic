@@ -13,7 +13,7 @@
  * (Hetzner-hosted, per site AGENTS.md §2), these TS impls will be
  * replaced by a proxy to the Python.
  *
- * v22.2.3. Companion to the bridge modules recovered in
+ * v22.2.4. Companion to the bridge modules recovered in
  * docs/site-ops/VERCEL_TOPOLOGY_REPORT_2026-06-19.md.
  */
 
@@ -446,7 +446,7 @@ export function apply_reasoning_methods(payload: Payload) {
 export function archaeology_stats(payload: Payload) {
   return fnOk("archaeology_stats", {
     status: "demo",
-    note: "TS demo impl. The real whitemagic.archaeology module is Group B in v22.2.3 — surface only. Actual statistics require a live excavation run on the SD-card archive at ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/.",
+    note: "TS demo impl. The real whitemagic.archaeology module is Group B in v22.2.4 — surface only. Actual statistics require a live excavation run on the SD-card archive at ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/.",
     scan_disk: payload.scan_disk === true,
   });
 }
@@ -492,6 +492,114 @@ export function local_ml_status(_payload: Payload) {
   });
 }
 
+// ─── v22.2.4 additions ─────────────────────────────────────────────
+
+/**
+ * gana_dipper — Dipper (Dou) Gana. Routes by `task` field:
+ *   - "intelligence_briefing" / "briefing" / "generate_briefing" → InsightPipeline
+ *   - "predict" / "generate_predictions" → PredictiveEngine + CoreAccessLayer
+ *   - "search_memories" / "memory_search" → MemoryManager
+ *   - "surface_memories" / "surface_dormant" / "surface_ancient" → SerendipityEngine
+ *   - default → "measuring" status
+ *
+ * Python source: whitemagic.core.ganas.northern_quadrant.DipperGana._execute_core
+ *                whitemagic.core.bridge.gana_wrappers.gana_dipper
+ */
+export function gana_dipper(payload: Payload) {
+  const operation = typeof payload.operation === "string" ? payload.operation : "invoke";
+  const task = typeof payload.task === "string" ? payload.task : operation;
+  const k = payload as Record<string, unknown>;
+  const now = new Date().toISOString();
+
+  // 1. Intelligence briefing
+  if (task === "intelligence_briefing" || task === "briefing" || task === "generate_briefing") {
+    const serendipity_count =
+      typeof k.serendipity_count === "number" ? k.serendipity_count : 3;
+    const max_items = typeof k.max_items === "number" ? k.max_items : 10;
+    return fnOk("gana_dipper", {
+      mansion: "dipper",
+      garden: "awe",
+      action: "intelligence_briefing",
+      briefing: {
+        generated_at: now,
+        items: [],
+        serendipity_count,
+        max_items,
+      },
+      text_summary: `${serendipity_count} active briefings (TS demo: live InsightPipeline not available in serverless context)`,
+      status: "governing",
+      note: "Live impl calls whitemagic.core.intelligence.insight_pipeline.get_insight_pipeline().generate_briefing().",
+    });
+  }
+
+  // 2. Predictions
+  if (task === "predict" || task === "generate_predictions") {
+    return fnOk("gana_dipper", {
+      mansion: "dipper",
+      garden: "awe",
+      action: "predict",
+      prediction_count: 0,
+      predictions: [],
+      velocity: { horizon_days: 30, confidence_avg: 0.0 },
+      gaps: ["no live PredictiveEngine in serverless context"],
+      status: "governing",
+      note: "Live impl calls whitemagic.core.intelligence.synthesis.predictive_engine.get_predictive_engine().predict().",
+    });
+  }
+
+  // 3. Memory search
+  if (task.includes("search_memories") || task.includes("memory_search")) {
+    const query = typeof k.query === "string" ? k.query : "";
+    const limit = typeof k.limit === "number" ? k.limit : 5;
+    return fnOk("gana_dipper", {
+      mansion: "dipper",
+      garden: "awe",
+      depth_accessed: true,
+      memories_retrieved: 0,
+      top_results: [],
+      query,
+      limit,
+      status: "measuring",
+      note: "Live impl calls whitemagic.core.memory.manager.MemoryManager.search_memories().",
+    });
+  }
+
+  // 4. Serendipity surface
+  if (
+    task === "surface_memories" ||
+    task === "surface_dormant" ||
+    task === "surface_ancient"
+  ) {
+    const mode_map: Record<string, string> = {
+      surface_memories: "balanced",
+      surface_dormant: "dormant",
+      surface_ancient: "ancient",
+    };
+    const mode = mode_map[task] ?? "balanced";
+    const count = typeof k.count === "number" ? k.count : 5;
+    return fnOk("gana_dipper", {
+      mansion: "dipper",
+      garden: "awe",
+      action: "serendipity_surface",
+      mode,
+      surfaced_count: 0,
+      memories: [],
+      status: "deep_discovery",
+      note: "Live impl calls whitemagic.core.intelligence.synthesis.serendipity_engine.get_serendipity_engine().surface().",
+    });
+  }
+
+  // 5. Default
+  return fnOk("gana_dipper", {
+    mansion: "dipper",
+    garden: "awe",
+    governance_active: true,
+    task,
+    status: "measuring",
+    note: "Default response. Pass `task` to route to a specific action: intelligence_briefing, predict, search_memories, or surface_*.",
+  });
+}
+
 // ─── dispatcher ─────────────────────────────────────────────────────
 
 type Impl = (payload: Payload) => unknown;
@@ -525,6 +633,7 @@ const IMPLS: Record<string, Impl> = {
   gana_horn,
   gana_winnowing_basket,
   local_ml_status,
+  gana_dipper,
 };
 
 const KNOWN_NAMES = new Set(BRIDGE_MODULES.map((m) => m.name));
