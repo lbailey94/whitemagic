@@ -180,9 +180,7 @@ def handle_association_mine_semantic(**kwargs: Any) -> dict[str, Any]:
 def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
     """Detect constellations (memory clusters) in the graph."""
     try:
-        from whitemagic.core.intelligence.synthesis.constellation import (
-            ConstellationDetector,
-        )
+        from whitemagic.core.memory.constellations import ConstellationDetector
         detector = ConstellationDetector()
 
         algorithm = kwargs.get("algorithm", "hdbscan")
@@ -212,9 +210,7 @@ def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
 def handle_constellation_stats(**kwargs: Any) -> dict[str, Any]:
     """Get constellation statistics."""
     try:
-        from whitemagic.core.intelligence.synthesis.constellation import (
-            ConstellationDetector,
-        )
+        from whitemagic.core.memory.constellations import ConstellationDetector
         detector = ConstellationDetector()
         return {
             "status": "success",
@@ -235,9 +231,7 @@ def handle_constellation_stats(**kwargs: Any) -> dict[str, Any]:
 def handle_constellation_merge(**kwargs: Any) -> dict[str, Any]:
     """Merge similar constellations."""
     try:
-        from whitemagic.core.intelligence.synthesis.constellation import (
-            ConstellationDetector,
-        )
+        from whitemagic.core.memory.constellations import ConstellationDetector
         detector = ConstellationDetector()
 
         similarity_threshold = kwargs.get("similarity_threshold", 0.8)
