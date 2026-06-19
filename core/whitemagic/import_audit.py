@@ -73,7 +73,7 @@ print()
 
 if failures:
     print("=== Failures by Category ===")
-    by_category = {}
+    by_category: dict = {}
     for f in failures:
         cat = f["category"]
         if cat not in by_category:

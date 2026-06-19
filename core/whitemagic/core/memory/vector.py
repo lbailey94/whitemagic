@@ -190,7 +190,7 @@ class HNSWIndex:
     def __init__(self, dim: int = 384):
         self._index = None
         self.dim = dim
-        self.nodes = {}
+        self.nodes: dict = {}
 
     def _get_index(self):
         if self._index is None:

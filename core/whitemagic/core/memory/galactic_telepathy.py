@@ -166,7 +166,7 @@ class GalacticTelepathyEngine:
         # Query memories modified since watermark
         candidates = self._get_modified_memories(src_um, since_timestamp)
 
-        results = {
+        results: dict[str, Any] = {
             "source": source_galaxy,
             "target": target_galaxy,
             "since_timestamp": since_timestamp,

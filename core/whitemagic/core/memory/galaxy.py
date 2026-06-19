@@ -33,7 +33,7 @@ class Constellation:
     """A cluster of semantically related memories forming a conceptual unit."""
     def __init__(self, name: str):
         self.name = name
-        self.members = []
+        self.members: list = []
 
 # --- GALAXY MANAGER ---
 

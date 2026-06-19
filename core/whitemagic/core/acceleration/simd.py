@@ -99,7 +99,7 @@ def holographic_5d_distance(v1: list[float], v2: list[float]) -> float:
 def extract_keywords(text: str, limit: int = 10) -> list[str]:
     """Extract keywords from text using SIMD-accelerated frequency analysis."""
     words = re.findall(r'\w+', text.lower())
-    freq = {}
+    freq: dict = {}
     for w in words:
         if len(w) > 3:
             freq[w] = freq.get(w, 0) + 1

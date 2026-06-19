@@ -271,7 +271,7 @@ class PatternResonanceDetector:
     @staticmethod
     def _dominant_garden(cluster: list[dict]) -> str:
         """Find the most common garden in a cluster."""
-        garden_counts = {}
+        garden_counts: dict = {}
         for m in cluster:
             g = m.get("garden", "core_garden")
             garden_counts[g] = garden_counts.get(g, 0) + 1
@@ -467,7 +467,7 @@ class ConstellationMerger:
             return {"networks": [], "total_networks": 0}
 
         # Build adjacency
-        adj = {c.constellation_id: set() for c in constellations}
+        adj: dict[str, set[str]] = {c.constellation_id: set() for c in constellations}
         for i in range(n):
             for j in range(i + 1, n):
                 overlap = self._calculate_overlap(constellations[i], constellations[j])

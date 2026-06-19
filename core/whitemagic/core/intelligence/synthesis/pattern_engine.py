@@ -108,7 +108,7 @@ class PatternEngine:
 
     def get_stats(self) -> dict[str, Any]:
         """Get pattern engine statistics."""
-        stats = {"engines": {}}
+        stats: dict[str, Any] = {"engines": {}}
 
         unified = self._get_unified()
         if unified:
