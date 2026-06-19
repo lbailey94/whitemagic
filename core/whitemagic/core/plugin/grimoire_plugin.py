@@ -55,9 +55,8 @@ class _PluginBase:
 
 
 try:
-    from whitemagic.core.plugin.base import (
-        Plugin as _PluginBase,  # type: ignore[assignment]
-    )
+    from whitemagic.core.plugin.base import Plugin as _ImportedPlugin
+    _PluginBase: type = _ImportedPlugin  # type: ignore[no-redef,misc]
 except ImportError:
     pass  # fallback base is sufficient
 
