@@ -82,7 +82,7 @@ export default function OfflineFallback() {
 
         {/* System Info */}
         <div className="text-xs text-gray-500 space-y-1">
-          <p>WhiteMagic v22.2.0</p>
+          <p>WhiteMagic v22.2.3</p>
           <p>484 tools · 28 Ganas · 5D Holographic Memory</p>
         </div>
       </div>

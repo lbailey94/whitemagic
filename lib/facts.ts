@@ -1,13 +1,13 @@
 export const WM_FACTS = {
-  version: "22.2.0",
-  verifiedDate: "June 16, 2026",
-  linesShort: "178K",
-  linesLong: "178,000",
+  version: "22.2.3",
+  verifiedDate: "June 19, 2026",
+  linesShort: "180K",
+  linesLong: "180,000",
   callableTools: "490",
   dispatchTools: "462",
   ganaTools: "28",
-  testsPassing: "2478",
-  testsSkipped: "0",
+  testsPassing: "2503",
+  testsSkipped: "2",
   testsFailing: "0",
   languages: "8",
   // Performance benchmarks (June 2026)
@@ -18,6 +18,10 @@ export const WM_FACTS = {
   perfMemoryMB: "0-0.18",
   perfThroughputRps: "29.38",
   benchmarkDate: "June 16, 2026",
+  // Recent changes
+  mcpApiBridgeFixed: true,
+  bridgeModulesRecovered: 25,
+  bridgeModulesNote: "13 core/bridge/* modules ported from SD card archive, 10 more surfaced, mcp_api_bridge crash fixed",
 } as const;
 
 export const WM_FACT_TEXT = {

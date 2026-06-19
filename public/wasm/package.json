@@ -1,7 +1,7 @@
 {
   "name": "whitemagic-rust",
   "type": "module",
-  "version": "22.2.0",
+  "version": "22.2.3",
   "license": "MIT",
   "files": [
     "whitemagic_rust_bg.wasm",

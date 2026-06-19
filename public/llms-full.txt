@@ -365,7 +365,7 @@ whitemagic/
 
 ## Quality metrics
 
-- **2,478 passing tests** (current audit, 0 failures, 0 skipped)
+- **2,503 passing tests** (current audit, 0 failures, 2 skipped)
 - **490 callable tools** (462 dispatch + 28 Gana meta-tools)
 - **180 nested tool enums** in the lean MCP server
 - **58/58 benchmarks** (36 gauntlet + 22 MCP)

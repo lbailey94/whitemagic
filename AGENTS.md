@@ -1,7 +1,7 @@
 # AGENTS.md — whitemagic.dev
 
-**Version**: 1.0.0
-**Last Updated**: 2026-06-16
+**Version**: 1.1.0
+**Last Updated**: 2026-06-19
 **Audience**: AI agents (LLM-based, agentic, or human collaborators) contributing to or extending the WhiteMagic Labs public site.
 
 ---
@@ -68,8 +68,8 @@ Any new public agent surface **must** be added to `app/sitemap.ts` and ideally t
 
 ```ts
 export const WM_FACTS = {
-  version: "22.2.0",
-  verifiedDate: "June 16, 2026",
+  version: "22.2.3",
+  verifiedDate: "June 19, 2026",
   linesShort: "178K",
   linesLong: "178,000",
   callableTools: "490",
