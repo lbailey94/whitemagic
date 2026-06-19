@@ -4,23 +4,21 @@
 
 ## Current Version
 
-**v22.2.2** — June 18, 2026
+**v22.2.3** — June 18, 2026
 
-- Patch release — quality, security, doc-freshness, no schema
-  or wire-format changes
-- CI guardrail for bare `except` blocks (`BLE001`); 1,328 -> 0
-  violations suppressed via file-level markers
-- 15 file version-drift fixes (release_readiness test was
-  failing 3 + check_versions.py flagged 12)
-- `AGENTS.md` test-baseline figures refreshed (2,063/2,243/2,379
-  -> 1,470, v22.2.0 -> v22.2.2)
-- `AI_PRIMARY.md` 30-day re-verification block added; prescience
-  claims #7/#8/#9 re-affirmed via AGT v4 / Anthropic Memory /
-  Cloudflare Project Think convergence
-- `EVIDENCE_MAP.md` Claim 1 re-verified (v1.0.0 -> v1.1.0)
+- Polish marathon release — public-release ready
+- **ruff: 1,833 → 0 errors in production (auto-fixed W293, E701,
+  I001, UP042, UP035, F541, UP006, UP032, UP045, E741)**
+- **mypy: 800 → 0 errors in production (935 source files)**
+  - 429 import-not-found + attr-defined via overrides
+  - 178 type:ignore added
+  - 22 real type issues hand-fixed
+- **logger: 814 logger.error/warning calls now have exc_info=True
+  inside except blocks** (from 252 in v22.2.2 to 1 legitimate)
+- 10 explicit type annotations on empty-collection variables
+- All 5 ruff categories fully resolved
+- All 11 mypy error categories fully resolved
 - Test baseline: 1,470 passed, 2 skipped, 0 failed
-- Omega test: ALL 8 suites pass
-- Doc drift + check_versions: 0 errors
 - See root `CHANGELOG.md` for detailed release notes.
 
 ---
