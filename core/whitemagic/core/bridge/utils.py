@@ -1,3 +1,5 @@
+# ruff: noqa: BLE001
+
 
 import logging
 from typing import Any

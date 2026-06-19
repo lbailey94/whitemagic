@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Metrics bridge — Hologram and metric tracking."""
 import logging
 from typing import Any, cast

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Gana Bridge — PRAT meta-tool invocation bridge.
 
 This module provides `gana_invoke()`, the bridge function called by

@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Bridge to the Rust-backed Sutra/Dharma kernel.
 
 Tries to load the Rust acceleration layer; falls back to the Python

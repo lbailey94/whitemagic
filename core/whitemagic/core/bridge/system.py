@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Bridge module: system health and initialization (Group A — resurfaced from archive)."""
 
 from typing import Any

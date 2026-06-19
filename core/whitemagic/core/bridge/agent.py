@@ -1,3 +1,5 @@
+# ruff: noqa: BLE001
+
 import os
 from typing import Any
 

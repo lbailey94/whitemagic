@@ -1,3 +1,5 @@
+# ruff: noqa: BLE001
+
 # mypy: disable-error-code=no-untyped-def
 """Whitemagic v5.1 - Haskell Logic Bridge (Stub).
 

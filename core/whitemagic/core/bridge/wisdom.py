@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Bridge module: wisdom council and I Ching consultation (Group A — resurfaced from archive)."""
 
 from typing import Any

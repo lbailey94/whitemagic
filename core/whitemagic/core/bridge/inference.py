@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Local Model / Inference Bridge (Group A — resurfaced from archive).
 
 Whitemagic previously included *embedded* local model inference (Ollama/BitNet/etc).
@@ -121,7 +122,7 @@ def run_local_inference(
             quick_coro = quick_recall(query, provider=provider)
             quick_result = asyncio.run(asyncio.wait_for(quick_coro, timeout=timeout_seconds))
             return {"answer": quick_result}
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return {"error": "Local inference timed out", "timeout_seconds": timeout_seconds}
         except Exception as exc:
             return {"error": str(exc)}
@@ -147,7 +148,7 @@ def run_local_inference(
                 "latency_ms": getattr(memory_result, "latency_ms", None),
                 "provider": getattr(memory_result, "provider", provider),
             }
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return {"error": "Local inference timed out", "timeout_seconds": timeout_seconds}
         except Exception as exc:
             return {"error": str(exc)}
@@ -162,7 +163,7 @@ def run_local_inference(
             )
             analyze_result = asyncio.run(asyncio.wait_for(analyze_coro, timeout=timeout_seconds))
             return analyze_result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return {"error": "Local inference timed out", "timeout_seconds": timeout_seconds}
         except Exception as exc:
             return {"error": str(exc)}
@@ -176,7 +177,7 @@ def run_local_inference(
                 batch_coro = quick_recall(item, provider=provider)
                 answer = asyncio.run(asyncio.wait_for(batch_coro, timeout=timeout_seconds))
                 results.append({"prompt": item, "answer": answer})
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 results.append({"prompt": item, "error": "Local inference timed out", "timeout_seconds": timeout_seconds})
             except Exception as exc:
                 results.append({"prompt": item, "error": str(exc)})

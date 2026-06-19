@@ -292,3 +292,16 @@ def get_matrix() -> MemoryMatrix:
         if _matrix_instance is None:
             _matrix_instance = MemoryMatrix()
         return _matrix_instance
+
+
+_timeline_instance: ChronologicalTimeline | None = None
+_timeline_lock = Lock()
+
+
+def get_timeline() -> ChronologicalTimeline:
+    """Return the process-wide ChronologicalTimeline singleton, creating it on first call."""
+    global _timeline_instance
+    with _timeline_lock:
+        if _timeline_instance is None:
+            _timeline_instance = ChronologicalTimeline()
+        return _timeline_instance

@@ -183,18 +183,15 @@ def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.memory.constellations import ConstellationDetector
         detector = ConstellationDetector()
 
-        algorithm = kwargs.get("algorithm", "hdbscan")
-        min_cluster_size = kwargs.get("min_cluster_size", 5)
+        sample_limit = kwargs.get("sample_limit", 50000)
 
-        constellations = detector.detect(
-            algorithm=algorithm,
-            min_cluster_size=min_cluster_size
-        )
+        report = detector.detect(sample_limit=sample_limit)
+        constellations = getattr(report, "constellations", []) or []
         return {
             "status": "success",
             "constellations_found": len(constellations),
             "constellations": constellations,
-            "algorithm": algorithm
+            "algorithm": getattr(report, "algorithm", "unknown"),
         }
     except ImportError:
         return {

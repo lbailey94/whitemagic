@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Bridge module: autonomous cycle runner (Group A — resurfaced from archive)."""
 
 from typing import Any
