@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/PageHeader";
 import { Prose } from "@/components/Prose";
+import BridgeFunctionRunner from "@/components/BridgeFunctionRunner";
 import { BRIDGE_MODULES, BRIDGE_SUMMARY } from "@/lib/data/mcp-bridge";
 import { WM_FACTS } from "@/lib/facts";
 
@@ -210,6 +211,7 @@ export default function McpBridgePage() {
                           </code>
                         </pre>
                       </div>
+                      <BridgeFunctionRunner fn={fn} />
                     </div>
                   </details>
                 ))}

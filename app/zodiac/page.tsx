@@ -13,10 +13,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { Prose } from "@/components/Prose";
+import ZodiacCoreActivator from "@/components/ZodiacCoreActivator";
 import {
-  ZODIAC_SIGNS,
   ELEMENT_COLORS,
   MODE_LABELS,
+  ZODIAC_SIGNS,
   type Element,
   type Mode,
   type ZodiacSign,
@@ -102,6 +103,8 @@ function SignCard({ sign }: { sign: ZodiacSign }) {
           ))}
         </div>
       </div>
+
+      <ZodiacCoreActivator sign={sign} />
     </div>
   );
 }
