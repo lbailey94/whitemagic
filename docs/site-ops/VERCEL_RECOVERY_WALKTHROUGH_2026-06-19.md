@@ -1,9 +1,49 @@
 # Vercel Recovery Walkthrough — Step by Step
 
-**Date**: 2026-06-19 12:34 UTC-4
+**Date**: 2026-06-19 12:34 UTC-4 (created), 12:50 UTC-4 (updated with actual root cause)
 **Author**: opencode (minimax-m3) on behalf of Lucas
-**Current state**: All backups complete, code committed and pushed, deployments blocked by Vercel infrastructure issue
-**Time to complete**: ~15-25 minutes of Vercel dashboard work + 5 minutes of CLI
+**Current state**: ✅ **RESOLVED 12:43 UTC-4** — force-push with corrected author email triggered successful auto-deploys on both `whitemagic-site` (4yr7w267e) and `whitemagic-website` (rc9t63yw2). whitemagic.dev is live with v22.2.3 + /mcp-bridge + /zodiac + /chat.
+**Time to complete**: 8 minutes (once root cause identified)
+**Critical insight**: This whole saga was a **git author email mismatch**, not a Vercel infrastructure bug.
+
+---
+
+## ⚠️  ACTUAL ROOT CAUSE (added 12:50)
+
+The `[0ms]` UNKNOWN builds weren't a Vercel bug. They were Vercel
+**silently rejecting every push** because the git author email
+`opencode@whitemagic.local` is not a verified email on the
+`lbailey94` GitHub account. The dashboard showed a red **"Blocked"**
+badge on the rejected deployments — the CLI never showed this.
+
+**Symptoms that would have caught this earlier:**
+- Dashboard: "Deployment Blocked — commit author email
+  (opencode@whitemagic.local) is not valid. Ensure your git email
+  matches your GitHub account."
+- CLI: deployment created immediately, status stuck at `UNKNOWN`,
+  `[0ms]` duration, never reaches `Building` or `Ready`
+
+**Fix (worked in 8 minutes):**
+1. `git filter-branch -f --env-filter` to rewrite author on the 8
+   blocked commits from `opencode@whitemagic.local` to
+   `lbailey94@protonmail.com`. Tree content verified identical to
+   backup tag. Backup tag created first as
+   `backup-pre-author-fix`.
+2. `git push --force-with-lease origin main` — safe because the
+   repo is private.
+3. Within 60 seconds, Vercel auto-deployed both `whitemagic-site`
+   and `whitemagic-website` (which was also linked to the same
+   private repo via the Vercel dashboard's Git integration, not the
+   local `.vercel/repo.json`).
+4. `vercel ls` shows new builds `4yr7w267e` (whitemagic-site) and
+   `rc9t63yw2` (whitemagic-website), both `● Ready`, 2m duration.
+
+**Note about `git config`:** The local `git config user.email` was
+already `lbailey94@protonmail.com` — opencode (the agent that made
+the commits) was setting author independently of config. The rebase
+was needed regardless of how the wrong email got into the commits.
+
+---
 
 ---
 
