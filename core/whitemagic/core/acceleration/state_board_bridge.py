@@ -20,7 +20,7 @@ class StateBoardBridge:
     def write_harmony(self, **kwargs: Any) -> None:
         """
         Perform the write harmony operation.
-        
+
         Returns:
             None
         """
@@ -29,10 +29,10 @@ class StateBoardBridge:
     def read(self, key: str) -> Any:
         """
         Perform the read operation.
-        
+
         Args:
             key: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -41,7 +41,7 @@ class StateBoardBridge:
     def snapshot(self) -> dict[str, Any]:
         """
         Perform the snapshot operation.
-        
+
         Returns:
             dict[str, Any]
         """

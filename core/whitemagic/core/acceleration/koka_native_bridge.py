@@ -85,7 +85,7 @@ class KokaCircuitBreaker:
     def allow_request(self) -> bool:
         """
         Perform the allow request operation.
-        
+
         Returns:
             bool
         """
@@ -211,7 +211,8 @@ class KokaNativeBridge:
     def _return_process(self, module: str, proc: subprocess.Popen) -> None:
         """Return a process to the available pool."""
         with self._lock:
-            if proc.poll() is None:  # Still running
+            if proc.poll() is None:
+                # Still running
                 self._available[module].append(proc)
 
     def _discard_process(self, module: str, proc: subprocess.Popen) -> None:

@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import secrets
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class APIKeyMetadata(BaseModel):
     """APIKeyMetadata: api key metadata.
-    
+
     Pydantic data model: validation and serialization via Pydantic v2."""
     key_id: str
     name: str
@@ -126,10 +126,10 @@ class APIKeySystem:
             def json_serial(obj: object) -> str:
                 """
                 Perform the json serial operation.
-                
+
                 Args:
                     obj: Parameter description.
-                
+
                 Returns:
                     str
                 """

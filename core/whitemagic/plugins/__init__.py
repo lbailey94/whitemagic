@@ -186,11 +186,11 @@ def register_commands(cli_group: Any) -> None:
                         # For now, pass a simple namespace-like object
                         """
                         Perform the wrapper operation.
-                        
+
                         Args:
                             ctx: Parameter description.
                             args: Parameter description.
-                        
+
                         Returns:
                             None
                         """

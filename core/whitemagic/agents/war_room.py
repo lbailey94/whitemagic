@@ -50,7 +50,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 # Command Hierarchy
 # ---------------------------------------------------------------------------
 
-class Rank(str, Enum):
+class Rank(StrEnum):
     """Command ranks in the Imperial Army."""
 
     EMPEROR = "emperor"          # User — The Mandate of Heaven
@@ -83,7 +83,7 @@ class Commander:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -100,7 +100,7 @@ class Commander:
 # Campaign Status
 # ---------------------------------------------------------------------------
 
-class CampaignStatus(str, Enum):
+class CampaignStatus(StrEnum):
     """Campaign lifecycle states."""
 
     PLANNING = "planning"
@@ -138,7 +138,7 @@ class CampaignRecord:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

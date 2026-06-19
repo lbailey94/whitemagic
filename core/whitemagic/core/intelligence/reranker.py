@@ -148,7 +148,8 @@ def lexical_rerank(
                 rerank_score=0.0,
                 metadata=r.get("metadata"),
             )
-            for r in results[:top_k]
+            for r in results[:
+                top_k]
         ]
 
     # 1. Build Vocab from the 200 candidates
@@ -295,7 +296,8 @@ def cross_encoder_rerank(
                 metadata=r.get("metadata"),
             ))
 
-        for i, res in enumerate(reranked[:10]):
+        for i, res in enumerate(reranked[:
+            10]):
             logger.debug(f"RANK {i+1}: id={res.memory_id} combined_score={res.combined_score} (orig={res.original_score}, rerank={res.rerank_score})")
         return reranked[:top_k]
 
@@ -309,12 +311,12 @@ class Reranker:
     def rerank(self, query: str, items: list[dict[str, Any]], top_k: int = 10) -> list[dict[str, Any]]:
         """
         Perform the rerank operation.
-        
+
         Args:
             query: Parameter description.
             items: Parameter description.
             top_k: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -324,7 +326,7 @@ class Reranker:
     def get_status(self) -> dict[str, Any]:
         """
         Get the status.
-        
+
         Returns:
             dict[str, Any]
         """

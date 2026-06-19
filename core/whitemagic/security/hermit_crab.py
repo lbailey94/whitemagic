@@ -74,7 +74,7 @@ class ThreatAssessment:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -102,7 +102,7 @@ class WithdrawalRecord:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

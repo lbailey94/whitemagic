@@ -9,7 +9,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from whitemagic.agents.doctrine import WuXingPhase
 from whitemagic.core.resonance.gan_ying import EventType, emit_event
@@ -17,13 +17,13 @@ from whitemagic.core.resonance.gan_ying import EventType, emit_event
 logger = logging.getLogger(__name__)
 
 
-class YinYangPhase(str, Enum):
+class YinYangPhase(StrEnum):
     """Yin/Yang phase"""
     YIN = "yin"    # Receptive, inward, consolidating
     YANG = "yang"  # Creative, outward, expansive
 
 
-class CyclePhase(str, Enum):
+class CyclePhase(StrEnum):
     """The 12 phases of the Zodiacal Round (Enochian precessional order)."""
     DISSOLUTION = "pisces"      # ORO: Begin anew, banish old forms
     BINDING = "aquarius"        # IBAH: Bind will in patterns
@@ -69,7 +69,7 @@ class UnifiedCycleState:
     def wu_xing(self) -> WuXingPhase:
         """
         Perform the wu xing operation.
-        
+
         Returns:
             WuXingPhase
         """
@@ -79,7 +79,7 @@ class UnifiedCycleState:
     def yin_yang(self) -> YinYangPhase:
         """
         Perform the yin yang operation.
-        
+
         Returns:
             YinYangPhase
         """
@@ -180,7 +180,7 @@ _progression_daemon: UnifiedProgressionDaemon | None = None
 def get_progression_daemon() -> UnifiedProgressionDaemon:
     """
     Get the progression daemon.
-    
+
     Returns:
         UnifiedProgressionDaemon
     """

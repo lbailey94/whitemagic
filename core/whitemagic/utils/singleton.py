@@ -42,10 +42,10 @@ def singleton(var_name: str | None = None) -> Callable[[F], F]:
     def decorator(func: F) -> F:
         """
         Perform the decorator operation.
-        
+
         Args:
             func: Parameter description.
-        
+
         Returns:
             F
         """
@@ -56,7 +56,7 @@ def singleton(var_name: str | None = None) -> Callable[[F], F]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             """
             Perform the wrapper operation.
-            
+
             Returns:
                 Any
             """

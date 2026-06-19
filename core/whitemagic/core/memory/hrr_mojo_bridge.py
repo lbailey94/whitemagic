@@ -197,7 +197,7 @@ def patch_hrr_engine():
             # Use Mojo bridge for large batches, Python for single calls
             """
             Perform the patched bind operation.
-            
+
             Args:
                 a: Parameter description.
                 b: Parameter description.
@@ -209,7 +209,7 @@ def patch_hrr_engine():
         def patched_unbind(self, bound, b):
             """
             Perform the patched unbind operation.
-            
+
             Args:
                 bound: Parameter description.
                 b: Parameter description.

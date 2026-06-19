@@ -61,7 +61,7 @@ class NarrativeCluster:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -87,7 +87,7 @@ class NarrativeResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -166,7 +166,8 @@ class NarrativeCompressor:
         result.clusters_found = len(clusters)
 
         # Step 3: Process top clusters
-        for cluster in clusters[:max_clusters]:
+        for cluster in clusters[:
+            max_clusters]:
             narrative = self._compress_cluster(cluster, um, dry_run)
             if narrative:
                 result.narratives.append(narrative)
@@ -444,7 +445,8 @@ class NarrativeCompressor:
             "",
             "Key memories:",
         ]
-        for content in contents[:8]:
+        for content in contents[:
+            8]:
             lines.append(f"  - {content[:150]}")
 
         return "\n".join(lines)

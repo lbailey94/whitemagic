@@ -55,7 +55,8 @@ def file_lock(filepath: str | Path, timeout: float = 5.0) -> Generator[None, Non
                 os.close(fd)
         return
 
-    if HAS_MSVCRT:  # pragma: no cover - Windows only
+    if HAS_MSVCRT:
+        # pragma: no cover - Windows only
         msvcrt_mod = cast(Any, msvcrt)
         lock_file.parent.mkdir(parents=True, exist_ok=True)
         lock_file.touch(exist_ok=True)

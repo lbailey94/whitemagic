@@ -111,7 +111,8 @@ def show_stats() -> None:
     click.echo(f"Total Activations: {total_activations}")
     click.echo("\nPer-Core Stats:")
 
-    for name, data in sorted(stats.items(), key=lambda x: x[1]["activations"], reverse=True):
+    for name, data in sorted(stats.items(), key=lambda x:
+        x[1]["activations"], reverse=True):
         click.echo(f"\n{name.title()}:")
         click.echo(f"  Activations: {data['activations']}")
         click.echo(f"  Frequency: {data['frequency']:.2f} Hz")

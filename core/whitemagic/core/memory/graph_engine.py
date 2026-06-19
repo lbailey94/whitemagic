@@ -72,7 +72,7 @@ class CentralitySnapshot:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -102,7 +102,7 @@ class EchoChamber:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -129,7 +129,7 @@ class Community:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -163,7 +163,7 @@ class GraphEngine:
     def available(self) -> bool:
         """
         Perform the available operation.
-        
+
         Returns:
             bool
         """
@@ -760,7 +760,7 @@ class GraphEngine:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

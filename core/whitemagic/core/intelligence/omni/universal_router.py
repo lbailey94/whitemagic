@@ -260,7 +260,7 @@ _router = None
 def get_universal_router() -> UniversalRouter:
     """
     Get the universal router.
-    
+
     Returns:
         UniversalRouter
     """

@@ -48,7 +48,7 @@ class ValidationResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -73,7 +73,7 @@ class DriftResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -531,10 +531,10 @@ class Governor:
             # Remove common words and extract meaningful terms
             """
             Mine or extract keywords.
-            
+
             Args:
                 text: Parameter description.
-            
+
             Returns:
                 set[str]
             """

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Entity:
     """Entity: entity.
-    
+
     Value object: equality and repr are field-based."""
     name: str
     entity_type: str
@@ -46,7 +46,7 @@ class Entity:
 @dataclass
 class Relation:
     """Relation: relation.
-    
+
     Value object: equality and repr are field-based."""
     subject: str
     predicate: str
@@ -57,7 +57,7 @@ class Relation:
 @dataclass
 class ExtractionResult:
     """ExtractionResult: extraction result.
-    
+
     Value object: equality and repr are field-based."""
     entities: list[Entity]
     relations: list[Relation]
@@ -89,10 +89,10 @@ class EntityExtractor:
         # Fallback to regex for speed in consolidation phase
         """
         Perform the extract operation.
-        
+
         Args:
             text: Parameter description.
-        
+
         Returns:
             ExtractionResult
         """
@@ -112,11 +112,11 @@ class EntityExtractor:
     def extract_and_store(self, memory_id: str, text: str) -> ExtractionResult:
         """
         Mine or extract and store.
-        
+
         Args:
             memory_id: Parameter description.
             text: Parameter description.
-        
+
         Returns:
             ExtractionResult
         """
@@ -137,10 +137,10 @@ class PromptClassifier:
     def classify(self, text: str) -> dict[str, float]:
         """
         Perform the classify operation.
-        
+
         Args:
             text: Parameter description.
-        
+
         Returns:
             dict[str, float]
         """
@@ -157,10 +157,11 @@ _extractor: EntityExtractor | None = None
 def get_entity_extractor() -> EntityExtractor:
     """
     Get the entity extractor.
-    
+
     Returns:
         EntityExtractor
     """
     global _extractor
-    if _extractor is None: _extractor = EntityExtractor()
+    if _extractor is None:
+        _extractor = EntityExtractor()
     return _extractor

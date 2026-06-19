@@ -10,6 +10,7 @@ Philosophy:
     Each test is a prayer that the code works.
 """
 
+import logging
 import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from whitemagic.config.concurrency import TEST_RUNNER_WORKERS
-import logging
+
 logger = logging.getLogger(__name__)
 
 

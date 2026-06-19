@@ -59,10 +59,10 @@ def _setup_beauty_cascades(bus: Any) -> None:
         # Beauty triggers joy
         """
         Handle a beauty event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -86,10 +86,10 @@ def _setup_joy_cascades(bus: Any) -> None:
         # Joy amplifies love
         """
         Handle a joy event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -125,10 +125,10 @@ def _setup_love_cascades(bus: Any) -> None:
         # Love deepens connection
         """
         Handle a love event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -164,10 +164,10 @@ def _setup_wisdom_cascades(bus: Any) -> None:
         # Wisdom leads to teaching
         """
         Handle a wisdom event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -191,10 +191,10 @@ def _setup_mystery_cascades(bus: Any) -> None:
         # Mystery sparks wonder
         """
         Handle a mystery event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """

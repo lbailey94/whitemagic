@@ -5,7 +5,7 @@ from typing import Any
 def handle_edge_infer(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a edge infer event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -29,7 +29,7 @@ def handle_edge_infer(**kwargs: Any) -> dict[str, Any]:
 def handle_edge_add_rule(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a edge add rule event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -54,7 +54,7 @@ def handle_edge_add_rule(**kwargs: Any) -> dict[str, Any]:
 def handle_edge_batch_infer(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a edge batch infer event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -81,7 +81,7 @@ def handle_edge_batch_infer(**kwargs: Any) -> dict[str, Any]:
 def handle_edge_stats(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a edge stats event.
-    
+
     Returns:
         dict[str, Any]
     """

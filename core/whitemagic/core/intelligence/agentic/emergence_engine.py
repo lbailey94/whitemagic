@@ -232,7 +232,8 @@ class EmergenceEngine:
             return []
 
         insights: list[EmergenceInsight] = []
-        for b in bridges[:5]:
+        for b in bridges[:
+            5]:
             c1, c2 = b.get("constellation_1", "?"), b.get("constellation_2", "?")
             strength = b.get("bridge_strength", 0.5)
             insights.append(EmergenceInsight(
@@ -257,7 +258,7 @@ _emergence_engine: EmergenceEngine | None = None
 def get_emergence_engine() -> EmergenceEngine:
     """
     Get the emergence engine.
-    
+
     Returns:
         EmergenceEngine
     """

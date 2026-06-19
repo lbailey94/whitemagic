@@ -48,7 +48,7 @@ class GanaReputation:
     def success_rate(self) -> float:
         """
         Perform the success rate operation.
-        
+
         Returns:
             float
         """
@@ -84,7 +84,7 @@ class GanaReputation:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

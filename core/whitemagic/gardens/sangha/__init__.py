@@ -92,7 +92,7 @@ _instance = None
 def get_sangha_garden() -> SanghaGarden:
     """
     Get the sangha garden.
-    
+
     Returns:
         SanghaGarden
     """

@@ -74,7 +74,7 @@ class DreamReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -519,7 +519,8 @@ class DreamCycle:
             report = miner.mine(sample_size=100)
 
             connections = []
-            for p in report.top_proposals[:10]:
+            for p in report.top_proposals[:
+                10]:
                 connections.append({
                     "from": p.source_id[:8],
                     "to": p.target_id[:8],
@@ -545,7 +546,8 @@ class DreamCycle:
                 if bridges_cal:
                     result["bridge_pairs"] = [
                         f"{b['constellation_1']} <-> {b['constellation_2']}"
-                        for b in bridges_cal[:3]
+                        for b in bridges_cal[:
+                            3]
                     ]
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
@@ -811,9 +813,11 @@ class DreamCycle:
             # Look for merge candidates (simplified logic)
             merge_count = 0
             for i, c1 in enumerate(const_list):
-                for c2 in const_list[i+1:]:
+                for c2 in const_list[i+1:
+                    ]:
                     overlap = len(set(c1.member_ids) & set(c2.member_ids))
-                    if overlap > len(c1.member_ids) * 0.5:  # 50% overlap threshold
+                    if overlap > len(c1.member_ids) * 0.5:
+                        # 50% overlap threshold
                         merge_count += 1
 
             result["merges"] = merge_count

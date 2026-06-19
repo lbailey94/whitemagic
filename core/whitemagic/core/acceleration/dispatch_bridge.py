@@ -66,9 +66,9 @@ class ToolId(IntEnum):
 # Maturity levels for Python fallback
 class Maturity(IntEnum):
     """Maturity: maturity.
-    
+
     Enumeration.
-    
+
     Members:
         EXPERIMENTAL
         BETA
@@ -203,7 +203,8 @@ class DispatchBridge:
         board = self._get_board()
         try:
             breaker_state, _failures = board.read_breaker(tool_id)
-            if breaker_state == 1:  # OPEN
+            if breaker_state == 1:
+                # OPEN
                 self._total_denied += 1
                 return DispatchResult.CIRCUIT_OPEN
         except Exception as e:

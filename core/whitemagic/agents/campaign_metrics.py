@@ -28,7 +28,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -37,11 +37,11 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 logger = logging.getLogger(__name__)
 
 
-class ArmyTier(str, Enum):
+class ArmyTier(StrEnum):
     """ArmyTier: army tier.
-    
+
     Enumeration.
-    
+
     Members:
         ALPHA
         BETA
@@ -51,11 +51,11 @@ class ArmyTier(str, Enum):
     GAMMA = "gamma"    # 240K+ clones — brute-force search
 
 
-class ObjectiveStatus(str, Enum):
+class ObjectiveStatus(StrEnum):
     """ObjectiveStatus: objective status.
-    
+
     Enumeration.
-    
+
     Members:
         PENDING
         RUNNING
@@ -69,11 +69,11 @@ class ObjectiveStatus(str, Enum):
     SKIPPED = "skipped"
 
 
-class FindingSeverity(str, Enum):
+class FindingSeverity(StrEnum):
     """FindingSeverity: finding severity.
-    
+
     Enumeration.
-    
+
     Members:
         CRITICAL
         HIGH
@@ -90,7 +90,7 @@ class FindingSeverity(str, Enum):
 @dataclass
 class Finding:
     """Finding: finding.
-    
+
     Value object: equality and repr are field-based."""
     description: str
     severity: FindingSeverity = FindingSeverity.INFO
@@ -105,7 +105,7 @@ class Finding:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -142,7 +142,7 @@ class ObjectiveMetrics:
     def elapsed_seconds(self) -> float:
         """
         Perform the elapsed seconds operation.
-        
+
         Returns:
             float
         """
@@ -156,7 +156,7 @@ class ObjectiveMetrics:
     def clones_per_second(self) -> float:
         """
         Perform the clones per second operation.
-        
+
         Returns:
             float
         """
@@ -168,7 +168,7 @@ class ObjectiveMetrics:
     def findings_by_severity(self) -> dict[str, int]:
         """
         Perform the findings by severity operation.
-        
+
         Returns:
             dict[str, int]
         """
@@ -180,11 +180,11 @@ class ObjectiveMetrics:
     def record_clones(self, count: int, deploy_ms: float = 0.0) -> None:
         """
         Perform the record clones operation.
-        
+
         Args:
             count: Parameter description.
             deploy_ms: Parameter description.
-        
+
         Returns:
             None
         """
@@ -201,13 +201,13 @@ class ObjectiveMetrics:
     ) -> None:
         """
         Perform the record finding operation.
-        
+
         Args:
             description: Parameter description.
             severity: Parameter description.
             category: Parameter description.
             details: Parameter description.
-        
+
         Returns:
             None
         """
@@ -221,10 +221,10 @@ class ObjectiveMetrics:
     def set_result(self, result: dict[str, Any]) -> None:
         """
         Perform the set result operation.
-        
+
         Args:
             result: Parameter description.
-        
+
         Returns:
             None
         """
@@ -237,7 +237,7 @@ class ObjectiveMetrics:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -294,7 +294,7 @@ class ArmyMetrics:
     def total_clones(self) -> int:
         """
         Perform the total clones operation.
-        
+
         Returns:
             int
         """
@@ -304,7 +304,7 @@ class ArmyMetrics:
     def total_findings(self) -> int:
         """
         Perform the total findings operation.
-        
+
         Returns:
             int
         """
@@ -314,7 +314,7 @@ class ArmyMetrics:
     def elapsed_seconds(self) -> float:
         """
         Perform the elapsed seconds operation.
-        
+
         Returns:
             float
         """
@@ -328,7 +328,7 @@ class ArmyMetrics:
     def completed_count(self) -> int:
         """
         Perform the completed count operation.
-        
+
         Returns:
             int
         """
@@ -338,7 +338,7 @@ class ArmyMetrics:
     def failed_count(self) -> int:
         """
         Perform the failed count operation.
-        
+
         Returns:
             int
         """
@@ -347,7 +347,7 @@ class ArmyMetrics:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -385,10 +385,10 @@ class CampaignTracker:
     def start_campaign(self, name: str = "Grand Army Deployment") -> None:
         """
         Perform the start campaign operation.
-        
+
         Args:
             name: Parameter description.
-        
+
         Returns:
             None
         """
@@ -399,7 +399,7 @@ class CampaignTracker:
     def end_campaign(self) -> None:
         """
         Perform the end campaign operation.
-        
+
         Returns:
             None
         """
@@ -408,10 +408,10 @@ class CampaignTracker:
     def set_preflight(self, data: dict[str, Any]) -> None:
         """
         Perform the set preflight operation.
-        
+
         Args:
             data: Parameter description.
-        
+
         Returns:
             None
         """
@@ -445,10 +445,10 @@ class CampaignTracker:
     def start_army(self, army: str | ArmyTier) -> None:
         """
         Perform the start army operation.
-        
+
         Args:
             army: Parameter description.
-        
+
         Returns:
             None
         """
@@ -458,10 +458,10 @@ class CampaignTracker:
     def end_army(self, army: str | ArmyTier) -> None:
         """
         Perform the end army operation.
-        
+
         Args:
             army: Parameter description.
-        
+
         Returns:
             None
         """
@@ -616,7 +616,8 @@ class CampaignTracker:
         md += "## Effectiveness Ranking\n"
         md += "| Objective | Army | Clones | Findings | Findings/1K Clones | Time | Confidence |\n"
         md += "|-----------|------|--------|----------|-------------------|------|------------|\n"
-        for eff in sorted(report["effectiveness"], key=lambda x: -x.get("findings_per_1k_clones", 0)):
+        for eff in sorted(report["effectiveness"], key=lambda x:
+            -x.get("findings_per_1k_clones", 0)):
             md += (
                 f"| {eff['name']} | {eff['army']} | {eff['clones']:,} | {eff['findings']} | "
                 f"{eff['findings_per_1k_clones']:.2f} | {eff['elapsed_s']:.1f}s | "

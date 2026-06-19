@@ -53,7 +53,7 @@ class MemoryCluster:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -84,7 +84,7 @@ class ConsolidationReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -443,7 +443,8 @@ class MemoryConsolidator:
 
             # Build strategy content
             sample_titles = []
-            for mid in cluster.memory_ids[:5]:
+            for mid in cluster.memory_ids[:
+                5]:
                 mem = mem_map.get(mid)
                 if mem and mem.title:
                     sample_titles.append(mem.title)
@@ -515,7 +516,8 @@ class MemoryConsolidator:
         # --- Left hemisphere: logical cross-cluster links ---
         logical_links = []
         for i, c1 in enumerate(clusters):
-            for c2 in clusters[i + 1:]:
+            for c2 in clusters[i + 1:
+                ]:
                 shared = c1.shared_tags & c2.shared_tags
                 if shared:
                     logical_links.append({
@@ -529,7 +531,8 @@ class MemoryConsolidator:
         # --- Right hemisphere: creative cross-cluster links ---
         creative_links = []
         for i, c1 in enumerate(clusters):
-            for c2 in clusters[i + 1:]:
+            for c2 in clusters[i + 1:
+                ]:
                 # Skip if already logically linked
                 if c1.shared_tags & c2.shared_tags:
                     continue
@@ -744,7 +747,7 @@ class MemoryConsolidator:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

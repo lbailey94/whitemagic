@@ -170,11 +170,11 @@ class SafeSandbox:
         def timeout_handler(signum: int, frame: Any) -> None:
             """
             Perform the timeout handler operation.
-            
+
             Args:
                 signum: Parameter description.
                 frame: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -308,11 +308,11 @@ class SafeSandbox:
         def timeout_handler(signum: int, frame: Any) -> None:
             """
             Perform the timeout handler operation.
-            
+
             Args:
                 signum: Parameter description.
                 frame: Parameter description.
-            
+
             Returns:
                 None
             """

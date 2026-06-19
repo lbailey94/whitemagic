@@ -5,7 +5,7 @@ from typing import Any
 def handle_galaxy_backup(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a galaxy backup event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -21,7 +21,7 @@ def handle_galaxy_backup(**kwargs: Any) -> dict[str, Any]:
 def handle_galaxy_restore(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a galaxy restore event.
-    
+
     Returns:
         dict[str, Any]
     """

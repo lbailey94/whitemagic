@@ -34,7 +34,7 @@ import re
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -80,7 +80,7 @@ def _get_haskell_bridge() -> Any:
 # Action spectrum (Gevurah → Chesed)
 # ---------------------------------------------------------------------------
 
-class DharmaAction(str, Enum):
+class DharmaAction(StrEnum):
     """Graduated action spectrum from MandalaOS's Yama engine."""
 
     LOG = "log"            # Record the event silently
@@ -215,7 +215,7 @@ class DharmaDecision:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -607,7 +607,8 @@ class DharmaRulesEngine:
             if tx_type == "redact" and field:
                 parts = field.split(".")
                 target = transformed
-                for part in parts[:-1]:
+                for part in parts[:
+                    -1]:
                     target = target.setdefault(part, {})
                 if isinstance(target, dict) and parts:
                     target[parts[-1]] = "[REDACTED]"
@@ -615,7 +616,8 @@ class DharmaRulesEngine:
                 max_val = tx.get("max", 100)
                 parts = field.split(".")
                 target = transformed
-                for part in parts[:-1]:
+                for part in parts[:
+                    -1]:
                     target = target.setdefault(part, {})
                 if isinstance(target, dict) and parts:
                     val = target.get(parts[-1])
@@ -633,7 +635,7 @@ class DharmaRulesEngine:
     def get_profile(self) -> str:
         """
         Get the profile.
-        
+
         Returns:
             str
         """
@@ -715,7 +717,8 @@ class DharmaRulesEngine:
 
         # Check 1: Contradictory rules (same pattern, different actions)
         for i, r1 in enumerate(rules):
-            for r2 in rules[i + 1:]:
+            for r2 in rules[i + 1:
+                ]:
                 if r1.profile != r2.profile:
                     continue
                 # Heuristic: same keywords + same tools = potential contradiction

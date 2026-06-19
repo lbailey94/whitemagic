@@ -96,7 +96,7 @@ class EngagementToken:
     def is_expired(self) -> bool:
         """
         Check whether the expired condition holds.
-        
+
         Returns:
             bool
         """
@@ -105,7 +105,7 @@ class EngagementToken:
     def is_valid(self) -> bool:
         """
         Check whether the valid condition holds.
-        
+
         Returns:
             bool
         """
@@ -114,7 +114,7 @@ class EngagementToken:
     def remaining_seconds(self) -> float:
         """
         Perform the remaining seconds operation.
-        
+
         Returns:
             float
         """
@@ -123,7 +123,7 @@ class EngagementToken:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

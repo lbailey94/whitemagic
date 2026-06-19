@@ -82,7 +82,8 @@ In the shadows, truth is found.
                     "high_impact": len([p for p in report.proposals if p.impact == "high"]),
                     "auto_fixable": len([p for p in report.proposals if p.auto_fixable]),
                     "proposals": [{"title": p.title, "impact": p.impact, "category": p.category}
-                                  for p in report.proposals[:10]],
+                                  for p in report.proposals[:
+                                      10]],
                     "metrics": report.metrics,
                     "status": "introspected",
                 }
@@ -355,7 +356,8 @@ Everything is connected to everything else.
                         "pattern_count": len(patterns),
                         "patterns": [{"id": p.id, "type": p.pattern_type, "title": p.title,
                                      "source": p.source_engine, "confidence": p.confidence}
-                                    for p in patterns[:10]],
+                                    for p in patterns[:
+                                        10]],
                         "status": "connected",
                     }
 

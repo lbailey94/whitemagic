@@ -10,7 +10,7 @@ Supports multiple search modes:
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +30,7 @@ from ..embeddings.storage import (  # type: ignore[import-not-found]
 logger = logging.getLogger(__name__)
 
 
-class SearchMode(str, Enum):
+class SearchMode(StrEnum):
     """Search mode selection."""
 
     KEYWORD = "keyword"
@@ -357,7 +357,8 @@ class SemanticSearcher:
 
         # Convert to SearchResult objects
         results = []
-        for i, memory in enumerate(raw_results[:k]):
+        for i, memory in enumerate(raw_results[:
+            k]):
             # Simple relevance score based on rank
             score = 1.0 - (i * 0.05)  # Decreases by 0.05 per rank
 
@@ -462,7 +463,8 @@ class SemanticSearcher:
         # Sort by combined score
         combined_results = [
             result
-            for score, result in sorted(rrf_scores.values(), key=lambda x: x[0], reverse=True)
+            for score, result in sorted(rrf_scores.values(), key=lambda x:
+                x[0], reverse=True)
         ]
 
         return combined_results[:k]

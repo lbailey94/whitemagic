@@ -206,7 +206,7 @@ class V17EmbeddingOptimizer:
             def do_insert() -> int:
                 """
                 Perform the do insert operation.
-                
+
                 Returns:
                     int
                 """
@@ -321,7 +321,7 @@ class V17EmbeddingOptimizer:
             def fetch() -> list[EmbeddingTask]:
                 """
                 Perform the fetch operation.
-                
+
                 Returns:
                     list[EmbeddingTask]
                 """

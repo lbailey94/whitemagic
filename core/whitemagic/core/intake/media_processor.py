@@ -76,10 +76,10 @@ class PDFProcessor:
     def can_process(self, path: Path) -> bool:
         """
         Perform the can process operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -88,7 +88,7 @@ class PDFProcessor:
     def supported_extensions(self) -> set[str]:
         """
         Perform the supported extensions operation.
-        
+
         Returns:
             set[str]
         """
@@ -108,10 +108,10 @@ class PDFProcessor:
     def extract(self, path: Path) -> ProcessedMedia | None:
         """
         Perform the extract operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             ProcessedMedia | None
         """
@@ -169,10 +169,10 @@ class DocxProcessor:
     def can_process(self, path: Path) -> bool:
         """
         Perform the can process operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -181,7 +181,7 @@ class DocxProcessor:
     def supported_extensions(self) -> set[str]:
         """
         Perform the supported extensions operation.
-        
+
         Returns:
             set[str]
         """
@@ -201,10 +201,10 @@ class DocxProcessor:
     def extract(self, path: Path) -> ProcessedMedia | None:
         """
         Perform the extract operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             ProcessedMedia | None
         """
@@ -249,10 +249,10 @@ class ImageProcessor:
     def can_process(self, path: Path) -> bool:
         """
         Perform the can process operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -261,7 +261,7 @@ class ImageProcessor:
     def supported_extensions(self) -> set[str]:
         """
         Perform the supported extensions operation.
-        
+
         Returns:
             set[str]
         """
@@ -282,10 +282,10 @@ class ImageProcessor:
     def extract(self, path: Path) -> ProcessedMedia | None:
         """
         Perform the extract operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             ProcessedMedia | None
         """
@@ -383,10 +383,10 @@ class AudioProcessor:
     def can_process(self, path: Path) -> bool:
         """
         Perform the can process operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -395,7 +395,7 @@ class AudioProcessor:
     def supported_extensions(self) -> set[str]:
         """
         Perform the supported extensions operation.
-        
+
         Returns:
             set[str]
         """
@@ -420,10 +420,10 @@ class AudioProcessor:
     def extract(self, path: Path) -> ProcessedMedia | None:
         """
         Perform the extract operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             ProcessedMedia | None
         """
@@ -493,10 +493,10 @@ class SpreadsheetProcessor:
     def can_process(self, path: Path) -> bool:
         """
         Perform the can process operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -508,7 +508,7 @@ class SpreadsheetProcessor:
     def supported_extensions(self) -> set[str]:
         """
         Perform the supported extensions operation.
-        
+
         Returns:
             set[str]
         """
@@ -528,10 +528,10 @@ class SpreadsheetProcessor:
     def extract(self, path: Path) -> ProcessedMedia | None:
         """
         Perform the extract operation.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             ProcessedMedia | None
         """

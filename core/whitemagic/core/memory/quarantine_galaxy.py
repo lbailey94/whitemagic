@@ -275,7 +275,8 @@ def run_quarantine_analysis(dry_run: bool = True):
         reason = c['reason']
         by_reason[reason] = by_reason.get(reason, 0) + 1
 
-    for reason, count in sorted(by_reason.items(), key=lambda x: -x[1]):
+    for reason, count in sorted(by_reason.items(), key=lambda x:
+        -x[1]):
         print(f"  • {reason}: {count}")
 
     if not dry_run and candidates:

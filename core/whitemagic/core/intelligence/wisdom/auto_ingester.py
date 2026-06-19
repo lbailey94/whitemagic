@@ -30,7 +30,7 @@ def validate_wisdom_url(url: str) -> bool:
 @dataclass
 class WisdomText:
     """WisdomText: wisdom text.
-    
+
     Value object: equality and repr are field-based."""
     name: str
     base_url: str

@@ -17,7 +17,7 @@ class HaskellBridge:
     def check_availability(self) -> bool:
         """
         Perform the check availability operation.
-        
+
         Returns:
             bool
         """
@@ -35,7 +35,7 @@ _global_bridge = None
 def get_haskell_bridge() -> HaskellBridge:
     """
     Get the haskell bridge.
-    
+
     Returns:
         HaskellBridge
     """

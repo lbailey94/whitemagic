@@ -112,7 +112,7 @@ def ok(
 ) -> dict[str, Any]:
     """
     Perform the ok operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -155,7 +155,7 @@ def err(
 ) -> dict[str, Any]:
     """
     Perform the err operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -183,10 +183,10 @@ def err(
 def is_enveloped(result: Any) -> bool:
     """
     Check whether the enveloped condition holds.
-    
+
     Args:
         result: Parameter description.
-    
+
     Returns:
         bool
     """

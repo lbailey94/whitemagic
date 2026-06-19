@@ -120,7 +120,7 @@ _telemetry = None
 def get_telemetry() -> Telemetry:
     """
     Get the telemetry.
-    
+
     Returns:
         Telemetry
     """

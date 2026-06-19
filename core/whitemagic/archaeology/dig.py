@@ -50,11 +50,11 @@ class Grimoire:
     def identify(content: str, filename: str) -> list[dict[str, Any]]:
         """
         Perform the identify operation.
-        
+
         Args:
             content: Parameter description.
             filename: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -97,11 +97,11 @@ class Ganas:
     def identify(content: str, filename: str) -> str | None:
         """
         Perform the identify operation.
-        
+
         Args:
             content: Parameter description.
             filename: Parameter description.
-        
+
         Returns:
             str | None
         """
@@ -181,13 +181,13 @@ class ChariotArchaeologist:
     def mark_read(self, path: str, context: str | None = None, note: str | None = None, insight: str | None = None) -> dict[str, Any]:
         """
         Mark the read state.
-        
+
         Args:
             path: Parameter description.
             context: Parameter description.
             note: Parameter description.
             insight: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -208,12 +208,12 @@ class ChariotArchaeologist:
     def mark_written(self, path: str, context: str | None = None, note: str | None = None) -> dict[str, Any]:
         """
         Mark the written state.
-        
+
         Args:
             path: Parameter description.
             context: Parameter description.
             note: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -232,10 +232,10 @@ class ChariotArchaeologist:
     def have_read(self, path: str) -> bool:
         """
         Check whether the read has occurred.
-        
+
         Args:
             path: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -244,11 +244,11 @@ class ChariotArchaeologist:
     def find_unread(self, directory: str = ".", patterns: list[str] | None = None) -> list[Any]:
         """
         Find unread matching the criteria.
-        
+
         Args:
             directory: Parameter description.
             patterns: Parameter description.
-        
+
         Returns:
             list[Any]
         """
@@ -270,10 +270,10 @@ class ChariotArchaeologist:
     def stats(self, scan_disk: bool = False) -> dict[str, Any]:
         """
         Perform the stats operation.
-        
+
         Args:
             scan_disk: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -286,10 +286,10 @@ class ChariotArchaeologist:
     def get_recent_reads(self, limit: int = 50) -> list[dict[str, Any]]:
         """
         Get the recent reads.
-        
+
         Args:
             limit: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -299,7 +299,7 @@ class ChariotArchaeologist:
     def reading_report(self) -> str:
         """
         Perform the reading report operation.
-        
+
         Returns:
             str
         """
@@ -308,10 +308,10 @@ class ChariotArchaeologist:
     def search(self, query: str) -> list[dict[str, Any]]:
         """
         Perform the search operation.
-        
+
         Args:
             query: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -336,10 +336,10 @@ class ChariotArchaeologist:
     def scan_file(self, file_path: Path) -> None:
         """
         Perform the scan file operation.
-        
+
         Args:
             file_path: Parameter description.
-        
+
         Returns:
             None
         """
@@ -375,7 +375,8 @@ class ChariotArchaeologist:
             # Check content
             if self.patterns["wxyz"].search(content):
                 matches.append("WXYZ_coordinates")
-            if "WXYZ" in content: # Simple string check for speed
+            if "WXYZ" in content:
+                # Simple string check for speed
                  matches.append("WXYZ_tag")
             if self.patterns["crystal"].search(content):
                 matches.append("content_crystal")
@@ -406,7 +407,7 @@ class ChariotArchaeologist:
     def dig(self) -> None:
         """
         Perform the dig operation.
-        
+
         Returns:
             None
         """
@@ -433,7 +434,7 @@ class ChariotArchaeologist:
     def conclusion(self) -> None:
         """
         Perform the conclusion operation.
-        
+
         Returns:
             None
         """

@@ -5,7 +5,7 @@ from typing import Any, cast
 def handle_evaluate_ethics(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a evaluate ethics event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -25,7 +25,7 @@ def handle_evaluate_ethics(**kwargs: Any) -> dict[str, Any]:
 def handle_check_boundaries(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a check boundaries event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -36,7 +36,7 @@ def handle_check_boundaries(**kwargs: Any) -> dict[str, Any]:
 def handle_verify_consent(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a verify consent event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -47,7 +47,7 @@ def handle_verify_consent(**kwargs: Any) -> dict[str, Any]:
 def handle_get_ethical_score(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get ethical score event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -66,7 +66,7 @@ def handle_get_ethical_score(**kwargs: Any) -> dict[str, Any]:
 def handle_get_dharma_guidance(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get dharma guidance event.
-    
+
     Returns:
         dict[str, Any]
     """

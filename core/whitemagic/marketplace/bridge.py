@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 
 class ListingState(Enum):
     """ListingState: listing state.
-    
+
     Enumeration.
-    
+
     Members:
         ACTIVE
         PAUSED
@@ -52,9 +52,9 @@ class ListingState(Enum):
 
 class NegotiationState(Enum):
     """NegotiationState: negotiation state.
-    
+
     Enumeration.
-    
+
     Members:
         OFFERED
         ACCEPTED
@@ -91,7 +91,7 @@ class ServiceListing:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -146,7 +146,7 @@ class Negotiation:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

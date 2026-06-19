@@ -167,7 +167,7 @@ _title_generator: TitleGenerator | None = None
 def get_title_generator() -> TitleGenerator:
     """
     Get the title generator.
-    
+
     Returns:
         TitleGenerator
     """

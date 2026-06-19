@@ -38,7 +38,7 @@ class ResonanceAmplifier:
     def get_stats(self) -> dict:
         """
         Get the stats.
-        
+
         Returns:
             dict
         """
@@ -52,7 +52,7 @@ _amp = None
 def get_amplifier() -> ResonanceAmplifier:
     """
     Get the amplifier.
-    
+
     Returns:
         ResonanceAmplifier
     """

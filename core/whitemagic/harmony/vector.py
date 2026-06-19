@@ -37,7 +37,7 @@ import time
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 # Guna classification (MandalaOS concept)
 # ---------------------------------------------------------------------------
 
-class Guna(str, Enum):
+class Guna(StrEnum):
     """Process temperament tags inspired by Vedic gunas."""
 
     SATTVIC = "sattvic"    # Balanced, interactive, light
@@ -108,10 +108,10 @@ class _RollingWindow:
     def push(self, event: _ToolEvent) -> None:
         """
         Perform the push operation.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -121,7 +121,7 @@ class _RollingWindow:
     def recent(self) -> list[_ToolEvent]:
         """
         Perform the recent operation.
-        
+
         Returns:
             list[_ToolEvent]
         """
@@ -182,7 +182,7 @@ class HarmonySnapshot:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -528,7 +528,8 @@ def read_harmony_fast() -> HarmonySnapshot:
         from whitemagic.core.acceleration.state_board_bridge import get_state_board
         board = get_state_board()
         tick = board.read_tick()
-        if tick > 0:  # Board has been written to at least once
+        if tick > 0:
+            # Board has been written to at least once
             hs = board.read_harmony()
             # Compute composite from the 7 dimensions using default weights
             dims = [hs.balance, hs.throughput, hs.latency, hs.error_rate,

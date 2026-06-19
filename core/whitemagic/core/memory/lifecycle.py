@@ -62,7 +62,7 @@ class LifecycleStats:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -331,7 +331,7 @@ class MemoryLifecycleManager:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -342,7 +342,7 @@ class MemoryLifecycleManager:
     def is_attached(self) -> bool:
         """
         Check whether the attached condition holds.
-        
+
         Returns:
             bool
         """

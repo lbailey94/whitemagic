@@ -118,11 +118,11 @@ class AgentRoleRegistry:
     def set_roles(self, agent_id: str, roles: list[str]) -> None:
         """
         Perform the set roles operation.
-        
+
         Args:
             agent_id: Parameter description.
             roles: Parameter description.
-        
+
         Returns:
             None
         """
@@ -133,10 +133,10 @@ class AgentRoleRegistry:
     def get_roles(self, agent_id: str) -> list[str]:
         """
         Get the roles.
-        
+
         Args:
             agent_id: Parameter description.
-        
+
         Returns:
             list[str]
         """
@@ -146,10 +146,10 @@ class AgentRoleRegistry:
     def set_default_roles(self, roles: list[str]) -> None:
         """
         Perform the set default roles operation.
-        
+
         Args:
             roles: Parameter description.
-        
+
         Returns:
             None
         """
@@ -160,7 +160,7 @@ class AgentRoleRegistry:
     def list_agents(self) -> dict[str, list[str]]:
         """
         List the agents.
-        
+
         Returns:
             dict[str, list[str]]
         """
@@ -179,7 +179,7 @@ _registry_lock = threading.Lock()
 def get_agent_role_registry() -> AgentRoleRegistry:
     """
     Get the agent role registry.
-    
+
     Returns:
         AgentRoleRegistry
     """
@@ -224,7 +224,8 @@ def check_tool_permission(
     if tool_category:
         for role in roles:
             allowed_cats = _ROLE_ALLOWED_CATEGORIES.get(role, set())
-            if not allowed_cats:  # Empty = admin (all allowed)
+            if not allowed_cats:
+                # Empty = admin (all allowed)
                 return None
             if tool_category in allowed_cats:
                 return None

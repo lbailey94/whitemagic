@@ -57,11 +57,11 @@ class CoherencePersistence:
     def save(self, level: int, factors: dict | None = None) -> Any:
         """
         Perform the save operation.
-        
+
         Args:
             level: Parameter description.
             factors: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -77,7 +77,7 @@ class CoherencePersistence:
     def get_level(self) -> int:
         """
         Get the level.
-        
+
         Returns:
             int
         """
@@ -86,11 +86,11 @@ class CoherencePersistence:
     def boost(self, amount: int, reason: str) -> Any:
         """
         Perform the boost operation.
-        
+
         Args:
             amount: Parameter description.
             reason: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -167,7 +167,7 @@ _coherence = None
 def get_coherence() -> CoherencePersistence:
     """
     Get the coherence.
-    
+
     Returns:
         CoherencePersistence
     """

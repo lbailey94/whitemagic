@@ -31,10 +31,10 @@ class StrengthTracker:
     def register_memory(self, memory: NeuralMemory) -> None:
         """
         Register a memory.
-        
+
         Args:
             memory: Parameter description.
-        
+
         Returns:
             None
         """
@@ -91,7 +91,8 @@ class StrengthTracker:
             if r1.memory_id != mem1_id:
                 continue
 
-            for r2 in accesses[max(0, i-5):i+5]:
+            for r2 in accesses[max(0, i-5):
+                i+5]:
                 if r2.memory_id == mem2_id:
                     time_diff = abs((r1.timestamp - r2.timestamp).total_seconds())
                     if time_diff < self.window_minutes * 60:
@@ -105,7 +106,7 @@ _tracker: StrengthTracker | None = None
 def get_tracker() -> StrengthTracker:
     """
     Get the tracker.
-    
+
     Returns:
         StrengthTracker
     """
@@ -117,10 +118,10 @@ def get_tracker() -> StrengthTracker:
 def on_co_access(memory_id: str) -> list[str]:
     """
     Handle a co access event.
-    
+
     Args:
         memory_id: Parameter description.
-    
+
     Returns:
         list[str]
     """
@@ -129,10 +130,10 @@ def on_co_access(memory_id: str) -> list[str]:
 def get_recent_accesses(minutes: float = 5.0) -> list[str]:
     """
     Get the recent accesses.
-    
+
     Args:
         minutes: Parameter description.
-    
+
     Returns:
         list[str]
     """

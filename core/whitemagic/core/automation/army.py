@@ -165,7 +165,7 @@ _manager = None
 def get_army_manager() -> AutonomousArmyManager:
     """
     Get the army manager.
-    
+
     Returns:
         AutonomousArmyManager
     """

@@ -88,7 +88,7 @@ def _apply_common_props(tools: list[ToolDefinition]) -> list[ToolDefinition]:
 def collect_authored_tool_definitions() -> list[ToolDefinition]:
     """
     Perform the collect authored tool definitions operation.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -106,7 +106,7 @@ def collect_authored_tool_definitions() -> list[ToolDefinition]:
 def get_gana_nested_tools() -> dict[str, list[str]]:
     """
     Get the gana nested tools.
-    
+
     Returns:
         dict[str, list[str]]
     """
@@ -119,7 +119,7 @@ def get_gana_nested_tools() -> dict[str, list[str]]:
 def get_dispatch_tool_names() -> list[str]:
     """
     Get the dispatch tool names.
-    
+
     Returns:
         list[str]
     """
@@ -137,10 +137,10 @@ def _registry_tool_map(authored_tools: list[ToolDefinition]) -> dict[str, ToolDe
 def synthesize_callable_tool_definitions(authored_tools: list[ToolDefinition]) -> list[ToolDefinition]:
     """
     Perform the synthesize callable tool definitions operation.
-    
+
     Args:
         authored_tools: Parameter description.
-    
+
     Returns:
         list[ToolDefinition]
     """

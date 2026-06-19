@@ -111,7 +111,8 @@ class DreamState:
                 report = self.pattern_engine.extract_patterns(min_confidence=0.6, use_rust=True)
 
                 # Solutions
-                for solution in report.solutions[:10]:
+                for solution in report.solutions[:
+                    10]:
                     patterns.append({
                         "id": f"SOL_{len(patterns)}",
                         "pattern": solution.title[:60],
@@ -120,7 +121,8 @@ class DreamState:
                     })
 
                 # Optimizations
-                for opt in report.optimizations[:10]:
+                for opt in report.optimizations[:
+                    10]:
                     patterns.append({
                         "id": f"OPT_{len(patterns)}",
                         "pattern": opt.title[:60],
@@ -129,7 +131,8 @@ class DreamState:
                     })
 
                 # Heuristics
-                for h in report.heuristics[:5]:
+                for h in report.heuristics[:
+                    5]:
                     patterns.append({
                         "id": f"HEU_{len(patterns)}",
                         "pattern": h.title[:60],

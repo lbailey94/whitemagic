@@ -120,7 +120,8 @@ class ConfigValidator:
             json.dump(secrets_data, f, indent=2)
 
         # Set restrictive permissions (Unix only)
-        if os.name != "nt":  # Not Windows
+        if os.name != "nt":
+            # Not Windows
             try:
                 os.chmod(self.secrets_file, 0o600)  # Owner read/write only
                 if not _silent_init():

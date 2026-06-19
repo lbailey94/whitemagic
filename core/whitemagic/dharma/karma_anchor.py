@@ -146,7 +146,8 @@ def get_anchor_history(limit: int = 20) -> list[dict[str, Any]]:
             return []
         lines = history_file.read_text(encoding="utf-8").strip().split("\n")
         records = []
-        for line in lines[-limit:]:
+        for line in lines[-limit:
+            ]:
             if line.strip():
                 try:
                     records.append(_json_loads(line))

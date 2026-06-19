@@ -323,7 +323,7 @@ def evaluate_dharma_router(operation: str = "evaluate", **kwargs: Any) -> dict[s
 def consolidate_consolidate_memories(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the consolidate consolidate memories operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -333,7 +333,7 @@ def consolidate_consolidate_memories(**kwargs: Any) -> dict[str, Any]:
 def consolidate_finalize_scratchpad(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the consolidate finalize scratchpad operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -343,7 +343,7 @@ def consolidate_finalize_scratchpad(**kwargs: Any) -> dict[str, Any]:
 def consolidate_process_wisdom(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the consolidate process wisdom operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -353,7 +353,7 @@ def consolidate_process_wisdom(**kwargs: Any) -> dict[str, Any]:
 def execute_cascade(**kwargs: Any) -> dict[str, Any]:
     """
     Run the cascade operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -363,7 +363,7 @@ def execute_cascade(**kwargs: Any) -> dict[str, Any]:
 def list_patterns(**kwargs: Any) -> dict[str, Any]:
     """
     List the patterns.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -373,7 +373,7 @@ def list_patterns(**kwargs: Any) -> dict[str, Any]:
 def cache_optimize_cache(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the cache optimize cache operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -383,7 +383,7 @@ def cache_optimize_cache(**kwargs: Any) -> dict[str, Any]:
 def cache_clear_cache(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the cache clear cache operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -393,7 +393,7 @@ def cache_clear_cache(**kwargs: Any) -> dict[str, Any]:
 def cache_cache_stats(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the cache cache stats operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -403,7 +403,7 @@ def cache_cache_stats(**kwargs: Any) -> dict[str, Any]:
 def manage_resonance(**kwargs: Any) -> dict[str, Any]:
     """
     Perform the manage resonance operation.
-    
+
     Returns:
         dict[str, Any]
     """

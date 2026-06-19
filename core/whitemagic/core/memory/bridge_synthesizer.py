@@ -42,7 +42,7 @@ class BridgeInsight:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -111,7 +111,8 @@ class BridgeSynthesizer:
                 node_to_community[mid] = comm.community_id
             community_tags[comm.community_id] = comm.theme_tags
 
-        for bridge in bridge_nodes[:top_n]:
+        for bridge in bridge_nodes[:
+            top_n]:
             node_id = bridge["node_id"]
             bc = bridge.get("bridging_centrality", 0.0)
 
@@ -284,7 +285,7 @@ class BridgeSynthesizer:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

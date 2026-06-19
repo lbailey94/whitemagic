@@ -99,7 +99,8 @@ class KarmaTraceLogger:
                 # For large files, we should read from the end.
                 # For now, a simple read of all lines is fine for v5.0.0-alpha.
                 lines = f.readlines()
-                for line in lines[-limit:]:
+                for line in lines[-limit:
+                    ]:
                     try:
                         traces.append(_json_loads(line))
                     except json.JSONDecodeError:
@@ -115,7 +116,7 @@ _logger: KarmaTraceLogger | None = None
 def get_karma_tracer() -> KarmaTraceLogger:
     """
     Get the karma tracer.
-    
+
     Returns:
         KarmaTraceLogger
     """

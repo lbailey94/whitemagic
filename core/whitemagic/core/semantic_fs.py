@@ -65,7 +65,7 @@ class FileEvent:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -97,7 +97,7 @@ class WatchConfig:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -423,10 +423,10 @@ class SemanticFileWatcher:
                 def on_created(self, event: FileSystemEvent) -> Any:
                     """
                     Handle a created event.
-                    
+
                     Args:
                         event: Parameter description.
-                    
+
                     Returns:
                         Any
                     """
@@ -445,10 +445,10 @@ class SemanticFileWatcher:
                 def on_modified(self, event: FileSystemEvent) -> Any:
                     """
                     Handle a modified event.
-                    
+
                     Args:
                         event: Parameter description.
-                    
+
                     Returns:
                         Any
                     """
@@ -467,10 +467,10 @@ class SemanticFileWatcher:
                 def on_deleted(self, event: FileSystemEvent) -> Any:
                     """
                     Handle a deleted event.
-                    
+
                     Args:
                         event: Parameter description.
-                    
+
                     Returns:
                         Any
                     """
@@ -488,10 +488,10 @@ class SemanticFileWatcher:
                 def on_moved(self, event: FileSystemEvent) -> Any:
                     """
                     Handle a moved event.
-                    
+
                     Args:
                         event: Parameter description.
-                    
+
                     Returns:
                         Any
                     """

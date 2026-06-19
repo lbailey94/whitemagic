@@ -36,7 +36,7 @@ class WuXingPhase(Enum):
     def element(self) -> str:
         """
         Perform the element operation.
-        
+
         Returns:
             str
         """
@@ -46,7 +46,7 @@ class WuXingPhase(Enum):
     def symbol(self) -> str:
         """
         Perform the symbol operation.
-        
+
         Returns:
             str
         """
@@ -56,7 +56,7 @@ class WuXingPhase(Enum):
     def quality(self) -> str:
         """
         Perform the quality operation.
-        
+
         Returns:
             str
         """
@@ -66,7 +66,7 @@ class WuXingPhase(Enum):
     def action(self) -> str:
         """
         Perform the action operation.
-        
+
         Returns:
             str
         """
@@ -96,7 +96,7 @@ class GrimoireContext:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

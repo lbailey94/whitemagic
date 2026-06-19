@@ -92,7 +92,7 @@ _refining_fire = None
 def get_refining_fire() -> RefiningFire:
     """
     Get the refining fire.
-    
+
     Returns:
         RefiningFire
     """

@@ -51,7 +51,7 @@ class DreamSynthesizer:
     def unmount(self) -> None:
         """
         Perform the unmount operation.
-        
+
         Returns:
             None
         """
@@ -110,7 +110,7 @@ _synthesizer_instance: DreamSynthesizer | None = None
 def get_dream_synthesizer() -> DreamSynthesizer:
     """
     Get the dream synthesizer.
-    
+
     Returns:
         DreamSynthesizer
     """

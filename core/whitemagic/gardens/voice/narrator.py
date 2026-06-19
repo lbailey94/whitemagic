@@ -138,7 +138,7 @@ _narrator = None
 def get_narrator() -> Narrator:
     """
     Get the narrator.
-    
+
     Returns:
         Narrator
     """

@@ -69,7 +69,7 @@ _instance = None
 def get_play_garden() -> PlayGarden:
     """
     Get the play garden.
-    
+
     Returns:
         PlayGarden
     """

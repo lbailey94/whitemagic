@@ -88,7 +88,7 @@ class BicameralResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -251,10 +251,10 @@ class BicameralReasoner:
         def biased_strategies(count: int) -> list[str]:
             """
             Perform the biased strategies operation.
-            
+
             Args:
                 count: Parameter description.
-            
+
             Returns:
                 list[str]
             """
@@ -520,7 +520,7 @@ class BicameralReasoner:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

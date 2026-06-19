@@ -8,7 +8,7 @@ class SanctuaryGarden(BaseGarden):
     def get_name(self) -> str:
         """
         Get the name.
-        
+
         Returns:
             str
         """
@@ -17,7 +17,7 @@ class SanctuaryGarden(BaseGarden):
     def get_coordinate_bias(self) -> tuple[float, float, float]:
         """
         Get the coordinate bias.
-        
+
         Returns:
             tuple[float, float, float]
         """
@@ -26,7 +26,7 @@ class SanctuaryGarden(BaseGarden):
 def get_sanctuary_garden() -> Any:
     """
     Get the sanctuary garden.
-    
+
     Returns:
         Any
     """

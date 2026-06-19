@@ -130,7 +130,7 @@ def _dir_size_bytes(path: Path, *, max_files: int = 10000) -> int:
 def state_paths() -> dict[str, Any]:
     """
     Perform the state paths operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -152,7 +152,7 @@ def state_summary(*, include_sizes: bool = True) -> dict[str, Any]:
     # Intentionally avoid reading memory contents; only count files/bytes.
     """
     Perform the state summary operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -185,7 +185,7 @@ def state_summary(*, include_sizes: bool = True) -> dict[str, Any]:
 def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[str, Any]:
     """
     Perform the manifest operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -246,7 +246,7 @@ def manifest(*, format: str = "summary", include_schemas: bool = False) -> dict[
 def capabilities(*, include_tools: bool = True, include_schemas: bool = False, include_env: bool = True) -> dict[str, Any]:
     """
     Perform the capabilities operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -333,7 +333,7 @@ def _iter_repo_files(*, max_files: int, skip_dirs: set[str] | None = None) -> It
 def repo_summary(*, max_files: int = 2500, max_matches: int = 25) -> dict[str, Any]:
     """
     Perform the repo summary operation.
-    
+
     Returns:
         dict[str, Any]
     """

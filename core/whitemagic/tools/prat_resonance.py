@@ -175,9 +175,9 @@ def _actionable_successor_hint(
         return "Use gan.a_void (galactic.dashboard) to confirm consolidation"
     # Tool was successful but unknown
     if "error" not in preview.lower() and "fail" not in preview.lower():
-        return f"Call completed. Use gan.a_ghost (list_ganas) to discover more tools"
+        return "Call completed. Use gan.a_ghost (list_ganas) to discover more tools"
     # Error case
-    return f"Last call did not succeed. Use gan.a_straddling_legs (evaluate_ethics) or retry with different args"
+    return "Last call did not succeed. Use gan.a_straddling_legs (evaluate_ethics) or retry with different args"
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +205,7 @@ class ResonanceSnapshot:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -251,7 +251,7 @@ class PratResonanceState:
     def call_count(self) -> int:
         """
         Perform the call count operation.
-        
+
         Returns:
             int
         """

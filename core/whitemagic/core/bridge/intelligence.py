@@ -48,11 +48,11 @@ def _emit_bridge_event(event_name: str, data: dict[str, Any]) -> None:
 def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     Perform the conduct reasoning operation.
-    
+
     Args:
         question: Parameter description.
         context: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -65,11 +65,11 @@ def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> d
 def consult_i_ching(question: str, method: str = "coins") -> dict[str, Any]:
     """
     Perform the consult i ching operation.
-    
+
     Args:
         question: Parameter description.
         method: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -84,10 +84,10 @@ def manage_agent_collaboration(operation: str = "list", **kwargs) -> dict[str, A
     # Simplified collaboration logic for bridge
     """
     Perform the manage agent collaboration operation.
-    
+
     Args:
         operation: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -98,11 +98,11 @@ def manage_agent_collaboration(operation: str = "list", **kwargs) -> dict[str, A
 def run_autonomous_inference(input_data: str, mode: str = "fast") -> dict[str, Any]:
     """
     Run the autonomous inference operation.
-    
+
     Args:
         input_data: Parameter description.
         mode: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """

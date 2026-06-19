@@ -282,7 +282,8 @@ class PolyglotAccelerator:
                 word_freq[word] = word_freq.get(word, 0) + 1
 
         patterns = []
-        for word, freq in sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:limit]:
+        for word, freq in sorted(word_freq.items(), key=lambda x:
+            x[1], reverse=True)[:limit]:
             patterns.append({
                 "pattern": word,
                 "frequency": freq,

@@ -77,7 +77,7 @@ _graph_engine = None
 def get_graph_engine() -> GraphEngine:
     """
     Get the graph engine.
-    
+
     Returns:
         GraphEngine
     """

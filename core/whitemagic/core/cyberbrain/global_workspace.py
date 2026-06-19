@@ -16,7 +16,7 @@ class GlobalWorkspace:
     def publish_event(self, core_id: str, event_type: str, payload: dict[str, Any], salience: float):
         """
         Publish or send a event event.
-        
+
         Args:
             core_id: Parameter description.
             event_type: Parameter description.

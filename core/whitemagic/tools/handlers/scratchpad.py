@@ -39,7 +39,7 @@ def handle_scratchpad(**kwargs: Any) -> dict[str, Any]:
 def handle_scratchpad_create(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a scratchpad create event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -63,7 +63,7 @@ def handle_scratchpad_create(**kwargs: Any) -> dict[str, Any]:
 def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a scratchpad update event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -101,7 +101,7 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
 def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a analyze scratchpad event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -139,7 +139,7 @@ def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:
 def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a scratchpad finalize event.
-    
+
     Returns:
         dict[str, Any]
     """

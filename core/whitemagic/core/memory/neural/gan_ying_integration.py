@@ -150,10 +150,10 @@ def setup_gan_ying_listeners() -> None:
         def on_pattern_confirmed(event: ResonanceEvent) -> None:
             """
             Handle a pattern confirmed event.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -175,10 +175,10 @@ def setup_gan_ying_listeners() -> None:
         def on_pattern_rejected(event: ResonanceEvent) -> None:
             """
             Handle a pattern rejected event.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -200,10 +200,10 @@ def setup_gan_ying_listeners() -> None:
             # Boost recent memories when joy is triggered
             """
             Handle a joy triggered event.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -246,10 +246,10 @@ def setup_gan_ying_listeners() -> None:
         def on_clone_search_complete_listener(event: ResonanceEvent) -> None:
             """
             Handle a clone search complete listener event.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """

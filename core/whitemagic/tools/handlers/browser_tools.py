@@ -162,7 +162,8 @@ def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
                         "selector": e.selector,
                         "type": e.element_type,
                     }
-                    for e in interactables[:100]
+                    for e in interactables[:
+                        100]
                 ],
             }
         finally:

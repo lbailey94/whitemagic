@@ -103,7 +103,7 @@ _instance = None
 def get_connection_garden() -> ConnectionGarden:
     """
     Get the connection garden.
-    
+
     Returns:
         ConnectionGarden
     """

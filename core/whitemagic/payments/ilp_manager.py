@@ -39,9 +39,9 @@ logger = logging.getLogger(__name__)
 
 class PaymentState(Enum):
     """PaymentState: payment state.
-    
+
     Enumeration.
-    
+
     Members:
         PENDING
         STREAMING
@@ -75,7 +75,7 @@ class PaymentRecord:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -108,7 +108,7 @@ class ILPConfig:
     def is_configured(self) -> bool:
         """
         Check whether the configured condition holds.
-        
+
         Returns:
             bool
         """
@@ -352,7 +352,8 @@ class ILPManager:
 
             lines = history_file.read_text(encoding="utf-8").strip().split("\n")
             records = []
-            for line in lines[-limit:]:
+            for line in lines[-limit:
+                ]:
                 if line.strip():
                     try:
                         records.append(_json_loads(line))

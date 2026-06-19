@@ -32,7 +32,7 @@ class Thread:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -48,11 +48,11 @@ class Thread:
     def from_dict(cls, data: dict[str, Any]) -> Thread:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             Thread
         """
@@ -78,7 +78,7 @@ class Chapter:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -94,11 +94,11 @@ class Chapter:
     def from_dict(cls, data: dict[str, Any]) -> Chapter:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             Chapter
         """
@@ -125,7 +125,7 @@ class Story:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -142,11 +142,11 @@ class Story:
     def from_dict(cls, data: dict[str, Any]) -> Story:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             Story
         """

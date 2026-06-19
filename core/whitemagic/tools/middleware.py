@@ -228,10 +228,10 @@ def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
     def wrapped(ctx: DispatchContext) -> dict[str, Any] | None:
         """
         Perform the wrapped operation.
-        
+
         Args:
             ctx: Parameter description.
-        
+
         Returns:
             dict[str, Any] | None
         """

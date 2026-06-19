@@ -127,7 +127,7 @@ _wallet_manager: WalletManager | None = None
 def get_wallet() -> WalletManager:
     """
     Get the wallet.
-    
+
     Returns:
         WalletManager
     """

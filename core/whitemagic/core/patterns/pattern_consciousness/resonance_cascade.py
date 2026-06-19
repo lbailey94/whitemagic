@@ -156,7 +156,7 @@ _orchestrator = None
 def get_orchestrator() -> ResonanceOrchestrator:
     """
     Get the orchestrator.
-    
+
     Returns:
         ResonanceOrchestrator
     """

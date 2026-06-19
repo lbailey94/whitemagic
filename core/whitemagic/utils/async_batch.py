@@ -12,7 +12,7 @@ async def async_batch_process(items, processor, batch_size=100, concurrency=10):
     async def bounded(item):
         """
         Perform the bounded operation.
-        
+
         Args:
             item: Parameter description.
         """
@@ -30,7 +30,7 @@ async def async_map(items: Iterable[Any], fn: Callable, max_concurrent: int = 50
     async def bounded(item):
         """
         Perform the bounded operation.
-        
+
         Args:
             item: Parameter description.
         """

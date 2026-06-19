@@ -93,11 +93,11 @@ class ChatMessage:
     def from_dict(cls, data: dict) -> ChatMessage:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             ChatMessage
         """
@@ -115,7 +115,7 @@ class ChatMessage:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -174,11 +174,11 @@ class Task:
     def from_dict(cls, data: dict) -> Task:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             Task
         """
@@ -203,7 +203,7 @@ class Task:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -380,7 +380,8 @@ class SanghaChat:
             with open(channel_jsonl) as f:
                 lines = f.readlines()
 
-            for line in lines[-limit:]:
+            for line in lines[-limit:
+                ]:
                 try:
                     data = _json_loads(line)
                     msg = ChatMessage.from_dict(data)
@@ -545,12 +546,14 @@ class SanghaChat:
             high_priority = [m for m in messages if m.priority in ["high", "urgent"]]
             if high_priority:
                 summary += f"- High Priority Messages: {len(high_priority)}\n"
-                for msg in high_priority[:5]:
+                for msg in high_priority[:
+                    5]:
                     summary += f"  - [{msg.timestamp.strftime('%H:%M')}] {msg.sender_id} ({msg.priority.upper()}): {msg.content[:100]}...\n"
             normal_msgs = [m for m in messages if m.priority not in ["high", "urgent"]]
             if normal_msgs:
                 summary += f"- Other Notable Messages: {len(normal_msgs)}\n"
-                for msg in normal_msgs[:3]:
+                for msg in normal_msgs[:
+                    3]:
                     summary += f"  - [{msg.timestamp.strftime('%H:%M')}] {msg.sender_id}: {msg.content[:100]}...\n"
         else:
             summary += "No messages found in this period.\n"
@@ -559,7 +562,8 @@ class SanghaChat:
         open_tasks = [t for t in tasks if t.status in ["open", "in_progress"] and (t.channel == channel or t.channel is None)]
         if open_tasks:
             summary += f"Total active tasks: {len(open_tasks)}\n"
-            for task in open_tasks[:5]:
+            for task in open_tasks[:
+                5]:
                 assigned = task.assigned_to if task.assigned_to else "Unassigned"
                 summary += f"- {task.id}: {task.title} ({task.status}, {assigned}, Priority: {task.priority})\n"
         else:
@@ -586,7 +590,7 @@ _chat: SanghaChat | None = None
 def get_chat() -> SanghaChat:
     """
     Get the chat.
-    
+
     Returns:
         SanghaChat
     """

@@ -55,7 +55,7 @@ class LineageEdge:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -85,7 +85,7 @@ class TaxonomicRank:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -121,10 +121,10 @@ class PhylogeneticTracker:
     def get_instance(cls) -> PhylogeneticTracker:
         """
         Get the instance.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             PhylogeneticTracker
         """

@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 class Phase(Enum):
     """Phase: phase.
-    
+
     Enumeration.
-    
+
     Members:
         WOOD
         FIRE
@@ -34,7 +34,7 @@ class Phase(Enum):
 @dataclass
 class PhaseState:
     """PhaseState: phase state.
-    
+
     Value object: equality and repr are field-based."""
     current: Phase
     start_time: datetime
@@ -72,7 +72,7 @@ class WuXingScheduler:
     def get_current_phase(self) -> Phase:
         """
         Get the current phase.
-        
+
         Returns:
             Phase
         """

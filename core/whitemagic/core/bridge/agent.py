@@ -30,7 +30,7 @@ def manage_agent_collaboration(
     def load_registry() -> list[dict[str, Any]]:
         """
         Load registry from storage.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -47,10 +47,10 @@ def manage_agent_collaboration(
     def save_registry(agents: list[dict[str, Any]]) -> None:
         """
         Save registry to storage.
-        
+
         Args:
             agents: Parameter description.
-        
+
         Returns:
             None
         """

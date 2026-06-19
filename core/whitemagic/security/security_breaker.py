@@ -262,7 +262,8 @@ class SecurityMonitor:
                         "tool": a.tool,
                         "timestamp": a.timestamp,
                     }
-                    for a in self._alerts[-5:]
+                    for a in self._alerts[-5:
+                        ]
                 ],
                 "config": {
                     "rapid_fire_threshold": self._rapid_fire_threshold,

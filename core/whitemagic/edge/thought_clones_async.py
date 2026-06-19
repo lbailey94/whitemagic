@@ -9,7 +9,7 @@ import logging
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from ..core.async_layer import batch_process, gather_with_concurrency
@@ -45,7 +45,7 @@ class AsyncThoughtPath:
     duration_ms: float = field(default=0)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-class CloneTier(str, Enum):
+class CloneTier(StrEnum):
     """Ancient Chinese military-inspired capability/cost tiers.
 
     Xianfeng (先锋): Vanguard — fast, cheap, lightweight front-line probes.
@@ -125,7 +125,8 @@ class AsyncThoughtCloneArmy:
             ]
             confidence_floor = 0.5
             cost_estimate = "medium"
-        else:  # HUBEN
+        else :
+            # HUBEN
             # Maximum reasoning, used sparingly
             base_strategies = [
                 "deep_analytical", "first_principles", "comprehensive_review",
@@ -144,11 +145,11 @@ class AsyncThoughtCloneArmy:
         async def safe_clone(strategy: str, clone_id: int) -> Any:
             """
             Perform the safe clone operation.
-            
+
             Args:
                 strategy: Parameter description.
                 clone_id: Parameter description.
-            
+
             Returns:
                 Any
             """
@@ -268,11 +269,11 @@ class AsyncThoughtCloneArmy:
         async def safe_clone(strategy: str, clone_id: int) -> Any:
             """
             Perform the safe clone operation.
-            
+
             Args:
                 strategy: Parameter description.
                 clone_id: Parameter description.
-            
+
             Returns:
                 Any
             """
@@ -343,10 +344,10 @@ class AsyncThoughtCloneArmy:
         async def explore_prompt(prompt: Any) -> Any:
             """
             Perform the explore prompt operation.
-            
+
             Args:
                 prompt: Parameter description.
-            
+
             Returns:
                 Any
             """
@@ -384,7 +385,8 @@ class AsyncThoughtCloneArmy:
                     tokens = len(content.split()) * random.randint(2, 4)
                 elif tier_hint == "wei_wuzu":
                     tokens = len(content.split()) * random.randint(3, 6)
-                else:  # huben
+                else :
+                    # huben
                     tokens = len(content.split()) * random.randint(5, 9)
 
                 duration = (datetime.now() - start_time).total_seconds() * 1000

@@ -107,7 +107,7 @@ class DGAEngine:
 def get_dga_engine() -> DGAEngine:
     """
     Get the dga engine.
-    
+
     Returns:
         DGAEngine
     """

@@ -42,7 +42,7 @@ class AssociationMiner:
     def get_stats(self) -> dict[str, object]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, object]
         """

@@ -22,17 +22,17 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """TaskStatus: task status.
-    
+
     Enumeration.
-    
+
     Members:
         PENDING
         ASSIGNED
@@ -46,11 +46,11 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
 
 
-class ConsensusStrategy(str, Enum):
+class ConsensusStrategy(StrEnum):
     """ConsensusStrategy: consensus strategy.
-    
+
     Enumeration.
-    
+
     Members:
         MAJORITY
         UNANIMOUS
@@ -67,7 +67,7 @@ class ConsensusStrategy(str, Enum):
 @dataclass
 class SubTask:
     """SubTask: sub task.
-    
+
     Value object: equality and repr are field-based."""
     id: str
     description: str
@@ -81,7 +81,7 @@ class SubTask:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -100,7 +100,7 @@ class SubTask:
 @dataclass
 class SwarmPlan:
     """SwarmPlan: swarm plan.
-    
+
     Value object: equality and repr are field-based."""
     id: str
     goal: str
@@ -111,7 +111,7 @@ class SwarmPlan:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -129,7 +129,7 @@ class SwarmPlan:
 @dataclass
 class Vote:
     """Vote: vote.
-    
+
     Value object: equality and repr are field-based."""
     agent_id: str
     value: Any
@@ -215,7 +215,8 @@ class AgentSwarm:
             self._plans[plan_id] = plan
             if len(self._plans) > self._max_plans:
                 oldest = sorted(self._plans.values(), key=lambda p: p.created_at)
-                for p in oldest[:10]:
+                for p in oldest[:
+                    10]:
                     del self._plans[p.id]
 
         return plan
@@ -564,10 +565,10 @@ class AgentSwarm:
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
         """
         Get the plan.
-        
+
         Args:
             plan_id: Parameter description.
-        
+
         Returns:
             dict[str, Any] | None
         """
@@ -578,10 +579,10 @@ class AgentSwarm:
     def list_plans(self, limit: int = 20) -> list[dict[str, Any]]:
         """
         List the plans.
-        
+
         Args:
             limit: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -592,7 +593,7 @@ class AgentSwarm:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -613,7 +614,7 @@ _swarm_lock = threading.Lock()
 def get_swarm() -> AgentSwarm:
     """
     Get the swarm.
-    
+
     Returns:
         AgentSwarm
     """

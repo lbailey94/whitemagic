@@ -88,7 +88,7 @@ def _wire_feedback_loops(ns):
         def on_threat(event):
             """
             Handle a threat event.
-            
+
             Args:
                 event: Parameter description.
             """
@@ -100,7 +100,7 @@ def _wire_feedback_loops(ns):
         def on_consolidation(event):
             """
             Handle a consolidation event.
-            
+
             Args:
                 event: Parameter description.
             """

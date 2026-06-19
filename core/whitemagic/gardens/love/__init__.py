@@ -199,7 +199,7 @@ _compassion_gen: CompassionGenerator | None = None
 def get_love_garden() -> LoveGarden:
     """
     Get the love garden.
-    
+
     Returns:
         LoveGarden
     """
@@ -212,7 +212,7 @@ def get_love_garden() -> LoveGarden:
 def get_love_detector() -> LoveDetector:
     """
     Get the love detector.
-    
+
     Returns:
         LoveDetector
     """
@@ -225,7 +225,7 @@ def get_love_detector() -> LoveDetector:
 def get_compassion_generator() -> CompassionGenerator:
     """
     Get the compassion generator.
-    
+
     Returns:
         CompassionGenerator
     """

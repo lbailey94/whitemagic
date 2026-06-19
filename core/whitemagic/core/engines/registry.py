@@ -13,9 +13,10 @@ This registry is the single source of truth for the Engine Framework.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import IntEnum
-import logging
+
 logger = logging.getLogger(__name__)
 
 

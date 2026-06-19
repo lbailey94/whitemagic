@@ -98,7 +98,7 @@ def _load_cached_binary_status(binary_name: str, fallback_path: str) -> dict[str
 def handle_capabilities(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a capabilities event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -114,7 +114,7 @@ def handle_capabilities(**kwargs: Any) -> dict[str, Any]:
 def handle_manifest(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a manifest event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -129,7 +129,7 @@ def handle_manifest(**kwargs: Any) -> dict[str, Any]:
 def handle_state_paths(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a state paths event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -138,7 +138,7 @@ def handle_state_paths(**kwargs: Any) -> dict[str, Any]:
 def handle_state_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a state summary event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -147,7 +147,7 @@ def handle_state_summary(**kwargs: Any) -> dict[str, Any]:
 def handle_repo_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a repo summary event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -162,7 +162,7 @@ def handle_repo_summary(**kwargs: Any) -> dict[str, Any]:
 def handle_ship_check(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a ship check event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -179,7 +179,7 @@ def handle_ship_check(**kwargs: Any) -> dict[str, Any]:
 def handle_get_telemetry_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get telemetry summary event.
-    
+
     Returns:
         dict[str, Any]
     """

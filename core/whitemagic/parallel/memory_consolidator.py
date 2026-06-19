@@ -11,11 +11,12 @@ Philosophy:
     and connections that sequential processing would miss.
 """
 
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-import logging
+
 logger = logging.getLogger(__name__)
 
 

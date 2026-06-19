@@ -22,7 +22,7 @@ def _disabled_error() -> RuntimeError:
 @dataclass
 class CascadeResult:  # pragma: no cover - legacy shim
     """CascadeResult: cascade result.
-    
+
     Value object: equality and repr are field-based."""
     query: str
     answer: str
@@ -46,7 +46,7 @@ class CascadingInference:  # pragma: no cover - legacy shim
     def get_cascade() -> Any:
         """
         Get the cascade.
-        
+
         Returns:
             Any
         """

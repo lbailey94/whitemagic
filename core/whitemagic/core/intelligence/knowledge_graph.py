@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExtractedEntity:
     """ExtractedEntity: extracted entity.
-    
+
     Value object: equality and repr are field-based."""
     name: str
     entity_type: str
@@ -44,7 +44,7 @@ class ExtractedEntity:
 @dataclass
 class ExtractedRelation:
     """ExtractedRelation: extracted relation.
-    
+
     Value object: equality and repr are field-based."""
     subject: str
     predicate: str
@@ -67,28 +67,31 @@ class KnowledgeGraph:
             return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, '_initialized'): return
+        if hasattr(self, '_initialized'):
+            return
         self._initialized = True
         self._stats = {"total_processed": 0, "total_entities": 0}
 
     def _get_db(self) -> sqlite3.Connection | None:
         try:
             from whitemagic.config.paths import DB_PATH
-            if not DB_PATH.exists(): return None
+            if not DB_PATH.exists():
+                return None
             conn = sqlite3.connect(str(DB_PATH))
             conn.execute("PRAGMA journal_mode=WAL")
             return conn
-        except (ImportError, ModuleNotFoundError): return None
+        except (ImportError, ModuleNotFoundError):
+            return None
 
     def extract_from_text(self, text: str, source_id: str) -> tuple[list[ExtractedEntity], list[ExtractedRelation]]:
         # Simplified extraction logic for consolidation phase
         """
         Mine or extract from text.
-        
+
         Args:
             text: Parameter description.
             source_id: Parameter description.
-        
+
         Returns:
             tuple[list[ExtractedEntity], list[ExtractedRelation]]
         """
@@ -97,11 +100,11 @@ class KnowledgeGraph:
     def extract_and_store(self, memory_id: str, text: str) -> dict[str, Any]:
         """
         Mine or extract and store.
-        
+
         Args:
             memory_id: Parameter description.
             text: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -111,10 +114,10 @@ class KnowledgeGraph:
     def query_entity(self, name: str) -> dict[str, Any]:
         """
         Perform the query entity operation.
-        
+
         Args:
             name: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -123,7 +126,7 @@ class KnowledgeGraph:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

@@ -27,7 +27,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # FUSION MAPPINGS
 # ============================================================================
 
-class ZodiacSign(str, Enum):
+class ZodiacSign(StrEnum):
     """12 Zodiac signs"""
     PISCES = "pisces"
     AQUARIUS = "aquarius"
@@ -53,7 +53,7 @@ class ZodiacSign(str, Enum):
     ARIES = "aries"
 
 
-class WuXingElement(str, Enum):
+class WuXingElement(StrEnum):
     """5 Wu Xing elements"""
     WOOD = "wood"
     FIRE = "fire"
@@ -62,7 +62,7 @@ class WuXingElement(str, Enum):
     WATER = "water"
 
 
-class PipelinePhase(str, Enum):
+class PipelinePhase(StrEnum):
     """7 Tactical pipeline phases"""
     SCOUT = "scout"
     DISCOVER = "discover"

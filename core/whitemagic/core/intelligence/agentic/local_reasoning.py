@@ -185,7 +185,8 @@ class LocalReasoningEngine:
             results = army.search_and_deliberate(query)
 
             insights = []
-            for result in results[:max_results]:
+            for result in results[:
+                max_results]:
                 # Estimate tokens saved (didn't send full file content)
                 tokens_saved = len(result.content) // 4  # ~4 chars per token
 
@@ -235,7 +236,8 @@ class LocalReasoningEngine:
 
         lines = [f"LOCAL REASONING SUMMARY for: {query}", ""]
 
-        for i, insight in enumerate(insights[:5], 1):
+        for i, insight in enumerate(insights[:
+            5], 1):
             lines.append(f"{i}. [{insight.method}] {insight.source}")
             lines.append(f"   Relevance: {insight.relevance:.2f}")
             lines.append(f"   {insight.content[:200]}...")

@@ -43,7 +43,7 @@ class ElixirBridge(LanguageBridge):
     def call(self, function: str, *args):
         """
         Perform the call operation.
-        
+
         Args:
             function: Parameter description.
         """
@@ -54,7 +54,7 @@ class JuliaBridge(LanguageBridge):
     def call(self, function: str, *args):
         """
         Perform the call operation.
-        
+
         Args:
             function: Parameter description.
         """
@@ -65,7 +65,7 @@ class KokaBridge(LanguageBridge):
     def call(self, function: str, *args):
         """
         Perform the call operation.
-        
+
         Args:
             function: Parameter description.
         """
@@ -103,7 +103,7 @@ class PolyglotAccelerator:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -115,12 +115,13 @@ _accelerator: PolyglotAccelerator | None = None
 def get_accelerator() -> PolyglotAccelerator:
     """
     Get the accelerator.
-    
+
     Returns:
         PolyglotAccelerator
     """
     global _accelerator
-    if _accelerator is None: _accelerator = PolyglotAccelerator()
+    if _accelerator is None:
+        _accelerator = PolyglotAccelerator()
     return _accelerator
 
 # Compatibility stubs

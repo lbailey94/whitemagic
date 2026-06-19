@@ -164,7 +164,8 @@ class EnhancedPatternEngine:
 
                 correlation, p_value = stats.pearsonr(log_ranks, log_freq)
 
-                if correlation < -0.7:  # Strong negative = Zipf pattern
+                if correlation < -0.7:
+                    # Strong negative = Zipf pattern
                     patterns.append({
                         "type": "statistical",
                         "pattern": "Natural language (Zipf distribution)",
@@ -177,7 +178,8 @@ class EnhancedPatternEngine:
             probs = np.array(frequencies) / sum(frequencies)
             entropy = stats.entropy(probs)
 
-            if entropy > 4.0:  # High entropy = rich content
+            if entropy > 4.0:
+                # High entropy = rich content
                 patterns.append({
                     "type": "statistical",
                     "pattern": "High information density",
@@ -188,7 +190,8 @@ class EnhancedPatternEngine:
 
             # Repetition detection
             repetition_ratio = len(set(words)) / len(words) if words else 0
-            if repetition_ratio < 0.5:  # Lots of repetition
+            if repetition_ratio < 0.5:
+                # Lots of repetition
                 patterns.append({
                     "type": "stylistic",
                     "pattern": "Repetitive/rhythmic structure",

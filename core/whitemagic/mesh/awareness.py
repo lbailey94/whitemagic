@@ -42,12 +42,12 @@ class MeshAwareness:
     def register_peer(self, node_id: str, address: str = "", meta: dict | None = None) -> None:
         """
         Register a peer.
-        
+
         Args:
             node_id: Parameter description.
             address: Parameter description.
             meta: Parameter description.
-        
+
         Returns:
             None
         """
@@ -62,10 +62,10 @@ class MeshAwareness:
     def remove_peer(self, node_id: str) -> None:
         """
         Remove the peer.
-        
+
         Args:
             node_id: Parameter description.
-        
+
         Returns:
             None
         """
@@ -75,7 +75,7 @@ class MeshAwareness:
     def get_peers(self) -> list[dict[str, Any]]:
         """
         Get the peers.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -85,10 +85,10 @@ class MeshAwareness:
     def record_event(self, event: dict[str, Any]) -> None:
         """
         Perform the record event operation.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -159,7 +159,7 @@ _awareness_lock = threading.Lock()
 def get_mesh_awareness() -> MeshAwareness:
     """
     Get the mesh awareness.
-    
+
     Returns:
         MeshAwareness
     """

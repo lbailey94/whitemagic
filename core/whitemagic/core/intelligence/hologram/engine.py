@@ -118,7 +118,7 @@ _hologram_engine = None
 def get_hologram_engine() -> HologramEngine:
     """
     Get the hologram engine.
-    
+
     Returns:
         HologramEngine
     """

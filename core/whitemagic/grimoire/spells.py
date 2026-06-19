@@ -4,11 +4,12 @@
 Individual spells that can be cast, tracked, and learned from.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
-import logging
+
 logger = logging.getLogger(__name__)
 
 

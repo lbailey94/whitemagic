@@ -18,10 +18,10 @@ class CascadeDiscovery:
     def register_memory(self, memory: NeuralMemory) -> None:
         """
         Register a memory.
-        
+
         Args:
             memory: Parameter description.
-        
+
         Returns:
             None
         """
@@ -78,7 +78,7 @@ _cascade: CascadeDiscovery | None = None
 def get_cascade() -> CascadeDiscovery:
     """
     Get the cascade.
-    
+
     Returns:
         CascadeDiscovery
     """
@@ -90,10 +90,10 @@ def get_cascade() -> CascadeDiscovery:
 def discover_cascade_links(memory: NeuralMemory) -> list[tuple]:
     """
     Discover or mine cascade links.
-    
+
     Args:
         memory: Parameter description.
-    
+
     Returns:
         list[tuple]
     """
@@ -102,10 +102,10 @@ def discover_cascade_links(memory: NeuralMemory) -> list[tuple]:
 def create_cascade_link(memory: NeuralMemory) -> int:
     """
     Create a new cascade link.
-    
+
     Args:
         memory: Parameter description.
-    
+
     Returns:
         int
     """

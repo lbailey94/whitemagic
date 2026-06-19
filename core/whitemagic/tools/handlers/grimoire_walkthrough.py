@@ -5,7 +5,7 @@ from typing import Any
 def handle_grimoire_walkthrough(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a grimoire walkthrough event.
-    
+
     Returns:
         dict[str, Any]
     """

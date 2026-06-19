@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
@@ -7,7 +8,7 @@ from typing import Any, cast
 
 from whitemagic.core.memory.unified import UnifiedMemory, get_unified_memory
 from whitemagic.core.memory.unified_types import Memory, MemoryType
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,14 +55,14 @@ class MemoryManager:
     ) -> dict[str, Any]:
         """
         Create a new memory.
-        
+
         Args:
             title: Parameter description.
             content: Parameter description.
             memory_type: Parameter description.
             tags: Parameter description.
             extra_fields: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -99,7 +100,7 @@ class MemoryManager:
     ) -> list[dict[str, Any]]:
         """
         Find memories matching the criteria.
-        
+
         Args:
             query: Parameter description.
             memory_type: Parameter description.
@@ -108,7 +109,7 @@ class MemoryManager:
             min_importance: Parameter description.
             include_archived: Parameter description.
             include_content: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -137,11 +138,11 @@ class MemoryManager:
     def search(self, query: str | None = None, limit: int = 20, **kwargs: Any) -> list[dict[str, Any]]:
         """
         Perform the search operation.
-        
+
         Args:
             query: Parameter description.
             limit: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -156,12 +157,12 @@ class MemoryManager:
     ) -> list[dict[str, Any]]:
         """
         Perform the read recent memories operation.
-        
+
         Args:
             memory_type: Parameter description.
             limit: Parameter description.
             include_archived: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -182,11 +183,11 @@ class MemoryManager:
     def list_recent(self, limit: int = 10, memory_type: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
         """
         List the recent.
-        
+
         Args:
             limit: Parameter description.
             memory_type: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -195,11 +196,11 @@ class MemoryManager:
     def list(self, limit: int = 20, memory_type: str | None = None, **kwargs: Any) -> list[dict[str, Any]]:
         """
         Perform the list operation.
-        
+
         Args:
             limit: Parameter description.
             memory_type: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -208,11 +209,11 @@ class MemoryManager:
     def get_memory(self, memory_id: str, include_metadata: bool = True) -> dict[str, Any]:
         """
         Get the memory.
-        
+
         Args:
             memory_id: Parameter description.
             include_metadata: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -240,7 +241,7 @@ class MemoryManager:
     ) -> dict[str, Any]:
         """
         Update the memory.
-        
+
         Args:
             filename: Parameter description.
             title: Parameter description.
@@ -249,7 +250,7 @@ class MemoryManager:
             add_tags: Parameter description.
             remove_tags: Parameter description.
             memory_type: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -277,11 +278,11 @@ class MemoryManager:
     def delete_memory(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:
         """
         Remove the memory.
-        
+
         Args:
             filename: Parameter description.
             permanent: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -312,11 +313,11 @@ class MemoryManager:
     def delete(self, filename: str, permanent: bool = False, **kwargs: Any) -> dict[str, Any]:
         """
         Perform the delete operation.
-        
+
         Args:
             filename: Parameter description.
             permanent: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -325,12 +326,12 @@ class MemoryManager:
     def associate(self, memory_id1: str, memory_id2: str, strength: float = 0.5) -> dict[str, Any]:
         """
         Perform the associate operation.
-        
+
         Args:
             memory_id1: Parameter description.
             memory_id2: Parameter description.
             strength: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -340,7 +341,7 @@ class MemoryManager:
     def consolidate(self) -> int:
         """
         Perform the consolidate operation.
-        
+
         Returns:
             int
         """
@@ -349,7 +350,7 @@ class MemoryManager:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -358,7 +359,7 @@ class MemoryManager:
     def stats(self) -> dict[str, Any]:
         """
         Perform the stats operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -367,7 +368,7 @@ class MemoryManager:
     def get_cache_stats(self) -> dict[str, Any] | None:
         """
         Get the cache stats.
-        
+
         Returns:
             dict[str, Any] | None
         """
@@ -380,11 +381,11 @@ class MemoryManager:
     def list_all_memories(self, include_archived: bool = False, sort_by: str = "created") -> dict[str, list[dict[str, Any]]]:
         """
         List the all memories.
-        
+
         Args:
             include_archived: Parameter description.
             sort_by: Parameter description.
-        
+
         Returns:
             dict[str, list[dict[str, Any]]]
         """
@@ -407,7 +408,7 @@ class MemoryManager:
     def list_all_tags(self) -> dict[str, Any]:
         """
         List the all tags.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -425,10 +426,10 @@ class MemoryManager:
     def generate_context_summary(self, tier: int = 1) -> str:
         """
         Generate context summary.
-        
+
         Args:
             tier: Parameter description.
-        
+
         Returns:
             str
         """
@@ -439,10 +440,10 @@ class MemoryManager:
     def consolidate_short_term(self, dry_run: bool = False) -> dict[str, int]:
         """
         Perform the consolidate short term operation.
-        
+
         Args:
             dry_run: Parameter description.
-        
+
         Returns:
             dict[str, int]
         """
@@ -452,10 +453,10 @@ class MemoryManager:
     def normalize_legacy_tags(self, dry_run: bool = True) -> dict[str, Any]:
         """
         Perform the normalize legacy tags operation.
-        
+
         Args:
             dry_run: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -464,11 +465,11 @@ class MemoryManager:
     def restore_memory(self, memory_id: str, memory_type: str = "short_term") -> dict[str, Any]:
         """
         Perform the restore memory operation.
-        
+
         Args:
             memory_id: Parameter description.
             memory_type: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -491,10 +492,10 @@ _manager: MemoryManager | None = None
 def get_memory_manager(base_dir: str | Path = ".") -> MemoryManager:
     """
     Get the memory manager.
-    
+
     Args:
         base_dir: Parameter description.
-    
+
     Returns:
         MemoryManager
     """

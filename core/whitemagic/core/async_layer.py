@@ -49,7 +49,7 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
         def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             """
             Perform the async wrapper operation.
-            
+
             Returns:
                 Any
             """
@@ -67,7 +67,7 @@ def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         """
         Perform the wrapper operation.
-        
+
         Returns:
             Any
         """
@@ -101,7 +101,7 @@ def ensure_async(func: Callable) -> Callable:
     async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
         """
         Perform the async wrapper operation.
-        
+
         Returns:
             Any
         """

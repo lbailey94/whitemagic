@@ -50,7 +50,7 @@ class TokenBudget:
     def remaining(self) -> int:
         """
         Perform the remaining operation.
-        
+
         Returns:
             int
         """
@@ -60,7 +60,7 @@ class TokenBudget:
     def efficiency(self) -> float:
         """
         Perform the efficiency operation.
-        
+
         Returns:
             float
         """
@@ -82,7 +82,7 @@ class TokenBudget:
     def rate_limit_remaining(self) -> int:
         """
         Perform the rate limit remaining operation.
-        
+
         Returns:
             int
         """
@@ -91,10 +91,10 @@ class TokenBudget:
     def use(self, tokens: int) -> None:
         """
         Perform the use operation.
-        
+
         Args:
             tokens: Parameter description.
-        
+
         Returns:
             None
         """
@@ -103,10 +103,10 @@ class TokenBudget:
     def save(self, tokens: int) -> None:
         """
         Perform the save operation.
-        
+
         Args:
             tokens: Parameter description.
-        
+
         Returns:
             None
         """
@@ -124,7 +124,7 @@ class TokenBudget:
     def is_rate_limited(self) -> bool:
         """
         Check whether the rate limited condition holds.
-        
+
         Returns:
             bool
         """
@@ -133,7 +133,7 @@ class TokenBudget:
     def report(self) -> str:
         """
         Perform the report operation.
-        
+
         Returns:
             str
         """
@@ -163,10 +163,10 @@ class CachedResult:
     def is_stale(self, max_age_hours: int = 24) -> bool:
         """
         Check whether the stale condition holds.
-        
+
         Args:
             max_age_hours: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -217,10 +217,10 @@ class QueryCache:
     def get(self, query: str) -> CachedResult | None:
         """
         Perform the get operation.
-        
+
         Args:
             query: Parameter description.
-        
+
         Returns:
             CachedResult | None
         """
@@ -234,12 +234,12 @@ class QueryCache:
     def set(self, query: str, result: str, tokens_saved: int) -> None:
         """
         Perform the set operation.
-        
+
         Args:
             query: Parameter description.
             result: Parameter description.
             tokens_saved: Parameter description.
-        
+
         Returns:
             None
         """
@@ -255,7 +255,7 @@ class QueryCache:
     def stats(self) -> dict[str, Any]:
         """
         Perform the stats operation.
-        
+
         Returns:
             dict[str, Any]
         """

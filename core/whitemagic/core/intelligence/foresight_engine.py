@@ -33,7 +33,7 @@ class ForesightReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -149,7 +149,8 @@ class ForesightEngine:
         warnings: list[dict[str, Any]] = []
         # Simple O(n²) pairwise check — fine for small constellation counts
         for i, a in enumerate(projections):
-            for b in projections[i + 1 :]:
+            for b in projections[i + 1:
+                ]:
                 pa = a["projected_centroid"]
                 pb = b["projected_centroid"]
                 distance = math.sqrt(

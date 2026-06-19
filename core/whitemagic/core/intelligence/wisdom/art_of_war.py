@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class WarPrinciple:
     keywords: list[str] = field(default_factory=list)
 
 
-class TerrainType(str, Enum):
+class TerrainType(StrEnum):
     """Six types of terrain from Chapter X."""
     ACCESSIBLE = "accessible"       # Both sides can move freely — open codebase
     ENTANGLING = "entangling"       # Easy to enter, hard to exit — legacy code
@@ -63,7 +63,7 @@ class TerrainType(str, Enum):
     DISTANT = "distant"             # Forces equal, hard to provoke battle — external deps
 
 
-class CampaignPhase(str, Enum):
+class CampaignPhase(StrEnum):
     """Campaign phases aligned to Wu Xing."""
     RECONNAISSANCE = "reconnaissance"   # Wood — explore, gather intelligence
     PLANNING = "planning"               # Water — reflect, formulate strategy
@@ -245,7 +245,7 @@ class CampaignPlan:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

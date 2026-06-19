@@ -59,7 +59,7 @@ class ConstellationContext:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -87,7 +87,7 @@ class AssociationNode:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -111,7 +111,7 @@ class TemporalBucket:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -135,7 +135,7 @@ class HolographicNeighbor:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -159,7 +159,7 @@ class HybridResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -719,7 +719,8 @@ class CoreAccessLayer:
                 seed_ids, depth=graph_depth, min_strength=0.3, max_nodes=k * 3,
             )
             for node in graph_nodes:
-                if node.depth > 0:  # Skip seeds themselves
+                if node.depth > 0:
+                    # Skip seeds themselves
                     graph_results.append((node.memory_id, node.strength))
 
         # --- Reciprocal Rank Fusion ---
@@ -770,7 +771,8 @@ class CoreAccessLayer:
         # Fetch titles and previews for top results
         conn = self._get_conn()
         results: list[HybridResult] = []
-        for mid, score, sources in scored[:k]:
+        for mid, score, sources in scored[:
+            k]:
             title = None
             preview = ""
             try:

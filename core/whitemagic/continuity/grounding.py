@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SystemState:
     """SystemState: system state.
-    
+
     Value object: equality and repr are field-based."""
     timestamp_utc: str
     timestamp_local: str

@@ -12,11 +12,11 @@ class JoyRouter:
     def add_joy(self, amount: float, source: str) -> dict:
         """
         Add joy.
-        
+
         Args:
             amount: Parameter description.
             source: Parameter description.
-        
+
         Returns:
             dict
         """
@@ -43,10 +43,10 @@ class JoyRouter:
     def celebrate(self, what: str) -> dict:
         """
         Perform the celebrate operation.
-        
+
         Args:
             what: Parameter description.
-        
+
         Returns:
             dict
         """
@@ -55,7 +55,7 @@ class JoyRouter:
     def get_level(self) -> float:
         """
         Get the level.
-        
+
         Returns:
             float
         """
@@ -65,7 +65,7 @@ _router = None
 def get_joy_router() -> JoyRouter:
     """
     Get the joy router.
-    
+
     Returns:
         JoyRouter
     """

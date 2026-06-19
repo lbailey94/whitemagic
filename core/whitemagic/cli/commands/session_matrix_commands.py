@@ -176,10 +176,10 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
         def on_event(event) -> None:
             """
             Handle a event event.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -201,7 +201,8 @@ def register_session_matrix_commands(main: click.Group, get_memory_fn, status_co
             table.add_column("Source", style="green")
             table.add_column("Data", style="white")
             table.add_column("Conf", justify="right", style="yellow")
-            for e in sorted(list(events), key=lambda ev: ev.timestamp, reverse=True):
+            for e in sorted(list(events), key=lambda ev:
+                ev.timestamp, reverse=True):
                 data_str = str(e.data)
                 if len(data_str) > 50:
                     data_str = data_str[:47] + "..."

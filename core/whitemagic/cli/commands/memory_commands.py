@@ -97,14 +97,16 @@ def recall(ctx, query: str, limit: int, search_type: str | None, fast: bool) -> 
                 table.add_column("ID", style="cyan", no_wrap=True)
                 table.add_column("Content", style="white")
                 table.add_column("Type", style="green")
-                for mem in memories[:limit]:
+                for mem in memories[:
+                    limit]:
                     mem_id = mem.get("id", mem.get("memory_id", "?"))[:8]
                     content = mem.get("content", "")[:60]
                     mem_type = mem.get("type", mem.get("memory_type", "?"))
                     table.add_row(mem_id, content, mem_type)
                 console.print(table)
             else:
-                for mem in memories[:limit]:
+                for mem in memories[:
+                    limit]:
                     mem_id = mem.get("id", mem.get("memory_id", "?"))
                     content = mem.get("content", "")
                     click.echo(f"{mem_id}: {content[:80]}")

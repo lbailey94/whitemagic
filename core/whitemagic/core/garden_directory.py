@@ -515,6 +515,7 @@ if __name__ == "__main__":
     print(f"Path hints: {len(PATH_GARDEN_HINTS)}")
     print()
     print("Garden → Gana → Element mapping:")
-    for entry in GARDEN_GANA_REGISTRY[:7]:
+    for entry in GARDEN_GANA_REGISTRY[:
+        7]:
         print(f"  {entry.garden:15} → {entry.gana:25} [{entry.element.value}]")
     print("  ...")

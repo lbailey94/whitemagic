@@ -123,7 +123,8 @@ def pairwise_distance_matrix(
             # Flatten vectors into contiguous array
             flat = (ctypes.c_float * (n * dim))()
             for i, vec in enumerate(vectors):
-                for j, v in enumerate(vec[:dim]):
+                for j, v in enumerate(vec[:
+                    dim]):
                     flat[i * dim + j] = v
 
             # Output: N×N matrix

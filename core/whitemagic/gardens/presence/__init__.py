@@ -46,7 +46,7 @@ class PresenceGarden(BaseGarden, GanYingMixin):
     def get_name(self) -> str:
         """
         Get the name.
-        
+
         Returns:
             str
         """
@@ -55,7 +55,7 @@ class PresenceGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         """
         Get the coordinate bias.
-        
+
         Returns:
             CoordinateBias
         """
@@ -75,7 +75,7 @@ class PresenceGarden(BaseGarden, GanYingMixin):
     def get_status(self) -> dict[str, Any]:
         """
         Get the status.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -91,10 +91,10 @@ class PresenceGarden(BaseGarden, GanYingMixin):
     def on_stillness(self, event: Any) -> None:
         """
         Handle a stillness event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -106,7 +106,7 @@ _instance = None
 def get_presence_garden() -> PresenceGarden:
     """
     Get the presence garden.
-    
+
     Returns:
         PresenceGarden
     """

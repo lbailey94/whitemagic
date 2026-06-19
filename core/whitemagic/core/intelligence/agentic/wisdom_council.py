@@ -117,7 +117,7 @@ class WisdomCouncil:
 def get_wisdom_council() -> WisdomCouncil:
     """
     Get the wisdom council.
-    
+
     Returns:
         WisdomCouncil
     """

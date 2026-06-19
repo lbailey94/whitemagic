@@ -74,7 +74,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
     def get_name(self) -> str:
         """
         Get the name.
-        
+
         Returns:
             str
         """
@@ -83,7 +83,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         """
         Get the coordinate bias.
-        
+
         Returns:
             CoordinateBias
         """
@@ -350,7 +350,7 @@ _instance = None
 def get_grief_garden() -> GriefGarden:
     """
     Get the grief garden.
-    
+
     Returns:
         GriefGarden
     """

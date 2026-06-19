@@ -13,6 +13,7 @@ This module calculates memory strength based on:
 Created: December 2, 2025 (Hanuman Tuesday)
 """
 
+import logging
 import math
 from dataclasses import dataclass
 from datetime import datetime
@@ -20,7 +21,7 @@ from typing import Any
 
 from whitemagic.core.memory.neural.identity_anchors import auto_protect_memory
 from whitemagic.core.memory.neural.neural_memory import MemoryState, NeuralMemory
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +41,7 @@ class ScoreBreakdown:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

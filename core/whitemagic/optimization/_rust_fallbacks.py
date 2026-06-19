@@ -145,11 +145,11 @@ class PythonSpatialIndex5D:
     def add(self, memory_id: str, vector: list[float]) -> int:
         """
         Perform the add operation.
-        
+
         Args:
             memory_id: Parameter description.
             vector: Parameter description.
-        
+
         Returns:
             int
         """
@@ -160,10 +160,10 @@ class PythonSpatialIndex5D:
     def add_batch(self, items: list[tuple[str, list[float]]]) -> int:
         """
         Add batch.
-        
+
         Args:
             items: Parameter description.
-        
+
         Returns:
             int
         """
@@ -174,11 +174,11 @@ class PythonSpatialIndex5D:
     def query_nearest(self, vector: list[float], n: int) -> list[tuple[str, float]]:
         """
         Perform the query nearest operation.
-        
+
         Args:
             vector: Parameter description.
             n: Parameter description.
-        
+
         Returns:
             list[tuple[str, float]]
         """
@@ -194,11 +194,11 @@ class PythonSpatialIndex5D:
     def query_within_radius(self, vector: list[float], radius_sq: float) -> list[tuple[str, float]]:
         """
         Perform the query within radius operation.
-        
+
         Args:
             vector: Parameter description.
             radius_sq: Parameter description.
-        
+
         Returns:
             list[tuple[str, float]]
         """
@@ -212,7 +212,7 @@ class PythonSpatialIndex5D:
     def size(self) -> int:
         """
         Perform the size operation.
-        
+
         Returns:
             int
         """
@@ -221,7 +221,7 @@ class PythonSpatialIndex5D:
     def get_snapshot(self) -> list[tuple[str, list[float]]]:
         """
         Get the snapshot.
-        
+
         Returns:
             list[tuple[str, list[float]]]
         """
@@ -230,7 +230,7 @@ class PythonSpatialIndex5D:
     def clear(self) -> None:
         """
         Perform the clear operation.
-        
+
         Returns:
             None
         """

@@ -408,7 +408,8 @@ def _votes_portal() -> dict[str, Any]:
         "open_sessions": result.get("count", 0),
         "sessions": [
             {"id": s["id"], "problem": s.get("problem", "")[:80], "vote_count": s.get("vote_count", 0)}
-            for s in result.get("sessions", [])[:5]
+            for s in result.get("sessions", [])[:
+                5]
         ],
     }
 

@@ -155,7 +155,7 @@ _matrix = None
 def get_resonance_matrix() -> GardenResonanceMatrix:
     """
     Get the resonance matrix.
-    
+
     Returns:
         GardenResonanceMatrix
     """

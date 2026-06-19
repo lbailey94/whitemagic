@@ -55,7 +55,7 @@ class BriefingItem:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -86,7 +86,7 @@ class InsightBriefing:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -104,7 +104,7 @@ class InsightBriefing:
     def critical_items(self) -> list[BriefingItem]:
         """
         Perform the critical items operation.
-        
+
         Returns:
             list[BriefingItem]
         """
@@ -114,7 +114,7 @@ class InsightBriefing:
     def high_items(self) -> list[BriefingItem]:
         """
         Perform the high items operation.
-        
+
         Returns:
             list[BriefingItem]
         """
@@ -138,7 +138,8 @@ class InsightBriefing:
         critical = self.critical_items
         if critical:
             lines.append("!! CRITICAL !!")
-            for item in critical[:3]:
+            for item in critical[:
+                3]:
                 lines.append(f"  - [{item.source_engine}] {item.title}")
                 if item.suggested_actions:
                     lines.append(f"    Action: {item.suggested_actions[0]}")
@@ -149,7 +150,8 @@ class InsightBriefing:
         remaining = [i for i in self.items if i.id not in shown]
         remaining.sort(key=lambda i: {"high": 0, "medium": 1, "low": 2}.get(i.priority, 3))
 
-        for item in remaining[:max_items - len(critical)]:
+        for item in remaining[:
+            max_items - len(critical)]:
             emoji = {"prediction": "🔮", "improvement": "🔧",
                      "discovery": "💡", "emergence": "✨"}.get(item.category, "📌")
             lines.append(f"{emoji} [{item.priority.upper()}] {item.title}")
@@ -160,7 +162,8 @@ class InsightBriefing:
         if self.constellation_context:
             lines.append("")
             lines.append(f"Active Constellations: {len(self.constellation_context)}")
-            for c in self.constellation_context[:3]:
+            for c in self.constellation_context[:
+                3]:
                 lines.append(f"  - {c.get('name', '?')} ({c.get('size', 0)} members, "
                            f"zone: {c.get('zone', '?')})")
 
@@ -263,7 +266,8 @@ class InsightPipeline:
         duration = (time.perf_counter() - start) * 1000
 
         # Add drift alerts as briefing items
-        for drift in drift_7d[:3]:
+        for drift in drift_7d[:
+            3]:
             if drift["drift_magnitude"] > 0.1:
                 items.append(BriefingItem(
                     id=f"drift_{drift['name'][:20]}",
@@ -336,7 +340,8 @@ class InsightPipeline:
             report = engine.predict()
 
             items = []
-            for pred in report.predictions[:15]:
+            for pred in report.predictions[:
+                15]:
                 priority = self._confidence_to_priority(
                     pred.confidence.value if hasattr(pred.confidence, 'value') else str(pred.confidence),
                     pred.impact_score,
@@ -370,7 +375,8 @@ class InsightPipeline:
             report = engine.analyze()
 
             items = []
-            for proposal in report.proposals[:15]:
+            for proposal in report.proposals[:
+                15]:
                 priority = self._effort_impact_to_priority(proposal.impact, proposal.effort)
                 items.append(BriefingItem(
                     id=f"kaizen_{proposal.id}",
@@ -526,7 +532,8 @@ class InsightPipeline:
             title = f"Intelligence Briefing #{self._briefing_count} ({briefing.timestamp[:10]})"
 
             top_items_text = []
-            for item in briefing.items[:8]:
+            for item in briefing.items[:
+                8]:
                 top_items_text.append(
                     f"[{item.priority.upper()}] ({item.source_engine}) {item.title}: {item.description[:120]}"
                 )
@@ -585,7 +592,7 @@ _pipeline: InsightPipeline | None = None
 def get_insight_pipeline() -> InsightPipeline:
     """
     Get the insight pipeline.
-    
+
     Returns:
         InsightPipeline
     """

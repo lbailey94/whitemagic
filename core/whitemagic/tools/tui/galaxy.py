@@ -49,7 +49,7 @@ class GalaxyExplorer:
     def get_layout(self) -> Layout:
         """
         Get the layout.
-        
+
         Returns:
             Layout
         """
@@ -63,7 +63,7 @@ class GalaxyExplorer:
     def render_details(self) -> Panel:
         """
         Render details.
-        
+
         Returns:
             Panel
         """

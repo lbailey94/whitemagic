@@ -255,7 +255,7 @@ class HolographicPatternEngine:
 def get_pattern_engine() -> HolographicPatternEngine:
     """
     Get the pattern engine.
-    
+
     Returns:
         HolographicPatternEngine
     """

@@ -4,9 +4,9 @@ from enum import Enum
 
 class DreamPhase(Enum):
     """DreamPhase: dream phase.
-    
+
     Enumeration.
-    
+
     Members:
         TRIAGE
         CONSOLIDATION

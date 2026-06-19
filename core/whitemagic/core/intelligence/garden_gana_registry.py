@@ -19,9 +19,9 @@ from typing import Any
 
 class Element(Enum):
     """Element: element.
-    
+
     Enumeration.
-    
+
     Members:
         FIRE
         EARTH
@@ -36,9 +36,9 @@ class Element(Enum):
 
 class Quadrant(Enum):
     """Quadrant: quadrant.
-    
+
     Enumeration.
-    
+
     Members:
         EASTERN
         SOUTHERN

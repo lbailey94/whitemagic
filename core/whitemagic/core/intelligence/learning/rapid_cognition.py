@@ -34,7 +34,7 @@ class RapidCognition:
     def start_continuous_learning(self) -> Any:
         """
         Perform the start continuous learning operation.
-        
+
         Returns:
             Any
         """
@@ -60,7 +60,7 @@ class RapidCognition:
     def get_stats(self) -> dict:
         """
         Get the stats.
-        
+
         Returns:
             dict
         """
@@ -76,7 +76,7 @@ _instance = None
 def get_rapid_learner() -> RapidCognition:
     """
     Get the rapid learner.
-    
+
     Returns:
         RapidCognition
     """
@@ -88,10 +88,10 @@ def get_rapid_learner() -> RapidCognition:
 def start_rapid_learning(interval_seconds: int = 5) -> Any:
     """
     Perform the start rapid learning operation.
-    
+
     Args:
         interval_seconds: Parameter description.
-    
+
     Returns:
         Any
     """

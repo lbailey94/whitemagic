@@ -61,7 +61,7 @@ except ImportError:
 @dataclass
 class HolographicCoordinate:
     """HolographicCoordinate: holographic coordinate.
-    
+
     Value object: equality and repr are field-based."""
     x: float  # Logic <-> Emotion
     y: float  # Micro <-> Macro
@@ -72,7 +72,7 @@ class HolographicCoordinate:
     def to_vector(self) -> list[float]:
         """
         Convert to/from vector.
-        
+
         Returns:
             list[float]
         """
@@ -85,7 +85,7 @@ class HolographicCoordinate:
     def to_dict(self) -> dict[str, float]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, float]
         """
@@ -205,7 +205,7 @@ class CoordinateEncoder:
         def dot_product(v1: list[float], v2: list[float]) -> float:
             """
             Perform the dot product operation.
-            
+
             Args:
                 v1: Parameter description.
                 v2: Parameter description.
@@ -215,7 +215,7 @@ class CoordinateEncoder:
         def vec_norm(v1: list[float]) -> float:
             """
             Perform the vec norm operation.
-            
+
             Args:
                 v1: Parameter description.
             """
@@ -224,7 +224,7 @@ class CoordinateEncoder:
         def vec_sub(v1: list[float], v2: list[float]) -> list[float]:
             """
             Perform the vec sub operation.
-            
+
             Args:
                 v1: Parameter description.
                 v2: Parameter description.
@@ -805,10 +805,10 @@ class CoordinateEncoder:
 def encode_memory(memory_obj: Any) -> Any:
     """
     Perform the encode memory operation.
-    
+
     Args:
         memory_obj: Parameter description.
-    
+
     Returns:
         Any
     """

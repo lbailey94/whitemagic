@@ -158,7 +158,7 @@ _forge = None
 def get_skill_forge() -> SkillForge:
     """
     Get the skill forge.
-    
+
     Returns:
         SkillForge
     """

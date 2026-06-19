@@ -47,7 +47,7 @@ class AnomalyAlert:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -239,7 +239,7 @@ _det_lock = threading.Lock()
 def get_anomaly_detector() -> AnomalyDetector:
     """
     Get the anomaly detector.
-    
+
     Returns:
         AnomalyDetector
     """

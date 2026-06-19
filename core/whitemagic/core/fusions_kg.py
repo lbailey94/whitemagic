@@ -43,7 +43,8 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
         related = set()
         for rel_list in relations.values():
             if isinstance(rel_list, list):
-                for item in rel_list[:10]:
+                for item in rel_list[:
+                    10]:
                     if isinstance(item, dict):
                         related.add(item.get("target", item.get("obj", "")))
                     elif isinstance(item, str):

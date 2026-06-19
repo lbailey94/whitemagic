@@ -17,13 +17,14 @@ This module provides tools to:
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT, get_external_app_data_paths
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,7 +51,7 @@ class Conversation:
     def message_count(self) -> int:
         """
         Perform the message count operation.
-        
+
         Returns:
             int
         """
@@ -81,7 +82,7 @@ class Conversation:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -186,11 +187,14 @@ class WindsurfConversationReader:
                 field_num = tag >> 3
                 wire_type = tag & 0x7
 
-                if wire_type == 0:  # Varint
+                if wire_type == 0:
+                    # Varint
                     _, pos = self._read_varint(data, pos)
-                elif wire_type == 1:  # 64-bit
+                elif wire_type == 1:
+                    # 64-bit
                     pos += 8
-                elif wire_type == 2:  # Length-delimited (string/bytes/embedded)
+                elif wire_type == 2:
+                    # Length-delimited (string/bytes/embedded)
                     length, pos = self._read_varint(data, pos)
                     content = data[pos:pos + length]
                     pos += length
@@ -206,7 +210,8 @@ class WindsurfConversationReader:
                             })
                     except UnicodeDecodeError:
                         pass
-                elif wire_type == 5:  # 32-bit
+                elif wire_type == 5:
+                    # 32-bit
                     pos += 4
                 else:
                     break

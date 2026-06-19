@@ -30,13 +30,13 @@ def get_archaeologist() -> 'ChariotArchaeologist':
 def mark_read(path: str, context: str | None = None, note: str | None = None, insight: str | None = None) -> dict[str, Any]:
     """
     Mark the read state.
-    
+
     Args:
         path: Parameter description.
         context: Parameter description.
         note: Parameter description.
         insight: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -45,12 +45,12 @@ def mark_read(path: str, context: str | None = None, note: str | None = None, in
 def mark_written(path: str, context: str | None = None, note: str | None = None) -> dict[str, Any]:
     """
     Mark the written state.
-    
+
     Args:
         path: Parameter description.
         context: Parameter description.
         note: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -59,10 +59,10 @@ def mark_written(path: str, context: str | None = None, note: str | None = None)
 def have_read(path: str) -> bool:
     """
     Check whether the read has occurred.
-    
+
     Args:
         path: Parameter description.
-    
+
     Returns:
         bool
     """
@@ -71,11 +71,11 @@ def have_read(path: str) -> bool:
 def find_unread(directory: str = ".", patterns: list[str] | None = None) -> list[Any]:
     """
     Find unread matching the criteria.
-    
+
     Args:
         directory: Parameter description.
         patterns: Parameter description.
-    
+
     Returns:
         list[Any]
     """
@@ -84,10 +84,10 @@ def find_unread(directory: str = ".", patterns: list[str] | None = None) -> list
 def stats(scan_disk: bool = False) -> dict[str, Any]:
     """
     Perform the stats operation.
-    
+
     Args:
         scan_disk: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -102,11 +102,11 @@ class WisdomExtractor:
     def extract_wisdom(self, content: str, source: str) -> dict[str, Any]:
         """
         Mine or extract wisdom.
-        
+
         Args:
             content: Parameter description.
             source: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -118,7 +118,7 @@ class WisdomExtractor:
 def get_wisdom_extractor() -> WisdomExtractor:
     """
     Get the wisdom extractor.
-    
+
     Returns:
         WisdomExtractor
     """
@@ -197,7 +197,7 @@ def create_daily_wisdom_digest() -> str:
 def wisdom_report() -> str:
     """
     Perform the wisdom report operation.
-    
+
     Returns:
         str
     """

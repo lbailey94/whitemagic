@@ -28,7 +28,7 @@ class ZodiacSign(Enum):
     def name_str(self) -> str:
         """
         Perform the name str operation.
-        
+
         Returns:
             str
         """
@@ -38,7 +38,7 @@ class ZodiacSign(Enum):
     def symbol(self) -> str:
         """
         Perform the symbol operation.
-        
+
         Returns:
             str
         """
@@ -48,7 +48,7 @@ class ZodiacSign(Enum):
     def modality(self) -> str:
         """
         Perform the modality operation.
-        
+
         Returns:
             str
         """
@@ -58,7 +58,7 @@ class ZodiacSign(Enum):
     def element(self) -> str:
         """
         Perform the element operation.
-        
+
         Returns:
             str
         """
@@ -68,7 +68,7 @@ class ZodiacSign(Enum):
     def number(self) -> int:
         """
         Perform the number operation.
-        
+
         Returns:
             int
         """

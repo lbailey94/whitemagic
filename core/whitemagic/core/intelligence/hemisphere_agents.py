@@ -35,7 +35,7 @@ class HemisphereAgent:
     def start_listening(self) -> None:
         """
         Perform the start listening operation.
-        
+
         Returns:
             None
         """
@@ -77,10 +77,10 @@ class LeftHemisphereAgent(HemisphereAgent):
     def propose(self, topic: str) -> str:
         """
         Perform the propose operation.
-        
+
         Args:
             topic: Parameter description.
-        
+
         Returns:
             str
         """
@@ -92,10 +92,10 @@ class LeftHemisphereAgent(HemisphereAgent):
     def critique(self, position: str) -> str:
         """
         Perform the critique operation.
-        
+
         Args:
             position: Parameter description.
-        
+
         Returns:
             str
         """
@@ -114,10 +114,10 @@ class RightHemisphereAgent(HemisphereAgent):
     def propose(self, topic: str) -> str:
         """
         Perform the propose operation.
-        
+
         Args:
             topic: Parameter description.
-        
+
         Returns:
             str
         """
@@ -129,10 +129,10 @@ class RightHemisphereAgent(HemisphereAgent):
     def critique(self, position: str) -> str:
         """
         Perform the critique operation.
-        
+
         Args:
             position: Parameter description.
-        
+
         Returns:
             str
         """

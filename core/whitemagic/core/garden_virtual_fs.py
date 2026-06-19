@@ -181,10 +181,10 @@ class GardenVirtualFS:
         def collect_files(node: VirtualNode) -> None:
             """
             Perform the collect files operation.
-            
+
             Args:
                 node: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -212,10 +212,10 @@ class GardenVirtualFS:
             def search_node(node: VirtualNode) -> None:
                 """
                 Find node matching the criteria.
-                
+
                 Args:
                     node: Parameter description.
-                
+
                 Returns:
                     None
                 """
@@ -266,10 +266,10 @@ class GardenVirtualFS:
         def node_to_dict(node: VirtualNode) -> dict[str, Any]:
             """
             Perform the node to dict operation.
-            
+
             Args:
                 node: Parameter description.
-            
+
             Returns:
                 dict[str, Any]
             """

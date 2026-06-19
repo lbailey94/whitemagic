@@ -3,10 +3,11 @@
 Manage the 26 consciousness domains.
 """
 
+import logging
 from typing import Any
 
 import click
-import logging
+
 logger = logging.getLogger(__name__)
 
 

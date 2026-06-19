@@ -274,7 +274,7 @@ class ContextOptimizer:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -295,7 +295,7 @@ _opt_lock = threading.Lock()
 def get_context_optimizer() -> ContextOptimizer:
     """
     Get the context optimizer.
-    
+
     Returns:
         ContextOptimizer
     """

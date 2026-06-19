@@ -5,7 +5,7 @@ from typing import Any, cast
 def handle_record_yin_yang_activity(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a record yin yang activity event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -26,7 +26,7 @@ def handle_record_yin_yang_activity(**kwargs: Any) -> dict[str, Any]:
 def handle_get_yin_yang_balance(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get yin yang balance event.
-    
+
     Returns:
         dict[str, Any]
     """

@@ -59,7 +59,7 @@ _dharma: DharmaConstraints | None = None
 def get_dharma_bridge() -> DharmaConstraints:
     """
     Get the dharma bridge.
-    
+
     Returns:
         DharmaConstraints
     """

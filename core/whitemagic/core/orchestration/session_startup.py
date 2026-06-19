@@ -98,7 +98,7 @@ class SessionStartupOrchestrator:
         def start_rust_bridge() -> None:
             """
             Perform the start rust bridge operation.
-            
+
             Returns:
                 None
             """
@@ -138,7 +138,7 @@ class SessionStartupOrchestrator:
         def start_gan_ying() -> None:
             """
             Perform the start gan ying operation.
-            
+
             Returns:
                 None
             """
@@ -152,7 +152,7 @@ class SessionStartupOrchestrator:
         def start_dharma() -> None:
             """
             Perform the start dharma operation.
-            
+
             Returns:
                 None
             """
@@ -164,7 +164,7 @@ class SessionStartupOrchestrator:
         def start_zodiac() -> None:
             """
             Perform the start zodiac operation.
-            
+
             Returns:
                 None
             """
@@ -178,7 +178,7 @@ class SessionStartupOrchestrator:
         def start_garden_resonance() -> None:
             """
             Perform the start garden resonance operation.
-            
+
             Returns:
                 None
             """
@@ -190,7 +190,7 @@ class SessionStartupOrchestrator:
         def start_adapters() -> None:
             """
             Perform the start adapters operation.
-            
+
             Returns:
                 None
             """
@@ -202,7 +202,7 @@ class SessionStartupOrchestrator:
         def start_redis_bridge() -> None:
             """
             Perform the start redis bridge operation.
-            
+
             Returns:
                 None
             """
@@ -226,7 +226,7 @@ class SessionStartupOrchestrator:
         def start_neural_gy() -> None:
             """
             Perform the start neural gy operation.
-            
+
             Returns:
                 None
             """
@@ -240,7 +240,7 @@ class SessionStartupOrchestrator:
         def start_decay() -> None:
             """
             Perform the start decay operation.
-            
+
             Returns:
                 None
             """
@@ -252,7 +252,7 @@ class SessionStartupOrchestrator:
         def start_embedding() -> None:
             """
             Perform the start embedding operation.
-            
+
             Returns:
                 None
             """
@@ -266,7 +266,7 @@ class SessionStartupOrchestrator:
         def start_predictive_cache() -> None:
             """
             Perform the start predictive cache operation.
-            
+
             Returns:
                 None
             """
@@ -289,7 +289,7 @@ class SessionStartupOrchestrator:
             def start_local_ml() -> None:
                 """
                 Perform the start local ml operation.
-                
+
                 Returns:
                     None
                 """
@@ -305,7 +305,7 @@ class SessionStartupOrchestrator:
         def start_hologram() -> None:
             """
             Perform the start hologram operation.
-            
+
             Returns:
                 None
             """
@@ -322,7 +322,7 @@ class SessionStartupOrchestrator:
         def start_emergence() -> None:
             """
             Perform the start emergence operation.
-            
+
             Returns:
                 None
             """
@@ -337,7 +337,7 @@ class SessionStartupOrchestrator:
         def start_feedback() -> None:
             """
             Perform the start feedback operation.
-            
+
             Returns:
                 None
             """
@@ -354,7 +354,7 @@ class SessionStartupOrchestrator:
     def start_pattern_gy(self) -> None:
         """
         Perform the start pattern gy operation.
-        
+
         Returns:
             None
         """
@@ -369,7 +369,7 @@ class SessionStartupOrchestrator:
     def start_cognition(self) -> None:
         """
         Perform the start cognition operation.
-        
+
         Returns:
             None
         """
@@ -393,17 +393,17 @@ class SessionStartupOrchestrator:
                 def make_activator(g: str) -> Callable[[], None]:
                     """
                     Create a new activator.
-                    
+
                     Args:
                         g: Parameter description.
-                    
+
                     Returns:
                         Callable[[], None]
                     """
                     def activate() -> None:
                         """
                         Perform the activate operation.
-                        
+
                         Returns:
                             None
                         """
@@ -433,7 +433,7 @@ class SessionStartupOrchestrator:
     def start_system_monitor(self) -> None:
         """
         Perform the start system monitor operation.
-        
+
         Returns:
             None
         """
@@ -443,7 +443,7 @@ class SessionStartupOrchestrator:
     def start_awareness(self) -> None:
         """
         Perform the start awareness operation.
-        
+
         Returns:
             None
         """
@@ -460,7 +460,7 @@ class SessionStartupOrchestrator:
     def start_dashboard(self) -> None:
         """
         Perform the start dashboard operation.
-        
+
         Returns:
             None
         """
@@ -493,7 +493,7 @@ class SessionStartupOrchestrator:
         def init_temporal() -> None:
             """
             Initialize the temporal.
-            
+
             Returns:
                 None
             """
@@ -508,7 +508,7 @@ class SessionStartupOrchestrator:
         def sync_user_profile() -> None:
             """
             Perform the sync user profile operation.
-            
+
             Returns:
                 None
             """
@@ -536,7 +536,7 @@ class SessionStartupOrchestrator:
     def load_resume_context(self) -> None:
         """
         Load resume context from storage.
-        
+
         Returns:
             None
         """
@@ -549,7 +549,7 @@ class SessionStartupOrchestrator:
     def init_circuit_breaker(self) -> None:
         """
         Initialize the circuit breaker.
-        
+
         Returns:
             None
         """
@@ -561,7 +561,7 @@ class SessionStartupOrchestrator:
     def init_coherence(self) -> None:
         """
         Initialize the coherence.
-        
+
         Returns:
             None
         """
@@ -575,7 +575,7 @@ class SessionStartupOrchestrator:
     def check_handoff(self) -> None:
         """
         Perform the check handoff operation.
-        
+
         Returns:
             None
         """
@@ -594,7 +594,7 @@ class SessionStartupOrchestrator:
         def init_harmony_vector() -> None:
             """
             Initialize the harmony vector.
-            
+
             Returns:
                 None
             """
@@ -608,7 +608,7 @@ class SessionStartupOrchestrator:
         def init_dharma_rules() -> None:
             """
             Initialize the dharma rules.
-            
+
             Returns:
                 None
             """
@@ -621,7 +621,7 @@ class SessionStartupOrchestrator:
         def init_karma_ledger() -> None:
             """
             Initialize the karma ledger.
-            
+
             Returns:
                 None
             """
@@ -634,7 +634,7 @@ class SessionStartupOrchestrator:
         def init_temporal_scheduler() -> None:
             """
             Initialize the temporal scheduler.
-            
+
             Returns:
                 None
             """
@@ -650,7 +650,7 @@ class SessionStartupOrchestrator:
         def init_homeostasis() -> None:
             """
             Initialize the homeostasis.
-            
+
             Returns:
                 None
             """
@@ -664,7 +664,7 @@ class SessionStartupOrchestrator:
         def init_maturity() -> None:
             """
             Initialize the maturity.
-            
+
             Returns:
                 None
             """
@@ -678,7 +678,7 @@ class SessionStartupOrchestrator:
         def init_breaker_registry() -> None:
             """
             Initialize the breaker registry.
-            
+
             Returns:
                 None
             """
@@ -691,7 +691,7 @@ class SessionStartupOrchestrator:
         def start_pulse() -> None:
             """
             Perform the start pulse operation.
-            
+
             Returns:
                 None
             """
@@ -714,7 +714,7 @@ class SessionStartupOrchestrator:
         def activate_swarm() -> None:
             """
             Perform the activate swarm operation.
-            
+
             Returns:
                 None
             """
@@ -773,7 +773,7 @@ class SessionStartupOrchestrator:
                 def run_swarm_breath() -> None:
                     """
                     Run the swarm breath operation.
-                    
+
                     Returns:
                         None
                     """
@@ -806,7 +806,7 @@ class SessionStartupOrchestrator:
         def run_briefing() -> None:
             """
             Run the briefing operation.
-            
+
             Returns:
                 None
             """
@@ -827,7 +827,8 @@ class SessionStartupOrchestrator:
                 logger.info(f"📋 Intelligence Briefing: {total} insights "
                           f"({critical} critical, {high} high priority)")
                 if critical > 0:
-                    for item in briefing.critical_items[:3]:
+                    for item in briefing.critical_items[:
+                        3]:
                         logger.info(f"   ‼️ {item.title}")
 
         results.append(self._safe_activate("Insight Briefing", run_briefing))

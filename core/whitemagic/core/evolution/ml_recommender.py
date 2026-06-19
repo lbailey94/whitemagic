@@ -101,7 +101,8 @@ class ToolRecommender:
             matching_trigrams = {
                 trigram: count
                 for trigram, count in self.trigram_counts.items()
-                if trigram[:2] == trigram_prefix
+                if trigram[:
+                    2] == trigram_prefix
             }
 
             if matching_trigrams:
@@ -194,7 +195,8 @@ class ToolRecommender:
             frequency = pattern.get("frequency", 1)
 
             # Record each sequence multiple times based on frequency
-            for _ in range(min(frequency, 100)):  # Cap to avoid overwhelming
+            for _ in range(min(frequency, 100)):
+                # Cap to avoid overwhelming
                 for tool in sequence:
                     self.record_tool_call(tool)
 

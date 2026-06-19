@@ -90,7 +90,7 @@ _manager: MemoryManager | None = None
 def get_memory_manager() -> MemoryManager:
     """
     Get the memory manager.
-    
+
     Returns:
         MemoryManager
     """

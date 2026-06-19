@@ -66,7 +66,7 @@ class _AsyncBroker:
     async def connect(self) -> None:
         """
         Perform the connect operation.
-        
+
         Returns:
             None
         """
@@ -89,7 +89,7 @@ class _AsyncBroker:
     async def disconnect(self) -> None:
         """
         Perform the disconnect operation.
-        
+
         Returns:
             None
         """
@@ -100,11 +100,11 @@ class _AsyncBroker:
     async def publish(self, channel: str, message: dict[str, Any]) -> str:
         """
         Perform the publish operation.
-        
+
         Args:
             channel: Parameter description.
             message: Parameter description.
-        
+
         Returns:
             str
         """
@@ -127,11 +127,11 @@ class _AsyncBroker:
     async def history(self, channel: str, limit: int = 20) -> list[dict[str, Any]]:
         """
         Perform the history operation.
-        
+
         Args:
             channel: Parameter description.
             limit: Parameter description.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -153,7 +153,7 @@ class _AsyncBroker:
     async def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

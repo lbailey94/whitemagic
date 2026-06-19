@@ -88,7 +88,8 @@ class ToolDiscovery:
         # Track sequential patterns
         if len(self.recent_calls) > 0:
             prev_tool, _ = self.recent_calls[-1]
-            if prev_tool != tool_name:  # Don't track self-loops
+            if prev_tool != tool_name:
+                # Don't track self-loops
                 # This tool follows prev_tool
                 metric.precedes_tools[prev_tool] = metric.precedes_tools.get(prev_tool, 0) + 1
                 # prev_tool is followed by this tool
@@ -230,7 +231,8 @@ class ToolDiscovery:
         for tool_name, metric in self.metrics.items():
             if metric.last_called:
                 time_since = (now - metric.last_called).total_seconds()
-                if time_since > 3600:  # Not called in last hour
+                if time_since > 3600:
+                    # Not called in last hour
                     underutilized.append({
                         "tool": tool_name,
                         "reason": f"Not used in {int(time_since/3600)}h",
@@ -294,11 +296,13 @@ class ToolDiscovery:
             "context_tags": list(metric.context_tags),
             "typically_follows": [
                 {"tool": t, "count": c}
-                for t, c in sorted(metric.precedes_tools.items(), key=lambda x: x[1], reverse=True)[:5]
+                for t, c in sorted(metric.precedes_tools.items(), key=lambda x:
+                    x[1], reverse=True)[:5]
             ],
             "typically_followed_by": [
                 {"tool": t, "count": c}
-                for t, c in sorted(metric.follows_tools.items(), key=lambda x: x[1], reverse=True)[:5]
+                for t, c in sorted(metric.follows_tools.items(), key=lambda x:
+                    x[1], reverse=True)[:5]
             ],
         }
 

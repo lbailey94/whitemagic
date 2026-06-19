@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 
 class LunarMansion(Enum):
     """LunarMansion: lunar mansion.
-    
+
     Enumeration.
-    
+
     Members:
         HORN
         NECK
@@ -96,7 +96,7 @@ class LunarMansion(Enum):
 @dataclass
 class GanaCall:
     """GanaCall: gana call.
-    
+
     Value object: equality and repr are field-based."""
     task: str
     state_vector: dict[str, Any] = field(default_factory=dict)
@@ -105,7 +105,7 @@ class GanaCall:
 @dataclass
 class GanaResult:
     """GanaResult: gana result.
-    
+
     Value object: equality and repr are field-based."""
     mansion: LunarMansion
     output: Any
@@ -123,10 +123,10 @@ class BaseGana:
     async def invoke(self, call: GanaCall) -> GanaResult:
         """
         Perform the invoke operation.
-        
+
         Args:
             call: Parameter description.
-        
+
         Returns:
             GanaResult
         """
@@ -158,11 +158,11 @@ class GanaChain:
     async def execute_chain(self, mansions: list[LunarMansion], task: str) -> list[GanaResult]:
         """
         Run the chain operation.
-        
+
         Args:
             mansions: Parameter description.
             task: Parameter description.
-        
+
         Returns:
             list[GanaResult]
         """
@@ -174,10 +174,10 @@ _registry: dict[LunarMansion, BaseGana] = {}
 def get_gana(mansion: LunarMansion) -> BaseGana:
     """
     Get the gana.
-    
+
     Args:
         mansion: Parameter description.
-    
+
     Returns:
         BaseGana
     """
@@ -188,7 +188,7 @@ def get_gana(mansion: LunarMansion) -> BaseGana:
 def get_chain() -> GanaChain:
     """
     Get the chain.
-    
+
     Returns:
         GanaChain
     """

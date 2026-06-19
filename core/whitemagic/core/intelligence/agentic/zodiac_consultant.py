@@ -62,10 +62,10 @@ class ZodiacConsultant:
     def quick_consult(self, domain: str) -> str:
         """
         Perform the quick consult operation.
-        
+
         Args:
             domain: Parameter description.
-        
+
         Returns:
             str
         """
@@ -78,7 +78,7 @@ _consultant = None
 def get_consultant() -> ZodiacConsultant:
     """
     Get the consultant.
-    
+
     Returns:
         ZodiacConsultant
     """

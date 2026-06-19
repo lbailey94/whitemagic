@@ -10,7 +10,7 @@ def _load_rust() -> tuple[Any, Any]:
 def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a rust audit event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -22,7 +22,8 @@ def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
     files = rust.audit_directory(str(path), pattern, 1000)
     file_summaries = [
         {"path": info.path, "size": info.size, "lines": info.lines, "words": info.words, "summary": info.summary}
-        for info in files[:100]
+        for info in files[:
+            100]
     ]
     return {"status": "success", "files_scanned": len(files), "files": file_summaries}
 
@@ -30,7 +31,7 @@ def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
 def handle_rust_compress(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a rust compress event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -47,7 +48,7 @@ def handle_rust_compress(**kwargs: Any) -> dict[str, Any]:
 def handle_rust_similarity(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a rust similarity event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -68,7 +69,7 @@ def handle_rust_similarity(**kwargs: Any) -> dict[str, Any]:
 def handle_rust_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a rust status event.
-    
+
     Returns:
         dict[str, Any]
     """

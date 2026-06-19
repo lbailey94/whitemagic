@@ -60,7 +60,7 @@ def handle_art_of_war_campaign(**kwargs: Any) -> dict[str, Any]:
 def handle_war_room_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a war room status event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -69,7 +69,7 @@ def handle_war_room_status(**kwargs: Any) -> dict[str, Any]:
 def handle_war_room_plan(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a war room plan event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -78,7 +78,7 @@ def handle_war_room_plan(**kwargs: Any) -> dict[str, Any]:
 def handle_war_room_execute(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a war room execute event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -87,7 +87,7 @@ def handle_war_room_execute(**kwargs: Any) -> dict[str, Any]:
 def handle_war_room_hierarchy(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a war room hierarchy event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -96,7 +96,7 @@ def handle_war_room_hierarchy(**kwargs: Any) -> dict[str, Any]:
 def handle_war_room_campaigns(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a war room campaigns event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -106,7 +106,7 @@ def handle_war_room_campaigns(**kwargs: Any) -> dict[str, Any]:
 def handle_war_room_phase(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a war room phase event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -115,7 +115,7 @@ def handle_war_room_phase(**kwargs: Any) -> dict[str, Any]:
 def handle_doctrine_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a doctrine summary event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -124,7 +124,7 @@ def handle_doctrine_summary(**kwargs: Any) -> dict[str, Any]:
 def handle_doctrine_stratagems(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a doctrine stratagems event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -133,7 +133,7 @@ def handle_doctrine_stratagems(**kwargs: Any) -> dict[str, Any]:
 def handle_doctrine_force(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a doctrine force event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -142,7 +142,7 @@ def handle_doctrine_force(**kwargs: Any) -> dict[str, Any]:
 def handle_fool_guard_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a fool guard status event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -151,7 +151,7 @@ def handle_fool_guard_status(**kwargs: Any) -> dict[str, Any]:
 def handle_fool_guard_dare_to_die(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a fool guard dare to die event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -160,7 +160,7 @@ def handle_fool_guard_dare_to_die(**kwargs: Any) -> dict[str, Any]:
 def handle_fool_guard_ralph(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a fool guard ralph event.
-    
+
     Returns:
         dict[str, Any]
     """

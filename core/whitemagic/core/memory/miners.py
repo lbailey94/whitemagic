@@ -123,11 +123,11 @@ class PatternEngine:
         def to_patterns(type_name: str, descriptions: list[str]) -> list[Pattern]:
             """
             Convert to/from patterns.
-            
+
             Args:
                 type_name: Parameter description.
                 descriptions: Parameter description.
-            
+
             Returns:
                 list[Pattern]
             """
@@ -216,17 +216,20 @@ class PatternEngine:
             f.write("\n")
 
             f.write(f"## ⚠️ Anti-Patterns ({len(report.anti_patterns)})\n\n")
-            for p in report.anti_patterns[:10]:
+            for p in report.anti_patterns[:
+                10]:
                 f.write(f"- **{p.title}** (confidence: {p.confidence:.2f})\n")
             f.write("\n")
 
             f.write(f"## 🎯 Heuristics ({len(report.heuristics)})\n\n")
-            for p in report.heuristics[:10]:
+            for p in report.heuristics[:
+                10]:
                 f.write(f"- **{p.title}** (confidence: {p.confidence:.2f})\n")
             f.write("\n")
 
             f.write(f"## ⚡ Optimizations ({len(report.optimizations)})\n\n")
-            for p in report.optimizations[:10]:
+            for p in report.optimizations[:
+                10]:
                 f.write(f"- **{p.title}** (confidence: {p.confidence:.2f})\n")
             f.write("\n")
 
@@ -312,7 +315,7 @@ class ProposedLink:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -340,7 +343,7 @@ class MiningReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -679,7 +682,8 @@ class AssociationMiner:
 
             edges_created = 0
             for p in proposals:
-                if p.overlap_score < 0.3:  # Only strong links
+                if p.overlap_score < 0.3:
+                    # Only strong links
                     continue
                 # Create a KG edge: source_id --[associated_with]--> target_id
                 kg.add_relation(
@@ -869,7 +873,7 @@ class AssociationMiner:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -957,7 +961,7 @@ class CausalEdge:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -990,7 +994,7 @@ class CausalMiningReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -1345,7 +1349,8 @@ class CausalMiner:
                         break
                     # Use temporal proximity as a stand-in for similarity
                     temporal_sim = self._temporal_proximity(dt_hours)
-                    if temporal_sim >= 0.1:  # At least some proximity
+                    if temporal_sim >= 0.1:
+                        # At least some proximity
                         pairs.append({
                             "source_id": parsed[i]["id"],
                             "target_id": parsed[j]["id"],
@@ -1368,7 +1373,7 @@ class CausalMiner:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

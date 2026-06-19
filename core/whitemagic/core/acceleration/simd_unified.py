@@ -337,7 +337,7 @@ def simd_status() -> dict[str, Any]:
 def simd_cosine_status() -> dict[str, Any]:
     """
     Perform the simd cosine status operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -346,7 +346,7 @@ def simd_cosine_status() -> dict[str, Any]:
 def simd_distance_status() -> dict[str, Any]:
     """
     Perform the simd distance status operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -355,7 +355,7 @@ def simd_distance_status() -> dict[str, Any]:
 def simd_holographic_status() -> dict[str, Any]:
     """
     Perform the simd holographic status operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -364,7 +364,7 @@ def simd_holographic_status() -> dict[str, Any]:
 def simd_constellation_status() -> dict[str, Any]:
     """
     Perform the simd constellation status operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -373,7 +373,7 @@ def simd_constellation_status() -> dict[str, Any]:
 def simd_keywords_status() -> dict[str, Any]:
     """
     Perform the simd keywords status operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -382,7 +382,7 @@ def simd_keywords_status() -> dict[str, Any]:
 def simd_vector_batch_status() -> dict[str, Any]:
     """
     Perform the simd vector batch status operation.
-    
+
     Returns:
         dict[str, Any]
     """

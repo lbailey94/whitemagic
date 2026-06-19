@@ -70,7 +70,7 @@ def listen_for(event_type):
     def decorator(callback):
         """
         Perform the decorator operation.
-        
+
         Args:
             callback: Parameter description.
         """

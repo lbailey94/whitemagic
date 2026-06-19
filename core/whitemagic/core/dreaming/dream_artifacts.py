@@ -21,7 +21,7 @@ import re
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +52,7 @@ class DreamArtifact:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -76,11 +76,11 @@ class DreamArtifact:
     def from_dict(cls, data: dict[str, Any]) -> DreamArtifact:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             DreamArtifact
         """

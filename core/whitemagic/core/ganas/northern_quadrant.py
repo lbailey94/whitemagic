@@ -5,10 +5,11 @@ Implementations for Lunar Mansions 22-28 (Winter/North).
 Theme: Resilience, Memory, Closure, Governance.
 """
 
+import logging
 from typing import Any
 
 from .base import BaseGana, GanaCall, LunarMansion
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,7 +84,8 @@ Authority comes from knowing the source.
                     "predictions": [
                         {"title": p.title, "confidence": p.confidence.value if hasattr(p.confidence, 'value') else str(p.confidence),
                          "impact": p.impact_score, "horizon": p.time_horizon}
-                        for p in report.predictions[:10]
+                        for p in report.predictions[:
+                            10]
                     ],
                     "velocity": report.velocity_metrics,
                     "gaps": report.knowledge_gaps[:5],

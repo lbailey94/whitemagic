@@ -32,13 +32,13 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ActionLevel(str, Enum):
+class ActionLevel(StrEnum):
     """Graduated response levels."""
 
     OBSERVE = "observe"     # Just note it
@@ -61,7 +61,7 @@ class HomeostaticAction:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -429,7 +429,7 @@ class HomeostaticLoop:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -449,7 +449,7 @@ class HomeostaticLoop:
     def is_running(self) -> bool:
         """
         Check whether the running condition holds.
-        
+
         Returns:
             bool
         """

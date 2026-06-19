@@ -283,7 +283,8 @@ class RustInspiredPipeline:
             result = initial
             start_idx = 0
 
-        for item in collected[start_idx:]:
+        for item in collected[start_idx:
+            ]:
             result = func(result, item)
 
         return result

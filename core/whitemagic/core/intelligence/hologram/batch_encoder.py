@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HolographicCoord:
     """HolographicCoord: holographic coord.
-    
+
     Value object: equality and repr are field-based."""
     x: float
     y: float
@@ -32,7 +32,7 @@ class HolographicCoord:
     def to_dict(self) -> dict[str, float]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, float]
         """

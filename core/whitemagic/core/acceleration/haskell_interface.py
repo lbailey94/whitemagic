@@ -41,7 +41,7 @@ class HaskellBridge:
     def available(self) -> bool:
         """
         Perform the available operation.
-        
+
         Returns:
             bool
         """
@@ -82,7 +82,7 @@ class HaskellBridge:
     def check_availability(self) -> bool:
         """
         Perform the check availability operation.
-        
+
         Returns:
             bool
         """

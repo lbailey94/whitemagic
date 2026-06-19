@@ -11,7 +11,7 @@ from .zodiac_round_cycle import CyclePhase, ZodiacalRound, get_zodiacal_round
 def get_zodiac_council() -> Any:
     """
     Get the zodiac council.
-    
+
     Returns:
         Any
     """

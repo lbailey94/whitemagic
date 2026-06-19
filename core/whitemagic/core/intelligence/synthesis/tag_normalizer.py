@@ -136,7 +136,8 @@ class TagNormalizer:
         # Python Fallback
         similar_pairs = []
         for i, tag1 in enumerate(tags):
-            for tag2 in tags[i+1:]:
+            for tag2 in tags[i+1:
+                ]:
                 similarity = self._levenshtein_similarity(tag1, tag2)
                 if similarity >= threshold and tag1 != tag2:
                     similar_pairs.append((tag1, tag2, similarity))
@@ -250,7 +251,7 @@ _tag_normalizer = None
 def get_tag_normalizer() -> TagNormalizer:
     """
     Get the tag normalizer.
-    
+
     Returns:
         TagNormalizer
     """

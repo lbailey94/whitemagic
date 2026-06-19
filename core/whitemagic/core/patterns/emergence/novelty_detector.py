@@ -140,7 +140,7 @@ _scorer: EmergenceScorer | None = None
 def get_novelty_detector() -> NoveltyDetector:
     """
     Get the novelty detector.
-    
+
     Returns:
         NoveltyDetector
     """
@@ -153,7 +153,7 @@ def get_novelty_detector() -> NoveltyDetector:
 def get_emergence_scorer() -> EmergenceScorer:
     """
     Get the emergence scorer.
-    
+
     Returns:
         EmergenceScorer
     """

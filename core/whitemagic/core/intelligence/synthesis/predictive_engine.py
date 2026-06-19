@@ -75,7 +75,7 @@ class PredictiveReport:
     def high_confidence_predictions(self) -> list[Prediction]:
         """
         Perform the high confidence predictions operation.
-        
+
         Returns:
             list[Prediction]
         """
@@ -85,7 +85,7 @@ class PredictiveReport:
     def by_type(self) -> dict[PredictionType, list[Prediction]]:
         """
         Perform the by type operation.
-        
+
         Returns:
             dict[PredictionType, list[Prediction]]
         """
@@ -100,7 +100,7 @@ class PredictiveReport:
     def by_horizon(self) -> dict[str, list[Prediction]]:
         """
         Perform the by horizon operation.
-        
+
         Returns:
             dict[str, list[Prediction]]
         """
@@ -433,7 +433,8 @@ class PredictiveEngine:
                 evidence=[],
                 suggested_actions=[
                     f"Consider integrating '{p['tag1']}' + '{p['tag2']}' (appears {p['co_count']}x together)"
-                    for p in strong_pairs[:3]
+                    for p in strong_pairs[:
+                        3]
                 ],
                 impact_score=0.65,
                 metadata={"pairs": strong_pairs[:10]},
@@ -690,7 +691,8 @@ class PredictiveEngine:
                 evidence=[],
                 suggested_actions=[
                     f"Create more memories about '{s.dominant_tags[0]}'" if s.dominant_tags else f"Enrich constellation '{s.name}'"
-                    for s in small[:3]
+                    for s in small[:
+                        3]
                 ],
                 impact_score=0.6,
                 metadata={"small_constellations": [s.name for s in small]},
@@ -716,7 +718,8 @@ class PredictiveEngine:
                 evidence=[b["source_id"] for b in bridges[:5]],
                 suggested_actions=[
                     f"Strengthen bridge between '{p[0]}' and '{p[1]}'"
-                    for p in list(linked_pairs)[:3]
+                    for p in list(linked_pairs)[:
+                        3]
                 ],
                 impact_score=0.8,
                 metadata={"bridges": bridges[:5]},
@@ -747,7 +750,8 @@ class PredictiveEngine:
                 evidence=[o.get("id", "") for o in orphans[:5]],
                 suggested_actions=[
                     f"Connect '{o.get('title', 'Untitled')[:40]}' (gravity={o.get('gravity', 0):.2f})"
-                    for o in orphans[:3]
+                    for o in orphans[:
+                        3]
                 ],
                 impact_score=0.75,
                 metadata={"orphan_count": len(orphans)},
@@ -921,7 +925,8 @@ class PredictiveEngine:
         for name, condition, params in gap_queries:
             cur.execute("SELECT COUNT(*) FROM holographic_coords WHERE " + condition, params)
             count = cur.fetchone()[0]
-            if count < 3:  # Sparse region
+            if count < 3:
+                # Sparse region
                 gaps.append({
                     "name": name,
                     "condition": condition,
@@ -961,7 +966,7 @@ _predictive_engine: PredictiveEngine | None = None
 def get_predictive_engine() -> PredictiveEngine:
     """
     Get the predictive engine.
-    
+
     Returns:
         PredictiveEngine
     """

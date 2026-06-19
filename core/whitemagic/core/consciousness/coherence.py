@@ -217,7 +217,7 @@ _smarana: SmaranaPractice | None = None
 def get_coherence_metric() -> CoherenceMetric:
     """
     Get the coherence metric.
-    
+
     Returns:
         CoherenceMetric
     """
@@ -229,7 +229,7 @@ def get_coherence_metric() -> CoherenceMetric:
 def get_smarana_practice() -> SmaranaPractice:
     """
     Get the smarana practice.
-    
+
     Returns:
         SmaranaPractice
     """

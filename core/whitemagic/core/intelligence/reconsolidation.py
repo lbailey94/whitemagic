@@ -55,7 +55,7 @@ class LabileMemory:
     def age_seconds(self) -> float:
         """
         Perform the age seconds operation.
-        
+
         Returns:
             float
         """

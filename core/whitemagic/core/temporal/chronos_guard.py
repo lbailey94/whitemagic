@@ -116,7 +116,7 @@ _chronos = None
 def get_chronos_guard() -> ChronosGuard:
     """
     Get the chronos guard.
-    
+
     Returns:
         ChronosGuard
     """

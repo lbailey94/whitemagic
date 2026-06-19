@@ -213,7 +213,7 @@ class SimplePlugin(PluginBase):
         # Priority: instance attributes > class attributes > defaults
         """
         Perform the info operation.
-        
+
         Returns:
             PluginInfo
         """
@@ -243,10 +243,10 @@ def plugin(name: str, version: str = "1.0.0", description: str = "", author: str
     def decorator(cls: type[_PluginT]) -> type[_PluginT]:
         """
         Perform the decorator operation.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             type[_PluginT]
         """

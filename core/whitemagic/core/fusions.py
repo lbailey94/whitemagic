@@ -60,7 +60,8 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
         related = set()
         for rel_list in relations.values():
             if isinstance(rel_list, list):
-                for item in rel_list[:10]:
+                for item in rel_list[:
+                    10]:
                     if isinstance(item, dict):
                         related.add(item.get("target", item.get("obj", "")))
                     elif isinstance(item, str):
@@ -68,7 +69,8 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
 
         suggested_ganas = {}
         for entity in related:
-            if not isinstance(entity, str): continue
+            if not isinstance(entity, str):
+                continue
             entity_lower = entity.lower().replace(" ", "_").replace(".", "_")
             if entity_lower in TOOL_TO_GANA:
                 gana = TOOL_TO_GANA[entity_lower]
@@ -104,8 +106,10 @@ def modulate_drive_from_resonance(gana_name: str, tool_name: str | None = None) 
         delta = base_delta * mood_amplifier
 
         event_payload = {"tool": tool_name or gana_name, "drive_target": drive_name, "delta": delta, "source": "prat_resonance_fusion"}
-        if hasattr(drive, "process_event"): drive.process_event(event_type, event_payload)
-        else: drive.on_event(event_type.lower(), event_payload)
+        if hasattr(drive, "process_event"):
+            drive.process_event(event_type, event_payload)
+        else :
+            drive.on_event(event_type.lower(), event_payload)
 
         return {"drive_modulated": drive_name, "delta": round(delta, 4), "quadrant": quadrant, "mood_amplifier": mood_amplifier}
     except Exception as e:
@@ -118,7 +122,8 @@ def check_proactive_dream() -> dict[str, Any]:
         from whitemagic.core.intelligence.self_model import get_self_model
         model = get_self_model()
         forecast = model.forecast("energy")
-        if forecast is None: return {"triggered": False, "reason": "insufficient energy data"}
+        if forecast is None:
+            return {"triggered": False, "reason": "insufficient energy data"}
 
         should_dream = (forecast.trend == "falling" and forecast.alert is not None and forecast.threshold_eta is not None and forecast.threshold_eta <= 15)
         if should_dream:
@@ -151,7 +156,8 @@ def mesh_memory_sync(memory_id: str | None = None, operation: str = "status", pa
             mesh.record_event({"type": "MEMORY_SYNC", "sub_type": "announce", "memory_id": memory_id, "timestamp": time.time()})
             return {"operation": "announce", "memory_id": memory_id, "peer_count": peer_count, "broadcast_queued": True}
         return {"operation": operation, "error": "invalid op or missing memory_id"}
-    except Exception as e: return {"error": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def _get_dominant_element() -> tuple:
@@ -177,7 +183,8 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
         boosted = (_ELEMENT_TO_QUADRANT.get(dominant_element) == quadrant)
         boost_factor = 1.0 + (element_energy * 0.5) if boosted else 1.0
         return {"gana": gana_name, "quadrant": quadrant, "boosted": boosted, "boost_factor": round(boost_factor, 3)}
-    except Exception as e: return {"boost_factor": 1.0, "error": str(e)}
+    except Exception as e:
+        return {"boost_factor": 1.0, "error": str(e)}
 
 logger = logging.getLogger(__name__)
 
@@ -459,7 +466,8 @@ def dream_bicameral_serendipity(memories: list) -> dict[str, Any]:
             for j in range(i + 1, len(items)):
                 a, b = items[i], items[j]
                 shared = a["keywords"] & b["keywords"] - {"", "the", "and", "of", "a", "in", "to"}
-                if 1 <= len(shared) <= 3:  # Sweet spot: some overlap but not too much
+                if 1 <= len(shared) <= 3:
+                    # Sweet spot: some overlap but not too much
                     connections.append({
                         "memory_a": a["id"],
                         "memory_b": b["id"],
@@ -532,7 +540,8 @@ def constellation_garden_activate(constellations: list) -> dict[str, Any]:
         }
 
         activations = []
-        for const in constellations[:5]:
+        for const in constellations[:
+            5]:
             tags = const.get("dominant_tags", [])
             matched_gardens = set()
             for tag in tags:
@@ -1026,7 +1035,8 @@ def pattern_dream_surface(dream_batch: list | None = None) -> dict[str, Any]:
         engine = PatternEngine()
         patterns = []
 
-        for mem in dream_batch[:20]:
+        for mem in dream_batch[:
+            20]:
             try:
                 mined = engine.mine(str(mem.get("content", "")))
                 if mined:

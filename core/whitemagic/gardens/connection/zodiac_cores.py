@@ -134,10 +134,10 @@ class AriesCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -158,10 +158,10 @@ class LeoCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -176,10 +176,10 @@ class LeoCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -200,10 +200,10 @@ class SagittariusCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -218,10 +218,10 @@ class SagittariusCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -244,10 +244,10 @@ class TaurusCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -262,10 +262,10 @@ class TaurusCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -286,10 +286,10 @@ class VirgoCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -304,10 +304,10 @@ class VirgoCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -328,10 +328,10 @@ class CapricornCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -346,10 +346,10 @@ class CapricornCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -372,10 +372,10 @@ class GeminiCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -390,10 +390,10 @@ class GeminiCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -414,10 +414,10 @@ class LibraCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -432,10 +432,10 @@ class LibraCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -456,10 +456,10 @@ class AquariusCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -474,10 +474,10 @@ class AquariusCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -500,10 +500,10 @@ class CancerCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -518,10 +518,10 @@ class CancerCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -542,10 +542,10 @@ class ScorpioCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -560,10 +560,10 @@ class ScorpioCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -584,10 +584,10 @@ class PiscesCore(ZodiacCore):
     def process(self, situation: dict[str, Any]) -> dict[str, Any]:
         """
         Perform the process operation.
-        
+
         Args:
             situation: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -602,10 +602,10 @@ class PiscesCore(ZodiacCore):
     def contribute_to_council(self, decision: str) -> str:
         """
         Contribute to council.
-        
+
         Args:
             decision: Parameter description.
-        
+
         Returns:
             str
         """
@@ -687,7 +687,7 @@ _council: ZodiacCouncil | None = None
 def get_council() -> ZodiacCouncil:
     """
     Get the council.
-    
+
     Returns:
         ZodiacCouncil
     """

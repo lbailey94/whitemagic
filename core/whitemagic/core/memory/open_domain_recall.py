@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SearchResult:
     """SearchResult: search result.
-    
+
     Value object: equality and repr are field-based."""
     memory_id: str
     title: str
@@ -191,7 +191,8 @@ class OpenDomainRecall:
 
         # Create final results with RRF scores
         final_results = []
-        for memory_id, rrf_score in sorted(rrf_scores.items(), key=lambda x: -x[1])[:k]:
+        for memory_id, rrf_score in sorted(rrf_scores.items(), key=lambda x:
+            -x[1])[:k]:
             result = id_to_result[memory_id]
             result.score = rrf_score
             final_results.append(result)
@@ -304,7 +305,8 @@ def benchmark_open_domain_recall():
         elapsed = (time.time() - start) * 1000
 
         print(f"  Results ({elapsed:.1f}ms):")
-        for i, r in enumerate(results[:3], 1):
+        for i, r in enumerate(results[:
+            3], 1):
             print(f"    {i}. {r.title[:50]}... (score: {r.score:.3f})")
 
     print("\n" + "=" * 60)

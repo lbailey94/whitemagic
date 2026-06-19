@@ -9,7 +9,7 @@ from dataclasses import dataclass
 @dataclass
 class RetrievalCandidate:
     """RetrievalCandidate: retrieval candidate.
-    
+
     Value object: equality and repr are field-based."""
     memory_id: str
     title: str
@@ -136,10 +136,10 @@ class HybridFusion:
         def normalize(scores: dict) -> dict:
             """
             Perform the normalize operation.
-            
+
             Args:
                 scores: Parameter description.
-            
+
             Returns:
                 dict
             """

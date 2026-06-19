@@ -61,7 +61,7 @@ _registry: CacheRegistry | None = None
 def get_cache_registry() -> CacheRegistry:
     """
     Get the cache registry.
-    
+
     Returns:
         CacheRegistry
     """

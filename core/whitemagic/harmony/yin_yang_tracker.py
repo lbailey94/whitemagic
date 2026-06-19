@@ -16,6 +16,7 @@ This tracker monitors activity and suggests transitions to maintain harmony.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
@@ -24,7 +25,7 @@ from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.core import parse_datetime
-import logging
+
 logger = logging.getLogger(__name__)
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads

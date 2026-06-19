@@ -71,7 +71,7 @@ class FetchResult:
     def success(self) -> bool:
         """
         Perform the success operation.
-        
+
         Returns:
             bool
         """
@@ -80,7 +80,7 @@ class FetchResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -109,7 +109,7 @@ class SearchResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -136,7 +136,7 @@ class SearchResponse:
     def success(self) -> bool:
         """
         Perform the success operation.
-        
+
         Returns:
             bool
         """
@@ -145,7 +145,7 @@ class SearchResponse:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -172,7 +172,7 @@ class ResearchFinding:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -203,7 +203,7 @@ class ResearchReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -690,7 +690,8 @@ def _synthesize_findings(topic: str, findings: list[ResearchFinding]) -> str:
     if all_points:
         parts.append("\n### Key Points Across Sources\n")
         seen = set()
-        for point in all_points[:15]:
+        for point in all_points[:
+            15]:
             # Deduplicate similar points
             key = point[:60].lower()
             if key not in seen:
@@ -773,10 +774,10 @@ class BrowserSessionManager:
     def get(cls) -> BrowserSessionManager:
         """
         Perform the get operation.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             BrowserSessionManager
         """
@@ -813,7 +814,7 @@ class BrowserSessionManager:
     def is_connected(self) -> bool:
         """
         Check whether the connected condition holds.
-        
+
         Returns:
             bool
         """
@@ -822,7 +823,7 @@ class BrowserSessionManager:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

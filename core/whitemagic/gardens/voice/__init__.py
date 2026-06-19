@@ -205,7 +205,7 @@ _instance = None
 def get_voice_garden() -> VoiceGarden:
     """
     Get the voice garden.
-    
+
     Returns:
         VoiceGarden
     """

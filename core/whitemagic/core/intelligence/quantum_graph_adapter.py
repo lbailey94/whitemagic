@@ -7,8 +7,9 @@ for 10-100x speedup on specific operations.
 import logging
 import math
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from whitemagic.core.intelligence.quantum_inspired_graph import (
     QuantumGraphEngine,
@@ -86,10 +87,10 @@ class QuantumGraphAdapter:
             def node_oracle(node: QuantumNode) -> bool:
                 """
                 Perform the node oracle operation.
-                
+
                 Args:
                     node: Parameter description.
-                
+
                 Returns:
                     bool
                 """

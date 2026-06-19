@@ -8,16 +8,17 @@ Expected event shape:
 from __future__ import annotations
 
 import json
+import logging
 import secrets
 import sys
-import logging
+
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     """
     Perform the main operation.
-    
+
     Returns:
         None
     """

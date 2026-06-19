@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SpecialistResult:
     """SpecialistResult: specialist result.
-    
+
     Value object: equality and repr are field-based."""
     specialist: str
     language: str
@@ -41,11 +41,11 @@ class PolyglotSpecialists:
     def extract_patterns(self, content: str, limit: int = 50) -> SpecialistResult:
         """
         Mine or extract patterns.
-        
+
         Args:
             content: Parameter description.
             limit: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -67,10 +67,10 @@ class PolyglotSpecialists:
     def distance_matrix(self, vectors: list[list[float]]) -> SpecialistResult:
         """
         Perform the distance matrix operation.
-        
+
         Args:
             vectors: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -98,11 +98,11 @@ class PolyglotSpecialists:
     def batch_encode(self, memories: list[dict], current_time: int) -> SpecialistResult:
         """
         Perform the batch encode operation.
-        
+
         Args:
             memories: Parameter description.
             current_time: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -117,11 +117,11 @@ class PolyglotSpecialists:
     def evaluate_rules(self, action: str, context: dict) -> SpecialistResult:
         """
         Perform the evaluate rules operation.
-        
+
         Args:
             action: Parameter description.
             context: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -142,10 +142,10 @@ class PolyglotSpecialists:
     def parallel_tasks(self, tasks: list[dict]) -> SpecialistResult:
         """
         Perform the parallel tasks operation.
-        
+
         Args:
             tasks: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -155,10 +155,10 @@ class PolyglotSpecialists:
         def run_task(task: dict) -> dict:
             """
             Run the task operation.
-            
+
             Args:
                 task: Parameter description.
-            
+
             Returns:
                 dict
             """
@@ -175,10 +175,10 @@ class PolyglotSpecialists:
     def mesh_discovery(self, seed_nodes: list[str] | None = None) -> SpecialistResult:
         """
         Perform the mesh discovery operation.
-        
+
         Args:
             seed_nodes: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -192,10 +192,10 @@ class PolyglotSpecialists:
     def statistical_analysis(self, data: list[float]) -> SpecialistResult:
         """
         Perform the statistical analysis operation.
-        
+
         Args:
             data: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -219,10 +219,10 @@ class PolyglotSpecialists:
     def orchestrate(self, workflow: dict) -> SpecialistResult:
         """
         Perform the orchestrate operation.
-        
+
         Args:
             workflow: Parameter description.
-        
+
         Returns:
             SpecialistResult
         """
@@ -235,7 +235,7 @@ class PolyglotSpecialists:
     def get_stats(self) -> dict:
         """
         Get the stats.
-        
+
         Returns:
             dict
         """

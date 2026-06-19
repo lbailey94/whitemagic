@@ -5,9 +5,10 @@ Consolidates all memory implementations into one coherent system using SQLite ba
 
 import logging
 import sys
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 if 'whitemagic.core.memory.neural_system' not in sys.modules:
@@ -656,7 +657,8 @@ class UnifiedMemory:
 
         ranked_ids = sorted(rrf_scores.keys(), key=lambda mid: rrf_scores[mid], reverse=True)
         results = []
-        for mid in ranked_ids[:limit]:
+        for mid in ranked_ids[:
+            limit]:
             mem = all_memories.get(mid)  # type: ignore[assignment]
             if mem:
                 mem.metadata["rrf_score"] = round(rrf_scores[mid], 6)

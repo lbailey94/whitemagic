@@ -108,7 +108,7 @@ _store: NeuralMemoryStore | None = None
 def get_store() -> NeuralMemoryStore:
     """
     Get the store.
-    
+
     Returns:
         NeuralMemoryStore
     """

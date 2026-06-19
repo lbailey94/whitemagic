@@ -31,11 +31,11 @@ def get_seen_registry():
         def mark_seen(self, path: str, context: str | None = None) -> None:
             """
             Perform the mark seen operation.
-            
+
             Args:
                 path: Parameter description.
                 context: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -150,7 +150,7 @@ _suite = None
 def get_continuity_suite() -> ContinuitySuite:
     """
     Get the continuity suite.
-    
+
     Returns:
         ContinuitySuite
     """
@@ -251,7 +251,8 @@ def get_recent_events(limit: int = 10) -> list[dict[str, Any]]:
             with open(EVENTS_FILE) as f:
                 # Read last N lines efficiently? For MVP, read all and slice.
                 lines = f.readlines()
-                for line in lines[-limit:]:
+                for line in lines[-limit:
+                    ]:
                     try:
                         events.append(_json_loads(line))
                     except json.JSONDecodeError:

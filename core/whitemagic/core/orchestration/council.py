@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Vote:
     """Vote: vote.
-    
+
     Value object: equality and repr are field-based."""
     agent: str
     decision: str # "APPROVE", "BLOCK", "ABSTAIN"
@@ -29,10 +29,10 @@ class Council:
     def deliberate(self, action_description: str) -> bool:
         """
         Perform the deliberate operation.
-        
+
         Args:
             action_description: Parameter description.
-        
+
         Returns:
             bool
         """

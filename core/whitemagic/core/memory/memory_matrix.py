@@ -77,13 +77,15 @@ class SeenRegistry:
             entry = self._entries[path]
             entry.last_seen = now
             entry.times_seen += 1
-            if content_hash: entry.content_hash = content_hash
+            if content_hash:
+                entry.content_hash = content_hash
         else:
             suffix = Path(path).suffix.lower() if "." in path else "unknown"
             self._entries[path] = SeenEntry(
                 path=path, last_seen=now, file_type=suffix, content_hash=content_hash
             )
-        if context: self._entries[path].metadata["last_context"] = context
+        if context:
+            self._entries[path].metadata["last_context"] = context
         self._save()
 
     def have_seen(self, path: str) -> bool:
@@ -232,11 +234,13 @@ class MemoryMatrix:
                 filtered = {k: v for k, v in data.items() if k in allowed}
                 if {"session_id", "started", "last_activity"}.issubset(filtered.keys()):
                     self._session = SessionContext(**filtered)
-                else: self._new_session()
+                else :
+                    self._new_session()
             except Exception as e:
                 logger.debug("Session load failed: %s", e)
                 self._new_session()
-        else: self._new_session()
+        else :
+            self._new_session()
 
     def _new_session(self) -> None:
         now = datetime.now(UTC).isoformat()
@@ -264,7 +268,8 @@ class MemoryMatrix:
         self.timeline.add_event(interaction_type, {"target": target, "context": context, "session_id": self._session.session_id if self._session else None, **(data or {})}, tags=[interaction_type, "interaction"])
         if interaction_type in ("read_file", "view_image"):
             self.seen.mark_seen(target, context=context)
-            if self._session: self._session.files_seen += 1
+            if self._session:
+                self._session.files_seen += 1
         self._save_session()
 
     def stats(self) -> dict[str, Any]:
@@ -284,5 +289,6 @@ def get_matrix() -> MemoryMatrix:
     """Return the process-wide MemoryMatrix singleton, creating it on first call."""
     global _matrix_instance
     with _matrix_lock:
-        if _matrix_instance is None: _matrix_instance = MemoryMatrix()
+        if _matrix_instance is None:
+            _matrix_instance = MemoryMatrix()
         return _matrix_instance

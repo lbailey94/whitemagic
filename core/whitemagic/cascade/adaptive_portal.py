@@ -625,7 +625,8 @@ class AdaptiveToolPortal:
                 if results:
                     # Convert grep results to memory format
                     formatted = []
-                    for item in results[:limit]:
+                    for item in results[:
+                        limit]:
                         if isinstance(item, dict):
                             formatted.append({
                                 "title": item.get("file", "Unknown"),
@@ -697,7 +698,8 @@ class AdaptiveToolPortal:
     def _extract_patterns(self, memories: list[dict]) -> list[str]:
         """Extract patterns from memories."""
         patterns = []
-        for m in memories[:5]:
+        for m in memories[:
+            5]:
             content = m.get("content", "")
             if "pattern" in content.lower():
                 patterns.append(f"Pattern in: {m.get('title', 'Unknown')}")
@@ -837,7 +839,7 @@ if __name__ == "__main__":
     async def test() -> Any:
         """
         Perform the test operation.
-        
+
         Returns:
             Any
         """

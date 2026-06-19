@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Proposal:
     """Proposal: proposal.
-    
+
     Value object: equality and repr are field-based."""
     id: str
     title: str
@@ -23,7 +23,7 @@ class Proposal:
 @dataclass
 class VoteSpectrum:
     """VoteSpectrum: vote spectrum.
-    
+
     Value object: equality and repr are field-based."""
     logic: float = 0.5 # 0.0 (intuitive) to 1.0 (analytical)
     micro: float = 0.5 # 0.0 (macro/global) to 1.0 (precise/local)
@@ -43,12 +43,12 @@ class ZodiacCouncil:
     def create_proposal(self, title: str, description: str, proposer_id: str) -> str:
         """
         Create a new proposal.
-        
+
         Args:
             title: Parameter description.
             description: Parameter description.
             proposer_id: Parameter description.
-        
+
         Returns:
             str
         """
@@ -117,7 +117,8 @@ class ZodiacCouncil:
 
             # 2. Ancestry Weight (DGA Alignment)
             a_weight = 1.0
-            if dga and local_sig and agent_id in resonance_index: # Using agent_id as sig proxy for demo
+            if dga and local_sig and agent_id in resonance_index:
+                # Using agent_id as sig proxy for demo
                 try:
                     dist = dga.calculate_distance(local_sig, agent_id)
                     a_weight = 1.0 + (1.0 - dist) # Closer = more weight
@@ -150,7 +151,7 @@ _council: ZodiacCouncil | None = None
 def get_council() -> ZodiacCouncil:
     """
     Get the council.
-    
+
     Returns:
         ZodiacCouncil
     """

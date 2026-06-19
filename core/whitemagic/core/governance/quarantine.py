@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class QuarantineEntry:
     """QuarantineEntry: quarantine entry.
-    
+
     Value object: equality and repr are field-based."""
     session_id: str
     reason: str
@@ -37,7 +37,7 @@ class QuarantineEntry:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -115,10 +115,10 @@ class QuarantineManager:
     def is_quarantined(self, session_id: str) -> bool:
         """
         Check whether the quarantined condition holds.
-        
+
         Args:
             session_id: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -132,7 +132,7 @@ class QuarantineManager:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

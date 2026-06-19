@@ -39,7 +39,7 @@ class TransmutationPipeline:
     def run(self, limit: int = 10000):
         """
         Perform the run operation.
-        
+
         Args:
             limit: Parameter description.
         """

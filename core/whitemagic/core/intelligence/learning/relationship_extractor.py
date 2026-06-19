@@ -277,7 +277,8 @@ def extract_relationships(
 
         persisted = len(edges)
     else:
-        for id_a, id_b, d_sq in edges[:20]:
+        for id_a, id_b, d_sq in edges[:
+            20]:
             strength = max(0.1, 1.0 - (d_sq / threshold_sq))
             logger.info("  [DRY] %s.. <-> %s..  dist_sq=%.4f  strength=%.3f",
                         id_a[:10], id_b[:10], d_sq, strength)

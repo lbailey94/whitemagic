@@ -22,7 +22,7 @@ class PhaseTiming:
     def duration_seconds(self) -> float | None:
         """
         Perform the duration seconds operation.
-        
+
         Returns:
             float | None
         """
@@ -33,7 +33,7 @@ class PhaseTiming:
     def to_dict(self) -> dict:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict
         """
@@ -83,7 +83,7 @@ class PhaseTimer:
     def timing(self) -> PhaseTiming | None:
         """
         Perform the timing operation.
-        
+
         Returns:
             PhaseTiming | None
         """
@@ -175,10 +175,12 @@ if __name__ == "__main__":
     workflow = WorkflowTimer("demo_workflow")
     workflow.start_workflow()
 
-    with workflow.phase("initialization", {"priority": "high"}):
+    with workflow.phase("initialization", {"priority":
+        "high"}):
         time.sleep(0.5)
 
-    with workflow.phase("processing", {"items": 100}):
+    with workflow.phase("processing", {"items":
+        100}):
         time.sleep(1.0)
 
     with workflow.phase("cleanup"):

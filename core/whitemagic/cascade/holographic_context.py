@@ -42,7 +42,7 @@ _holographic_injector = None
 def get_holographic_injector() -> HolographicContextInjector:
     """
     Get the holographic injector.
-    
+
     Returns:
         HolographicContextInjector
     """

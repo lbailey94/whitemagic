@@ -147,7 +147,7 @@ _linker: AutoLinker | None = None
 def get_linker() -> AutoLinker:
     """
     Get the linker.
-    
+
     Returns:
         AutoLinker
     """
@@ -159,10 +159,10 @@ def get_linker() -> AutoLinker:
 def find_similar_memories(memory: Memory) -> list[SimilarityResult]:
     """
     Find similar memories matching the criteria.
-    
+
     Args:
         memory: Parameter description.
-    
+
     Returns:
         list[SimilarityResult]
     """

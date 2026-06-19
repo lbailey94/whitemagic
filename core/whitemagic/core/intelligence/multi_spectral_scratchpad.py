@@ -29,7 +29,7 @@ from whitemagic.core.intelligence.multi_spectral_reasoning import (
 @dataclass(frozen=True)
 class ScratchpadAnalysis:
     """ScratchpadAnalysis: scratchpad analysis.
-    
+
     Value object: equality and repr are field-based."""
     synthesis: str
     wisdom: str

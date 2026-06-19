@@ -35,7 +35,7 @@ class Bounty:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -139,10 +139,10 @@ class BountyBoard:
     def get_bounty(self, bounty_id: str) -> Bounty | None:
         """
         Get the bounty.
-        
+
         Args:
             bounty_id: Parameter description.
-        
+
         Returns:
             Bounty | None
         """
@@ -151,10 +151,10 @@ class BountyBoard:
     def list_bounties(self, status: str = "open") -> list[Bounty]:
         """
         List the bounties.
-        
+
         Args:
             status: Parameter description.
-        
+
         Returns:
             list[Bounty]
         """
@@ -165,7 +165,7 @@ _board: BountyBoard | None = None
 def get_bounty_board() -> BountyBoard:
     """
     Get the bounty board.
-    
+
     Returns:
         BountyBoard
     """

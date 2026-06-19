@@ -17,9 +17,9 @@ warnings.warn(
 
 class TemporalLane(Enum):
     """TemporalLane: temporal lane.
-    
+
     Enumeration.
-    
+
     Members:
         FAST
         MEDIUM

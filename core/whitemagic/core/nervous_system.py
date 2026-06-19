@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 class OrganType(Enum):
     """OrganType: organ type.
-    
+
     Enumeration.
-    
+
     Members:
         IMMUNE
         GENETICS

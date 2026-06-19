@@ -81,7 +81,7 @@ _market: MemoryMarket | None = None
 def get_memory_market() -> MemoryMarket:
     """
     Get the memory market.
-    
+
     Returns:
         MemoryMarket
     """

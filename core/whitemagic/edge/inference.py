@@ -438,7 +438,7 @@ class EdgeInference:
     def stats(self) -> dict[str, Any]:
         """
         Perform the stats operation.
-        
+
         Returns:
             dict[str, Any]
         """

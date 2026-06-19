@@ -17,7 +17,8 @@ from whitemagic.core.ganas.registry import get_all_ganas
 
 try:
     from fastapi import APIRouter, HTTPException
-except ImportError as e:  # pragma: no cover - optional dependency
+except ImportError as e:
+    # pragma: no cover - optional dependency
     raise ImportError(
         "FastAPI is required for whitemagic.interfaces.api.routes.dashboard_api",
     ) from e

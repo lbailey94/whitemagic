@@ -143,7 +143,8 @@ def memory_search(
         # Also truncate if result dict contains results array
         if "results" in result and isinstance(result["results"], list):
             truncated_results = []
-            for entry in result["results"][:limit]:
+            for entry in result["results"][:
+                limit]:
                 if isinstance(entry, dict):
                     truncated_mem = entry.copy()
                     if "content" in truncated_mem and len(truncated_mem["content"]) > 500:

@@ -86,7 +86,8 @@ class SerendipityEngine:
             return self._surface_association_orphans(count)
         elif mode == "quantum":
             return self._surface_quantum(context, count)
-        else:  # balanced
+        else :
+            # balanced
             results = []
             results.extend(self._surface_dormant(max(1, count // 3)))
             results.extend(self._surface_constellation_bridges(max(1, count // 4)))
@@ -487,7 +488,7 @@ _serendipity_engine = None
 def get_serendipity_engine() -> SerendipityEngine:
     """
     Get the serendipity engine.
-    
+
     Returns:
         SerendipityEngine
     """

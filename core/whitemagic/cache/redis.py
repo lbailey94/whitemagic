@@ -11,11 +11,13 @@ Provides:
 
 import hashlib
 import json
+import logging
 import pickle
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, TypeVar, cast
-import logging
+from typing import Any, TypeVar, cast
+
 logger = logging.getLogger(__name__)
 
 try:

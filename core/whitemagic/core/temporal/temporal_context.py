@@ -80,7 +80,7 @@ class TemporalContext:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -225,7 +225,8 @@ class TemporalContextManager:
             return WuXingPhase.EARTH
         elif month in (9, 10, 11):
             return WuXingPhase.METAL
-        else:  # 12, 1
+        else :
+            # 12, 1
             return WuXingPhase.WATER
 
     def _get_consolidation_info(self) -> tuple[datetime | None, int, bool]:

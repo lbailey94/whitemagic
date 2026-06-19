@@ -17,7 +17,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class DebateRound:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -71,7 +71,7 @@ class DebateResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -97,11 +97,11 @@ class SynthesisArbiter:
     def should_escalate(cls, tension: float) -> bool:
         """
         Perform the should escalate operation.
-        
+
         Args:
             cls: Parameter description.
             tension: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -203,10 +203,10 @@ class CorpusCallosumBus:
     def get_debate(self, debate_id: str) -> DebateResult | None:
         """
         Get the debate.
-        
+
         Args:
             debate_id: Parameter description.
-        
+
         Returns:
             DebateResult | None
         """
@@ -215,7 +215,7 @@ class CorpusCallosumBus:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

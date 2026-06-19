@@ -196,7 +196,7 @@ _solution_library = None
 def get_solution_library() -> SolutionLibrary:
     """
     Get the solution library.
-    
+
     Returns:
         SolutionLibrary
     """

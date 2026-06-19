@@ -71,10 +71,10 @@ class TFIDFEmbedder:
     def encode(self, texts: list[str]) -> list[list[float]]:
         """
         Perform the encode operation.
-        
+
         Args:
             texts: Parameter description.
-        
+
         Returns:
             list[list[float]]
         """
@@ -104,7 +104,7 @@ def _cosine(a: list[float], b: list[float]) -> float:
 @dataclass
 class VSearchResult:
     """VSearchResult: v search result.
-    
+
     Value object: equality and repr are field-based."""
     memory_id: str
     score: float
@@ -112,13 +112,13 @@ class VSearchResult:
     snippet: str=""
     """
     Convert to/from dict.
-    
+
     Returns:
         dict[str, Any]
     """
     """
     Convert to/from dict.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -161,12 +161,12 @@ class VectorSearch:
     def index_memory(self, memory_id: str, content: str, title: str = "") -> None:
         """
         Perform the index memory operation.
-        
+
         Args:
             memory_id: Parameter description.
             content: Parameter description.
             title: Parameter description.
-        
+
         Returns:
             None
         """
@@ -193,11 +193,11 @@ class VectorSearch:
     def search(self, query: str, limit: int = 10) -> list[VSearchResult]:
             """
             Perform the search operation.
-            
+
             Args:
                 query: Parameter description.
                 limit: Parameter description.
-            
+
             Returns:
                 list[VSearchResult]
             """
@@ -279,20 +279,21 @@ class VectorSearch:
                         scored.append((mid, s))
                     scored.sort(key=lambda x:x[1], reverse=True)
             results = []
-            for mid,s in scored[:limit]:
+            for mid,s in scored[:
+                limit]:
                 m = self._meta.get(mid,{})
                 results.append(VSearchResult(memory_id=mid,score=s,title=m.get("title",""),snippet=m.get("snippet","")))
             return results
 
     """
     Perform the index count operation.
-    
+
     Returns:
         int
     """
     """
     Perform the index count operation.
-    
+
     Returns:
         int
     """
@@ -301,7 +302,7 @@ class VectorSearch:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -321,7 +322,7 @@ _vs_lock=threading.Lock()
 def get_vector_status() -> dict[str, Any]:
     """
     Get the vector status.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -364,7 +365,7 @@ def get_vector_status() -> dict[str, Any]:
 def get_vector_search() -> VectorSearch:
     """
     Get the vector search.
-    
+
     Returns:
         VectorSearch
     """

@@ -11,7 +11,7 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
 def handle_ganying_emit(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a ganying emit event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -25,7 +25,7 @@ def handle_ganying_emit(**kwargs: Any) -> dict[str, Any]:
 def handle_ganying_history(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a ganying history event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -53,7 +53,7 @@ def handle_ganying_history(**kwargs: Any) -> dict[str, Any]:
 def handle_ganying_listeners(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a ganying listeners event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -72,7 +72,7 @@ def handle_ganying_listeners(**kwargs: Any) -> dict[str, Any]:
 def handle_resonance_trace(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a resonance trace event.
-    
+
     Returns:
         dict[str, Any]
     """

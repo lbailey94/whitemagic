@@ -51,10 +51,10 @@ class EmbeddingEngine:
     def embed_text(self, text: str) -> list[float]:
         """
         Perform the embed text operation.
-        
+
         Args:
             text: Parameter description.
-        
+
         Returns:
             list[float]
         """
@@ -69,10 +69,10 @@ class EmbeddingEngine:
     def encode(self, text: str) -> list[float]:
         """
         Perform the encode operation.
-        
+
         Args:
             text: Parameter description.
-        
+
         Returns:
             list[float]
         """
@@ -81,10 +81,10 @@ class EmbeddingEngine:
     def encode_batch(self, texts: list[str]) -> list[list[float]]:
         """
         Perform the encode batch operation.
-        
+
         Args:
             texts: Parameter description.
-        
+
         Returns:
             list[list[float]]
         """
@@ -96,12 +96,12 @@ class EmbeddingEngine:
     def search_similar(self, query: str, limit: int = 10, include_cold: bool = False) -> list[dict]:
         """
         Find similar matching the criteria.
-        
+
         Args:
             query: Parameter description.
             limit: Parameter description.
             include_cold: Parameter description.
-        
+
         Returns:
             list[dict]
         """
@@ -113,11 +113,11 @@ class EmbeddingEngine:
     def index_memories(self, memory_type: str = "LONG_TERM", batch_size: int = 100) -> int:
         """
         Perform the index memories operation.
-        
+
         Args:
             memory_type: Parameter description.
             batch_size: Parameter description.
-        
+
         Returns:
             int
         """
@@ -151,11 +151,11 @@ class VectorSearch:
     def search(self, query_vec: list[float], limit: int = 10) -> list[tuple[str, float]]:
         """
         Perform the search operation.
-        
+
         Args:
             query_vec: Parameter description.
             limit: Parameter description.
-        
+
         Returns:
             list[tuple[str, float]]
         """
@@ -167,11 +167,11 @@ class VectorSearch:
     def search_by_text(self, query: str, limit: int = 10) -> list[dict]:
         """
         Find by text matching the criteria.
-        
+
         Args:
             query: Parameter description.
             limit: Parameter description.
-        
+
         Returns:
             list[dict]
         """
@@ -205,7 +205,7 @@ class HNSWIndex:
     def add(self, id: str, vec: list[float]):
         """
         Perform the add operation.
-        
+
         Args:
             id: Parameter description.
             vec: Parameter description.
@@ -218,11 +218,11 @@ class HNSWIndex:
     def search(self, vec: list[float], k: int = 10) -> list[tuple[str, float]]:
         """
         Perform the search operation.
-        
+
         Args:
             vec: Parameter description.
             k: Parameter description.
-        
+
         Returns:
             list[tuple[str, float]]
         """
@@ -249,7 +249,7 @@ _search: VectorSearch | None = None
 def get_embedding_engine() -> EmbeddingEngine:
     """
     Get the embedding engine.
-    
+
     Returns:
         EmbeddingEngine
     """
@@ -261,7 +261,7 @@ def get_embedding_engine() -> EmbeddingEngine:
 def get_vector_search() -> VectorSearch:
     """
     Get the vector search.
-    
+
     Returns:
         VectorSearch
     """

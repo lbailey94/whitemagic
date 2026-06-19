@@ -6,7 +6,8 @@ simulations. Part of v22 Intelligence Matrix.
 """
 
 import math
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 

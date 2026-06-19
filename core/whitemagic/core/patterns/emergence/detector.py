@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class NovelBehavior:
     """NovelBehavior: novel behavior.
-    
+
     Value object: equality and repr are field-based."""
     name: str
     description: str
@@ -95,7 +95,7 @@ _detector: EmergenceDetector | None = None
 def get_detector() -> EmergenceDetector:
     """
     Get the detector.
-    
+
     Returns:
         EmergenceDetector
     """

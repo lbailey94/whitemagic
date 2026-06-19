@@ -63,7 +63,7 @@ class GalaxyInfo:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -73,11 +73,11 @@ class GalaxyInfo:
     def from_dict(cls, d: dict[str, Any]) -> GalaxyInfo:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             d: Parameter description.
-        
+
         Returns:
             GalaxyInfo
         """
@@ -104,10 +104,10 @@ class GalaxyManager:
     def get_instance(cls) -> GalaxyManager:
         """
         Get the instance.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             GalaxyManager
         """
@@ -311,7 +311,8 @@ class GalaxyManager:
         skipped_dedup = 0
         errors = 0
 
-        for mem in candidates[:limit]:
+        for mem in candidates[:
+            limit]:
             # Content-hash dedup check in target
             content_str = str(mem.content)
             content_hash = hashlib.sha256(content_str.encode()).hexdigest()

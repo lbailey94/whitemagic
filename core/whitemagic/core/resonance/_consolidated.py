@@ -37,9 +37,9 @@ logger = logging.getLogger(__name__)
 class EventType(Enum):
     # Core resonance events
     """EventType: event type.
-    
+
     Enumeration.
-    
+
     Members:
         INTERNAL_STATE_CHANGED
         EMERGENCE_DETECTED
@@ -243,7 +243,7 @@ class EventType(Enum):
 @dataclass
 class ResonanceEvent:
     """ResonanceEvent: resonance event.
-    
+
     Value object: equality and repr are field-based."""
     source: str
     event_type: EventType
@@ -265,13 +265,14 @@ class GanYingBus:
     def emit(self, event: ResonanceEvent):
         """
         Perform the emit operation.
-        
+
         Args:
             event: Parameter description.
         """
         with self._lock:
             self._history.append(event)
-            if len(self._history) > 1000: self._history.pop(0)
+            if len(self._history) > 1000:
+                self._history.pop(0)
 
         # Dispatch to listeners
         listeners = self._listeners.get(event.event_type, [])
@@ -284,13 +285,14 @@ class GanYingBus:
     def listen(self, event_type: EventType, callback: Callable):
         """
         Perform the listen operation.
-        
+
         Args:
             event_type: Parameter description.
             callback: Parameter description.
         """
         with self._lock:
-            if event_type not in self._listeners: self._listeners[event_type] = []
+            if event_type not in self._listeners:
+                self._listeners[event_type] = []
             self._listeners[event_type].append(callback)
 
 # --- SINGLETONS ---
@@ -299,12 +301,13 @@ _bus: GanYingBus | None = None
 def get_bus() -> GanYingBus:
     """
     Get the bus.
-    
+
     Returns:
         GanYingBus
     """
     global _bus
-    if _bus is None: _bus = GanYingBus()
+    if _bus is None:
+        _bus = GanYingBus()
     return _bus
 
 get_event_bus = get_bus # Compatibility alias
@@ -315,13 +318,18 @@ def emit_event(*args, **kwargs):
     """
     if args and isinstance(args[0], EventType):
         kwargs["event_type"] = args[0]
-        if len(args) > 1: kwargs["data"] = args[1]
-        if len(args) > 2: kwargs["source"] = args[2]
+        if len(args) > 1:
+            kwargs["data"] = args[1]
+        if len(args) > 2:
+            kwargs["source"] = args[2]
     elif args and isinstance(args[0], str):
         kwargs["source"] = args[0]
-        if len(args) > 1: kwargs["event_type"] = args[1]
-        if len(args) > 2: kwargs["data"] = args[2]
-    if "source" not in kwargs: kwargs["source"] = "system"
+        if len(args) > 1:
+            kwargs["event_type"] = args[1]
+        if len(args) > 2:
+            kwargs["data"] = args[2]
+    if "source" not in kwargs:
+        kwargs["source"] = "system"
     if "event_type" not in kwargs or not isinstance(kwargs["event_type"], EventType):
         kwargs["event_type"] = EventType.SYSTEM_HEARTBEAT
     get_bus().emit(ResonanceEvent(**kwargs))

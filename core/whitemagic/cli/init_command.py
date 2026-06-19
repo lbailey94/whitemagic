@@ -274,7 +274,8 @@ def main() -> None:
         alerts = gnosis.get("alerts", [])
         if alerts:
             print(f"  Alerts ({len(alerts)}):")
-            for a in alerts[:5]:
+            for a in alerts[:
+                5]:
                 print(f"    - {a}")
         else:
             print("  No alerts — all clear.")
@@ -299,7 +300,8 @@ def main() -> None:
             tools = list(tools.values())
         print(f"  Available tools: {len(tools)}")
         categories = {}
-        for t_info in tools[:300]:
+        for t_info in tools[:
+            300]:
             if isinstance(t_info, dict):
                 cat = t_info.get("category", "unknown")
             elif isinstance(t_info, str):
@@ -309,7 +311,8 @@ def main() -> None:
             categories[cat] = categories.get(cat, 0) + 1
         if categories:
             print("  By category:")
-            for cat, count in sorted(categories.items(), key=lambda x: -x[1])[:8]:
+            for cat, count in sorted(categories.items(), key=lambda x:
+                -x[1])[:8]:
                 print(f"    {cat}: {count} tools")
     else:
         print(f"  Result: {pretty(result)}")
@@ -352,7 +355,8 @@ def main() -> None:
         print("  Action: 'Read a file from disk'")
         print(f"  Ethical score: {score}")
         if concerns:
-            for c in concerns[:3]:
+            for c in concerns[:
+                3]:
                 print(f"  Concern: {c}")
         else:
             print("  No ethical concerns raised.")

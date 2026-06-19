@@ -7,7 +7,7 @@ _verifications: dict[str, dict[str, Any]] = {}
 def handle_verification_request(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a verification request event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -22,7 +22,7 @@ def handle_verification_request(**kwargs: Any) -> dict[str, Any]:
 def handle_verification_attest(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a verification attest event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -41,7 +41,7 @@ def handle_verification_attest(**kwargs: Any) -> dict[str, Any]:
 def handle_verification_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a verification status event.
-    
+
     Returns:
         dict[str, Any]
     """

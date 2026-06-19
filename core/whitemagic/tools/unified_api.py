@@ -128,7 +128,8 @@ def _load_rust() -> tuple[object | None, str | None]:
         except ImportError:
             import whitemagic_rs as rs_module  # type: ignore
         return rs_module, None
-    except Exception as exc:  # pragma: no cover - best-effort availability
+    except Exception as exc:
+        # pragma: no cover - best-effort availability
         return None, str(exc)
 
 

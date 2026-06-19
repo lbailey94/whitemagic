@@ -14,9 +14,9 @@ class EthicsViolation(Exception):
 
 class Intent(Enum):
     """Intent: intent.
-    
+
     Enumeration.
-    
+
     Members:
         LIBERATION
         EVOLUTION
@@ -73,7 +73,7 @@ class DharmaProtocol:
 def get_dharma() -> DharmaProtocol:
     """
     Get the dharma.
-    
+
     Returns:
         DharmaProtocol
     """

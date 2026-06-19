@@ -18,7 +18,7 @@ def _env_flag(name: str) -> bool:
 def get_runtime_status() -> dict[str, Any]:
     """
     Get the runtime status.
-    
+
     Returns:
         dict[str, Any]
     """

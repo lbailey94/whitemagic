@@ -53,7 +53,7 @@ class MeshPeer:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -271,7 +271,7 @@ _client_lock = threading.Lock()
 def get_mesh_client() -> MeshClient:
     """
     Get the mesh client.
-    
+
     Returns:
         MeshClient
     """

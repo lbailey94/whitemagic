@@ -49,7 +49,8 @@ def rust_search(
             logger.info(_json_dumps(payload, indent=2))
         else:
             logger.info(f"🔍 Found {len(results)} results:")
-            for path, score in results[:20]:
+            for path, score in results[:
+                20]:
                 logger.info(f"  {score:.2f}  {path}")
             if len(results) > 20:
                 logger.info(f"  ... and {len(results) - 20} more")

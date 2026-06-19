@@ -34,10 +34,10 @@ logger = logging.getLogger(__name__)
 def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
     """
     Perform the check system health operation.
-    
+
     Args:
         deep_scan: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -50,11 +50,11 @@ def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
 def session_init(name: str = "default_session", goals: list = None) -> dict[str, Any]:
     """
     Perform the session init operation.
-    
+
     Args:
         name: Parameter description.
         goals: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -66,7 +66,7 @@ def session_init(name: str = "default_session", goals: list = None) -> dict[str,
 def session_get_active() -> dict[str, Any]:
     """
     Perform the session get active operation.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -80,7 +80,7 @@ def session_get_active() -> dict[str, Any]:
 def get_metrics_summary() -> dict[str, Any]:
     """
     Get the metrics summary.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -89,10 +89,10 @@ def get_metrics_summary() -> dict[str, Any]:
 def run_benchmark(category: str = "all") -> dict[str, Any]:
     """
     Run the benchmark operation.
-    
+
     Args:
         category: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -113,7 +113,7 @@ def list_gardens() -> list[str]:
 def get_timestamp() -> str:
     """
     Get the timestamp.
-    
+
     Returns:
         str
     """

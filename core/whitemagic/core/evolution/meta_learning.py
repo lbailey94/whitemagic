@@ -34,7 +34,7 @@ class PatternMetrics:
     def success_rate(self) -> float:
         """
         Perform the success rate operation.
-        
+
         Returns:
             float
         """

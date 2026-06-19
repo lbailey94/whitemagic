@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EmergenceInsight:
     """EmergenceInsight: emergence insight.
-    
+
     Value object: equality and repr are field-based."""
     id: str
     title: str
@@ -47,7 +47,7 @@ class EmergenceInsight:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -69,11 +69,11 @@ class ResonanceAmplifier:
     def amplify(self, pattern: str, strength: float = 1.0) -> dict[str, Any]:
         """
         Perform the amplify operation.
-        
+
         Args:
             pattern: Parameter description.
             strength: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -84,7 +84,7 @@ class CoherencePersistence:
     def check_coherence(self) -> float:
         """
         Perform the check coherence operation.
-        
+
         Returns:
             float
         """
@@ -98,32 +98,35 @@ _coherence: CoherencePersistence | None = None
 def get_emergence_engine() -> EmergenceEngine:
     """
     Get the emergence engine.
-    
+
     Returns:
         EmergenceEngine
     """
     global _emergence
-    if _emergence is None: _emergence = EmergenceEngine()
+    if _emergence is None:
+        _emergence = EmergenceEngine()
     return _emergence
 
 def get_resonance_amplifier() -> ResonanceAmplifier:
     """
     Get the resonance amplifier.
-    
+
     Returns:
         ResonanceAmplifier
     """
     global _resonance
-    if _resonance is None: _resonance = ResonanceAmplifier()
+    if _resonance is None:
+        _resonance = ResonanceAmplifier()
     return _resonance
 
 def get_coherence_persistence() -> CoherencePersistence:
     """
     Get the coherence persistence.
-    
+
     Returns:
         CoherencePersistence
     """
     global _coherence
-    if _coherence is None: _coherence = CoherencePersistence()
+    if _coherence is None:
+        _coherence = CoherencePersistence()
     return _coherence

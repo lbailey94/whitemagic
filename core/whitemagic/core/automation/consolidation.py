@@ -158,7 +158,8 @@ class ConsolidationEngine:
 
         # Compare all pairs
         for i, mem1 in enumerate(short_term_files):
-            for mem2 in short_term_files[i+1:]:
+            for mem2 in short_term_files[i+1:
+                ]:
                 # Compare titles
                 try:
                     title1 = mem1.get("title", "")
@@ -489,21 +490,24 @@ def consolidate_cli(args: Any) -> None:
     logger.info(f"\n{'Would be' if dry_run else 'Consolidation'} Results:")
     if results["archived"]:
         logger.info(f"  📦 Archived: {len(results['archived'])} memories")
-        for item in results["archived"][:5]:
+        for item in results["archived"][:
+            5]:
             logger.info(f"     - {item['filename']} ({item.get('age_days', '?')} days old)")
         if len(results["archived"]) > 5:
             logger.info(f"     ... and {len(results['archived']) - 5} more")
 
     if results["merged"]:
         logger.info(f"  🔗 Merged: {len(results['merged'])} memory pairs")
-        for item in results["merged"][:3]:
+        for item in results["merged"][:
+            3]:
             logger.info(f"     - {item['source1']} + {item['source2']} ({item['similarity']})")
         if len(results["merged"]) > 3:
             logger.info(f"     ... and {len(results['merged']) - 3} more")
 
     if results["promoted"]:
         logger.info(f"  ⬆️  Promoted: {len(results['promoted'])} memories to long-term")
-        for item in results["promoted"][:3]:
+        for item in results["promoted"][:
+            3]:
             reason = item.get("reason", "N/A")
             logger.info(f"     - {item['source']} ({reason})")
         if len(results["promoted"]) > 3:
@@ -511,7 +515,8 @@ def consolidate_cli(args: Any) -> None:
 
     if results["scratchpads_cleaned"]:
         logger.info(f"  🧹 Scratchpads: {len(results['scratchpads_cleaned'])} cleaned (>24h old)")
-        for item in results["scratchpads_cleaned"][:3]:
+        for item in results["scratchpads_cleaned"][:
+            3]:
             age_hours = item.get("age_hours", 0)
             logger.info(f"     - {item['name']} ({age_hours:.1f}h old)")
         if len(results["scratchpads_cleaned"]) > 3:
@@ -519,7 +524,8 @@ def consolidate_cli(args: Any) -> None:
 
     if results["errors"]:
         logger.info(f"\n⚠️  Errors: {len(results['errors'])}")
-        for error in results["errors"][:3]:
+        for error in results["errors"][:
+            3]:
             logger.info(f"     - {error}")
 
     if dry_run:

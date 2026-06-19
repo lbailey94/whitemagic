@@ -23,10 +23,9 @@ import logging
 import os
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
-
-import whitemagic
+from typing import Any
 
 from agentdojo.agent_pipeline import agent_pipeline
 from agentdojo.agent_pipeline.base_pipeline_element import BasePipelineElement
@@ -35,7 +34,13 @@ from agentdojo.agent_pipeline.tool_execution import (
     ToolsExecutor,
 )
 from agentdojo.functions_runtime import EmptyEnv, Env, FunctionsRuntime
-from agentdojo.types import ChatMessage, ChatToolResultMessage, text_content_block_from_string
+from agentdojo.types import (
+    ChatMessage,
+    ChatToolResultMessage,
+    text_content_block_from_string,
+)
+
+import whitemagic
 
 logger = logging.getLogger(__name__)
 
@@ -52,14 +57,14 @@ _EMPTY_FUNCTION_NAME = "make_choice"
 
 def _wm_call(tool: str, **kwargs) -> dict[str, Any]:
     """Call a WhiteMagic tool via subprocess in its own venv."""
-    bridge = """
+    bridge = f"""
 import json, sys
-sys.path.insert(0, "{core}")
+sys.path.insert(0, "{_WM_CORE}")
 from whitemagic.tools.unified_api import call_tool
 payload = json.load(sys.stdin)
 result = call_tool(payload["tool"], **payload.get("kwargs", {{}}))
 print(json.dumps(result))
-""".format(core=_WM_CORE)
+"""
     payload = json.dumps({"tool": tool, "kwargs": kwargs})
     proc = subprocess.run(
         [_WM_PYTHON, "-c", bridge],
@@ -133,7 +138,7 @@ def _evaluate_tool(tool_name: str, tool_args: dict[str, Any]) -> tuple[bool, str
     # Layer 2: Dharma rules engine (semantic policy evaluation)
     # ------------------------------------------------------------------
     try:
-        from whitemagic.dharma.rules import get_rules_engine, DharmaAction
+        from whitemagic.dharma.rules import DharmaAction, get_rules_engine
 
         engine = get_rules_engine()
         # Build an action description from tool name + args for semantic matching
@@ -200,14 +205,14 @@ class WhiteMagicDharmaDefense(BasePipelineElement):
     ) -> tuple[str, FunctionsRuntime, Env, Sequence[ChatMessage], dict]:
         """
         Perform the query operation.
-        
+
         Args:
             query: Parameter description.
             runtime: Parameter description.
             env: Parameter description.
             messages: Parameter description.
             extra_args: Parameter description.
-        
+
         Returns:
             tuple[str, FunctionsRuntime, Env, Sequence[ChatMessage], dict]
         """

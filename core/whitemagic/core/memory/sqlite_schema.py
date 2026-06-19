@@ -282,7 +282,8 @@ class SQLiteSchemaManager:
         cm_columns = cm_cursor.fetchall()
         cm_pk_columns = [
             row[1]
-            for row in sorted((row for row in cm_columns if row[5]), key=lambda row: row[5])
+            for row in sorted((row for row in cm_columns if row[5]), key=lambda row:
+                row[5])
         ]
         if cm_pk_columns == ["memory_id"]:
             if self._needs_backup:

@@ -107,7 +107,8 @@ def batch_cosine(
         return batch_cosine_numpy(pairs)
     elif strategy == "rust":
         return batch_cosine_rust(pairs)
-    else:  # auto
+    else :
+        # auto
         # Rust is consistently faster than NumPy for 384d vectors at all batch sizes
         # NumPy only wins for very small vectors (<64d) where FFI overhead dominates
         if dim < 64 and n_pairs < 100:

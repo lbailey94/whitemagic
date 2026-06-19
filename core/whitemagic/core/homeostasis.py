@@ -78,9 +78,11 @@ class HomeostasisSystem:
         if h_bias:
             logger.info(f"🌌 Harmonic Gravity detected: {h_bias['mode']} pull ({h_bias['intensity']:.2f})")
             # Bias shifts equilibrium target slightly
-            if h_bias["mode"] == "analytical": # Push toward Yin
+            if h_bias["mode"] == "analytical":
+                # Push toward Yin
                 yin = min(1.0, yin + (h_bias["intensity"] * 0.1))
-            elif h_bias["mode"] == "intuitive": # Push toward Yang
+            elif h_bias["mode"] == "intuitive":
+                # Push toward Yang
                 yang = min(1.0, yang + (h_bias["intensity"] * 0.1))
 
         # Apply Tzimtzum (Vacant Space) bias (Phase 33)
@@ -139,7 +141,8 @@ class HomeostasisSystem:
                         max_importance = importance
                         best_prop = consensus
 
-            if best_prop and max_importance > 0.6: # Threshold for detectable gravity
+            if best_prop and max_importance > 0.6:
+                # Threshold for detectable gravity
                 logic = best_prop.get("logic", 0.5)
                 # Logic > 0.7 = Analytical (Yin), Logic < 0.3 = Intuitive (Yang)
                 mode = "analytical" if logic > 0.7 else "intuitive" if logic < 0.3 else "balanced"
@@ -159,7 +162,7 @@ _homeostasis: HomeostasisSystem | None = None
 def get_homeostasis() -> HomeostasisSystem:
     """
     Get the homeostasis.
-    
+
     Returns:
         HomeostasisSystem
     """

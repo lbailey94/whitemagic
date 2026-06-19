@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AdaptiveRules:
     """AdaptiveRules: adaptive rules.
-    
+
     Value object: equality and repr are field-based."""
     enabled: bool = False
     min_confidence: float = 0.8
@@ -50,7 +50,7 @@ class AdaptiveSystem:
     def enable(self, require_approval: bool = True):
         """
         Perform the enable operation.
-        
+
         Args:
             require_approval: Parameter description.
         """
@@ -75,29 +75,31 @@ _galaxy: ThoughtGalaxy | None = None
 def get_adaptive_system() -> AdaptiveSystem:
     """
     Get the adaptive system.
-    
+
     Returns:
         AdaptiveSystem
     """
     global _adaptive
-    if _adaptive is None: _adaptive = AdaptiveSystem()
+    if _adaptive is None:
+        _adaptive = AdaptiveSystem()
     return _adaptive
 
 def get_thought_galaxy() -> ThoughtGalaxy:
     """
     Get the thought galaxy.
-    
+
     Returns:
         ThoughtGalaxy
     """
     global _galaxy
-    if _galaxy is None: _galaxy = ThoughtGalaxy()
+    if _galaxy is None:
+        _galaxy = ThoughtGalaxy()
     return _galaxy
 
 def enable_full_recursion(require_approval: bool = True):
     """
     Perform the enable full recursion operation.
-    
+
     Args:
         require_approval: Parameter description.
     """

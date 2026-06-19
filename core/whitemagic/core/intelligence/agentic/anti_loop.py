@@ -154,7 +154,8 @@ class AntiLoopDetector:
             # Check if same error repeated
             if len(self.error_history) >= self.SAME_ERROR_THRESHOLD:
                 recent = self.error_history[-self.SAME_ERROR_THRESHOLD:]
-                if len(set(recent)) == 1:  # All same error
+                if len(set(recent)) == 1:
+                    # All same error
                     return self._open_circuit("error_repeat",
                         f"Same error repeated {self.SAME_ERROR_THRESHOLD} times: {error[:100]}")
 
@@ -237,7 +238,8 @@ class AntiLoopDetector:
             "circuit_breaker": self.get_circuit_status(),
             "recent_warnings": [
                 {"type": w.type, "suggestion": w.suggestion}
-                for w in self.warnings_issued[-5:]
+                for w in self.warnings_issued[-5:
+                    ]
             ],
         }
 

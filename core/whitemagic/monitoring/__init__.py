@@ -12,12 +12,13 @@ Provides:
 import importlib.util
 import logging
 import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Generator
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Logging Configuration
@@ -64,10 +65,10 @@ class StructuredLogger:
     def debug(self, message: str, **kwargs) -> None:
         """
         Perform the debug operation.
-        
+
         Args:
             message: Parameter description.
-        
+
         Returns:
             None
         """
@@ -76,10 +77,10 @@ class StructuredLogger:
     def info(self, message: str, **kwargs) -> None:
         """
         Perform the info operation.
-        
+
         Args:
             message: Parameter description.
-        
+
         Returns:
             None
         """
@@ -88,10 +89,10 @@ class StructuredLogger:
     def warning(self, message: str, **kwargs) -> None:
         """
         Perform the warning operation.
-        
+
         Args:
             message: Parameter description.
-        
+
         Returns:
             None
         """
@@ -100,10 +101,10 @@ class StructuredLogger:
     def error(self, message: str, **kwargs) -> None:
         """
         Perform the error operation.
-        
+
         Args:
             message: Parameter description.
-        
+
         Returns:
             None
         """
@@ -112,10 +113,10 @@ class StructuredLogger:
     def critical(self, message: str, **kwargs) -> None:
         """
         Perform the critical operation.
-        
+
         Args:
             message: Parameter description.
-        
+
         Returns:
             None
         """
@@ -306,10 +307,10 @@ def traced(name: str | None = None, **tags) -> Callable:
     def decorator(func: Callable) -> Callable:
         """
         Perform the decorator operation.
-        
+
         Args:
             func: Parameter description.
-        
+
         Returns:
             Callable
         """
@@ -366,10 +367,10 @@ class HealthChecker:
         def decorator(func: Callable[[], HealthCheckResult]) -> Callable:
             """
             Perform the decorator operation.
-            
+
             Args:
                 func: Parameter description.
-            
+
             Returns:
                 Callable
             """

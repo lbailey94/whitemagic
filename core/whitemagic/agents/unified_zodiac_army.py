@@ -522,7 +522,8 @@ class UnifiedZodiacCommander:
 
             if zodiac_counts:
                 report.append("### Zodiac Distribution")
-                for sign, count in sorted(zodiac_counts.items(), key=lambda x: x[1], reverse=True):
+                for sign, count in sorted(zodiac_counts.items(), key=lambda x:
+                    x[1], reverse=True):
                     mapping = next((m for m in self.mappings if m.sign == sign), None)
                     if mapping:
                         report.append(f"- **{sign.value.title()}** ({mapping.element}/{mapping.modality}): {count} clones, synergy {mapping.synergy_score:.0%}")

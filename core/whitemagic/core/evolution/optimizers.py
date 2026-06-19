@@ -30,7 +30,7 @@ class OptimizationMetrics:
     def cache_hit_rate(self) -> float:
         """
         Perform the cache hit rate operation.
-        
+
         Returns:
             float
         """
@@ -41,7 +41,7 @@ class OptimizationMetrics:
     def avg_latency_saved_ms(self) -> float:
         """
         Perform the avg latency saved ms operation.
-        
+
         Returns:
             float
         """

@@ -25,7 +25,7 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 @dataclass
 class ZodiacEntry:
     """ZodiacEntry: zodiac entry.
-    
+
     Value object: equality and repr are field-based."""
     entry_id: str
     timestamp: float
@@ -59,7 +59,7 @@ class ZodiacEntry:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -153,7 +153,7 @@ _ledger_instance = None
 def get_ledger() -> ZodiacLedger:
     """
     Get the ledger.
-    
+
     Returns:
         ZodiacLedger
     """

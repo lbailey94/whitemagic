@@ -1,4 +1,5 @@
 # ruff: noqa: BLE001
+import logging
 import shutil
 from importlib.util import find_spec
 from pathlib import Path
@@ -6,7 +7,7 @@ from pathlib import Path
 import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
-import logging
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -199,7 +200,8 @@ def rules_command() -> None:
         result = dispatch("dharma_rules") or {}
         rules = result.get("rules", result.get("principles", []))
         if isinstance(rules, list):
-            for r in rules[:20]:
+            for r in rules[:
+                20]:
                 if isinstance(r, dict):
                     click.echo(f"  {r.get('name', '?')}: {r.get('level', '?')} (weight: {r.get('weight', '?')})")
                 else:

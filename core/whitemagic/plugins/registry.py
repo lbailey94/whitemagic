@@ -178,10 +178,10 @@ class PluginRegistry:
         def visit(name: str) -> Any:
             """
             Perform the visit operation.
-            
+
             Args:
                 name: Parameter description.
-            
+
             Returns:
                 Any
             """

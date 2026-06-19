@@ -75,7 +75,7 @@ class IntakeItem:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -428,7 +428,8 @@ class HolographicIntake:
 
         pending = [p for p, item in self._queue.items() if item.status == IntakeStatus.PENDING]
 
-        for path in pending[:limit]:
+        for path in pending[:
+            limit]:
             if self.process_item(path):
                 stats["processed"] += 1
             else:
@@ -547,7 +548,8 @@ if __name__ == "__main__":
     if cmd == "scan" and len(sys.argv) > 2:
         items = intake.scan_directory(sys.argv[2])
         logger.info(f"Found {len(items)} new files")
-        for item in items[:10]:
+        for item in items[:
+            10]:
             logger.info(f"  {item.path}")
 
     elif cmd == "process":

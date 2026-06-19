@@ -1,7 +1,12 @@
 """Polyglot Memory Tools — Route holographic memory queries to Julia/Elixir/Haskell/Rust backends.
 """
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety, ToolStability
+from whitemagic.tools.tool_types import (
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+    ToolStability,
+)
 
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(

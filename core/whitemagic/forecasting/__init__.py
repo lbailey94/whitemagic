@@ -11,6 +11,8 @@ from whitemagic.forecasting.brier import (
 )
 from whitemagic.forecasting.convergence_bridge import (
     convergence_score as _convergence_score,
+)
+from whitemagic.forecasting.convergence_bridge import (
     detect_converging_claims,
 )
 from whitemagic.forecasting.temporal_db import TemporalForecastDB

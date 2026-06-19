@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 # Force Types — The Unit Roster
 # ---------------------------------------------------------------------------
 
-class ForceType(str, Enum):
+class ForceType(StrEnum):
     """The five force types in the Shadow Clone Army."""
 
     LIGHT_INFANTRY = "light_infantry"      # Tokio Clones — fast, cheap, consensus
@@ -51,7 +51,7 @@ class ForceType(str, Enum):
     DARE_TO_DIE = "dare_to_die"           # Ralph Clones — stateless, zero context
 
 
-class Rank(str, Enum):
+class Rank(StrEnum):
     """Command hierarchy ranks."""
 
     EMPEROR = "emperor"          # User — sets the Mandate of Heaven
@@ -61,7 +61,7 @@ class Rank(str, Enum):
     SOLDIER = "soldier"          # Clone — executes, reports, dies
 
 
-class ForceNature(str, Enum):
+class ForceNature(StrEnum):
     """Zheng (Orthodox) vs Qi (Unorthodox) classification."""
 
     ZHENG = "zheng"  # Orthodox — direct, predictable, overwhelming force
@@ -72,7 +72,7 @@ class ForceNature(str, Enum):
 # Wu Xing Force Timing
 # ---------------------------------------------------------------------------
 
-class WuXingPhase(str, Enum):
+class WuXingPhase(StrEnum):
     """Five Elements mapped to campaign phases."""
 
     WOOD = "wood"    # Reconnaissance — growth, exploration, intelligence gathering
@@ -719,7 +719,8 @@ class ImperialDoctrine:
 
         # Generate ForceSpecs
         specs = []
-        for force_type, weight in sorted(weights.items(), key=lambda x: -x[1]):
+        for force_type, weight in sorted(weights.items(), key=lambda x:
+            -x[1]):
             count = max(1, int(max_clones * weight))
             if count < 5 and force_type not in (ForceType.OFFICERS, ForceType.SIEGE_ENGINEERS):
                 continue  # Too small to matter

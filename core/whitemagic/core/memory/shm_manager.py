@@ -170,10 +170,10 @@ class SharedMemoryManager:
     def get_uuid(self, int_id: int) -> str | None:
         """
         Get the uuid.
-        
+
         Args:
             int_id: Parameter description.
-        
+
         Returns:
             str | None
         """
@@ -182,7 +182,7 @@ class SharedMemoryManager:
     def get_count(self) -> int:
         """
         Get the count.
-        
+
         Returns:
             int
         """
@@ -192,7 +192,7 @@ _global_shm_manager = None
 def get_shm_manager() -> SharedMemoryManager:
     """
     Get the shm manager.
-    
+
     Returns:
         SharedMemoryManager
     """

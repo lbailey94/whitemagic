@@ -44,7 +44,7 @@ class LazyToolRegistry(list[ToolDefinition]):
     def copy(self) -> list[ToolDefinition]:
         """
         Perform the copy operation.
-        
+
         Returns:
             list[ToolDefinition]
         """
@@ -54,7 +54,7 @@ class LazyToolRegistry(list[ToolDefinition]):
     def refresh(self) -> list[ToolDefinition]:
         """
         Perform the refresh operation.
-        
+
         Returns:
             list[ToolDefinition]
         """
@@ -76,7 +76,7 @@ TOOL_REGISTRY = LazyToolRegistry(_load_callable_registry)
 def get_all_tools() -> list[ToolDefinition]:
     """
     Get the all tools.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -87,7 +87,7 @@ def get_all_tools() -> list[ToolDefinition]:
 def get_authored_tools() -> list[ToolDefinition]:
     """
     Get the authored tools.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -98,7 +98,7 @@ def get_authored_tools() -> list[ToolDefinition]:
 def refresh_tool_registry() -> list[ToolDefinition]:
     """
     Perform the refresh tool registry operation.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -111,10 +111,10 @@ def refresh_tool_registry() -> list[ToolDefinition]:
 def get_tool(name: str) -> ToolDefinition | None:
     """
     Get the tool.
-    
+
     Args:
         name: Parameter description.
-    
+
     Returns:
         ToolDefinition | None
     """
@@ -128,10 +128,10 @@ def get_tool(name: str) -> ToolDefinition | None:
 def get_tools_by_category(category: ToolCategory) -> list[ToolDefinition]:
     """
     Get the tools by category.
-    
+
     Args:
         category: Parameter description.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -142,10 +142,10 @@ def get_tools_by_category(category: ToolCategory) -> list[ToolDefinition]:
 def get_tools_by_safety(safety: ToolSafety) -> list[ToolDefinition]:
     """
     Get the tools by safety.
-    
+
     Args:
         safety: Parameter description.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -156,7 +156,7 @@ def get_tools_by_safety(safety: ToolSafety) -> list[ToolDefinition]:
 def get_safe_tools() -> list[ToolDefinition]:
     """
     Get the safe tools.
-    
+
     Returns:
         list[ToolDefinition]
     """
@@ -167,7 +167,7 @@ def get_safe_tools() -> list[ToolDefinition]:
 def to_openai_tools() -> list[dict[str, Any]]:
     """
     Convert to/from openai tools.
-    
+
     Returns:
         list[dict[str, Any]]
     """
@@ -178,7 +178,7 @@ def to_openai_tools() -> list[dict[str, Any]]:
 def to_mcp_tools() -> list[dict[str, Any]]:
     """
     Convert to/from mcp tools.
-    
+
     Returns:
         list[dict[str, Any]]
     """
@@ -189,7 +189,7 @@ def to_mcp_tools() -> list[dict[str, Any]]:
 def get_tool_names() -> list[str]:
     """
     Get the tool names.
-    
+
     Returns:
         list[str]
     """

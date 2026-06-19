@@ -183,11 +183,11 @@ class SQLiteBackend:
     def list_recent(self, limit: int = 10, memory_type: MemoryType | None = None) -> list[Memory]:
         """
         List the recent.
-        
+
         Args:
             limit: Parameter description.
             memory_type: Parameter description.
-        
+
         Returns:
             list[Memory]
         """
@@ -196,11 +196,11 @@ class SQLiteBackend:
     def fetch_memory_contents(self, memory_type: str | None = None, limit: int = 10000) -> list[str]:
         """
         Perform the fetch memory contents operation.
-        
+
         Args:
             memory_type: Parameter description.
             limit: Parameter description.
-        
+
         Returns:
             list[str]
         """
@@ -218,10 +218,10 @@ class SQLiteBackend:
     def find_by_content_hash(self, content_hash: str) -> str | None:
         """
         Find by content hash matching the criteria.
-        
+
         Args:
             content_hash: Parameter description.
-        
+
         Returns:
             str | None
         """
@@ -236,7 +236,7 @@ class SQLiteBackend:
     def store_coords(self, memory_id: str, x: float, y: float, z: float, w: float, v: float) -> None:
         """
         Perform the store coords operation.
-        
+
         Args:
             memory_id: Parameter description.
             x: Parameter description.
@@ -244,7 +244,7 @@ class SQLiteBackend:
             z: Parameter description.
             w: Parameter description.
             v: Parameter description.
-        
+
         Returns:
             None
         """
@@ -259,10 +259,10 @@ class SQLiteBackend:
     def get_coords(self, memory_id: str) -> tuple[float, float, float, float, float] | None:
         """
         Get the coords.
-        
+
         Args:
             memory_id: Parameter description.
-        
+
         Returns:
             tuple[float, float, float, float, float] | None
         """
@@ -275,7 +275,7 @@ class SQLiteBackend:
     def get_all_coords(self) -> dict[str, tuple[float, float, float, float, float]]:
         """
         Get the all coords.
-        
+
         Returns:
             dict[str, tuple[float, float, float, float, float]]
         """
@@ -288,11 +288,11 @@ class SQLiteBackend:
     def update_galactic_distance(self, memory_id: str, distance: float) -> None:
         """
         Update the galactic distance.
-        
+
         Args:
             memory_id: Parameter description.
             distance: Parameter description.
-        
+
         Returns:
             None
         """
@@ -305,10 +305,10 @@ class SQLiteBackend:
     def get_weakest_memories(self, limit: int = 100) -> list[Memory]:
         """
         Get the weakest memories.
-        
+
         Args:
             limit: Parameter description.
-        
+
         Returns:
             list[Memory]
         """
@@ -317,11 +317,11 @@ class SQLiteBackend:
     def archive_to_edge(self, memory_id: str, galactic_distance: float = 0.95) -> None:
         """
         Perform the archive to edge operation.
-        
+
         Args:
             memory_id: Parameter description.
             galactic_distance: Parameter description.
-        
+
         Returns:
             None
         """

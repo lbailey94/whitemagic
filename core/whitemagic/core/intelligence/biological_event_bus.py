@@ -9,10 +9,11 @@ Rust-accelerated dispatch and circuit breaker protection.
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class BiologicalEventBus:
         async def safe_handler(event: BiologicalEvent):
             """
             Perform the safe handler operation.
-            
+
             Args:
                 event: Parameter description.
             """
@@ -247,7 +248,8 @@ async def connect_metabolism_to_evolution():
     async def memory_decay_handler(event: BiologicalEvent):
         """Convert memory decay into selection pressure."""
         decay_rate = event.data.get("decay_rate", 0)
-        if decay_rate > 0.1:  # Significant decay
+        if decay_rate > 0.1:
+            # Significant decay
             await bus.publish(
                 EventType.SELECTION_PRESSURE,
                 {"pressure_type": "memory_decay", "strength": decay_rate},

@@ -12,11 +12,11 @@ All other tools are considered experimental and may change without notice.
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class ToolStability(str, Enum):
+class ToolStability(StrEnum):
     """Tool stability classification."""
     STABLE = "stable"           # Core contract - never break
     EXPERIMENTAL = "experimental"  # May change

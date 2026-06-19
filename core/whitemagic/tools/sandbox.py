@@ -48,7 +48,7 @@ class ResourceLimits:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -73,7 +73,7 @@ class SandboxResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -229,7 +229,7 @@ _sandbox_lock = threading.Lock()
 def get_sandbox() -> ToolSandbox:
     """
     Get the sandbox.
-    
+
     Returns:
         ToolSandbox
     """

@@ -421,7 +421,8 @@ class TemporalForecastDB:
         result = self.summary()
         # Replace NaN with None for JSON safety
         for key in ("brier_score", "brier_skill_score"):
-            if result[key] is not None and result[key] != result[key]:  # NaN check
+            if result[key] is not None and result[key] != result[key]:
+                # NaN check
                 result[key] = None
         return result
 

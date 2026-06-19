@@ -112,11 +112,11 @@ class SharedMemoryBridge:
     def write_embedding(self, memory_id: int, vector: list[float]) -> bool:
         """
         Perform the write embedding operation.
-        
+
         Args:
             memory_id: Parameter description.
             vector: Parameter description.
-        
+
         Returns:
             bool
         """
@@ -152,11 +152,11 @@ class SharedMemoryBridge:
     def write_batch_numpy(self, ids: np.ndarray, vectors: np.ndarray) -> int:
         """
         Perform the write batch numpy operation.
-        
+
         Args:
             ids: Parameter description.
             vectors: Parameter description.
-        
+
         Returns:
             int
         """
@@ -195,7 +195,7 @@ class SharedMemoryBridge:
     def read_embedding(self) -> tuple[int, list[float]] | None:
         """
         Perform the read embedding operation.
-        
+
         Returns:
             tuple[int, list[float]] | None
         """
@@ -227,10 +227,10 @@ class SharedMemoryBridge:
     def read_batch_numpy(self, max_count: int = 1000) -> tuple[np.ndarray, np.ndarray]:
         """
         Perform the read batch numpy operation.
-        
+
         Args:
             max_count: Parameter description.
-        
+
         Returns:
             tuple[np.ndarray, np.ndarray]
         """
@@ -264,7 +264,7 @@ class SharedMemoryBridge:
     def get_stats(self) -> dict:
         """
         Get the stats.
-        
+
         Returns:
             dict
         """
@@ -285,7 +285,7 @@ class SharedMemoryBridge:
     def close(self) -> None:
         """
         Perform the close operation.
-        
+
         Returns:
             None
         """
@@ -297,7 +297,7 @@ class SharedMemoryBridge:
     def destroy(self) -> None:
         """
         Perform the destroy operation.
-        
+
         Returns:
             None
         """
@@ -323,7 +323,7 @@ class SharedMemoryBridge:
 def create_bridge() -> SharedMemoryBridge:
     """
     Create a new bridge.
-    
+
     Returns:
         SharedMemoryBridge
     """
@@ -333,7 +333,7 @@ def create_bridge() -> SharedMemoryBridge:
 def open_bridge() -> SharedMemoryBridge:
     """
     Perform the open bridge operation.
-    
+
     Returns:
         SharedMemoryBridge
     """
@@ -343,10 +343,10 @@ def open_bridge() -> SharedMemoryBridge:
 def benchmark_transfer(n_embeddings: int = 1000) -> dict[str, Any]:
     """
     Perform the benchmark transfer operation.
-    
+
     Args:
         n_embeddings: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """

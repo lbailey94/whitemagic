@@ -71,7 +71,7 @@ class BiologicalEventBus:
     async def start(self) -> None:
         """
         Perform the start operation.
-        
+
         Returns:
             None
         """
@@ -82,7 +82,7 @@ class BiologicalEventBus:
     async def stop(self) -> None:
         """
         Perform the stop operation.
-        
+
         Returns:
             None
         """
@@ -92,27 +92,30 @@ class BiologicalEventBus:
     def subscribe(self, event_type: EventType, handler: Callable, subsystem: str) -> None:
         """
         Perform the subscribe operation.
-        
+
         Args:
             event_type: Parameter description.
             handler: Parameter description.
             subsystem: Parameter description.
-        
+
         Returns:
             None
         """
-        if event_type not in self._subscribers: self._subscribers[event_type] = []
+        if event_type not in self._subscribers:
+            self._subscribers[event_type] = []
 
         async def safe_handler(event: BiologicalEvent):
             """
             Perform the safe handler operation.
-            
+
             Args:
                 event: Parameter description.
             """
             try:
-                if asyncio.iscoroutinefunction(handler): await handler(event)
-                else: await asyncio.get_event_loop().run_in_executor(self._executor, handler, event)
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(event)
+                else :
+                    await asyncio.get_event_loop().run_in_executor(self._executor, handler, event)
             except Exception as e:
                 self._stats["errors"] += 1
                 logger.error(f"Event handler error in {subsystem}: {e}")
@@ -122,17 +125,18 @@ class BiologicalEventBus:
     async def publish(self, event_type: EventType, data: dict[str, Any], source: str, priority: int = 1) -> bool:
         """
         Perform the publish operation.
-        
+
         Args:
             event_type: Parameter description.
             data: Parameter description.
             source: Parameter description.
             priority: Parameter description.
-        
+
         Returns:
             bool
         """
-        if not self.is_active: return False
+        if not self.is_active:
+            return False
         event = BiologicalEvent(event_type=event_type, data=data, source_subsystem=source, priority=priority)
         await self._event_queue.put(event)
         self._stats["events_published"] += 1
@@ -147,13 +151,15 @@ class BiologicalEventBus:
                     tasks = [handler(event) for handler in handlers]
                     await asyncio.gather(*tasks, return_exceptions=True)
                 self._stats["events_processed"] += 1
-            except TimeoutError: continue
-            except Exception as e: logger.error(f"Event processing error: {e}")
+            except TimeoutError:
+                continue
+            except Exception as e:
+                logger.error(f"Event processing error: {e}")
 
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -173,11 +179,12 @@ class UnifiedNervousSystem:
     async def start(self) -> None:
         """
         Perform the start operation.
-        
+
         Returns:
             None
         """
-        if self.is_active: return
+        if self.is_active:
+            return
         self.event_bus = await get_event_bus()
         self.is_active = True
         logger.info("🧠 Unified Nervous System initialized")
@@ -185,24 +192,26 @@ class UnifiedNervousSystem:
     async def stop(self) -> None:
         """
         Perform the stop operation.
-        
+
         Returns:
             None
         """
         self.is_active = False
-        if self.event_bus: await self.event_bus.stop()
+        if self.event_bus:
+            await self.event_bus.stop()
 
     async def pulse(self, context: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Perform the pulse operation.
-        
+
         Args:
             context: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
-        if not self.is_active: return {"status": "inactive"}
+        if not self.is_active:
+            return {"status": "inactive"}
         self._stats["pulses"] += 1
         return {"status": "ok", "pulses": self._stats["pulses"], "timestamp": time.time()}
 
@@ -214,7 +223,7 @@ _lock = asyncio.Lock()
 async def get_event_bus() -> BiologicalEventBus:
     """
     Get the event bus.
-    
+
     Returns:
         BiologicalEventBus
     """
@@ -229,7 +238,7 @@ async def get_event_bus() -> BiologicalEventBus:
 async def get_nervous_system() -> UnifiedNervousSystem:
     """
     Get the nervous system.
-    
+
     Returns:
         UnifiedNervousSystem
     """
@@ -245,7 +254,7 @@ async def get_nervous_system() -> UnifiedNervousSystem:
 def get_nervous_system_sync() -> UnifiedNervousSystem:
     """
     Get the nervous system sync.
-    
+
     Returns:
         UnifiedNervousSystem
     """

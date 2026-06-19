@@ -39,7 +39,7 @@ class ActionResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -140,10 +140,10 @@ class BrowserActions:
         async def on_load(event: Any) -> None:
             """
             Handle a load event.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """

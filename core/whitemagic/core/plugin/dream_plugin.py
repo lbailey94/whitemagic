@@ -22,7 +22,7 @@ class DreamPlugin:
     def start(self) -> None:
         """
         Perform the start operation.
-        
+
         Returns:
             None
         """
@@ -35,7 +35,7 @@ class DreamPlugin:
     def stop(self) -> None:
         """
         Perform the stop operation.
-        
+
         Returns:
             None
         """
@@ -47,7 +47,7 @@ class DreamPlugin:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

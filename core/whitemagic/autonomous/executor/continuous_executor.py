@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class FileCreateAction:
     """FileCreateAction: file create action.
-    
+
     Value object: equality and repr are field-based."""
     path: str
     content: str
@@ -31,7 +31,7 @@ class FileCreateAction:
 @dataclass
 class FileEditAction:
     """FileEditAction: file edit action.
-    
+
     Value object: equality and repr are field-based."""
     path: str
     changes: str
@@ -39,14 +39,14 @@ class FileEditAction:
 @dataclass
 class ShellCommandAction:
     """ShellCommandAction: shell command action.
-    
+
     Value object: equality and repr are field-based."""
     command: str
 
 @dataclass
 class ComplexTaskAction:
     """ComplexTaskAction: complex task action.
-    
+
     Value object: equality and repr are field-based."""
     description: str
 
@@ -82,7 +82,7 @@ class Objective:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -222,7 +222,8 @@ class ContinuousExecutor:
                 self.current_iteration = getattr(self, 'current_iteration', 0) + 1
 
                 # Homeostasis / Biological Subsystem pulse
-                if self.current_iteration % 5 == 0:  # Lowered from 50 to 5 for testing
+                if self.current_iteration % 5 == 0:
+                    # Lowered from 50 to 5 for testing
                     self.log("🧠 Triggering Nervous System Pulse")
                     if self.nervous_system:
                         try:
@@ -765,10 +766,10 @@ class ContinuousExecutor:
             async def execute_with_limit(obj: Objective) -> ExecutionResult:
                 """
                 Run the with limit operation.
-                
+
                 Args:
                     obj: Parameter description.
-                
+
                 Returns:
                     ExecutionResult
                 """
@@ -813,7 +814,8 @@ class ContinuousExecutor:
 
             # NEW: Circuit Breaker Check (Stop if too many failures in batch)
             batch_failures = sum(1 for r in batch_results if isinstance(r, ExecutionResult) and not r.success)
-            if batch_failures > len(batch) * 0.5:  # >50% failure rate
+            if batch_failures > len(batch) * 0.5:
+                # >50% failure rate
                 self.log(f"Stopping: Circuit breaker tripped ({batch_failures} failures in batch)", "ERROR")
                 break
 

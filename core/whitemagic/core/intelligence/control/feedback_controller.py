@@ -169,7 +169,7 @@ _controller = None
 def get_feedback_controller() -> FeedbackController:
     """
     Get the feedback controller.
-    
+
     Returns:
         FeedbackController
     """

@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 # ── Lazy crypto import (never block init) ────────────────────────────
 _CRYPTO_AVAILABLE = False
 try:
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
         Ed25519PrivateKey,
     )
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.exceptions import InvalidSignature
 
     _CRYPTO_AVAILABLE = True
 except ImportError:
@@ -132,7 +132,7 @@ class AuditSigner:
     def is_available(self) -> bool:
         """
         Check whether the available condition holds.
-        
+
         Returns:
             bool
         """

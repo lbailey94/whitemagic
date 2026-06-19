@@ -42,7 +42,7 @@ class CastContext:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -270,7 +270,8 @@ Spells Cast: {len(self.cast_history)}
 
         if self.cast_history:
             status += "\nRecent Casts:\n"
-            for result in self.cast_history[-5:]:
+            for result in self.cast_history[-5:
+                ]:
                 if result.spell:
                     status += f"  ✨ {result.spell.name} - {result.outcome.value}\n"
 

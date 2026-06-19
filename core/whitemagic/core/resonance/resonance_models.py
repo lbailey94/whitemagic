@@ -221,7 +221,8 @@ class PatternResonanceDetector:
         clusters = []
         current_cluster = [resonant_mems[0]]
 
-        for mem in resonant_mems[1:]:
+        for mem in resonant_mems[1:
+            ]:
             center_freq = sum(m["frequency"] for m in current_cluster) / len(current_cluster)
             if abs(mem["frequency"] - center_freq) <= self.frequency_tolerance:
                 current_cluster.append(mem)
@@ -584,7 +585,8 @@ class GardenResonanceMatrix:
 
                 matrix[i][j] = round(harmony, 4)
 
-                if i < j:  # Only record each pair once
+                if i < j:
+                    # Only record each pair once
                     pairs.append({
                         "garden_a": g1,
                         "garden_b": g2,

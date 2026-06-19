@@ -64,7 +64,7 @@ class CentralitySnapshot:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -107,7 +107,7 @@ class WalkPath:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -132,7 +132,7 @@ class WalkResult:
     def discovered_ids(self) -> set[str]:
         """
         Perform the discovered ids operation.
-        
+
         Returns:
             set[str]
         """
@@ -174,7 +174,7 @@ class GraphEngine:
     def graph(self) -> Any:
         """
         Perform the graph operation.
-        
+
         Returns:
             Any
         """
@@ -195,14 +195,15 @@ class GraphEngine:
     def rebuild(self, sample_limit: int = 50000) -> dict[str, Any]:
         """
         Perform the rebuild operation.
-        
+
         Args:
             sample_limit: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
-        if not _NX_AVAILABLE: return {"status": "unavailable"}
+        if not _NX_AVAILABLE:
+            return {"status": "unavailable"}
         time.perf_counter()
         try:
             from whitemagic.core.memory.unified import get_unified_memory
@@ -225,15 +226,16 @@ class GraphEngine:
     def pagerank(self, alpha: float = 0.85) -> dict[str, float]:
         """
         Perform the pagerank operation.
-        
+
         Args:
             alpha: Parameter description.
-        
+
         Returns:
             dict[str, float]
         """
         G = self.graph
-        if G is None or not _NX_AVAILABLE: return {}
+        if G is None or not _NX_AVAILABLE:
+            return {}
         try:
             return cast(dict[str, float], nx.pagerank(G, alpha=alpha, weight="weight"))
         except Exception as e:
@@ -259,12 +261,12 @@ class GraphWalker:
         # For Milestone 4.3 I'll focus on structural consolidation first
         """
         Perform the walk operation.
-        
+
         Args:
             seed_ids: Parameter description.
             hops: Parameter description.
             top_k: Parameter description.
-        
+
         Returns:
             WalkResult
         """
@@ -277,21 +279,23 @@ _walker: GraphWalker | None = None
 def get_graph_engine() -> GraphEngine:
     """
     Get the graph engine.
-    
+
     Returns:
         GraphEngine
     """
     global _engine
-    if _engine is None: _engine = GraphEngine()
+    if _engine is None:
+        _engine = GraphEngine()
     return _engine
 
 def get_graph_walker() -> GraphWalker:
     """
     Get the graph walker.
-    
+
     Returns:
         GraphWalker
     """
     global _walker
-    if _walker is None: _walker = GraphWalker()
+    if _walker is None:
+        _walker = GraphWalker()
     return _walker

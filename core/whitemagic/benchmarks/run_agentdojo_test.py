@@ -11,6 +11,7 @@ from pathlib import Path
 
 # Patch AgentDojo BEFORE importing the benchmark CLI
 import agentdojo.agent_pipeline.agent_pipeline as agent_pipeline
+
 import whitemagic.benchmarks.agentdojo_defense as _  # noqa: F401  # side-effect: registers defense
 
 # Inject our defense into the DEFENSES list
@@ -19,9 +20,9 @@ if "whitemagic_dharma" not in agent_pipeline.DEFENSES:
     # The from_config patch is already applied in agentdojo_defense.py
 
 # Now import the benchmark function
+from agentdojo.models import ModelsEnum
 from agentdojo.scripts.benchmark import benchmark_suite
 from agentdojo.task_suite import get_suite
-from agentdojo.models import ModelsEnum
 from dotenv import load_dotenv
 
 

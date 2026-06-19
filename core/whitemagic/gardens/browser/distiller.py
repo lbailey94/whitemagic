@@ -159,7 +159,8 @@ class DOMDistiller:
             return None
 
         # Handle text nodes
-        if node_type == 3:  # TEXT_NODE
+        if node_type == 3:
+            # TEXT_NODE
             text = dom_node.get("nodeValue", "").strip()
             if text:
                 return SimplifiedElement(
@@ -171,7 +172,8 @@ class DOMDistiller:
             return None
 
         # Skip non-element nodes
-        if node_type != 1:  # ELEMENT_NODE
+        if node_type != 1:
+            # ELEMENT_NODE
             return None
 
         # Determine element type
@@ -287,7 +289,8 @@ class DOMDistiller:
         """Extract direct text content."""
         texts = []
         for child in node.get("children", []):
-            if child.get("nodeType") == 3:  # TEXT_NODE
+            if child.get("nodeType") == 3:
+                # TEXT_NODE
                 text = child.get("nodeValue", "").strip()
                 if text:
                     texts.append(text)

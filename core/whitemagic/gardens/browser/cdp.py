@@ -76,7 +76,7 @@ class CDPResponse:
     def success(self) -> bool:
         """
         Perform the success operation.
-        
+
         Returns:
             bool
         """
@@ -85,7 +85,7 @@ class CDPResponse:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -108,7 +108,7 @@ class CDPEvent:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

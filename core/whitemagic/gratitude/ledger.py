@@ -13,7 +13,7 @@ import logging
 import threading
 import time
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -23,11 +23,11 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 
-class GratitudeChannel(str, Enum):
+class GratitudeChannel(StrEnum):
     """GratitudeChannel: gratitude channel.
-    
+
     Enumeration.
-    
+
     Members:
         XRPL
         X402
@@ -53,7 +53,7 @@ class GratitudeEvent:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

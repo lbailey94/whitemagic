@@ -151,7 +151,7 @@ else:
     @dataclass
     class User:
         """User: user.
-    
+
     Value object: equality and repr are field-based."""
         id: int = 0
         username: str = ""
@@ -161,7 +161,7 @@ else:
     @dataclass
     class APIKey:
         """APIKey: api key.
-    
+
     Value object: equality and repr are field-based."""
         id: int = 0
         user_id: int = 0
@@ -172,7 +172,7 @@ else:
     @dataclass
     class Quota:
         """Quota: quota.
-    
+
     Value object: equality and repr are field-based."""
         id: int = 0
         user_id: int = 0
@@ -183,7 +183,7 @@ else:
     @dataclass
     class UsageRecord:
         """UsageRecord: usage record.
-    
+
     Value object: equality and repr are field-based."""
         id: int = 0
         user_id: int = 0
@@ -194,7 +194,7 @@ else:
     @dataclass
     class Memory:
         """Memory: memory.
-    
+
     Value object: equality and repr are field-based."""
         id: str = ""
         title: str = ""
@@ -203,7 +203,7 @@ else:
     @dataclass
     class MemoryLink:
         """MemoryLink: memory link.
-    
+
     Value object: equality and repr are field-based."""
         id: str = ""
         source_id: str = ""

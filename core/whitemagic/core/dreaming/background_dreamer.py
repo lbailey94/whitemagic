@@ -73,7 +73,7 @@ class BackgroundDreamer:
     def get_latest_report(self) -> dict[str, Any]:
         """
         Get the latest report.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -83,7 +83,7 @@ _dreamer_instance = None
 def get_background_dreamer() -> BackgroundDreamer:
     """
     Get the background dreamer.
-    
+
     Returns:
         BackgroundDreamer
     """

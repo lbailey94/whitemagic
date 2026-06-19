@@ -5,7 +5,7 @@ from typing import Any, cast
 def handle_sangha_chat_send(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a sangha chat send event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -16,7 +16,7 @@ def handle_sangha_chat_send(**kwargs: Any) -> dict[str, Any]:
 def handle_sangha_chat_read(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a sangha chat read event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -41,7 +41,7 @@ def handle_sangha_lock(**kwargs: Any) -> dict[str, Any]:
 def handle_sangha_lock_acquire(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a sangha lock acquire event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -52,7 +52,7 @@ def handle_sangha_lock_acquire(**kwargs: Any) -> dict[str, Any]:
 def handle_sangha_lock_release(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a sangha lock release event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -63,7 +63,7 @@ def handle_sangha_lock_release(**kwargs: Any) -> dict[str, Any]:
 def handle_sangha_lock_list(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a sangha lock list event.
-    
+
     Returns:
         dict[str, Any]
     """

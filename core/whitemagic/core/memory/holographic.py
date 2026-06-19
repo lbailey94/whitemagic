@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class HolographicResult:
     """HolographicResult: holographic result.
-    
+
     Value object: equality and repr are field-based."""
     memory_id: str
     distance: float
@@ -232,7 +232,7 @@ class HolographicMemory:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -280,7 +280,7 @@ _holo_memory: HolographicMemory | None = None
 def get_holographic_memory() -> HolographicMemory:
     """
     Get the holographic memory.
-    
+
     Returns:
         HolographicMemory
     """

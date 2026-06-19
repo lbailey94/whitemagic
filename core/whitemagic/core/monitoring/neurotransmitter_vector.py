@@ -58,7 +58,7 @@ class NeurotransmitterSnapshot:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -76,10 +76,10 @@ class _SignalWindow:
     def push(self, value: float) -> None:
         """
         Perform the push operation.
-        
+
         Args:
             value: Parameter description.
-        
+
         Returns:
             None
         """
@@ -89,7 +89,7 @@ class _SignalWindow:
     def recent(self) -> list[float]:
         """
         Perform the recent operation.
-        
+
         Returns:
             list[float]
         """
@@ -100,7 +100,7 @@ class _SignalWindow:
     def mean(self) -> float:
         """
         Perform the mean operation.
-        
+
         Returns:
             float
         """
@@ -110,7 +110,7 @@ class _SignalWindow:
     def variance(self) -> float:
         """
         Perform the variance operation.
-        
+
         Returns:
             float
         """

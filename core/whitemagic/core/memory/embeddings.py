@@ -843,7 +843,8 @@ class EmbeddingEngine:
 
         # Batch approach: for each vector, compute cosine against all subsequent
         for i in range(n):
-            if len(pairs) >= max_pairs * 3:  # collect extra, trim later
+            if len(pairs) >= max_pairs * 3:
+                # collect extra, trim later
                 break
             remaining = vectors[i + 1:]
             if len(remaining) == 0:

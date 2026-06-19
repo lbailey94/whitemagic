@@ -58,7 +58,8 @@ class TransitionTracker:
             ranked = sorted(counts.items(), key=lambda x: x[1], reverse=True)
             return [
                 (gana, count / total)
-                for gana, count in ranked[:top_k]
+                for gana, count in ranked[:
+                    top_k]
             ]
 
     def stats(self) -> dict[str, Any]:
@@ -139,7 +140,7 @@ class PrefetchCache:
     def stats(self) -> dict[str, Any]:
         """
         Perform the stats operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -224,7 +225,8 @@ class SpeculativePrefetcher:
         for gana_name, probability in predictions:
             tools = gana_tools.get(gana_name, [])
             # Prefetch top N tools for this Gana
-            for tool_name in tools[:self._max_prefetch]:
+            for tool_name in tools[:
+                self._max_prefetch]:
                 try:
                     self._prefetch_tool(tool_name, gana_name, probability)
                 except Exception as e:

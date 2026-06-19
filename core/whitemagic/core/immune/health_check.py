@@ -11,9 +11,9 @@ from typing import Any
 
 class HealthStatus(Enum):
     """HealthStatus: health status.
-    
+
     Enumeration.
-    
+
     Members:
         HEALTHY
         DEGRADED
@@ -40,7 +40,7 @@ class HealthMetric:
     def status(self) -> HealthStatus:
         """
         Perform the status operation.
-        
+
         Returns:
             HealthStatus
         """
@@ -131,7 +131,7 @@ _health_check: HealthCheck | None = None
 def get_health_check() -> HealthCheck:
     """
     Get the health check.
-    
+
     Returns:
         HealthCheck
     """

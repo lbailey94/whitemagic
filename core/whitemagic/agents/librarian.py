@@ -64,13 +64,13 @@ class InMemoryStorage:
     ) -> dict[str, Any]:
         """
         Create a new memory.
-        
+
         Args:
             title: Parameter description.
             content: Parameter description.
             memory_type: Parameter description.
             tags: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -90,7 +90,7 @@ class InMemoryStorage:
     def memories(self) -> list[dict[str, Any]]:
         """
         Perform the memories operation.
-        
+
         Returns:
             list[dict[str, Any]]
         """
@@ -115,13 +115,13 @@ def _get_default_storage() -> MemoryStorage:
             ) -> dict[str, Any]:
                 """
                 Create a new memory.
-                
+
                 Args:
                     title: Parameter description.
                     content: Parameter description.
                     memory_type: Parameter description.
                     tags: Parameter description.
-                
+
                 Returns:
                     dict[str, Any]
                 """
@@ -335,10 +335,10 @@ class EditorAgent:
         def find(x: int) -> int:
             """
             Perform the find operation.
-            
+
             Args:
                 x: Parameter description.
-            
+
             Returns:
                 int
             """
@@ -350,11 +350,11 @@ class EditorAgent:
         def union(x: int, y: int) -> None:
             """
             Perform the union operation.
-            
+
             Args:
                 x: Parameter description.
                 y: Parameter description.
-            
+
             Returns:
                 None
             """
@@ -378,7 +378,8 @@ class EditorAgent:
         merged: list[dict[str, Any]] = []
         for indices in groups.values():
             primary = dict(memories[indices[0]])  # copy
-            for idx in indices[1:]:
+            for idx in indices[1:
+                ]:
                 other = memories[idx]
                 # Append other content if different
                 if other.get("content") and other["content"] != primary.get("content"):
@@ -437,7 +438,8 @@ class PlannerAgent:
                 verb, target = match.group(1), match.group(2).strip()
                 # Trim target at first sentence end
                 target = re.split(r"[.!?]\s", target, maxsplit=1)[0]
-                if len(target) > 10:  # Skip very short matches
+                if len(target) > 10:
+                    # Skip very short matches
                     tasks.append({
                         "verb": verb.lower(),
                         "target": target,

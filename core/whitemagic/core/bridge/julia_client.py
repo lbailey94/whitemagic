@@ -58,7 +58,8 @@ class JuliaPersistentClient:
         )
 
         # Wait for server to be ready
-        for i in range(30):  # Wait up to 30 seconds for JIT
+        for i in range(30):
+            # Wait up to 30 seconds for JIT
             time.sleep(1)
             if self._ping():
                 logger.info("Julia server ready")

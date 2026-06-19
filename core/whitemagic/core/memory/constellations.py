@@ -80,7 +80,7 @@ class Constellation:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -118,7 +118,7 @@ class DetectionReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -445,7 +445,8 @@ class ConstellationDetector:
                 entities_created += 1
 
                 # Link a sample of members (avoid huge fan-out)
-                for mid in c.member_ids[:20]:
+                for mid in c.member_ids[:
+                    20]:
                     kg.add_relation(
                         source=mid,
                         relation="belongs_to_constellation",

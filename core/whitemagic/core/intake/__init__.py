@@ -272,7 +272,7 @@ class HolographicIntake:
         def daemon_loop() -> None:
             """
             Perform the daemon loop operation.
-            
+
             Returns:
                 None
             """

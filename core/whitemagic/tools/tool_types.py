@@ -5,15 +5,15 @@ domain definition files in registry_defs/.
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class ToolCategory(str, Enum):
+class ToolCategory(StrEnum):
     """ToolCategory: tool category.
-    
+
     Enumeration.
-    
+
     Members:
         MEMORY
         SESSION
@@ -59,11 +59,11 @@ class ToolCategory(str, Enum):
     SECURITY = "security"
 
 
-class ToolSafety(str, Enum):
+class ToolSafety(StrEnum):
     """ToolSafety: tool safety.
-    
+
     Enumeration.
-    
+
     Members:
         READ
         WRITE
@@ -73,7 +73,7 @@ class ToolSafety(str, Enum):
     DELETE = "delete"
 
 
-class ToolStability(str, Enum):
+class ToolStability(StrEnum):
     """Public contract tier for a tool.
 
     STABLE      — Part of the guaranteed public API. Gana meta-tools are always STABLE.

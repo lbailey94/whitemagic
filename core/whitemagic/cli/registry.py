@@ -27,10 +27,10 @@ class CommandRegistry:
         def decorator(func: Callable) -> Callable:
             """
             Perform the decorator operation.
-            
+
             Args:
                 func: Parameter description.
-            
+
             Returns:
                 Callable
             """

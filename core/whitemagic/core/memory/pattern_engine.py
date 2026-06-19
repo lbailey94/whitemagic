@@ -121,11 +121,11 @@ class PatternEngine:
         def to_patterns(type_name: str, descriptions: list[str]) -> list[Pattern]:
             """
             Convert to/from patterns.
-            
+
             Args:
                 type_name: Parameter description.
                 descriptions: Parameter description.
-            
+
             Returns:
                 list[Pattern]
             """
@@ -214,17 +214,20 @@ class PatternEngine:
             f.write("\n")
 
             f.write(f"## ⚠️ Anti-Patterns ({len(report.anti_patterns)})\n\n")
-            for p in report.anti_patterns[:10]:
+            for p in report.anti_patterns[:
+                10]:
                 f.write(f"- **{p.title}** (confidence: {p.confidence:.2f})\n")
             f.write("\n")
 
             f.write(f"## 🎯 Heuristics ({len(report.heuristics)})\n\n")
-            for p in report.heuristics[:10]:
+            for p in report.heuristics[:
+                10]:
                 f.write(f"- **{p.title}** (confidence: {p.confidence:.2f})\n")
             f.write("\n")
 
             f.write(f"## ⚡ Optimizations ({len(report.optimizations)})\n\n")
-            for p in report.optimizations[:10]:
+            for p in report.optimizations[:
+                10]:
                 f.write(f"- **{p.title}** (confidence: {p.confidence:.2f})\n")
             f.write("\n")
 

@@ -198,10 +198,10 @@ _accelerator_bridge = None
 def get_accelerator_bridge(root_dir: Path | None = None) -> AcceleratorBridge:
     """
     Get the accelerator bridge.
-    
+
     Args:
         root_dir: Parameter description.
-    
+
     Returns:
         AcceleratorBridge
     """

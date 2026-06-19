@@ -114,7 +114,8 @@ class DreamDaemon:
         compressed = 0
         for log_file in log_dir.glob("*.log"):
             try:
-                if log_file.stat().st_size > 5_000_000:  # >5MB
+                if log_file.stat().st_size > 5_000_000:
+                    # >5MB
                     gz_path = log_file.with_suffix(".log.gz")
                     with open(log_file, "rb") as f_in, gzip.open(gz_path, "wb") as f_out:
                         f_out.writelines(f_in)
@@ -187,7 +188,7 @@ _daemon: DreamDaemon | None = None
 def get_daemon() -> DreamDaemon:
     """
     Get the daemon.
-    
+
     Returns:
         DreamDaemon
     """

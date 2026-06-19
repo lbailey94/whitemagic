@@ -23,7 +23,7 @@ def _load_rust() -> tuple[Any, Any]:
 def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a create memory event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -102,7 +102,7 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
 def handle_fast_read_memory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a fast read memory event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -160,7 +160,7 @@ def handle_fast_read_memory(**kwargs: Any) -> dict[str, Any]:
 def handle_batch_read_memories(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a batch read memories event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -244,7 +244,7 @@ def handle_batch_read_memories(**kwargs: Any) -> dict[str, Any]:
 def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a search memories event.
-    
+
     Returns:
         dict[str, Any]
     """

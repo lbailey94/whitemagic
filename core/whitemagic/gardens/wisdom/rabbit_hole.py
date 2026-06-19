@@ -189,7 +189,8 @@ class RabbitHoleExplorer:
         connections = []
 
         for i, entry1 in enumerate(entries):
-            for entry2 in entries[i+1:]:
+            for entry2 in entries[i+1:
+                ]:
                 # Check for shared related terms
                 shared = set(entry1.related_terms) & set(entry2.related_terms)
                 if shared:
@@ -308,7 +309,7 @@ class SourceComparator:
     @dataclass
     class SourceInfo:
         """SourceInfo: source info.
-    
+
     Value object: equality and repr are field-based."""
         url: str
         content: str

@@ -52,7 +52,8 @@ def gana_list(quadrant: str) -> None:
             if quadrant != "all" and quadrant != quad_key:
                 continue
             branch = tree.add(f"[{color}]{label}[/{color}]")
-            for i, gana in enumerate(ganas[start:end], start + 1):
+            for i, gana in enumerate(ganas[start:
+                end], start + 1):
                 mansion = gana.mansion
                 branch.add(f"{i}. {mansion.name} ({mansion.value}) - {gana.__class__.__name__}")
         console.print(tree)
@@ -63,7 +64,8 @@ def gana_list(quadrant: str) -> None:
         if quadrant != "all" and quadrant != quad_key:
             continue
         click.echo(f"\n{label}")
-        for i, gana in enumerate(ganas[start:end], start + 1):
+        for i, gana in enumerate(ganas[start:
+            end], start + 1):
             mansion = gana.mansion
             click.echo(f"{i}. {mansion.name} ({mansion.value}) - {gana.__class__.__name__}")
 

@@ -49,7 +49,7 @@ def retry_with_backoff(
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         """
         Perform the wrapper operation.
-        
+
         Returns:
             Any
         """

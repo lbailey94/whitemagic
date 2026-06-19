@@ -41,7 +41,7 @@ def _arch() -> Any:
 def handle_archaeology_scan_directory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology scan directory event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -71,7 +71,7 @@ def handle_archaeology_scan_directory(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_mark_read(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology mark read event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -87,7 +87,7 @@ def handle_archaeology_mark_read(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_mark_written(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology mark written event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -102,7 +102,7 @@ def handle_archaeology_mark_written(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_have_read(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology have read event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -113,7 +113,7 @@ def handle_archaeology_have_read(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_find_unread(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology find unread event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -127,7 +127,7 @@ def handle_archaeology_find_unread(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_find_changed(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology find changed event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -138,7 +138,7 @@ def handle_archaeology_find_changed(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_recent_reads(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology recent reads event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -149,7 +149,7 @@ def handle_archaeology_recent_reads(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_stats(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology stats event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -168,7 +168,7 @@ def handle_archaeology_stats(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_report(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology report event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -178,7 +178,7 @@ def handle_archaeology_report(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_search(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology search event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -189,7 +189,7 @@ def handle_archaeology_search(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_process_wisdom(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology process wisdom event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -204,7 +204,7 @@ def handle_archaeology_process_wisdom(**kwargs: Any) -> dict[str, Any]:
 def handle_archaeology_daily_digest(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a archaeology daily digest event.
-    
+
     Returns:
         dict[str, Any]
     """

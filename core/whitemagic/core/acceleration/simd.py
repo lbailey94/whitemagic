@@ -48,13 +48,15 @@ def _find_lib(name: str) -> str | None:
     else:
         path = base / "whitemagic-zig" / "zig-out" / "lib" / "libwhitemagic.so"
 
-    if path.exists(): return str(path)
+    if path.exists():
+        return str(path)
     return os.environ.get(f"WM_{name.upper()}_LIB")
 
 def _init_libs():
     """Lazy initialization of SIMD backends."""
     global _rust_lib, _zig_lib, _rust_available, _zig_available
-    if _rust_lib is not None or _zig_lib is not None: return
+    if _rust_lib is not None or _zig_lib is not None:
+        return
     with _lock:
         # Rust init
         rust_path = _find_lib("rust")
@@ -99,7 +101,8 @@ def extract_keywords(text: str, limit: int = 10) -> list[str]:
     words = re.findall(r'\w+', text.lower())
     freq = {}
     for w in words:
-        if len(w) > 3: freq[w] = freq.get(w, 0) + 1
+        if len(w) > 3:
+            freq[w] = freq.get(w, 0) + 1
     return sorted(freq.keys(), key=lambda x: freq[x], reverse=True)[:limit]
 
 # --- VECTOR BATCH OPS ---
@@ -122,7 +125,7 @@ def batch_topk_cosine(query: list[float], corpus: list[list[float]], k: int = 10
 def simd_status() -> dict[str, Any]:
     """
     Perform the simd status operation.
-    
+
     Returns:
         dict[str, Any]
     """

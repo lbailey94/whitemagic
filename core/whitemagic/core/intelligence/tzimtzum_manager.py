@@ -48,7 +48,7 @@ class TzimtzumManager:
     def get_status(self) -> dict[str, Any]:
         """
         Get the status.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -65,7 +65,7 @@ _tzimtzum = None
 def get_tzimtzum() -> TzimtzumManager:
     """
     Get the tzimtzum.
-    
+
     Returns:
         TzimtzumManager
     """

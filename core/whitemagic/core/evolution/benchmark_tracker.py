@@ -105,7 +105,8 @@ class BenchmarkHistoryTracker:
         recent_values = []
 
         # Look through recent runs
-        for run in reversed(self.history[-lookback:]):
+        for run in reversed(self.history[-lookback:
+            ]):
             for result in run.get("results", []):
                 if result.get("name") == benchmark_name:
                     recent_values.append(result.get("duration_ms", 0))
@@ -169,7 +170,8 @@ class BenchmarkHistoryTracker:
         values = []
         timestamps = []
 
-        for run in self.history[-window:]:
+        for run in self.history[-window:
+            ]:
             for result in run.get("results", []):
                 if result.get("name") == benchmark_name:
                     values.append(result.get("duration_ms", 0))
@@ -239,7 +241,8 @@ class BenchmarkHistoryTracker:
         if regressions:
             report_lines.append("⚠️ REGRESSIONS DETECTED")
             report_lines.append("-"*80)
-            for comp in sorted(regressions, key=lambda x: x.improvement_pct):
+            for comp in sorted(regressions, key=lambda x:
+                x.improvement_pct):
                 report_lines.append(f"  {comp.benchmark_name}")
                 report_lines.append(f"    Baseline: {comp.baseline_ms:.2f}ms")
                 report_lines.append(f"    Current:  {comp.current_ms:.2f}ms")
@@ -250,7 +253,8 @@ class BenchmarkHistoryTracker:
         if improvements:
             report_lines.append("✓ TOP IMPROVEMENTS")
             report_lines.append("-"*80)
-            for comp in sorted(improvements, key=lambda x: x.improvement_pct, reverse=True)[:5]:
+            for comp in sorted(improvements, key=lambda x:
+                x.improvement_pct, reverse=True)[:5]:
                 report_lines.append(f"  {comp.benchmark_name}")
                 report_lines.append(f"    Baseline: {comp.baseline_ms:.2f}ms")
                 report_lines.append(f"    Current:  {comp.current_ms:.2f}ms")

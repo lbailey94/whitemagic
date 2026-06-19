@@ -38,7 +38,7 @@ class CacheStats:
     def hit_rate(self) -> float:
         """
         Perform the hit rate operation.
-        
+
         Returns:
             float
         """
@@ -49,7 +49,7 @@ class CacheStats:
     def prediction_accuracy(self) -> float:
         """
         Perform the prediction accuracy operation.
-        
+
         Returns:
             float
         """
@@ -166,7 +166,8 @@ class PredictiveCache:
 
         # Pre-warm cache with predictions
         for next_key, probability in likely_next:
-            if probability > 0.3:  # Only if reasonably likely
+            if probability > 0.3:
+                # Only if reasonably likely
                 self.prewarmed.add(next_key)
                 self.stats.predictions += 1
 

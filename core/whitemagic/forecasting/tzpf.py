@@ -92,7 +92,8 @@ def directional_foresight_index(
                 "raw_points": round(v["raw_points"], 1),
                 "weighted": round(v["weighted"], 1),
             }
-            for k, v in sorted(by_category.items(), key=lambda x: -x[1]["weighted"])
+            for k, v in sorted(by_category.items(), key=lambda x:
+                -x[1]["weighted"])
         },
     }
 

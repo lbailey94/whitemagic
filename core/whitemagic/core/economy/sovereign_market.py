@@ -77,7 +77,7 @@ _market: SovereignMarket | None = None
 def get_market() -> SovereignMarket:
     """
     Get the market.
-    
+
     Returns:
         SovereignMarket
     """

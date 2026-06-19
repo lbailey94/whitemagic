@@ -8,7 +8,7 @@ configuration sources (files, environment variables, CLI arguments).
 import logging
 import os
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +19,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 
-class Environment(str, Enum):
+class Environment(StrEnum):
     """Supported environments."""
 
     DEVELOPMENT = "development"
@@ -50,11 +50,11 @@ class DatabaseConfig(BaseModel):
     def validate_url(cls, v: str) -> str:
         """
         Validate the url.
-        
+
         Args:
             cls: Parameter description.
             v: Parameter description.
-        
+
         Returns:
             str
         """
@@ -197,11 +197,11 @@ class WhiteMagicConfig(BaseModel):
         # Generate secret key if not provided in development
         """
         Validate the security.
-        
+
         Args:
             cls: Parameter description.
             v: Parameter description.
-        
+
         Returns:
             dict[str, Any] | SecurityConfig
         """

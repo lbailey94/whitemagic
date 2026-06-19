@@ -12,6 +12,7 @@ Implementation:
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,7 +23,7 @@ from whitemagic.tools.envelope import coerce_jsonable
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 from whitemagic.utils.fileio import atomic_write, file_lock
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,7 +45,7 @@ def _record_path(tool: str, key: str) -> Path:
 @dataclass(frozen=True)
 class IdempotencyRecord:
     """IdempotencyRecord: idempotency record.
-    
+
     Value object: equality and repr are field-based."""
     tool: str
     key: str
@@ -54,7 +55,7 @@ class IdempotencyRecord:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -69,11 +70,11 @@ class IdempotencyRecord:
 def get_record(tool: str, key: str) -> IdempotencyRecord | None:
     """
     Get the record.
-    
+
     Args:
         tool: Parameter description.
         key: Parameter description.
-    
+
     Returns:
         IdempotencyRecord | None
     """
@@ -101,12 +102,12 @@ def get_record(tool: str, key: str) -> IdempotencyRecord | None:
 def put_record(tool: str, key: str, response: dict[str, Any]) -> None:
     """
     Perform the put record operation.
-    
+
     Args:
         tool: Parameter description.
         key: Parameter description.
         response: Parameter description.
-    
+
     Returns:
         None
     """

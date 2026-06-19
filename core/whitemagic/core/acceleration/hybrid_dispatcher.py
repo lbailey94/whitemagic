@@ -12,6 +12,7 @@ Mode selection:
 - "adaptive": Choose based on operation complexity (default)
 """
 
+import logging
 import queue
 import subprocess
 import threading
@@ -22,7 +23,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
-import logging
+
 logger = logging.getLogger(__name__)
 
 KOKA_DIR = Path(__file__).parent.parent / "whitemagic-koka"
@@ -31,9 +32,9 @@ _DEFAULT_HYBRID_PROCESS_TIMEOUT_S = 5.0
 
 class DispatchMode(Enum):
     """DispatchMode: dispatch mode.
-    
+
     Enumeration.
-    
+
     Members:
         SPEED
         SAFETY

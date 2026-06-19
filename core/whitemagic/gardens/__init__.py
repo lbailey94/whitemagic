@@ -268,11 +268,11 @@ class _LazyGardenGetters:
     def get(self, name: str, default: Any = None) -> Any:
         """
         Perform the get operation.
-        
+
         Args:
             name: Parameter description.
             default: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -282,7 +282,7 @@ class _LazyGardenGetters:
     def items(self) -> Any:
         """
         Perform the items operation.
-        
+
         Returns:
             Any
         """
@@ -291,7 +291,7 @@ class _LazyGardenGetters:
     def keys(self) -> Any:
         """
         Perform the keys operation.
-        
+
         Returns:
             Any
         """
@@ -300,7 +300,7 @@ class _LazyGardenGetters:
     def values(self) -> Any:
         """
         Perform the values operation.
-        
+
         Returns:
             Any
         """

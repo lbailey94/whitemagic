@@ -282,9 +282,11 @@ class PredictiveMaintenanceEngine:
                 threshold = readings[-1].threshold
                 current = values[-1]
 
-                if trend < 0 and current > threshold:  # Declining toward threshold
+                if trend < 0 and current > threshold:
+                    # Declining toward threshold
                     time_to_cross = (current - threshold) / abs(trend)
-                    if 0 < time_to_cross < 24:  # Within 24 "check intervals"
+                    if 0 < time_to_cross < 24:
+                        # Within 24 "check intervals"
                         alert = PredictiveAlert(
                             alert_id=f"pred_{int(time.time())}_{metric_name}",
                             component=metric_name,
@@ -375,7 +377,8 @@ class CapabilityDiscoveryEngine:
 
         # Test promising combinations
         from itertools import combinations
-        for combo in combinations(available_tools[:10], 2):
+        for combo in combinations(available_tools[:
+            10], 2):
             if combo not in self._tested_combinations:
                 discovery = DiscoveredCapability(
                     capability_name=f"combo_{combo[0]}_{combo[1]}",
@@ -506,7 +509,8 @@ class ApotheosisEngine:
 
         # 5. Test top discoveries
         tested = 0
-        for disc in discoveries[:3]:
+        for disc in discoveries[:
+            3]:
             self.capability.test_capability(disc)
             tested += 1
         results["capabilities_tested"] = tested

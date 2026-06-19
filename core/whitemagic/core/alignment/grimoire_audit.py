@@ -96,7 +96,7 @@ _auditor = None
 def get_auditor() -> GrimoireAuditor:
     """
     Get the auditor.
-    
+
     Returns:
         GrimoireAuditor
     """

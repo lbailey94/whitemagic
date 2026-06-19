@@ -35,9 +35,9 @@ _DEFAULT_KOKA_PROCESS_TIMEOUT_S = 5.0
 
 class DispatchMode(Enum):
     """DispatchMode: dispatch mode.
-    
+
     Enumeration.
-    
+
     Members:
         SPEED
         SAFETY
@@ -57,10 +57,10 @@ class LatencyStats:
     def record(self, latency_us: float) -> None:
         """
         Perform the record operation.
-        
+
         Args:
             latency_us: Parameter description.
-        
+
         Returns:
             None
         """
@@ -71,7 +71,7 @@ class LatencyStats:
     def avg_us(self) -> float:
         """
         Perform the avg us operation.
-        
+
         Returns:
             float
         """
@@ -82,7 +82,7 @@ class LatencyStats:
     def p95_us(self) -> float:
         """
         Perform the p95 us operation.
-        
+
         Returns:
             float
         """
@@ -161,11 +161,11 @@ class PythonFastPath:
     def prat_route(cls, tool: str) -> str:
         """
         Perform the prat route operation.
-        
+
         Args:
             cls: Parameter description.
             tool: Parameter description.
-        
+
         Returns:
             str
         """
@@ -181,11 +181,11 @@ class PythonFastPath:
     def get_predecessor(cls, gana: str) -> str:
         """
         Get the predecessor.
-        
+
         Args:
             cls: Parameter description.
             gana: Parameter description.
-        
+
         Returns:
             str
         """
@@ -203,11 +203,11 @@ class PythonFastPath:
     def get_successor(cls, gana: str) -> str:
         """
         Get the successor.
-        
+
         Args:
             cls: Parameter description.
             gana: Parameter description.
-        
+
         Returns:
             str
         """
@@ -225,10 +225,10 @@ class PythonFastPath:
     def circuit_check(cls) -> str:
         """
         Perform the circuit check operation.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             str
         """
@@ -238,10 +238,10 @@ class PythonFastPath:
     def circuit_record_success(cls) -> str:
         """
         Perform the circuit record success operation.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             str
         """
@@ -256,10 +256,10 @@ class PythonFastPath:
     def circuit_record_failure(cls) -> str:
         """
         Perform the circuit record failure operation.
-        
+
         Args:
             cls: Parameter description.
-        
+
         Returns:
             str
         """
@@ -412,7 +412,7 @@ class KokaProcess:
     def is_healthy(self) -> bool:
         """
         Check whether the healthy condition holds.
-        
+
         Returns:
             bool
         """
@@ -421,7 +421,7 @@ class KokaProcess:
     def stop(self) -> None:
         """
         Perform the stop operation.
-        
+
         Returns:
             None
         """
@@ -437,7 +437,7 @@ class KokaProcess:
     def stats(self) -> dict:
         """
         Perform the stats operation.
-        
+
         Returns:
             dict
         """
@@ -513,7 +513,7 @@ class KokaProcessPool:
     def stop(self) -> None:
         """
         Perform the stop operation.
-        
+
         Returns:
             None
         """
@@ -525,7 +525,7 @@ class KokaProcessPool:
     def stats(self) -> dict:
         """
         Perform the stats operation.
-        
+
         Returns:
             dict
         """
@@ -714,10 +714,10 @@ class HybridDispatcherV2:
     def prat_route(self, tool: str) -> str:
         """
         Perform the prat route operation.
-        
+
         Args:
             tool: Parameter description.
-        
+
         Returns:
             str
         """
@@ -760,10 +760,10 @@ class HybridDispatcherV2:
     def get_predecessor(self, gana: str) -> str:
         """
         Get the predecessor.
-        
+
         Args:
             gana: Parameter description.
-        
+
         Returns:
             str
         """
@@ -786,10 +786,10 @@ class HybridDispatcherV2:
     def get_successor(self, gana: str) -> str:
         """
         Get the successor.
-        
+
         Args:
             gana: Parameter description.
-        
+
         Returns:
             str
         """
@@ -814,7 +814,7 @@ class HybridDispatcherV2:
     def circuit_check(self) -> str:
         """
         Perform the circuit check operation.
-        
+
         Returns:
             str
         """
@@ -836,7 +836,7 @@ class HybridDispatcherV2:
     def circuit_record_failure(self) -> str:
         """
         Perform the circuit record failure operation.
-        
+
         Returns:
             str
         """
@@ -858,7 +858,7 @@ class HybridDispatcherV2:
     def circuit_record_success(self) -> str:
         """
         Perform the circuit record success operation.
-        
+
         Returns:
             str
         """
@@ -890,7 +890,7 @@ class HybridDispatcherV2:
     def dream_status(self) -> dict:
         """
         Perform the dream status operation.
-        
+
         Returns:
             dict
         """

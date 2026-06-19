@@ -123,7 +123,7 @@ class Campaign:
     def victory_progress(self) -> str:
         """
         Perform the victory progress operation.
-        
+
         Returns:
             str
         """
@@ -137,7 +137,7 @@ class Campaign:
     def army_label(self) -> str:
         """
         Perform the army label operation.
-        
+
         Returns:
             str
         """

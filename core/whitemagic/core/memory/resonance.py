@@ -35,10 +35,10 @@ class ResonanceBridge:
     def dump_memory_state(self, output_path: str) -> bool:
         """
         Perform the dump memory state operation.
-        
+
         Args:
             output_path: Parameter description.
-        
+
         Returns:
             bool
         """

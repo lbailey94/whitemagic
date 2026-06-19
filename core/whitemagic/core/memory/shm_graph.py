@@ -50,7 +50,7 @@ class SHMGraphTopology:
 
         """
         Perform the initialize operation.
-        
+
         Returns:
             None
         """
@@ -125,7 +125,7 @@ _global_shm_graph = None
 def get_shm_graph() -> SHMGraphTopology:
     """
     Get the shm graph.
-    
+
     Returns:
         SHMGraphTopology
     """

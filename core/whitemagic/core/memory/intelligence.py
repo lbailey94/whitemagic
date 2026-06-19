@@ -35,10 +35,10 @@ class HolographicStorage:
     def encode(self, data: Any) -> list[float]:
         """
         Perform the encode operation.
-        
+
         Args:
             data: Parameter description.
-        
+
         Returns:
             list[float]
         """
@@ -53,11 +53,11 @@ class HRREngine:
     def bind(self, a: list[float], b: list[float]) -> list[float]:
         """
         Perform the bind operation.
-        
+
         Args:
             a: Parameter description.
             b: Parameter description.
-        
+
         Returns:
             list[float]
         """
@@ -81,32 +81,35 @@ _lifecycle: MemoryLifecycle | None = None
 def get_holographic_storage() -> HolographicStorage:
     """
     Get the holographic storage.
-    
+
     Returns:
         HolographicStorage
     """
     global _holographic
-    if _holographic is None: _holographic = HolographicStorage()
+    if _holographic is None:
+        _holographic = HolographicStorage()
     return _holographic
 
 def get_hrr_engine() -> HRREngine:
     """
     Get the hrr engine.
-    
+
     Returns:
         HRREngine
     """
     global _hrr
-    if _hrr is None: _hrr = HRREngine()
+    if _hrr is None:
+        _hrr = HRREngine()
     return _hrr
 
 def get_memory_lifecycle() -> MemoryLifecycle:
     """
     Get the memory lifecycle.
-    
+
     Returns:
         MemoryLifecycle
     """
     global _lifecycle
-    if _lifecycle is None: _lifecycle = MemoryLifecycle()
+    if _lifecycle is None:
+        _lifecycle = MemoryLifecycle()
     return _lifecycle

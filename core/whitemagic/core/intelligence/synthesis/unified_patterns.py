@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 class PatternType(Enum):
     """PatternType: pattern type.
-    
+
     Enumeration.
-    
+
     Members:
         SOLUTION
         ANTI_PATTERN
@@ -250,7 +250,8 @@ class UnifiedPatternAPI:
 
         # Group by similar titles/descriptions
         for i, p1 in enumerate(all_patterns):
-            for p2 in all_patterns[i+1:]:
+            for p2 in all_patterns[i+1:
+                ]:
                 if p1.source_engine != p2.source_engine:
                     similarity = self._text_similarity(
                         f"{p1.title} {p1.description}",
@@ -294,7 +295,8 @@ class UnifiedPatternAPI:
         if "core" in self._engines:
             try:
                 report = self._engines["core"].extract_patterns(min_confidence=0.3)
-                for p in report.solutions[:100]:
+                for p in report.solutions[:
+                    100]:
                     core_titles[p.title[:50]] = p
             except Exception as e:
                 logger.debug(f"Core pattern title fetch failed: {e}")
@@ -393,7 +395,7 @@ _pattern_api = None
 def get_pattern_api() -> UnifiedPatternAPI:
     """
     Get the pattern api.
-    
+
     Returns:
         UnifiedPatternAPI
     """

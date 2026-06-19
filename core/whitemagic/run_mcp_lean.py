@@ -92,7 +92,7 @@ class _LazyServer:
         def decorator(fn):
             """
             Perform the decorator operation.
-            
+
             Args:
                 fn: Parameter description.
             """
@@ -822,8 +822,9 @@ def _read_grimoire_resource(uri_str: str) -> str:
 
 async def main_stdio() -> None:
     """Run as stdio MCP server (default, for IDE integration)."""
-    import anyio
     import signal
+
+    import anyio
     from mcp.shared.message import SessionMessage
 
     from whitemagic.runtime_status import get_runtime_status

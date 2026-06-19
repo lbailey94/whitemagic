@@ -88,10 +88,10 @@ class PracticeRitualConductor:
             # Ritual is complete when confidence exceeds deepening threshold
             """
             Perform the ritual completion check operation.
-            
+
             Args:
                 thought_path: Parameter description.
-            
+
             Returns:
                 bool
             """

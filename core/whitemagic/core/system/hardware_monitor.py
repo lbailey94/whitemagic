@@ -5,10 +5,11 @@ Adaptive resource allocation based on detected hardware capabilities.
 Prevents system overload while maximizing throughput.
 """
 
+import logging
 import os
 import subprocess
 from dataclasses import dataclass
-import logging
+
 logger = logging.getLogger(__name__)
 
 

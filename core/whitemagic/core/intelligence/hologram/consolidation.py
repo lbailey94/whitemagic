@@ -230,10 +230,10 @@ class HolographicConsolidator:
         async def process_cluster(c: Any) -> Any:
             """
             Process cluster.
-            
+
             Args:
                 c: Parameter description.
-            
+
             Returns:
                 Any
             """
@@ -275,7 +275,7 @@ class HolographicConsolidator:
 def get_consolidator() -> HolographicConsolidator:
     """
     Get the consolidator.
-    
+
     Returns:
         HolographicConsolidator
     """

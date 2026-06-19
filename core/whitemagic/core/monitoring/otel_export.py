@@ -238,7 +238,7 @@ class OTelExporter:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -263,7 +263,7 @@ _otel_lock = threading.Lock()
 def get_otel() -> OTelExporter:
     """
     Get the otel.
-    
+
     Returns:
         OTelExporter
     """

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Attractor:
     """Attractor: attractor.
-    
+
     Value object: equality and repr are field-based."""
     memory_id: str
     center: tuple[float, float, float, float] # x, y, z, w
@@ -35,7 +35,7 @@ class Attractor:
     def density(self) -> float:
         """
         Perform the density operation.
-        
+
         Returns:
             float
         """

@@ -27,9 +27,10 @@ Usage:
 from __future__ import annotations
 
 import importlib.util
+import logging
 import math
 from typing import Any
-import logging
+
 logger = logging.getLogger(__name__)
 
 HAS_RUST = importlib.util.find_spec("whitemagic_rs") is not None

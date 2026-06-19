@@ -121,7 +121,8 @@ def orchestra_health() -> None:
         click.echo(f"   Systems Checked: {len(report['systems'])}")
         if report.get("recommendations"):
             click.echo("   Recommendations:")
-            for rec in report["recommendations"][:3]:
+            for rec in report["recommendations"][:
+                3]:
                 click.echo(f"     • {rec}")
     except ImportError:
         click.echo("⚠️  Orchestra requires: whitemagic.automation module")

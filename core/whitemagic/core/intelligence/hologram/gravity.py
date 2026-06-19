@@ -255,7 +255,7 @@ class GravityCalculator:
 def get_gravity_calculator() -> GravityCalculator:
     """
     Get the gravity calculator.
-    
+
     Returns:
         GravityCalculator
     """

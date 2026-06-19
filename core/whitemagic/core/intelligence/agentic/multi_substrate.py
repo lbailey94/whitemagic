@@ -55,7 +55,7 @@ _multi = None
 def get_multi_substrate() -> MultiSubstrate:
     """
     Get the multi substrate.
-    
+
     Returns:
         MultiSubstrate
     """

@@ -276,10 +276,10 @@ class EventSubscriber:
         def handler(event: AsyncEvent) -> None:
             """
             Perform the handler operation.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 None
             """

@@ -18,6 +18,7 @@ Created: 2026-02-05
 Phase: 2 (Fusion Opportunities)
 """
 
+import logging
 import os
 import sqlite3
 import subprocess
@@ -28,7 +29,7 @@ from typing import Any
 from whitemagic.config.paths import DB_PATH as MEM_DB
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
-import logging
+
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -84,15 +85,20 @@ def get_current_element() -> str:
 
     # Fallback: hour-based element approximation (traditional Chinese hour mapping)
     hour = datetime.now().hour
-    if 3 <= hour < 7:      # Yin Wood/Yang Wood
+    if 3 <= hour < 7:
+        # Yin Wood/Yang Wood
         return "wood"
-    elif 7 <= hour < 11:   # Yang Fire
+    elif 7 <= hour < 11:
+        # Yang Fire
         return "fire"
-    elif 11 <= hour < 15:  # Yin Fire / Yang Earth
+    elif 11 <= hour < 15:
+        # Yin Fire / Yang Earth
         return "earth"
-    elif 15 <= hour < 19:  # Yang Metal
+    elif 15 <= hour < 19:
+        # Yang Metal
         return "metal"
-    else:                  # Water hours (19-03)
+    else :
+        # Water hours (19-03)
         return "water"
 
 
@@ -275,7 +281,8 @@ def get_dream_feedback_signal(clusters: dict, agg: dict) -> dict:
         words = insight.lower().split()
         for w in words:
             clean = "".join(c for c in w if c.isalnum())
-            if len(clean) > 3:  # Ignore short words
+            if len(clean) > 3:
+                # Ignore short words
                 dream_words.add(clean)
 
     if not dream_words:
@@ -404,10 +411,10 @@ def fuse_signals_with_fusion(
     def normalise(d: dict[Any, float]) -> dict[Any, float]:
         """
         Perform the normalise operation.
-        
+
         Args:
             d: Parameter description.
-        
+
         Returns:
             dict[Any, float]
         """
@@ -456,7 +463,8 @@ def fuse_signals_with_fusion(
     # If balance is low, we favor Novelty
     if balance > 0.6:
         # Boost stability signals
-        for k in all_keys: # straightforward bias
+        for k in all_keys:
+            # straightforward bias
             relevance[k] *= (1.0 + resonance * 0.1)
 
     # Re-normalize final scores
@@ -493,7 +501,8 @@ if __name__ == "__main__":
     insights = get_dream_insights(limit=3)
     print(f"    Recent dream insights: {len(insights)}")
     if insights:
-        for i, insight in enumerate(insights[:3]):
+        for i, insight in enumerate(insights[:
+            3]):
             print(f"      [{i+1}] {insight[:80]}...")
 
     print("\n" + "=" * 60)

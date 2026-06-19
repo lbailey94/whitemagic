@@ -27,10 +27,10 @@ def send_response(data: dict[str, Any]):
 def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
     """
     Handle a ping event.
-    
+
     Args:
         args: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -39,10 +39,10 @@ def handle_ping(args: dict[str, Any]) -> dict[str, Any]:
 def handle_consolidate(args: dict[str, Any]) -> dict[str, Any]:
     """
     Handle a consolidate event.
-    
+
     Args:
         args: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -56,10 +56,10 @@ def handle_consolidate(args: dict[str, Any]) -> dict[str, Any]:
 def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
     """
     Handle a consult oracle event.
-    
+
     Args:
         args: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -90,10 +90,10 @@ def handle_consult_oracle(args: dict[str, Any]) -> dict[str, Any]:
 def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
     """
     Handle a execute phase event.
-    
+
     Args:
         args: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """

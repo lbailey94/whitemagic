@@ -12,7 +12,7 @@ import sys
 def main() -> None:
     """
     Perform the main operation.
-    
+
     Returns:
         None
     """

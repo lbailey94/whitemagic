@@ -11,7 +11,7 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
 def handle_garden_activate(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a garden activate event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -25,7 +25,7 @@ def handle_garden_activate(**kwargs: Any) -> dict[str, Any]:
 def handle_garden_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a garden status event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -37,7 +37,7 @@ def handle_garden_status(**kwargs: Any) -> dict[str, Any]:
 def handle_garden_synergy(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a garden synergy event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -61,7 +61,7 @@ def handle_garden_synergy(**kwargs: Any) -> dict[str, Any]:
 def handle_garden_health(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a garden health event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -141,7 +141,8 @@ def handle_garden_list_functions(**kwargs: Any) -> dict[str, Any]:
                     "element": f.element,
                     "is_public": f.is_public,
                 }
-                for f in functions[:limit]
+                for f in functions[:
+                    limit]
             ],
             "count": len(functions),
             "truncated": len(functions) > limit,
@@ -180,7 +181,8 @@ def handle_garden_search(**kwargs: Any) -> dict[str, Any]:
                     "type": m.file_type,
                     "loc": m.loc_count,
                 }
-                for m in file_results[:50]
+                for m in file_results[:
+                    50]
             ]
 
         # Search functions
@@ -194,7 +196,8 @@ def handle_garden_search(**kwargs: Any) -> dict[str, Any]:
                     "file": f.file_path,
                     "garden": f.primary_garden,
                 }
-                for f in func_results[:50]
+                for f in func_results[:
+                    50]
             ]
 
         return {

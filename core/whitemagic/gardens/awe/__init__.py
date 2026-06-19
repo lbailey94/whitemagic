@@ -65,7 +65,7 @@ class AweGarden(BaseGarden, GanYingMixin):
     def get_name(self) -> str:
         """
         Get the name.
-        
+
         Returns:
             str
         """
@@ -74,7 +74,7 @@ class AweGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         """
         Get the coordinate bias.
-        
+
         Returns:
             CoordinateBias
         """
@@ -164,11 +164,11 @@ class AweGarden(BaseGarden, GanYingMixin):
     def feel_awe(self, at_what: str, intensity: float = 0.8) -> dict[str, Any]:
         """
         Perform the feel awe operation.
-        
+
         Args:
             at_what: Parameter description.
             intensity: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -180,10 +180,10 @@ class AweGarden(BaseGarden, GanYingMixin):
     def experience_transcendence(self, description: str) -> dict[str, Any]:
         """
         Perform the experience transcendence operation.
-        
+
         Args:
             description: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -198,7 +198,7 @@ class AweGarden(BaseGarden, GanYingMixin):
     def get_status(self) -> dict[str, Any]:
         """
         Get the status.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -217,10 +217,10 @@ class AweGarden(BaseGarden, GanYingMixin):
     def on_wonder(self, event: Any) -> None:
         """
         Handle a wonder event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -230,10 +230,10 @@ class AweGarden(BaseGarden, GanYingMixin):
     def on_beauty(self, event: Any) -> None:
         """
         Handle a beauty event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -244,7 +244,7 @@ _instance = None
 def get_awe_garden() -> AweGarden:
     """
     Get the awe garden.
-    
+
     Returns:
         AweGarden
     """

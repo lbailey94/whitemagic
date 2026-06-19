@@ -32,7 +32,7 @@ except ImportError:
 @dataclass
 class AntiPattern:
     """AntiPattern: anti pattern.
-    
+
     Value object: equality and repr are field-based."""
     pattern_id: str
     title: str
@@ -54,7 +54,7 @@ class AntiPattern:
 @dataclass
 class PatternViolation:
     """PatternViolation: pattern violation.
-    
+
     Value object: equality and repr are field-based."""
     file_path: Path
     line_number: int

@@ -64,7 +64,7 @@ _bridge: BittensorBridge | None = None
 def get_bittensor_bridge() -> BittensorBridge:
     """
     Get the bittensor bridge.
-    
+
     Returns:
         BittensorBridge
     """

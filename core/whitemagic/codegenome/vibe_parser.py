@@ -181,7 +181,8 @@ class VibeParser:
 
     def _detect_tier(self, text: str) -> str:
         """Infer tier from adjectives in the prompt."""
-        for keyword, tier in sorted(_TIER_HINTS.items(), key=lambda x: len(x[0]), reverse=True):
+        for keyword, tier in sorted(_TIER_HINTS.items(), key=lambda x:
+            len(x[0]), reverse=True):
             if keyword in text:
                 return tier
         return "xianfeng"  # Default: fast, cheap reconnaissance

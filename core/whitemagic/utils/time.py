@@ -29,10 +29,10 @@ def _normalize(dt: datetime) -> datetime:
 def parse_now_iso(now_iso: str) -> datetime:
     """
     Parse a now iso representation.
-    
+
     Args:
         now_iso: Parameter description.
-    
+
     Returns:
         datetime
     """
@@ -47,7 +47,7 @@ def parse_now_iso(now_iso: str) -> datetime:
 def now() -> datetime:
     """
     Perform the now operation.
-    
+
     Returns:
         datetime
     """
@@ -60,7 +60,7 @@ def now() -> datetime:
 def utcnow() -> datetime:
     """
     Perform the utcnow operation.
-    
+
     Returns:
         datetime
     """
@@ -74,7 +74,7 @@ def utcnow() -> datetime:
 def now_iso() -> str:
     """
     Perform the now iso operation.
-    
+
     Returns:
         str
     """
@@ -85,10 +85,10 @@ def now_iso() -> str:
 def override_now(now_iso_str: str | None) -> Generator[None, None, None]:
     """
     Perform the override now operation.
-    
+
     Args:
         now_iso_str: Parameter description.
-    
+
     Returns:
         Generator[None, None, None]
     """

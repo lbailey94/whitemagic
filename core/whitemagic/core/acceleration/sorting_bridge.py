@@ -122,10 +122,10 @@ class ParallelSorter:
         def sort_batch(batch: list[T]) -> list[T]:
             """
             Perform the sort batch operation.
-            
+
             Args:
                 batch: Parameter description.
-            
+
             Returns:
                 list[T]
             """

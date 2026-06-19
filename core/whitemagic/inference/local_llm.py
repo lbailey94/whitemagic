@@ -50,7 +50,7 @@ class LocalLLM:
     def is_available(self) -> bool:
         """
         Check whether the available condition holds.
-        
+
         Returns:
             bool
         """

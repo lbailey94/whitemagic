@@ -27,7 +27,7 @@ class LocalModelAgent:  # pragma: no cover - legacy shim
 async def create_agent_team(*_: Any, **__: Any) -> Any:
     """
     Create a new agent team.
-    
+
     Returns:
         Any
     """

@@ -215,7 +215,7 @@ _resources: ResourceManager | None = None
 def get_resources() -> ResourceManager:
     """
     Get the resources.
-    
+
     Returns:
         ResourceManager
     """

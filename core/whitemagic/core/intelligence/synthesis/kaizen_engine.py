@@ -44,7 +44,7 @@ class KaizenReport:
     def by_category(self) -> dict[str, list[ImprovementProposal]]:
         """
         Perform the by category operation.
-        
+
         Returns:
             dict[str, list[ImprovementProposal]]
         """
@@ -631,7 +631,7 @@ _kaizen_engine = None
 def get_kaizen_engine() -> KaizenEngine:
     """
     Get the kaizen engine.
-    
+
     Returns:
         KaizenEngine
     """

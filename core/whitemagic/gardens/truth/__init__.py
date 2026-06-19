@@ -67,7 +67,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
     def get_name(self) -> str:
         """
         Get the name.
-        
+
         Returns:
             str
         """
@@ -76,7 +76,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
     def get_coordinate_bias(self) -> CoordinateBias:
         """
         Get the coordinate bias.
-        
+
         Returns:
             CoordinateBias
         """
@@ -262,11 +262,11 @@ class TruthGarden(BaseGarden, GanYingMixin):
     def discover_truth(self, what: str, evidence: Any = None) -> dict[str, Any]:
         """
         Discover or mine truth.
-        
+
         Args:
             what: Parameter description.
             evidence: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -279,10 +279,10 @@ class TruthGarden(BaseGarden, GanYingMixin):
     def on_wisdom(self, event: Any) -> None:
         """
         Handle a wisdom event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -292,10 +292,10 @@ class TruthGarden(BaseGarden, GanYingMixin):
     def on_pattern(self, event: Any) -> None:
         """
         Handle a pattern event.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -308,7 +308,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
     def get_status(self) -> dict[str, Any]:
         """
         Get the status.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -327,7 +327,7 @@ _instance = None
 def get_truth_garden() -> TruthGarden:
     """
     Get the truth garden.
-    
+
     Returns:
         TruthGarden
     """

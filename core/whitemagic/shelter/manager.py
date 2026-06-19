@@ -48,9 +48,9 @@ class ShelterTier(Enum):
 
 class ShelterState(Enum):
     """ShelterState: shelter state.
-    
+
     Enumeration.
-    
+
     Members:
         CREATED
         RUNNING
@@ -77,7 +77,7 @@ class ShelterCapabilities:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -102,7 +102,7 @@ class ShelterLimits:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -134,7 +134,7 @@ class Shelter:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """

@@ -407,10 +407,10 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
     def consciousness_handler(event: BiologicalEvent) -> None:
         """
         Perform the consciousness handler operation.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """
@@ -427,10 +427,10 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
     def dream_handler(event: BiologicalEvent) -> None:
         """
         Perform the dream handler operation.
-        
+
         Args:
             event: Parameter description.
-        
+
         Returns:
             None
         """

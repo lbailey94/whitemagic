@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ from whitemagic.config.validator import get_validator
 logger = logging.getLogger(__name__)
 
 
-class ToolRisk(str, Enum):
+class ToolRisk(StrEnum):
     """Tool risk classification for security gating."""
 
     SAFE = "safe"           # Read-only, no external access

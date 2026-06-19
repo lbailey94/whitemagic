@@ -5,6 +5,7 @@ Connects to the real GalaxyManager and returns actual memory nodes
 with holographic coordinates from the active galaxy.
 """
 
+import logging
 import os
 import sqlite3
 import time
@@ -12,9 +13,12 @@ from concurrent.futures import Future
 from typing import Any
 
 from whitemagic.core.async_layer import AsyncCompat
-from whitemagic.core.memory.constellation_algorithms import detect_kdtree, detect_semantic
+from whitemagic.core.memory.constellation_algorithms import (
+    detect_kdtree,
+    detect_semantic,
+)
 from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
-import logging
+
 logger = logging.getLogger(__name__)
 
 # Simple TTL cache for constellation detection results
@@ -77,7 +81,8 @@ def _trigger_background_refresh(
 try:
     from fastapi import APIRouter, Body, Header, HTTPException, Request
     router = APIRouter(prefix="/galaxy", tags=["galaxy"])
-except ImportError:  # pragma: no cover - optional dependency
+except ImportError:
+    # pragma: no cover - optional dependency
     APIRouter = None  # type: ignore[misc,assignment]
     Body = None  # type: ignore[misc,assignment]
     Header = None  # type: ignore[misc,assignment]
@@ -173,7 +178,8 @@ def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -
         pass
 
     nodes: list[dict[str, Any]] = []
-    for mem in memories[:limit]:
+    for mem in memories[:
+        limit]:
         zone = _memory_type_to_zone(
             mem.memory_type.name if hasattr(mem.memory_type, "name") else str(mem.memory_type)
         )
@@ -267,7 +273,8 @@ def _build_constellations_from_galaxy(
     mem_ids: list[str] = []
     mem_lookup: dict[str, Any] = {}
 
-    for mem in memories[:limit]:
+    for mem in memories[:
+        limit]:
         coords_tuple = coords_map.get(mem.id)
         if coords_tuple and len(coords_tuple) >= 3:
             x = float(coords_tuple[0])
@@ -398,7 +405,9 @@ def _build_semantic_constellations_from_galaxy(
                 blob = row[1]
                 # Unpack embedding blob (expects pack_embedding format)
                 try:
-                    from whitemagic.core.memory.embedding_similarity import unpack_embedding
+                    from whitemagic.core.memory.embedding_similarity import (
+                        unpack_embedding,
+                    )
                     vec = unpack_embedding(blob)
                     if vec and len(vec) > 0:
                         embeddings.append([float(v) for v in vec])
@@ -459,7 +468,8 @@ def _build_semantic_constellations_from_galaxy(
 
         # Representative labels
         labels = [str(meta.get("title", mem_ids[idx]) or mem_ids[idx])[:30]
-                  for idx, meta in enumerate(members_meta) if meta is not None][:5]
+                  for idx, meta in enumerate(members_meta) if meta is not None][:
+                      5]
 
         constellations.append({
             "id": f"semantic_{i}",

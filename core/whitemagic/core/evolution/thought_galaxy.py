@@ -17,7 +17,7 @@ class ThoughtGalaxy:
     def add_episode(self, episode: CognitiveEpisode):
         """
         Add episode.
-        
+
         Args:
             episode: Parameter description.
         """
@@ -33,11 +33,11 @@ class ThoughtGalaxy:
         # Simple intersection scoring for now
         """
         Perform the recall operation.
-        
+
         Args:
             query_tags: Parameter description.
             top_k: Parameter description.
-        
+
         Returns:
             list[CognitiveEpisode]
         """

@@ -77,7 +77,7 @@ class ResonanceResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -101,7 +101,7 @@ class CausalVerificationResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -122,7 +122,7 @@ class NeighborResult:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -229,7 +229,7 @@ class ResonanceEngine:
         def oscillator(t, state):
             """
             Perform the oscillator operation.
-            
+
             Args:
                 t: Parameter description.
                 state: Parameter description.
@@ -371,7 +371,7 @@ class ResonanceEngine:
         def coupled_oscillators(t, state):
             """
             Perform the coupled oscillators operation.
-            
+
             Args:
                 t: Parameter description.
                 state: Parameter description.

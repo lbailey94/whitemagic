@@ -36,10 +36,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from whitemagic.security.audit_signing import get_audit_signer
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
-
-from whitemagic.security.audit_signing import get_audit_signer
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +84,7 @@ class KarmaEntry:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -446,7 +445,8 @@ class KarmaLedger:
             lines = ledger_file.read_text(encoding="utf-8").strip().split("\n")
             # Only load last 1000 entries
             loaded = 0
-            for line in lines[-1000:]:
+            for line in lines[-1000:
+                ]:
                 if not line.strip():
                     continue
                 try:

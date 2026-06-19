@@ -4,6 +4,7 @@ Manages work sessions, state persistence, and context tracking.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -14,7 +15,7 @@ from uuid import uuid4
 from whitemagic.config.paths import SESSIONS_DIR
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +55,7 @@ class Session:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -64,11 +65,11 @@ class Session:
     def from_dict(cls, data: dict[str, Any]) -> Session:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             Session
         """

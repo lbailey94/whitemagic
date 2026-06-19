@@ -102,10 +102,10 @@ class ObjectiveGenerator:
         async def scan_dir(dir_path: str) -> list[str]:
             """
             Perform the scan dir operation.
-            
+
             Args:
                 dir_path: Parameter description.
-            
+
             Returns:
                 list[str]
             """
@@ -182,7 +182,8 @@ class ObjectiveGenerator:
                 try:
                     with open(src_file, encoding="utf-8") as f:
                         content = f.read()
-                        if "def " in content and '"""' not in content[:200]:
+                        if "def " in content and '"""' not in content[:
+                            200]:
                             gaps.append(src_file)
                 except (OSError, FileNotFoundError, PermissionError):
                     continue
@@ -197,10 +198,10 @@ class ObjectiveGenerator:
         async def scan_dir(dir_path: str) -> list[str]:
             """
             Perform the scan dir operation.
-            
+
             Args:
                 dir_path: Parameter description.
-            
+
             Returns:
                 list[str]
             """
@@ -227,10 +228,10 @@ class ObjectiveGenerator:
         async def scan_dir(dir_path: str) -> list[str]:
             """
             Perform the scan dir operation.
-            
+
             Args:
                 dir_path: Parameter description.
-            
+
             Returns:
                 list[str]
             """
@@ -270,7 +271,8 @@ class ObjectiveGenerator:
         # Analyze test gaps
         if scan.test_gaps:
             insights.append(f"Found {len(scan.test_gaps)} files without corresponding tests")
-            for gap in scan.test_gaps[:5]:
+            for gap in scan.test_gaps[:
+                5]:
                 opportunities.append({
                     "type": "test_gap",
                     "description": f"Create test for {Path(gap).name}",
@@ -280,7 +282,8 @@ class ObjectiveGenerator:
         # Analyze documentation gaps
         if scan.doc_gaps:
             insights.append(f"Found {len(scan.doc_gaps)} files potentially missing documentation")
-            for gap in scan.doc_gaps[:5]:
+            for gap in scan.doc_gaps[:
+                5]:
                 opportunities.append({
                     "type": "doc_gap",
                     "description": f"Add documentation for {Path(gap).name}",
@@ -290,7 +293,8 @@ class ObjectiveGenerator:
         # Analyze incomplete features
         if scan.incomplete_features:
             insights.append(f"Found {len(scan.incomplete_features)} incomplete features")
-            for feature in scan.incomplete_features[:5]:
+            for feature in scan.incomplete_features[:
+                5]:
                 opportunities.append({
                     "type": "incomplete_feature",
                     "description": f"Complete feature: {feature.split(':', 2)[-1]}",
@@ -300,7 +304,8 @@ class ObjectiveGenerator:
         # Analyze technical debt
         if scan.technical_debt:
             insights.append(f"Found {len(scan.technical_debt)} instances of technical debt")
-            for debt in scan.technical_debt[:5]:
+            for debt in scan.technical_debt[:
+                5]:
                 opportunities.append({
                     "type": "technical_debt",
                     "description": f"Resolve tech debt: {debt.split(':', 2)[-1]}",
@@ -435,23 +440,28 @@ class ObjectiveGenerator:
             research = self.last_research
             if research.opportunities:
                 if "TODO" in goal:
-                    for opp in research.opportunities[:5]:
+                    for opp in research.opportunities[:
+                        5]:
                         if opp["type"] == "todo":
                             objectives.append(Objective(description=f"Resolve TODO in {opp['file']}: {opp['description']}", success_criteria=[f"file_exists:{opp['file']}"], priority=7))
                 elif "test coverage" in goal.lower():
-                    for opp in research.opportunities[:3]:
+                    for opp in research.opportunities[:
+                        3]:
                         if opp["type"] == "test_gap":
                             objectives.append(Objective(description=f"Create test for {opp['file']}", success_criteria=["tests_pass"], priority=8))
                 elif "documentation" in goal.lower():
-                    for opp in research.opportunities[:2]:
+                    for opp in research.opportunities[:
+                        2]:
                         if opp["type"] == "doc_gap":
                             objectives.append(Objective(description=f"Add documentation to {opp['file']}", success_criteria=[f"file_exists:{opp['file']}"], priority=6))
                 elif "feature" in goal.lower():
-                    for opp in research.opportunities[:2]:
+                    for opp in research.opportunities[:
+                        2]:
                         if opp["type"] == "incomplete_feature":
                             objectives.append(Objective(description=f"Complete feature in {opp['file']}: {opp['description']}", success_criteria=["Feature completed"], priority=7))
                 elif "technical debt" in goal.lower():
-                    for opp in research.opportunities[:3]:
+                    for opp in research.opportunities[:
+                        3]:
                         if opp["type"] == "technical_debt":
                             objectives.append(Objective(description=f"Resolve technical debt in {opp['file']}: {opp['description']}", success_criteria=["Debt resolved"], priority=6))
 

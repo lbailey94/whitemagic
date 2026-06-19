@@ -28,7 +28,7 @@ class SalienceScore:
     def composite(self) -> float:
         """
         Perform the composite operation.
-        
+
         Returns:
             float
         """

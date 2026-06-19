@@ -49,10 +49,10 @@ def build_native_gana_details(
 ) -> dict[str, Any]:
     """
     Generate native gana details.
-    
+
     Args:
         gana_name: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -93,10 +93,10 @@ def normalize_native_gana_result(
 ) -> dict[str, Any]:
     """
     Perform the normalize native gana result operation.
-    
+
     Args:
         gana_name: Parameter description.
-    
+
     Returns:
         dict[str, Any]
     """

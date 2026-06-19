@@ -97,7 +97,7 @@ _instance = None
 def get_practice_garden() -> PracticeGarden:
     """
     Get the practice garden.
-    
+
     Returns:
         PracticeGarden
     """

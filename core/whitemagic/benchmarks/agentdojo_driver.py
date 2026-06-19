@@ -226,10 +226,10 @@ def print_comparison_table(summaries: list[dict[str, Any]]) -> None:
 def main(argv: list[str] | None = None) -> int:
     """
     Perform the main operation.
-    
+
     Args:
         argv: Parameter description.
-    
+
     Returns:
         int
     """

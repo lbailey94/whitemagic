@@ -84,7 +84,7 @@ _token_economy: TokenEconomy | None = None
 def get_token_economy() -> TokenEconomy:
     """
     Get the token economy.
-    
+
     Returns:
         TokenEconomy
     """

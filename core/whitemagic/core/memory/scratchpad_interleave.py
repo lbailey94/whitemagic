@@ -44,7 +44,7 @@ class Scratchpad:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -119,7 +119,8 @@ class ScratchpadManager:
         all_entries = []
         for name in pads:
             if name in self.scratchpads:
-                for entry in self.scratchpads[name].entries[-3:]:
+                for entry in self.scratchpads[name].entries[-3:
+                    ]:
                     all_entries.append({
                         "source": name,
                         "content": entry["content"],
@@ -155,7 +156,7 @@ _manager: ScratchpadManager | None = None
 def get_scratchpad_manager() -> ScratchpadManager:
     """
     Get the scratchpad manager.
-    
+
     Returns:
         ScratchpadManager
     """

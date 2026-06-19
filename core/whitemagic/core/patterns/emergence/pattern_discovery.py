@@ -348,7 +348,8 @@ class PatternDiscovery:
         insights: list[str] = []
         try:
             if hasattr(result, "insights"):
-                for insight in result.insights[:5]:
+                for insight in result.insights[:
+                    5]:
                     text = (
                         insight.insight
                         if hasattr(insight, "insight")
@@ -357,7 +358,8 @@ class PatternDiscovery:
                     insights.append(f"[{source_name}] {text}")
             elif isinstance(result, dict):
                 if "solutions" in result:
-                    for sol in result["solutions"][:3]:
+                    for sol in result["solutions"][:
+                        3]:
                         title = sol.get("title", sol.get("description", str(sol)))
                         insights.append(f"[{source_name}] Solution: {title}")
                 if "guidance" in result:

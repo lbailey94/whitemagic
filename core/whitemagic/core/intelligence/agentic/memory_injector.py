@@ -166,7 +166,8 @@ class MemoryInjector:
         scored_files.sort(key=lambda x: -x[0])
 
         summaries = []
-        for _, f in scored_files[:limit]:
+        for _, f in scored_files[:
+            limit]:
             try:
                 content = f.read_text()
                 # Extract title or first line

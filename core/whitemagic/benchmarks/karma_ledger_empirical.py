@@ -72,10 +72,10 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     def measure_read(td: Path) -> tuple[int, int]:
         """
         Measure or score read.
-        
+
         Args:
             td: Parameter description.
-        
+
         Returns:
             tuple[int, int]
         """
@@ -99,10 +99,10 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     def write_file(args: dict[str, Any]) -> None:
         """
         Perform the write file operation.
-        
+
         Args:
             args: Parameter description.
-        
+
         Returns:
             None
         """
@@ -111,10 +111,10 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     def measure_write(td: Path) -> tuple[int, int]:
         """
         Measure or score write.
-        
+
         Args:
             td: Parameter description.
-        
+
         Returns:
             tuple[int, int]
         """
@@ -136,10 +136,10 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     def read_file(args: dict[str, Any]) -> None:
         """
         Perform the read file operation.
-        
+
         Args:
             args: Parameter description.
-        
+
         Returns:
             None
         """
@@ -161,10 +161,10 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     def delete_file(args: dict[str, Any]) -> None:
         """
         Remove the file.
-        
+
         Args:
             args: Parameter description.
-        
+
         Returns:
             None
         """
@@ -174,10 +174,10 @@ def _make_file_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
         # Ledger treats DELETE as mutation; report writes=1 to avoid mismatch
         """
         Measure or score delete.
-        
+
         Args:
             td: Parameter description.
-        
+
         Returns:
             tuple[int, int]
         """
@@ -208,10 +208,10 @@ def _make_whitemagic_scenarios(temp_dir: Path) -> list[EmpiricalScenario]:
     def measure_noop(_td: Path) -> tuple[int, int]:
         """
         Measure or score noop.
-        
+
         Args:
             _td: Parameter description.
-        
+
         Returns:
             tuple[int, int]
         """
@@ -377,7 +377,7 @@ def run_empirical_benchmark(storage_dir: Path | None = None) -> dict[str, Any]:
 def main() -> int:
     """
     Perform the main operation.
-    
+
     Returns:
         int
     """

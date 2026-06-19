@@ -38,9 +38,9 @@ logger = logging.getLogger(__name__)
 
 class ReasoningLens(Enum):
     """ReasoningLens: reasoning lens.
-    
+
     Enumeration.
-    
+
     Members:
         OBJ_RECOVERY
         WU_XING
@@ -58,7 +58,7 @@ class ReasoningLens(Enum):
 @dataclass
 class ReasoningContext:
     """ReasoningContext: reasoning context.
-    
+
     Value object: equality and repr are field-based."""
     question: str
     task_type: str = "analysis"
@@ -69,7 +69,7 @@ class ReasoningContext:
 @dataclass
 class LensPerspective:
     """LensPerspective: lens perspective.
-    
+
     Value object: equality and repr are field-based."""
     lens: ReasoningLens
     analysis: str
@@ -80,7 +80,7 @@ class LensPerspective:
 @dataclass
 class ReasoningResult:
     """ReasoningResult: reasoning result.
-    
+
     Value object: equality and repr are field-based."""
     question: str
     perspectives: list[LensPerspective]
@@ -94,7 +94,7 @@ class ReasoningResult:
 @dataclass(frozen=True)
 class ScratchpadAnalysis:
     """ScratchpadAnalysis: scratchpad analysis.
-    
+
     Value object: equality and repr are field-based."""
     synthesis: str
     wisdom: str
@@ -116,17 +116,19 @@ class MultiSpectralReasoner:
     def reason(self, question: str, lenses: Sequence[ReasoningLens] | None = None, context: ReasoningContext | None = None) -> ReasoningResult:
         """
         Perform the reason operation.
-        
+
         Args:
             question: Parameter description.
             lenses: Parameter description.
             context: Parameter description.
-        
+
         Returns:
             ReasoningResult
         """
-        if context is None: context = ReasoningContext(question=question)
-        if lenses is None: lenses = list(ReasoningLens)
+        if context is None:
+            context = ReasoningContext(question=question)
+        if lenses is None:
+            lenses = list(ReasoningLens)
 
         perspectives = []
         for lens in lenses:
@@ -148,12 +150,12 @@ class MultiSpectralReasoner:
 def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None = None, lenses: Sequence[ReasoningLens] | None = None) -> ScratchpadAnalysis:
     """
     Perform the analyze scratchpad operation.
-    
+
     Args:
         scratchpad_content: Parameter description.
         question: Parameter description.
         lenses: Parameter description.
-    
+
     Returns:
         ScratchpadAnalysis
     """
@@ -176,12 +178,12 @@ def analyze_scratchpad(scratchpad_content: dict[str, str], question: str | None 
 def serialize_scratchpad_with_analysis(scratchpad_content: dict[str, str], analysis: ScratchpadAnalysis, title: str = "Scratchpad") -> str:
     """
     Perform the serialize scratchpad with analysis operation.
-    
+
     Args:
         scratchpad_content: Parameter description.
         analysis: Parameter description.
         title: Parameter description.
-    
+
     Returns:
         str
     """
@@ -197,10 +199,11 @@ _reasoner: MultiSpectralReasoner | None = None
 def get_reasoner() -> MultiSpectralReasoner:
     """
     Get the reasoner.
-    
+
     Returns:
         MultiSpectralReasoner
     """
     global _reasoner
-    if _reasoner is None: _reasoner = MultiSpectralReasoner()
+    if _reasoner is None:
+        _reasoner = MultiSpectralReasoner()
     return _reasoner

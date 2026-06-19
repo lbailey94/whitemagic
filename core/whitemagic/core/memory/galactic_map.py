@@ -94,7 +94,7 @@ class GalacticSweepReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -468,7 +468,7 @@ class GalacticMap:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -518,10 +518,10 @@ class GalacticMap:
             def process_page_sync(page_data: list[Memory]) -> tuple[list[tuple[str, float, float]], dict[str, Any]]:
                 """
                 Process page sync.
-                
+
                 Args:
                     page_data: Parameter description.
-                
+
                 Returns:
                     tuple[list[tuple[str, float, float]], dict[str, Any]]
                 """
@@ -610,7 +610,7 @@ class GalacticMap:
             def query_zones() -> dict[str, int]:
                 """
                 Perform the query zones operation.
-                
+
                 Returns:
                     dict[str, int]
                 """

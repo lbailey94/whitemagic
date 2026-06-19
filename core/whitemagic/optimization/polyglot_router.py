@@ -57,7 +57,7 @@ class PerformanceMetrics:
     def total_calls(self) -> int:
         """
         Perform the total calls operation.
-        
+
         Returns:
             int
         """
@@ -67,7 +67,7 @@ class PerformanceMetrics:
     def native_usage_rate(self) -> float:
         """
         Perform the native usage rate operation.
-        
+
         Returns:
             float
         """
@@ -263,7 +263,7 @@ class PolyglotRouter:
         def zig_impl() -> list[int]:
             """
             Perform the zig impl operation.
-            
+
             Returns:
                 list[int]
             """
@@ -277,7 +277,7 @@ class PolyglotRouter:
         def python_impl() -> list[int]:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 list[int]
             """
@@ -298,7 +298,7 @@ class PolyglotRouter:
         def rust_impl() -> bool:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 bool
             """
@@ -311,7 +311,7 @@ class PolyglotRouter:
             # Fallback: Just log it for now
             """
             Perform the python impl operation.
-            
+
             Returns:
                 bool
             """
@@ -325,7 +325,7 @@ class PolyglotRouter:
         def mojo_impl() -> dict[str, float]:
             """
             Perform the mojo impl operation.
-            
+
             Returns:
                 dict[str, float]
             """
@@ -365,7 +365,7 @@ class PolyglotRouter:
         def python_impl() -> dict[str, float]:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 dict[str, float]
             """
@@ -381,7 +381,7 @@ class PolyglotRouter:
         def mojo_impl() -> list[dict[str, float]]:
             """
             Perform the mojo impl operation.
-            
+
             Returns:
                 list[dict[str, float]]
             """
@@ -444,7 +444,7 @@ class PolyglotRouter:
             # Use optimized batch encoder with null safety
             """
             Perform the python impl operation.
-            
+
             Returns:
                 list[dict[str, float]]
             """
@@ -462,7 +462,7 @@ class PolyglotRouter:
         def mojo_impl() -> dict[str, Any]:
             """
             Perform the mojo impl operation.
-            
+
             Returns:
                 dict[str, Any]
             """
@@ -483,7 +483,7 @@ class PolyglotRouter:
         def python_impl() -> dict[str, Any]:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 dict[str, Any]
             """
@@ -508,7 +508,7 @@ class PolyglotRouter:
         def mojo_impl() -> dict[str, float]:
             """
             Perform the mojo impl operation.
-            
+
             Returns:
                 dict[str, float]
             """
@@ -530,7 +530,7 @@ class PolyglotRouter:
         def python_impl() -> dict[str, float]:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 dict[str, float]
             """
@@ -546,7 +546,7 @@ class PolyglotRouter:
         def rust_impl() -> float:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 float
             """
@@ -556,7 +556,7 @@ class PolyglotRouter:
         def python_impl() -> float:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 float
             """
@@ -570,7 +570,7 @@ class PolyglotRouter:
         def rust_impl() -> list[tuple[str, float]]:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 list[tuple[str, float]]
             """
@@ -583,7 +583,7 @@ class PolyglotRouter:
         def python_impl() -> list[tuple[str, float]]:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 list[tuple[str, float]]
             """
@@ -616,7 +616,7 @@ class PolyglotRouter:
         def rust_impl() -> list[tuple[Any, ...]]:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 list[tuple[Any, ...]]
             """
@@ -639,7 +639,7 @@ class PolyglotRouter:
             # Basic fallback grep simulation
             """
             Perform the python impl operation.
-            
+
             Returns:
                 list[tuple[Any, ...]]
             """
@@ -676,7 +676,7 @@ class PolyglotRouter:
         def rust_impl() -> list[dict[str, Any]]:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 list[dict[str, Any]]
             """
@@ -698,7 +698,7 @@ class PolyglotRouter:
             # Simplified fallback
             """
             Perform the python impl operation.
-            
+
             Returns:
                 list[dict[str, Any]]
             """
@@ -722,7 +722,7 @@ class PolyglotRouter:
             def rust_impl() -> dict[str, Any]:
                 """
                 Perform the rust impl operation.
-                
+
                 Returns:
                     dict[str, Any]
                 """
@@ -741,7 +741,7 @@ class PolyglotRouter:
         def rust_impl() -> Any:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 Any
             """
@@ -754,7 +754,7 @@ class PolyglotRouter:
             # Minimal fallback: just return file count
             """
             Perform the python impl operation.
-            
+
             Returns:
                 Any
             """
@@ -775,7 +775,7 @@ class PolyglotRouter:
         def rust_impl() -> Any:
             """
             Perform the rust impl operation.
-            
+
             Returns:
                 Any
             """
@@ -787,7 +787,7 @@ class PolyglotRouter:
         def python_impl() -> Any:
             """
             Perform the python impl operation.
-            
+
             Returns:
                 Any
             """
@@ -839,7 +839,7 @@ class PolyglotRouter:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -863,10 +863,10 @@ _global_router: PolyglotRouter | None = None
 def get_router(prefer_backend: Backend = Backend.AUTO) -> PolyglotRouter:
     """
     Get the router.
-    
+
     Args:
         prefer_backend: Parameter description.
-    
+
     Returns:
         PolyglotRouter
     """
@@ -878,7 +878,7 @@ def get_router(prefer_backend: Backend = Backend.AUTO) -> PolyglotRouter:
 def get_performance_stats() -> dict[str, Any]:
     """
     Get the performance stats.
-    
+
     Returns:
         dict[str, Any]
     """

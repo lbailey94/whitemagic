@@ -372,7 +372,8 @@ class CycleEngine:
         self.metrics.total_rounds = n_rounds
 
         for round_num in range(1, n_rounds + 1):
-            for phase_num in range(1, 13):  # 12 zodiacal phases per round
+            for phase_num in range(1, 13):
+                # 12 zodiacal phases per round
                 state = self.advance()
 
                 if callback:

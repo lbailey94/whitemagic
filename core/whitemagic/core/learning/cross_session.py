@@ -102,7 +102,8 @@ class CrossSessionLearner:
                 self._sequences[self._last_tool][tool_name] += 1
 
             # Track co-occurrence within session
-            for prev_tool in set(session.tools_used[:-1]):
+            for prev_tool in set(session.tools_used[:
+                -1]):
                 if prev_tool != tool_name:
                     self._cooccurrence[prev_tool][tool_name] += 1
                     self._cooccurrence[tool_name][prev_tool] += 1
@@ -157,12 +158,14 @@ class CrossSessionLearner:
                 "top_tools": [{"tool": t, "count": c} for t, c in top_tools],
                 "co_occurrences": [
                     {"tool_a": a, "tool_b": b, "count": c}
-                    for a, b, c in cooccur_pairs[:15]
+                    for a, b, c in cooccur_pairs[:
+                        15]
                 ],
                 "common_sequences": seq_list[:15],
                 "error_prone": [
                     {"tool": t, "errors": e, "error_rate": r}
-                    for t, e, r in error_tools[:10]
+                    for t, e, r in error_tools[:
+                        10]
                 ],
             }
 
@@ -176,7 +179,8 @@ class CrossSessionLearner:
             suggestions = sorted(followers.items(), key=lambda x: x[1], reverse=True)
             return [
                 {"tool": t, "probability": round(c / total, 3), "count": c}
-                for t, c in suggestions[:5]
+                for t, c in suggestions[:
+                    5]
             ]
 
     def _save(self) -> None:
@@ -214,7 +218,7 @@ class CrossSessionLearner:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -239,7 +243,7 @@ _learner_lock = threading.Lock()
 def get_session_learner() -> CrossSessionLearner:
     """
     Get the session learner.
-    
+
     Returns:
         CrossSessionLearner
     """

@@ -23,7 +23,7 @@ import logging
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class AuditReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -115,7 +115,7 @@ class ClaimLog:
     def get_unverified(self) -> list[ClaimEntry]:
         """
         Get the unverified.
-        
+
         Returns:
             list[ClaimEntry]
         """
@@ -150,7 +150,7 @@ class VoiceAuditScanner:
     def claim_log(self) -> ClaimLog:
         """
         Perform the claim log operation.
-        
+
         Returns:
             ClaimLog
         """
@@ -218,7 +218,7 @@ class VoiceAuditScanner:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

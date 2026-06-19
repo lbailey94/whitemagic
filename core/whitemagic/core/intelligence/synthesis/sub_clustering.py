@@ -166,7 +166,7 @@ _sub_clustering_engine: SubClusteringEngine | None = None
 def get_sub_clustering_engine() -> SubClusteringEngine:
     """
     Get the sub clustering engine.
-    
+
     Returns:
         SubClusteringEngine
     """

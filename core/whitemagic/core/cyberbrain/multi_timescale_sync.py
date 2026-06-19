@@ -16,7 +16,7 @@ class TimescaleSync:
     def register_hook(self, timescale: str, callback):
         """
         Register a hook.
-        
+
         Args:
             timescale: Parameter description.
             callback: Parameter description.

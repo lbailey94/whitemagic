@@ -57,7 +57,7 @@ class Holocron:
     def get_all_rules(self) -> list[dict[str, Any]]:
         """
         Get the all rules.
-        
+
         Returns:
             list[dict[str, Any]]
         """

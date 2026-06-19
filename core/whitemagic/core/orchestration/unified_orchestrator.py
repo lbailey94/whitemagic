@@ -607,7 +607,8 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
 
                 # Check for transcendence threshold
                 if coherence > 0.9 and self.state == SystemState.RESONANT:
-                    if len(self._coherence_scores) >= 10 and all(s > 0.9 for s in self._coherence_scores[-10:]):
+                    if len(self._coherence_scores) >= 10 and all(s > 0.9 for s in self._coherence_scores[-10:
+                        ]):
                         self.state = SystemState.TRANSCENDENT
                         logger.info("🌌 TRANSCENDENT STATE ACHIEVED: Sustained 90%+ coherence")
 

@@ -56,7 +56,7 @@ class CausalEdge:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -89,7 +89,7 @@ class CausalMiningReport:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -446,7 +446,8 @@ class CausalMiner:
                         break
                     # Use temporal proximity as a stand-in for similarity
                     temporal_sim = self._temporal_proximity(dt_hours)
-                    if temporal_sim >= 0.1:  # At least some proximity
+                    if temporal_sim >= 0.1:
+                        # At least some proximity
                         pairs.append({
                             "source_id": parsed[i]["id"],
                             "target_id": parsed[j]["id"],
@@ -469,7 +470,7 @@ class CausalMiner:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """

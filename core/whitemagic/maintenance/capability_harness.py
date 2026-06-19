@@ -48,7 +48,7 @@ class HarnessReport:
     def to_markdown(self) -> str:
         """
         Convert to/from markdown.
-        
+
         Returns:
             str
         """
@@ -135,10 +135,10 @@ class CapabilityHarness:
         def capture_oracle(event: Any) -> Any:
             """
             Perform the capture oracle operation.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 Any
             """
@@ -171,10 +171,10 @@ class CapabilityHarness:
         def capture_council(event: Any) -> Any:
             """
             Perform the capture council operation.
-            
+
             Args:
                 event: Parameter description.
-            
+
             Returns:
                 Any
             """

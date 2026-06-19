@@ -47,9 +47,9 @@ _DEFAULT_BATCH_READ_TIMEOUT_S = 5.0
 
 class BatchMode(Enum):
     """BatchMode: batch mode.
-    
+
     Enumeration.
-    
+
     Members:
         SEQUENTIAL
         PARALLEL"""
@@ -67,7 +67,7 @@ class BatchCommand:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to/from dict.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -90,11 +90,11 @@ class BatchResult:
     def from_dict(cls, data: dict[str, Any]) -> BatchResult:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             BatchResult
         """
@@ -118,11 +118,11 @@ class BatchResponse:
     def from_dict(cls, data: dict[str, Any]) -> BatchResponse:
         """
         Convert to/from m dict.
-        
+
         Args:
             cls: Parameter description.
             data: Parameter description.
-        
+
         Returns:
             BatchResponse
         """
@@ -226,7 +226,8 @@ class KokaBatchClient:
     def _return_process(self, proc: subprocess.Popen) -> None:
         """Return a process to the pool."""
         with self._lock:
-            if proc.poll() is None:  # Still running
+            if proc.poll() is None:
+                # Still running
                 self._available.append(proc)
 
     def _discard_process(self, proc: subprocess.Popen) -> None:

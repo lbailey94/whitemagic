@@ -279,7 +279,8 @@ def inject_context() -> None:
 
         if context_data.short_term_memories:
             click.echo("\n📝 Recent Short-term Memories:")
-            for m in context_data.short_term_memories[:5]:
+            for m in context_data.short_term_memories[:
+                5]:
                 click.echo(f"   • {m[:100]}")
 
         if context_data.session_state:

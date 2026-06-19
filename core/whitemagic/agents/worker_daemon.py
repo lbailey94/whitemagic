@@ -104,7 +104,8 @@ class WorkerDaemon:
                     pending = self._get_pending_tasks()
                     if pending:
                         logger.info(f"Found {len(pending)} pending task(s)")
-                        for task in pending[:self.max_concurrent]:
+                        for task in pending[:
+                            self.max_concurrent]:
                             self._execute_task(task)
                     time.sleep(self.poll_interval)
 
@@ -318,7 +319,7 @@ class WorkerDaemon:
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -340,7 +341,7 @@ class WorkerDaemon:
 def main() -> None:
     """
     Perform the main operation.
-    
+
     Returns:
         None
     """

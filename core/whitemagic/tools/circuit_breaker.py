@@ -36,7 +36,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from whitemagic.runtime_status import get_runtime_status
@@ -44,11 +44,11 @@ from whitemagic.runtime_status import get_runtime_status
 logger = logging.getLogger(__name__)
 
 
-class BreakerState(str, Enum):
+class BreakerState(StrEnum):
     """BreakerState: breaker state.
-    
+
     Enumeration.
-    
+
     Members:
         CLOSED
         OPEN

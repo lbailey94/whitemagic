@@ -70,13 +70,16 @@ class QuantumEngine:
             return [i for i in items if oracle(i)]
 
         N = len(items)
-        if N == 0: return []
-        if iterations is None: iterations = int((math.pi / 4) * math.sqrt(N))
+        if N == 0:
+            return []
+        if iterations is None:
+            iterations = int((math.pi / 4) * math.sqrt(N))
 
         amplitudes = np.full(N, 1.0 / math.sqrt(N))
         for _ in range(iterations):
             for i, item in enumerate(items):
-                if oracle(item): amplitudes[i] *= -1
+                if oracle(item):
+                    amplitudes[i] *= -1
             mean = np.mean(amplitudes)
             amplitudes = 2 * mean - amplitudes
 
@@ -93,12 +96,14 @@ class QuantumGraphEngine:
 
     def grover_amplification(self, nodes: list[QuantumNode], oracle: Callable[[QuantumNode], bool], iterations: int = 1) -> list[QuantumNode]:
         """Amplify the amplitude of nodes matching the oracle condition."""
-        if not nodes: return []
+        if not nodes:
+            return []
         N = len(nodes)
         avg_amp = sum(n.amplitude for n in nodes) / N
         for _ in range(iterations):
             for node in nodes:
-                if oracle(node): node.amplitude *= -1
+                if oracle(node):
+                    node.amplitude *= -1
             avg_amp = sum(n.amplitude for n in nodes) / N
             for node in nodes:
                 node.amplitude = 2 * avg_amp - node.amplitude
@@ -127,19 +132,24 @@ class QuantumGraphEngine:
             next_state_map: dict[str, QuantumNode] = {}
             for node in current_state:
                 neighbors = get_neighbors_func(node.id)
-                if not neighbors: continue
+                if not neighbors:
+                    continue
                 total_strength = sum(n.get("strength", 0.1) for n in neighbors)
-                if total_strength == 0: continue
+                if total_strength == 0:
+                    continue
                 for n in neighbors:
                     target_id = n["target_id"]
                     dist_amp = node.amplitude * math.sqrt(n.get("strength", 0.1) / total_strength)
-                    if target_id in next_state_map: next_state_map[target_id].amplitude += dist_amp
-                    else: next_state_map[target_id] = QuantumNode(id=target_id, amplitude=dist_amp)
+                    if target_id in next_state_map:
+                        next_state_map[target_id].amplitude += dist_amp
+                    else :
+                        next_state_map[target_id] = QuantumNode(id=target_id, amplitude=dist_amp)
             current_state = list(next_state_map.values())
             total_prob = sum(node_prob.amplitude**2 for node_prob in current_state)
             if total_prob > 0:
                 norm = math.sqrt(total_prob)
-                for node_obj in current_state: node_obj.amplitude /= norm
+                for node_obj in current_state:
+                    node_obj.amplitude /= norm
         return sorted(current_state, key=lambda x: x.amplitude**2, reverse=True)
 
 # --- ADAPTER ---
@@ -156,7 +166,7 @@ class QuantumGraphAdapter:
         # Simplified bridge for consolidation
         """
         Perform the quantum enhanced walk operation.
-        
+
         Args:
             seed_ids: Parameter description.
             hops: Parameter description.
@@ -164,7 +174,7 @@ class QuantumGraphAdapter:
             query_embedding: Parameter description.
             oracle_func: Parameter description.
             get_neighbors_func: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -178,10 +188,11 @@ _quantum_engine: QuantumEngine | None = None
 def get_quantum_engine() -> QuantumEngine:
     """
     Get the quantum engine.
-    
+
     Returns:
         QuantumEngine
     """
     global _quantum_engine
-    if _quantum_engine is None: _quantum_engine = QuantumEngine()
+    if _quantum_engine is None:
+        _quantum_engine = QuantumEngine()
     return _quantum_engine

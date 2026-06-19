@@ -22,7 +22,7 @@ _DEFAULT_KOKA_BRIDGE_TIMEOUT_S = 5.0
 @dataclass
 class KokaProcess:
     """KokaProcess: koka process.
-    
+
     Value object: equality and repr are field-based."""
     name: str
     proc: subprocess.Popen

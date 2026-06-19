@@ -33,7 +33,7 @@ class StillnessManager:
     def is_still(self) -> bool:
         """
         Check whether the still condition holds.
-        
+
         Returns:
             bool
         """
@@ -95,7 +95,7 @@ _stillness_manager = None
 def get_stillness_manager() -> StillnessManager:
     """
     Get the stillness manager.
-    
+
     Returns:
         StillnessManager
     """

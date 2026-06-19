@@ -3,7 +3,7 @@
 Adds 'wm reason' command for unified reasoning system.
 """
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import click
 
@@ -32,18 +32,18 @@ def reasoning() -> None:
 @click.option('--save/--no-save', default=True,
               help='Save reasoning to memory (default: yes)')
 def ask(question: str, task_type: str, urgency: str, complexity: str,
-        lenses: Tuple[str, ...], sequential: bool, save: bool) -> None:
+        lenses: tuple[str, ...], sequential: bool, save: bool) -> None:
     """Ask a question using multi-spectral reasoning
-    
+
     Examples:
         wm reason ask "Should I refactor or rewrite?"
         wm reason ask "Best approach for scaling?" -t architecture -u high
         wm reason ask "How to debug this?" -l i_ching -l wu_xing
     """
     from whitemagic.core.intelligence.multi_spectral_reasoning import (
-        get_reasoner,
         ReasoningContext,
-        ReasoningLens
+        ReasoningLens,
+        get_reasoner,
     )
 
     # Create context
@@ -63,9 +63,9 @@ def ask(question: str, task_type: str, urgency: str, complexity: str,
         'all': ReasoningLens.ALL
     }
 
-    selected_lenses: Optional[List[ReasoningLens]] = None
+    selected_lenses: list[ReasoningLens] | None = None
     if lenses:
-        selected_lenses = [lens_mapping[l] for l in lenses if l in lens_mapping]
+        selected_lenses = [lens_mapping[lens] for lens in lenses if lens in lens_mapping]
 
     # Reason
     reasoner = get_reasoner()
@@ -100,7 +100,8 @@ def history(limit: int) -> None:
     click.echo(f"\n🧠 Reasoning History (last {limit}):")
     click.echo("=" * 60)
 
-    for i, result in enumerate(reasoner.reasoning_history[-limit:], 1):
+    for i, result in enumerate(reasoner.reasoning_history[-limit:
+        ], 1):
         click.echo(f"\n{i}. {result.question}")
         click.echo(f"   Confidence: {result.confidence:.0%}")
         click.echo(f"   Timestamp: {result.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -136,7 +137,7 @@ def status() -> None:
 
     if reasoner.reasoning_history:
         latest = reasoner.reasoning_history[-1]
-        click.echo(f"\n🕐 Latest reasoning:")
+        click.echo("\n🕐 Latest reasoning:")
         click.echo(f"  Question: {latest.question}")
         click.echo(f"  Confidence: {latest.confidence:.0%}")
         click.echo(f"  Timestamp: {latest.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -156,12 +157,12 @@ def similar(question: str, threshold: float) -> None:
         click.echo("No reasoning history to search.")
         return
 
-    click.echo(f"\n🔍 Searching for similar reasonings...")
+    click.echo("\n🔍 Searching for similar reasonings...")
     click.echo(f"Question: {question}")
     click.echo(f"Threshold: {threshold:.0%}")
     click.echo("=" * 60)
 
-    matches: List[Tuple[float, Any]] = []
+    matches: list[tuple[float, Any]] = []
     for past in reasoner.reasoning_history:
         similarity = reasoner._calculate_similarity(question, past.question)
         if similarity >= threshold:

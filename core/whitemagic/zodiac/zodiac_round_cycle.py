@@ -362,7 +362,7 @@ if __name__ == "__main__":
     async def test() -> None:
         """
         Perform the test operation.
-        
+
         Returns:
             None
         """

@@ -43,7 +43,7 @@ def _ensure_result_dict(result: Any, context: str) -> dict[str, Any]:
 def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get agent capabilities event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -83,7 +83,7 @@ def handle_get_agent_capabilities(**kwargs: Any) -> dict[str, Any]:
 def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a immune scan event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -104,7 +104,8 @@ def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
                     "pattern": v.pattern.name if hasattr(v.pattern, "name") else str(v.pattern),
                     "matched_text": v.matched_text[:100],
                 }
-                for v in violations[:20]
+                for v in violations[:
+                    20]
             ],
         }
     except Exception as e:
@@ -114,7 +115,7 @@ def handle_immune_scan(**kwargs: Any) -> dict[str, Any]:
 def handle_immune_heal(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a immune heal event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -135,7 +136,7 @@ def handle_immune_heal(**kwargs: Any) -> dict[str, Any]:
 def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a cast oracle event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -160,7 +161,7 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
 def handle_wu_xing_balance(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a wu xing balance event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -183,7 +184,7 @@ def handle_wu_xing_balance(**kwargs: Any) -> dict[str, Any]:
 def handle_track_metric(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a track metric event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -194,7 +195,7 @@ def handle_track_metric(**kwargs: Any) -> dict[str, Any]:
 def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get metrics summary event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -215,7 +216,7 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
 def handle_execute_cascade(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a execute cascade event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -231,7 +232,7 @@ def handle_execute_cascade(**kwargs: Any) -> dict[str, Any]:
 def handle_thought_clone(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a thought clone event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -256,7 +257,7 @@ def handle_thought_clone(**kwargs: Any) -> dict[str, Any]:
 def handle_coherence_boost(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a coherence boost event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -274,7 +275,7 @@ def handle_coherence_boost(**kwargs: Any) -> dict[str, Any]:
 def handle_anti_loop_check(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a anti loop check event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -296,7 +297,7 @@ def handle_anti_loop_check(**kwargs: Any) -> dict[str, Any]:
 def handle_token_report(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a token report event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -324,7 +325,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
 def handle_grimoire_list(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a grimoire list event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -340,7 +341,7 @@ def handle_grimoire_list(**kwargs: Any) -> dict[str, Any]:
 def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a grimoire read event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -356,7 +357,8 @@ def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
             "count": len(spells),
             "spells": [
                 {"id": s.id, "name": s.name, "path": str(s.path), "category": s.category}
-                for s in spells[:50]
+                for s in spells[:
+                    50]
             ],
         }
     except Exception as e:
@@ -367,7 +369,7 @@ def handle_grimoire_read(**kwargs: Any) -> dict[str, Any]:
 def handle_focus_session(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a focus session event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -380,7 +382,7 @@ def handle_focus_session(**kwargs: Any) -> dict[str, Any]:
 def handle_capability_harness(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a capability harness event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -411,7 +413,7 @@ def handle_capability_harness(**kwargs: Any) -> dict[str, Any]:
 def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a view hologram event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -446,7 +448,7 @@ def handle_view_hologram(**kwargs: Any) -> dict[str, Any]:
 def handle_read_memory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a read memory event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -485,7 +487,7 @@ def handle_list_memories(**kwargs: Any) -> dict[str, Any]:
 def handle_update_memory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a update memory event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -503,7 +505,7 @@ def handle_update_memory(**kwargs: Any) -> dict[str, Any]:
 def handle_delete_memory(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a delete memory event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -516,7 +518,7 @@ def handle_delete_memory(**kwargs: Any) -> dict[str, Any]:
 def handle_solve_optimization(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a solve optimization event.
-    
+
     Returns:
         dict[str, Any]
     """

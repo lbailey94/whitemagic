@@ -11,7 +11,7 @@ _watchers: dict[str, dict[str, Any]] = {}
 def handle_watcher_add(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher add event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -26,7 +26,7 @@ def handle_watcher_add(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_remove(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher remove event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -40,7 +40,7 @@ def handle_watcher_remove(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_start(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher start event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -54,7 +54,7 @@ def handle_watcher_start(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_stop(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher stop event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -68,7 +68,7 @@ def handle_watcher_stop(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher status event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -83,7 +83,7 @@ def handle_watcher_status(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_recent_events(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher recent events event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -98,7 +98,7 @@ def handle_watcher_recent_events(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_stats(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher stats event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -110,7 +110,7 @@ def handle_watcher_stats(**kwargs: Any) -> dict[str, Any]:
 def handle_watcher_list(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a watcher list event.
-    
+
     Returns:
         dict[str, Any]
     """

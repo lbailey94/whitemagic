@@ -19,7 +19,7 @@ class PatternWeather:
     def get_forecast(self) -> dict:
         """
         Get the forecast.
-        
+
         Returns:
             dict
         """
@@ -42,7 +42,7 @@ class PatternWeather:
     def display(self) -> str:
         """
         Perform the display operation.
-        
+
         Returns:
             str
         """
@@ -53,7 +53,7 @@ _weather = None
 def get_weather() -> PatternWeather:
     """
     Get the weather.
-    
+
     Returns:
         PatternWeather
     """

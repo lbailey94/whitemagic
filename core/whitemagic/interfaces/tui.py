@@ -31,7 +31,7 @@ class GalaxyStats(Static):
     def compose(self) -> ComposeResult:
         """
         Perform the compose operation.
-        
+
         Returns:
             ComposeResult
         """
@@ -42,10 +42,10 @@ class GalaxyStats(Static):
     def watch_total_stars(self, val: int) -> None:
         """
         Perform the watch total stars operation.
-        
+
         Args:
             val: Parameter description.
-        
+
         Returns:
             None
         """
@@ -54,10 +54,10 @@ class GalaxyStats(Static):
     def watch_clusters(self, val: int) -> None:
         """
         Perform the watch clusters operation.
-        
+
         Args:
             val: Parameter description.
-        
+
         Returns:
             None
         """
@@ -69,7 +69,7 @@ class GalaxyMap(Static):
     def on_mount(self) -> None:
         """
         Handle a mount event.
-        
+
         Returns:
             None
         """
@@ -78,10 +78,10 @@ class GalaxyMap(Static):
     def update_map(self, memories: list[Any]) -> None:
         """
         Update the map.
-        
+
         Args:
             memories: Parameter description.
-        
+
         Returns:
             None
         """
@@ -151,7 +151,7 @@ class GalaxyTUI(App):
     def compose(self) -> ComposeResult:
         """
         Perform the compose operation.
-        
+
         Returns:
             ComposeResult
         """
@@ -174,7 +174,7 @@ class GalaxyTUI(App):
     def on_mount(self) -> None:
         """
         Handle a mount event.
-        
+
         Returns:
             None
         """
@@ -186,7 +186,7 @@ class GalaxyTUI(App):
     def action_refresh_data(self) -> None:
         """
         Perform the action refresh data operation.
-        
+
         Returns:
             None
         """

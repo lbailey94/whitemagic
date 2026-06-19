@@ -47,7 +47,7 @@ class _PluginBase:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -80,7 +80,7 @@ class GrimoirePlugin(_PluginBase):
     def start(self) -> None:
         """
         Perform the start operation.
-        
+
         Returns:
             None
         """
@@ -93,7 +93,7 @@ class GrimoirePlugin(_PluginBase):
     def stop(self) -> None:
         """
         Perform the stop operation.
-        
+
         Returns:
             None
         """
@@ -114,7 +114,7 @@ class GrimoirePlugin(_PluginBase):
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """

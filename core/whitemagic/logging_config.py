@@ -24,7 +24,8 @@ except ImportError:
     try:
         from pythonjsonlogger import jsonlogger as _jsonlogger_legacy  # <3.0 fallback
         _jsonlogger_imported = _jsonlogger_legacy
-    except ImportError:  # Optional dependency
+    except ImportError:
+        # Optional dependency
         _jsonlogger_imported = None
 if _jsonlogger_imported is not None:
     _jsonlogger = _jsonlogger_imported

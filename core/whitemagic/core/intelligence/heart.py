@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 class EmotionalState(Enum):
     """EmotionalState: emotional state.
-    
+
     Enumeration.
-    
+
     Members:
         NEUTRAL
         JOY
@@ -132,10 +132,10 @@ class HeartEngine:
     def report_pulse(self, pulse: ResonancePulse) -> Any:
         """
         Perform the report pulse operation.
-        
+
         Args:
             pulse: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -160,7 +160,7 @@ class HeartEngine:
     def status(self) -> dict[str, Any]:
         """
         Perform the status operation.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -176,7 +176,7 @@ _heart: HeartEngine | None = None
 def get_heart() -> HeartEngine:
     """
     Get the heart.
-    
+
     Returns:
         HeartEngine
     """

@@ -15,7 +15,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 @dataclass
 class UserProfile:
     """UserProfile: user profile.
-    
+
     Value object: equality and repr are field-based."""
     name: str = "User"
     preferences: dict[str, Any] = field(default_factory=dict)
@@ -43,7 +43,7 @@ class UserManager:
     def save_profile(self) -> Any:
         """
         Save profile to storage.
-        
+
         Returns:
             Any
         """
@@ -63,11 +63,11 @@ class UserManager:
     def update_preference(self, key: str, value: Any) -> Any:
         """
         Update the preference.
-        
+
         Args:
             key: Parameter description.
             value: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -77,11 +77,11 @@ class UserManager:
     def log_adaptation(self, adaptation: str, context: str) -> Any:
         """
         Perform the log adaptation operation.
-        
+
         Args:
             adaptation: Parameter description.
             context: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -98,11 +98,11 @@ class UserManager:
     def get_preference(self, key: str, default: Any = None) -> Any:
         """
         Get the preference.
-        
+
         Args:
             key: Parameter description.
             default: Parameter description.
-        
+
         Returns:
             Any
         """
@@ -113,7 +113,7 @@ _user_manager = None
 def get_user_manager() -> UserManager:
     """
     Get the user manager.
-    
+
     Returns:
         UserManager
     """

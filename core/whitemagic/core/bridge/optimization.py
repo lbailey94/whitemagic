@@ -58,7 +58,8 @@ def optimize_models(
         if isinstance(strategy, dict):
             result = {}
             for k, v in strategy.items():
-                if hasattr(v, "value"):  # Enum
+                if hasattr(v, "value"):
+                    # Enum
                     result[k] = v.value
                 else:
                     result[k] = v

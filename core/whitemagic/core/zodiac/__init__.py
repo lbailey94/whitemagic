@@ -104,7 +104,7 @@ class ZodiacalClock:
     def current_phase(self) -> str:
         """
         Perform the current phase operation.
-        
+
         Returns:
             str
         """

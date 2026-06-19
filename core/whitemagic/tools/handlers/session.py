@@ -50,7 +50,7 @@ def _emit(event_type: str, data: dict[str, Any]) -> None:
 def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a session bootstrap event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -76,7 +76,8 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
         if recent:
             context["recent_memories"] = [
                 {"title": getattr(m, "title", ""), "id": getattr(m, "id", "")}
-                for m in recent[:3]
+                for m in recent[:
+                    3]
             ]
         # Galaxy status
         try:
@@ -96,7 +97,7 @@ def handle_session_bootstrap(**kwargs: Any) -> dict[str, Any]:
 def handle_session_status(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a session status event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -111,7 +112,7 @@ def handle_session_status(**kwargs: Any) -> dict[str, Any]:
 def handle_session_handoff_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a session handoff summary event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -138,7 +139,7 @@ def handle_session_handoff_summary(**kwargs: Any) -> dict[str, Any]:
 def handle_create_session(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a create session event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -166,7 +167,7 @@ def handle_create_session(**kwargs: Any) -> dict[str, Any]:
 def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a checkpoint session event.
-    
+
     Returns:
         dict[str, Any]
     """
@@ -201,7 +202,7 @@ def handle_checkpoint_session(**kwargs: Any) -> dict[str, Any]:
 def handle_resume_session(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a resume session event.
-    
+
     Returns:
         dict[str, Any]
     """

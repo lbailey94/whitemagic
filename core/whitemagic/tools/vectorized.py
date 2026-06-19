@@ -117,11 +117,11 @@ class VectorizedDispatcher:
     def encode(self, tool_name: str, args: dict[str, Any] | None = None) -> str:
         """
         Perform the encode operation.
-        
+
         Args:
             tool_name: Parameter description.
             args: Parameter description.
-        
+
         Returns:
             str
         """
@@ -155,10 +155,10 @@ class VectorizedDispatcher:
     def decode(self, glyph_str: str) -> tuple[str, dict[str, Any]]:
         """
         Perform the decode operation.
-        
+
         Args:
             glyph_str: Parameter description.
-        
+
         Returns:
             tuple[str, dict[str, Any]]
         """
@@ -219,11 +219,11 @@ class VectorizedDispatcher:
     def measure(self, tool_name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Perform the measure operation.
-        
+
         Args:
             tool_name: Parameter description.
             args: Parameter description.
-        
+
         Returns:
             dict[str, Any]
         """
@@ -242,7 +242,7 @@ _vectorized: VectorizedDispatcher | None = None
 def get_vectorized_dispatcher() -> VectorizedDispatcher:
     """
     Get the vectorized dispatcher.
-    
+
     Returns:
         VectorizedDispatcher
     """
@@ -255,7 +255,7 @@ def get_vectorized_dispatcher() -> VectorizedDispatcher:
 def is_vectorized_mode() -> bool:
     """
     Check whether the vectorized mode condition holds.
-    
+
     Returns:
         bool
     """
@@ -265,11 +265,11 @@ def is_vectorized_mode() -> bool:
 def encode_call(tool_name: str, args: dict[str, Any] | None = None) -> str:
     """
     Perform the encode call operation.
-    
+
     Args:
         tool_name: Parameter description.
         args: Parameter description.
-    
+
     Returns:
         str
     """
@@ -279,10 +279,10 @@ def encode_call(tool_name: str, args: dict[str, Any] | None = None) -> str:
 def decode_call(glyph_str: str) -> tuple[str, dict[str, Any]]:
     """
     Perform the decode call operation.
-    
+
     Args:
         glyph_str: Parameter description.
-    
+
     Returns:
         tuple[str, dict[str, Any]]
     """

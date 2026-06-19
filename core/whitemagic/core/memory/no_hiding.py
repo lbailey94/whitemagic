@@ -83,7 +83,7 @@ _controller = None
 def get_nohiding_controller() -> NoHidingMemoryController:
     """
     Get the nohiding controller.
-    
+
     Returns:
         NoHidingMemoryController
     """

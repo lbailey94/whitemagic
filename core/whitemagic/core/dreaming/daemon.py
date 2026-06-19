@@ -161,7 +161,7 @@ _daemon: DreamDaemon | None = None
 def get_daemon() -> DreamDaemon:
     """
     Get the daemon.
-    
+
     Returns:
         DreamDaemon
     """

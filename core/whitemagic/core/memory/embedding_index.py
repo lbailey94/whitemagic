@@ -185,7 +185,8 @@ class EmbeddingIndex:
         results = []
         for content_id, entry in self.index.items():
             similarity = self.embedder.similarity(query_embedding, entry["embedding"])
-            if similarity > 0.1:  # Threshold
+            if similarity > 0.1:
+                # Threshold
                 results.append((content_id, similarity, entry))
 
         # Sort by similarity
