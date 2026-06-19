@@ -344,7 +344,7 @@ class ConsolidationEngine:
                                 type="long_term",
                                 tags=memory_tags + ["auto_promoted"],
                             )
-                            self.manager.delete(mem_data.get("filename"), permanent=False)
+                            self.manager.delete(mem_data.get("filename"), permanent=False)  # type: ignore[arg-type]
 
                             results["promoted"].append({
                                 "source": mem_data.get("filename"),
@@ -398,7 +398,7 @@ class ConsolidationEngine:
 
         # Emit MEMORY_CONSOLIDATED event
         if not dry_run and results["metrics"]["success"]:
-            self.bus.emit(EventType.MEMORY_CONSOLIDATED, {  # type: ignore[arg-type]
+            self.bus.emit(EventType.MEMORY_CONSOLIDATED, {  # type: ignore[arg-type, call-arg]
                 "archived_count": len(results["archived"]),
                 "promoted_count": len(results["promoted"]),
                 "merged_count": len(results["merged"]),
@@ -448,7 +448,7 @@ class ConsolidationEngine:
                     except OSError as e:
                         logger.debug(f"Archive delete failed for {memory.filename}: {e}")
 
-                return consolidated  # type: ignore[no-any-return]
+                return consolidated  # type: ignore[no-any-return, return-value]
             else:
                 return None
 

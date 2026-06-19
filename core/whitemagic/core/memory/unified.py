@@ -143,7 +143,7 @@ class UnifiedMemory:
                 self._holographic = factory()
             except Exception as e:
                 logger.debug(f"Holographic memory initialization failed: {e}")
-                self._holographic = False
+                self._holographic = False  # type: ignore[assignment]
                 return None
         if self._holographic is False:
             return None
@@ -153,7 +153,7 @@ class UnifiedMemory:
         # Thread-safe lazy loading
         if self._holographic_lock is None:
             import threading
-            self._holographic_lock = threading.Lock()
+            self._holographic_lock = threading.Lock()  # type: ignore[assignment]
 
         with self._holographic_lock:
             if self._holographic_loaded:

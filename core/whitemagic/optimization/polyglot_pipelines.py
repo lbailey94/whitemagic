@@ -33,8 +33,8 @@ class PolyglotPipeline:
             r3 = self.specialists.statistical_analysis(pattern_lengths)
             results["stages"].append({"stage": 3, "language": r3.language, "time_ms": r3.execution_time_ms})
 
-        results["total_time_ms"] = (time.time() - start) * 1000
-        results["languages_used"] = len(set(s["language"] for s in results["stages"]))
+        results["total_time_ms"] = (time.time() - start) * 1000  # type: ignore[assignment]
+        results["languages_used"] = len(set(s["language"] for s in results["stages"]))  # type: ignore[assignment, index]
         return results
 
     def batch_processing_pipeline(self, memories: list[dict]) -> dict[str, Any]:
@@ -50,8 +50,8 @@ class PolyglotPipeline:
         r2 = self.specialists.evaluate_rules("batch_process", {"count": len(memories)})
         results["stages"].append({"stage": 2, "language": r2.language, "time_ms": r2.execution_time_ms})
 
-        results["total_time_ms"] = (time.time() - start) * 1000
-        results["languages_used"] = len(set(s["language"] for s in results["stages"]))
+        results["total_time_ms"] = (time.time() - start) * 1000  # type: ignore[assignment]
+        results["languages_used"] = len(set(s["language"] for s in results["stages"]))  # type: ignore[assignment, index]
         return results
 
     def concurrent_search_pipeline(self, query: str, corpus: list) -> dict[str, Any]:
@@ -69,6 +69,6 @@ class PolyglotPipeline:
             r2 = self.specialists.statistical_analysis(scores)
             results["stages"].append({"stage": 2, "language": r2.language, "time_ms": r2.execution_time_ms})
 
-        results["total_time_ms"] = (time.time() - start) * 1000
-        results["languages_used"] = len(set(s["language"] for s in results["stages"]))
+        results["total_time_ms"] = (time.time() - start) * 1000  # type: ignore[assignment]
+        results["languages_used"] = len(set(s["language"] for s in results["stages"]))  # type: ignore[assignment, index]
         return results

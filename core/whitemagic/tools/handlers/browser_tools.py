@@ -101,10 +101,10 @@ def handle_browser_extract_dom(**kwargs: Any) -> dict[str, Any]:
             distiller = DOMDistiller()
             simplified = distiller.distill(root_node)
             return {
-                "title": simplified.title,
-                "url": simplified.url,
-                "elements_count": len(simplified.elements),
-                "elements": [e.to_dict() for e in simplified.elements[:50]],
+                "title": simplified.title,  # type: ignore[union-attr]
+                "url": simplified.url,  # type: ignore[union-attr]
+                "elements_count": len(simplified.elements),  # type: ignore[union-attr]
+                "elements": [e.to_dict() for e in simplified.elements[:50]],  # type: ignore[union-attr]
             }
         finally:
             await browser.disconnect()
@@ -152,7 +152,7 @@ def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
             root_node = doc.get("root", {})
             distiller = DOMDistiller()
             simplified = distiller.distill(root_node)
-            interactables = [e for e in simplified.elements if e.interactable]
+            interactables = [e for e in simplified.elements if e.interactable]  # type: ignore[union-attr]
             return {
                 "count": len(interactables),
                 "elements": [

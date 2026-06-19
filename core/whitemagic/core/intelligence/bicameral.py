@@ -263,7 +263,7 @@ class BicameralReasoner:
                 result.append(strategies[i % len(strategies)])
             return result
 
-        army._generate_strategies = biased_strategies  # type: ignore[method-assign]
+        army._generate_strategies = biased_strategies  # type: ignore[assignment]
 
         start = time.perf_counter()
         # Force the Python path here so the hemisphere-specific strategy bias

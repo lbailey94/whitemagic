@@ -15,7 +15,7 @@ T = TypeVar('T')
 # Try to load Rust module
 _rs: Any = None
 try:
-    import whitemagic_rust as _rs
+    import whitemagic_rust as _rs  # type: ignore[no-redef]
 except (ImportError, ModuleNotFoundError):
     pass
 

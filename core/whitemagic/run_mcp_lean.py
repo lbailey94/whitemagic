@@ -325,7 +325,7 @@ _GANA_ICONS: dict[str, str] = {
 }
 
 
-def _icon_for_gana(name: str) -> list[types.Icon] | None:
+def _icon_for_gana(name: str) -> list[types.Icon] | None:  # type: ignore[name-defined]
     """Generate a data-URI SVG icon for a Gana using its lunar mansion character."""
     char = _GANA_ICONS.get(name)
     if not char:
@@ -371,7 +371,7 @@ except FileNotFoundError:
 # ══════════════════════════════════════════════════════════════════════
 
 @server.list_tools()
-async def list_tools() -> list[types.Tool]:
+async def list_tools() -> list[types.Tool]:  # type: ignore[name-defined]
     """Return the 28 Gana meta-tools with per-Gana tool enums, icons, and execution modes."""
     from whitemagic.tools.tool_surface import (
         GANA_NAMES as _GANA_NAMES,
@@ -380,7 +380,7 @@ async def list_tools() -> list[types.Tool]:
         GANA_SHORT_DESC as _GANA_SHORT_DESC,
     )
 
-    tools: list[types.Tool] = []
+    tools: list[types.Tool] = []  # type: ignore[name-defined]
     for name in _GANA_NAMES:
         desc = _GANA_SHORT_DESC.get(name, f"Gana {name}")
         kwargs: dict[str, Any] = {
@@ -510,7 +510,7 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:
+async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:  # type: ignore[name-defined]
     """Dispatch a PRAT Gana call through the full WhiteMagic pipeline."""
     from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
@@ -540,7 +540,7 @@ _WORKFLOW_META: dict[str, str] = {
 
 
 @server.list_resources()
-async def list_resources() -> list[types.Resource]:
+async def list_resources() -> list[types.Resource]:  # type: ignore[name-defined]
     """Expose orientation docs, workflow templates, and health status."""
     resources = [
         types.Resource(
@@ -699,8 +699,8 @@ def _read_grimoire_resource(uri_str: str) -> str:
         from whitemagic.harmony.vector import get_harmony_vector
         hv = get_harmony_vector()
         snap = hv.snapshot()
-        live_state["harmony_score"] = round(snap.harmony_score, 3)
-        live_state["guna"] = {
+        live_state["harmony_score"] = round(snap.harmony_score, 3)  # type: ignore[assignment]
+        live_state["guna"] = {  # type: ignore[assignment]
             "sattvic": round(snap.guna_sattvic_pct, 2),
             "rajasic": round(snap.guna_rajasic_pct, 2),
             "tamasic": round(snap.guna_tamasic_pct, 2),
@@ -713,7 +713,7 @@ def _read_grimoire_resource(uri_str: str) -> str:
         )
         nt = get_neurotransmitter_vector()
         nt_snap = nt.snapshot()
-        live_state["neurotransmitters"] = {
+        live_state["neurotransmitters"] = {  # type: ignore[assignment]
             "dominant": nt_snap.dominant,
             "cortisol": nt_snap.cortisol,
             "dopamine": nt_snap.dopamine,

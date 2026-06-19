@@ -10,7 +10,7 @@ except ImportError:
 
 # Stub for functions not present in the Rust build
 try:
-    extract_patterns_from_content
+    extract_patterns_from_content  # type: ignore[used-before-def]
 except NameError:
     def extract_patterns_from_content(samples: list[str], threshold: float = 0.1) -> tuple:
         """Stub pattern extraction."""

@@ -17,7 +17,7 @@ try:
     console = Console()
 except ImportError:
     HAS_RICH = False
-    console = None
+    console = None  # type: ignore[assignment]
 
 try:
     from whitemagic import __version__

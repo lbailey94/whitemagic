@@ -190,7 +190,7 @@ class MemoryLifecycleManager:
         if report is None:
             # Synthetic sweep when retention engine is unavailable
             from types import SimpleNamespace
-            report = SimpleNamespace(
+            report = SimpleNamespace(  # type: ignore[assignment]
                 total_evaluated=0,
                 retained=0,
                 decayed=0,

@@ -518,7 +518,7 @@ class SpreadsheetProcessor:
         if self._available is not None:
             return self._available
         try:
-            import openpyxl  # noqa: F401
+            import openpyxl  # type: ignore[import-untyped]  # noqa: F401
             self._available = True
         except ImportError:
             self._available = False

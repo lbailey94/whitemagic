@@ -13,7 +13,7 @@ try:
     console = Console()
 except ImportError:
     HAS_RICH = False
-    console = None
+    console = None  # type: ignore[assignment]
 
 
 @click.group(name="wisdom")

@@ -207,8 +207,8 @@ class SemanticFileWatcher:
         config = WatchConfig(
             path=abs_path,
             recursive=recursive,
-            patterns=patterns or WatchConfig.DEFAULT_PATTERNS,
-            ignore_patterns=ignore_patterns or WatchConfig.DEFAULT_IGNORE,
+            patterns=patterns or WatchConfig.DEFAULT_PATTERNS,  # type: ignore[arg-type]
+            ignore_patterns=ignore_patterns or WatchConfig.DEFAULT_IGNORE,  # type: ignore[arg-type]
             **kwargs,
         )
 

@@ -48,71 +48,71 @@ class UnifiedNervousSystemV21:
             logger.info("🛡️ Immune System initialized")
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning(f"⚠️ Immune System unavailable: {e}")
-            subsystems["immune"] = None
+            subsystems["immune"] = None  # type: ignore[assignment]
 
         # 2. Evolution System
         try:
             from whitemagic.core.evolution.continuous_evolution import (
                 ContinuousEvolutionEngine,
             )
-            subsystems["evolution"] = ContinuousEvolutionEngine()
+            subsystems["evolution"] = ContinuousEvolutionEngine()  # type: ignore[assignment]
             logger.info("🧬 Evolution System initialized")
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning(f"⚠️ Evolution System unavailable: {e}")
-            subsystems["evolution"] = None
+            subsystems["evolution"] = None  # type: ignore[assignment]
 
         # 3. Dream System
         try:
             from whitemagic.core.dreaming.dream_cycle import DreamCycle
-            subsystems["dreams"] = DreamCycle()
+            subsystems["dreams"] = DreamCycle()  # type: ignore[assignment]
             logger.info("💭 Dream System initialized")
         except ImportError as e:
             logger.warning(f"⚠️ Dream System unavailable: {e}")
-            subsystems["dreams"] = None
+            subsystems["dreams"] = None  # type: ignore[assignment]
 
         # 4. Memory Metabolism
         try:
             from whitemagic.core.intelligence.hologram.consolidation import (
                 HolographicConsolidator,
             )
-            subsystems["metabolism"] = HolographicConsolidator()
+            subsystems["metabolism"] = HolographicConsolidator()  # type: ignore[assignment]
             logger.info("🔄 Memory Metabolism initialized")
         except ImportError as e:
             logger.warning(f"⚠️ Memory Metabolism unavailable: {e}")
-            subsystems["metabolism"] = None
+            subsystems["metabolism"] = None  # type: ignore[assignment]
 
         # 5. Consciousness
         try:
             from whitemagic.core.intelligence.agentic.coherence_persistence import (
                 CoherencePersistence,
             )
-            subsystems["consciousness"] = CoherencePersistence()
+            subsystems["consciousness"] = CoherencePersistence()  # type: ignore[assignment]
             logger.info("🌟 Consciousness initialized")
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning(f"⚠️ Consciousness unavailable: {e}")
-            subsystems["consciousness"] = None
+            subsystems["consciousness"] = None  # type: ignore[assignment]
 
         # 6. Resonance
         try:
             from whitemagic.core.intelligence.agentic.resonance_amp import (
                 ResonanceAmplifier,
             )
-            subsystems["resonance"] = ResonanceAmplifier()
+            subsystems["resonance"] = ResonanceAmplifier()  # type: ignore[assignment]
             logger.info("🎵 Resonance initialized")
         except ImportError as e:
             logger.warning(f"⚠️ Resonance unavailable: {e}")
-            subsystems["resonance"] = None
+            subsystems["resonance"] = None  # type: ignore[assignment]
 
         # 7. Emergence
         try:
             from whitemagic.core.intelligence.agentic.emergence_engine import (
                 EmergenceEngine,
             )
-            subsystems["emergence"] = EmergenceEngine()
+            subsystems["emergence"] = EmergenceEngine()  # type: ignore[assignment]
             logger.info("✨ Emergence initialized")
         except ImportError as e:
             logger.warning(f"⚠️ Emergence unavailable: {e}")
-            subsystems["emergence"] = None
+            subsystems["emergence"] = None  # type: ignore[assignment]
 
         return subsystems
 

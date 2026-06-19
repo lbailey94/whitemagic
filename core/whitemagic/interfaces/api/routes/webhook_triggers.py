@@ -53,4 +53,4 @@ if HAS_FASTAPI:
             "result": result,
         }
 else:
-    router = None
+    router = None  # type: ignore[assignment]

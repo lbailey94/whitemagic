@@ -244,7 +244,7 @@ class JITResearcher:
         """Extract key phrases from text."""
         try:
             from whitemagic.optimization.rust_accelerators import keyword_extract
-            return list(keyword_extract(text, max_keywords=5))
+            return list(keyword_extract(text, max_keywords=5))  # type: ignore[arg-type]
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug(f"Keyword extraction failed: {e}")
 

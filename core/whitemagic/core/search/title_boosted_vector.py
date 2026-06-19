@@ -81,7 +81,7 @@ def search_title_boosted(
         engine_obj = get_embedding_engine()
         query_embedding = engine_obj.encode(query)
         if hasattr(query_embedding, 'tolist'):
-            query_embedding = query_embedding.tolist()
+            query_embedding = query_embedding.tolist()  # type: ignore[union-attr]
 
     mem_embeddings = []
     valid_memories = []
@@ -97,7 +97,7 @@ def search_title_boosted(
     if not valid_memories:
         return []
 
-    similarities = batch_cosine(query_embedding, mem_embeddings)
+    similarities = batch_cosine(query_embedding, mem_embeddings)  # type: ignore[arg-type]
 
     scored_results = []
 

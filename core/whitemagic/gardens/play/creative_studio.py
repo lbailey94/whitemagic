@@ -217,7 +217,7 @@ def meditate(depth: int = 0) -> "awareness":
         self.creations: list[Creation] = []
 
         # Connect to Gan Ying bus (optional)
-        self.bus = get_bus() if get_bus else None
+        self.bus = get_bus() if get_bus else None  # type: ignore[truthy-function]
 
         self._load_gallery()
 
@@ -309,7 +309,7 @@ def meditate(depth: int = 0) -> "awareness":
             self.generate_code_art,
         ]
         chosen = random.choice(outlets)
-        creation = chosen()
+        creation = chosen()  # type: ignore[operator]
         creation.tags.append("improvised")
         creation.tags.append("biodigital_jazz")
         creation.joy_score = energy

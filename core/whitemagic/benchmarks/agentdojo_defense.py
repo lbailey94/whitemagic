@@ -176,7 +176,7 @@ def _log_to_karma(tool_name: str, tool_args: dict[str, Any], allowed: bool, reas
     """Log a gate decision to the WhiteMagic Karma Ledger."""
     try:
         declared = "DELETE" if "rm" in reason or "delete" in reason.lower() or "delete" in tool_name.lower() else "WRITE"
-        _wm_call(
+        _wm_call(  # type: ignore[misc]
             "karma_record",
             tool=f"agentdojo:{tool_name}",
             declared_safety=declared,

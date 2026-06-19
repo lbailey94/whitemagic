@@ -760,7 +760,7 @@ class EmbeddingEngine:
             if ids:
                 if np is not None and _asarray is not None and isinstance(vectors, _ndarray):
                     q_np = _asarray(query_vec, dtype=_float32)
-                    scores = batch_cosine_similarity_numpy(q_np, vectors, pre_normalized=True)
+                    scores = batch_cosine_similarity_numpy(q_np, vectors, pre_normalized=True)  # type: ignore[call-arg]
                     mask = scores >= min_similarity
                     if _where is not None:
                         for idx in _where(mask)[0]:
@@ -798,7 +798,7 @@ class EmbeddingEngine:
                     if np is not None and _asarray is not None and isinstance(cold_vectors, _ndarray):
                         q_np = _asarray(query_vec, dtype=_float32)
                         cold_scores = batch_cosine_similarity(q_np, cold_vectors)
-                        mask = cold_scores >= min_similarity
+                        mask = cold_scores >= min_similarity  # type: ignore[operator]
                         if _where is not None:
                             for idx in _where(mask)[0]:
                                 mid = cold_ids[idx]
@@ -853,7 +853,7 @@ class EmbeddingEngine:
             # Check if we are in numpy mode or list mode
             if np is not None and isinstance(vectors, _ndarray):
                 scores = batch_cosine_similarity(vectors[i], remaining)
-                mask = scores >= min_similarity
+                mask = scores >= min_similarity  # type: ignore[operator]
                 if _where is not None:
                     for j_offset in _where(mask)[0]:
                         pairs.append({

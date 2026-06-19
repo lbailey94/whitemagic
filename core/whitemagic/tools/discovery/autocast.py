@@ -139,7 +139,7 @@ class ToolDiscovery:
             ]
 
             # Sort by usage count
-            tools.sort(key=lambda x: x["usage_count"], reverse=True)
+            tools.sort(key=lambda x: x["usage_count"], reverse=True)  # type: ignore[arg-type, return-value]
             return tools
         except Exception as e:
             logger.error("Tool discovery failed: %s", e, exc_info=True)

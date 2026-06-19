@@ -81,9 +81,9 @@ def gana_invoke(tool_name: str, args: str) -> None:
         args_dict = _json_loads(args)
         if HAS_RICH and console:
             with console.status(f"[cyan]Invoking {tool_name} through Gana...", spinner="moon"):
-                result = invoke_gana(target_tool=tool_name, tool_args=args_dict)
+                result = invoke_gana(target_tool=tool_name, tool_args=args_dict)  # type: ignore[call-arg]
         else:
-            result = invoke_gana(target_tool=tool_name, tool_args=args_dict)
+            result = invoke_gana(target_tool=tool_name, tool_args=args_dict)  # type: ignore[call-arg]
 
         if "error" in result:
             if HAS_RICH and console:

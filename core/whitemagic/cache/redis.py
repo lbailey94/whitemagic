@@ -300,7 +300,7 @@ class RedisCache:
             if value is None:
                 return default
 
-            return self._deserialize(value)
+            return self._deserialize(value)  # type: ignore[arg-type]
 
         except RedisError as e:
             logger.error("Async cache get error: %s", e, exc_info=True)

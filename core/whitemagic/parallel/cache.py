@@ -60,7 +60,7 @@ class DistributedCache:
         try:
             import redis
 
-            self._redis_client = redis.from_url(self.redis_url, decode_responses=True)
+            self._redis_client = redis.from_url(self.redis_url, decode_responses=True)  # type: ignore[assignment, arg-type]
             # Test connection
             if self._redis_client is not None:
                 self._redis_client.ping()

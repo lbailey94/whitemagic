@@ -92,11 +92,11 @@ def from_ptr(ptr: Any, length: int, dtype: type = np.float32) -> np.ndarray:
         Numpy array view
     """
     if dtype == np.float32:
-        c_type = ctypes.c_float
+        c_type: type[ctypes._SimpleCData[float]] = ctypes.c_float
     elif dtype == np.float64:
         c_type = ctypes.c_double
     elif dtype == np.int32:
-        c_type = ctypes.c_int32
+        c_type = ctypes.c_int32  # type: ignore[assignment]
     else:
         raise ValueError(f"Unsupported dtype: {dtype}")
 
@@ -152,8 +152,8 @@ class ArrayPool:
         """Get or create a pre-allocated array."""
         key = (size, dtype)
         if key not in self._pool:
-            self._pool[key] = np.empty(size, dtype=dtype)
-        return self._pool[key]
+            self._pool[key] = np.empty(size, dtype=dtype)  # type: ignore[index]
+        return self._pool[key]  # type: ignore[index]
 
     def get_batch(self, n: int, dim: int, dtype: type = np.float32) -> np.ndarray:
         """Get or create a pre-allocated 2D array."""

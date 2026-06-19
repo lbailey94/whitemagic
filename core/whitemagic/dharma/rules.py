@@ -622,7 +622,7 @@ class DharmaRulesEngine:
                 if isinstance(target, dict) and parts:
                     val = target.get(parts[-1])
                     try:
-                        target[parts[-1]] = min(float(val), max_val)
+                        target[parts[-1]] = min(float(val), max_val)  # type: ignore[arg-type]
                     except (TypeError, ValueError):
                         pass
         return transformed

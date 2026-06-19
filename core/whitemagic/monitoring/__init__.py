@@ -420,7 +420,7 @@ def check_database() -> HealthCheckResult:
         from whitemagic.core.memory.unified import get_unified_memory
         mem = get_unified_memory()
         # Simple query to test connectivity
-        _ = len(mem)  # This triggers a DB query
+        _ = mem.search("", limit=1)
         return HealthCheckResult(
             name="database",
             status=HealthStatus.HEALTHY,
@@ -456,7 +456,7 @@ def check_memory_size() -> HealthCheckResult:
     try:
         from whitemagic.core.memory.unified import get_unified_memory
         mem = get_unified_memory()
-        size = len(mem)
+        size = len(mem)  # type: ignore[arg-type]
         return HealthCheckResult(
             name="memory_size",
             status=HealthStatus.HEALTHY,
@@ -534,7 +534,7 @@ class AlertManager:
             try:
                 handler(alert)
             except Exception as e:
-                logger.error("Alert handler failed: %s", e, exc_info=True)
+                logger.error("Alert handler failed: %s", e, exc_info=True)  # type: ignore[call-arg]
 
 
 # Global alert manager

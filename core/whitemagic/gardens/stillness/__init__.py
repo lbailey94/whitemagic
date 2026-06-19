@@ -14,7 +14,7 @@ class StillnessGarden(BaseGarden):
         """
         return "stillness"
 
-    def get_coordinate_bias(self) -> tuple[float, float, float]:
+    def get_coordinate_bias(self) -> tuple[float, float, float]:  # type: ignore[override]
         """
         Get the coordinate bias.
 

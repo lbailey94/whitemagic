@@ -459,7 +459,7 @@ def _build_semantic_constellations_from_galaxy(
         # Dominant tags
         tag_counts: dict[str, int] = {}
         for meta in members_meta:
-            tags_str = meta.get("tags", "") or ""
+            tags_str = meta.get("tags", "") or ""  # type: ignore[union-attr]
             for tag in str(tags_str).split(","):
                 tag = tag.strip()
                 if tag:

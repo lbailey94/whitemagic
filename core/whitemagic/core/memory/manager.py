@@ -233,9 +233,9 @@ class MemoryManager:
         filename: str,
         title: str | None = None,
         content: str | None = None,
-        tags: list[str] | None = None,
-        add_tags: list[str] | None = None,
-        remove_tags: list[str] | None = None,
+        tags: list[str] | None = None,  # type: ignore[valid-type]
+        add_tags: list[str] | None = None,  # type: ignore[valid-type]
+        remove_tags: list[str] | None = None,  # type: ignore[valid-type]
         memory_type: str | None = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
@@ -378,7 +378,7 @@ class MemoryManager:
         except (ImportError, AttributeError):
             return None
 
-    def list_all_memories(self, include_archived: bool = False, sort_by: str = "created") -> dict[str, list[dict[str, Any]]]:
+    def list_all_memories(self, include_archived: bool = False, sort_by: str = "created") -> dict[str, list[dict[str, Any]]]:  # type: ignore[valid-type]
         """
         List the all memories.
 

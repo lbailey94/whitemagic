@@ -16,7 +16,7 @@ try:
     import whitemagic_rs as _rs_mod
     _rs = _rs_mod
 except (ImportError, ModuleNotFoundError):
-    _rs = None
+    _rs = None  # type: ignore[assignment]
 
 
 def fast_content_hash(content: str | bytes) -> str:

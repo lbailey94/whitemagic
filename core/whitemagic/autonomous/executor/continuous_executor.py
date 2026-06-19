@@ -144,9 +144,9 @@ class ContinuousExecutor:
                 and not self.nervous_system.is_active
                 and not inspect.iscoroutinefunction(self.nervous_system.start)
             ):
-                self.nervous_system.start()
+                self.nervous_system.start()  # type: ignore[unused-coroutine]
         except ImportError:
-            self.nervous_system = None
+            self.nervous_system = None  # type: ignore[assignment]
         try:
             import whitemagic_rust as rs
             if hasattr(rs, 'ContinuousDaemon'):
@@ -227,7 +227,7 @@ class ContinuousExecutor:
                     self.log("🧠 Triggering Nervous System Pulse")
                     if self.nervous_system:
                         try:
-                            self.nervous_system.pulse()
+                            self.nervous_system.pulse()  # type: ignore[unused-coroutine]
                         except Exception as e:
                             self.log(f"Nervous system pulse failed: {e}", "WARN")
 

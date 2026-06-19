@@ -75,7 +75,7 @@ class LocalLLM:
 
         try:
             start = time.time()
-            resp = requests.post(url, json=payload, timeout=60.0)
+            resp = requests.post(url, json=payload, timeout=60.0)  # type: ignore[arg-type]
             resp.raise_for_status()
             data = resp.json()
             latency = (time.time() - start) * 1000
@@ -102,7 +102,7 @@ class LocalLLM:
         }
 
         try:
-            resp = requests.post(url, json=payload, timeout=60.0)
+            resp = requests.post(url, json=payload, timeout=60.0)  # type: ignore[arg-type]
             resp.raise_for_status()
             data = resp.json()
             res = data.get("message", {}).get("content", "")

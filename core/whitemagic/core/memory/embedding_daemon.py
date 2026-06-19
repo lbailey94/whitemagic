@@ -87,7 +87,7 @@ class EmbeddingDaemon:
         on_batch_complete: Callable[[dict], None] | None = None,
     ) -> None:
         # Only init once (singleton)
-        if hasattr(self, '_initialized') and self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:  # type: ignore[has-type]
             return
 
         self.batch_size = batch_size
@@ -181,7 +181,7 @@ class EmbeddingDaemon:
         if self._python_engine is None:
             try:
                 from whitemagic.core.memory.embeddings import get_embedding_engine
-                self._python_engine = get_embedding_engine()
+                self._python_engine = get_embedding_engine()  # type: ignore[assignment]
             except Exception as e:
                 logger.error("Python embedding engine load failed: %s", e, exc_info=True)
         return self._python_engine

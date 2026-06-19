@@ -110,7 +110,7 @@ class WalkResult:
     hops: int
     paths_explored: int = 0
     unique_nodes_visited: int = 0
-    paths: list[WalkPath] = None
+    paths: list[WalkPath] = None  # type: ignore[assignment]
     duration_ms: float = 0.0
 
     def __post_init__(self):
@@ -123,7 +123,7 @@ def compute_transition_probability(
     galactic_gravity: float,
     recency: float,
     staleness: float,
-    weights: dict[str, float] = None
+    weights: dict[str, float] = None  # type: ignore[assignment]
 ) -> float:
     """
     Compute edge transition probability from 4 signals.
@@ -145,7 +145,7 @@ def compute_transition_probability(
 # Hot path: Batch transition probability computation
 def batch_compute_probabilities(
     edges: list[dict[str, float]],
-    weights: dict[str, float] = None
+    weights: dict[str, float] = None  # type: ignore[assignment]
 ) -> list[float]:
     """
     Compute probabilities for batch of edges.
@@ -180,7 +180,7 @@ def batch_compute_probabilities(
             logger.debug("Zig graph transitions failed, falling back to NumPy: %s", e)
 
     # Hot path: vectorized NumPy baseline (with Zig SIMD for semantic channel if vectors present)
-    semantic = np.array([e.get("semantic_sim", 0.0) for e in edges], dtype=np.float32)
+    semantic = np.array([e.get("semantic_sim", 0.0) for e in edges], dtype=np.float32)  # type: ignore[assignment]
 
     # If raw embedding vectors are attached, use Zig SIMD batch cosine
     # (edges can carry {"query_vec": [...], "target_vec": [...]} for live scoring)
@@ -191,17 +191,17 @@ def batch_compute_probabilities(
             # Use first query vec as reference (all from same query in a walk step)
             q = query_vecs[0]
             zig_scores = _ZIG_BATCH_COSINE(q, target_vecs)
-            semantic = np.array(zig_scores, dtype=np.float32)
+            semantic = np.array(zig_scores, dtype=np.float32)  # type: ignore[assignment]
 
-    gravity = np.array([e.get("galactic_gravity", 0.0) for e in edges], dtype=np.float32)
-    recency = np.array([e.get("recency", 0.0) for e in edges], dtype=np.float32)
-    staleness = np.array([e.get("staleness", 0.0) for e in edges], dtype=np.float32)
+    gravity = np.array([e.get("galactic_gravity", 0.0) for e in edges], dtype=np.float32)  # type: ignore[assignment]
+    recency = np.array([e.get("recency", 0.0) for e in edges], dtype=np.float32)  # type: ignore[assignment]
+    staleness = np.array([e.get("staleness", 0.0) for e in edges], dtype=np.float32)  # type: ignore[assignment]
 
     probs = (
-        w["semantic"] * semantic +
-        w["gravity"] * gravity +
-        w["recency"] * recency +
-        w["staleness"] * (1.0 - staleness)
+        w["semantic"] * semantic +  # type: ignore[operator]
+        w["gravity"] * gravity +  # type: ignore[operator]
+        w["recency"] * recency +  # type: ignore[operator]
+        w["staleness"] * (1.0 - staleness)  # type: ignore[operator]
     )
 
     return np.clip(probs, 0.0, 1.0).tolist()
@@ -263,7 +263,7 @@ def _walk_from_seed(
     hops: int,
     top_k: int,
     visited: set[str],
-    weights: dict[str, float] = None
+    weights: dict[str, float] = None  # type: ignore[assignment]
 ) -> list[WalkPath]:
     """Walk from a single seed node with SIMD-accelerated batch transitions."""
     paths = []

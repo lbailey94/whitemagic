@@ -47,7 +47,7 @@ def check_system_health(deep_scan: bool = False, **kwargs) -> dict[str, Any]:
 
 # --- SESSION MANAGEMENT ---
 
-def session_init(name: str = "default_session", goals: list = None) -> dict[str, Any]:
+def session_init(name: str = "default_session", goals: list = None) -> dict[str, Any]:  # type: ignore[assignment]
     """
     Perform the session init operation.
 

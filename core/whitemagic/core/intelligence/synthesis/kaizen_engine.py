@@ -83,7 +83,7 @@ class KaizenEngine:
                 from whitemagic.core.intelligence.synthesis.solution_library import (
                     get_solution_library,
                 )
-                self._solution_lib = get_solution_library()
+                self._solution_lib = get_solution_library()  # type: ignore[assignment]
             except ImportError:
                 self._solution_lib = None
         return self._solution_lib

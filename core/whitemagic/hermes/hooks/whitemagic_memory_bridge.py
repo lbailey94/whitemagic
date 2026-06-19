@@ -48,7 +48,7 @@ def _store_event(event: dict) -> str:
         mid = um.store(
             title=f"hermes:{tool_name}",
             content=json.dumps({"input": tool_input, "output": output}),
-            tags=["hermes", "bridge"],
+            tags=["hermes", "bridge"],  # type: ignore[arg-type]
         )
         # store() may return a Memory object or a string ID
         if mid is None:

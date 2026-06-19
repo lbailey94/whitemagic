@@ -27,7 +27,7 @@ _np: Any = None
 _NP_AVAILABLE = False
 
 try:
-    import hdbscan as _hdbscan
+    import hdbscan as _hdbscan  # type: ignore[no-redef]
     import numpy as _np
     _HDBSCAN_AVAILABLE = True
     _NP_AVAILABLE = True

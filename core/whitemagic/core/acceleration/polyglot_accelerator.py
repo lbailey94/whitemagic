@@ -187,7 +187,7 @@ class PolyglotAccelerator:
             try:
                 import whitemagic_rs
                 if hasattr(whitemagic_rs, 'extract_patterns_from_content'):
-                    result = whitemagic_rs.extract_patterns_from_content(content, limit)
+                    result = whitemagic_rs.extract_patterns_from_content(content, limit)  # type: ignore[arg-type]
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
                     return cast(list[dict[str, Any]], result)
@@ -195,10 +195,10 @@ class PolyglotAccelerator:
                 logger.debug(f"Rust pattern extraction failed: {e}")
 
         # Python fallback - simple keyword extraction
-        result = self._py_extract_patterns(content, limit)
+        result = self._py_extract_patterns(content, limit)  # type: ignore[assignment]
         self.python_calls += 1
         self.total_time_ms += (time.time() - start) * 1000
-        return result
+        return result  # type: ignore[return-value]
 
     def find_duplicates(self, texts: list[str], threshold: float = 0.9) -> list[tuple[int, int, float]]:
         """Find duplicate texts using MinHash LSH.

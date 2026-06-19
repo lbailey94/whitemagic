@@ -57,7 +57,7 @@ def activate(garden: str) -> None:
             from whitemagic.core.resonance.gan_ying_enhanced import EventType
 
             bus = get_bus()
-            bus.emit(EventType.GARDEN_ACTIVATED, {  # type: ignore[arg-type]
+            bus.emit(EventType.GARDEN_ACTIVATED, {  # type: ignore[arg-type, call-arg]
                 "garden": garden,
                 "timestamp": "now",
             })

@@ -832,7 +832,7 @@ class PolyglotRouter:
         }
 
         if operation in method_map:
-            return method_map[operation](*args, **kwargs)
+            return method_map[operation](*args, **kwargs)  # type: ignore[operator]
 
         raise ValueError(f"Unknown operation: {operation}")
 

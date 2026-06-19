@@ -416,7 +416,7 @@ class WarRoom:
             result = await self._deploy_tokio_scouts(task, num_clones=1000)
             lane_results.append({"lane": i, "task": task[:80], **result})
 
-        phases.append({"name": "The Pincer", "type": "combined", "lanes": lane_results})
+        phases.append({"name": "The Pincer", "type": "combined", "lanes": lane_results})  # type: ignore[dict-item]
 
         return {
             "tactic": "Besiege Wei to Rescue Zhao",

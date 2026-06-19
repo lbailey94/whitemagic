@@ -21,7 +21,7 @@ from whitemagic.core.economy.wallet_manager import get_wallet
 if HAS_FASTAPI:
     router = APIRouter(prefix="/tip", tags=["economy"])
 else:
-    router = None
+    router = None  # type: ignore[assignment]
 
 
 def _build_response(data: dict[str, Any]) -> dict[str, Any]:

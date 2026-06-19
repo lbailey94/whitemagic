@@ -79,12 +79,12 @@ def _ensure_cached() -> None:
         logger.debug("Middleware: rate_limiter dependency missing: %s", e)
     try:
         from whitemagic.tools.tool_permissions import check_tool_permission
-        _check_tool_permission = check_tool_permission
+        _check_tool_permission = check_tool_permission  # type: ignore[assignment]
     except Exception as e:
         logger.debug("Middleware: tool_permissions dependency missing: %s", e)
     try:
         from whitemagic.tools.maturity_check import check_maturity_for_tool
-        _check_maturity_for_tool = check_maturity_for_tool
+        _check_maturity_for_tool = check_maturity_for_tool  # type: ignore[assignment]
     except Exception as e:
         logger.debug("Middleware: maturity_check dependency missing: %s", e)
     try:
@@ -97,7 +97,9 @@ def _ensure_cached() -> None:
         _get_governor = get_governor
     except Exception as e:
         try:
-            from whitemagic.dharma.governor import get_governor
+            from whitemagic.dharma.governor import (
+                get_governor,  # type: ignore[assignment]
+            )
             _get_governor = get_governor
         except (ImportError, AttributeError):
             pass
@@ -357,7 +359,7 @@ def mw_tool_permissions(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
         try:
             perm_result = _check_tool_permission(ctx.agent_id, ctx.tool_name)
             if perm_result is not None:
-                return perm_result
+                return perm_result  # type: ignore[return-value]
         except (AttributeError, RuntimeError) as e:
             logger.debug(f"Middleware: permission check failed for {ctx.tool_name}: {e}")
     return next_fn(ctx)
@@ -372,7 +374,7 @@ def mw_maturity_gate(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
         try:
             mat_result = _check_maturity_for_tool(ctx.tool_name)
             if mat_result is not None:
-                return mat_result
+                return mat_result  # type: ignore[return-value]
         except (AttributeError, RuntimeError) as e:
             logger.debug(f"Middleware: maturity check failed for {ctx.tool_name}: {e}")
     return next_fn(ctx)

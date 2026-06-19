@@ -195,7 +195,7 @@ def log_function_call(
                 log.debug(f"Completed {func.__name__}")
                 return result
             except Exception as e:
-                logger.debug("Operation failed: %s", e)
+                logger.debug("Operation failed: %s", e)  # type: ignore[union-attr]
                 log.error(f"Error in {func.__name__}", exc_info=True)
                 raise
         return wrapper

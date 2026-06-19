@@ -47,9 +47,9 @@ class WillowHealthChecker:
 
         logger.info("🌿 Performing Willow health check...")
 
-        issues = []
+        issues: list[str] = []
         circuit_ok = True
-        koka_ok = True
+        koka_ok: bool | None = True
 
         # 1. Check circuit breaker state
         try:
@@ -87,7 +87,7 @@ class WillowHealthChecker:
 
         except ImportError:
             logger.debug("Koka bridge not available, skipping check")
-            koka_ok = None  # Not an error if unavailable
+            koka_ok = None  # Not an error if unavailable  # type: ignore[assignment]
         except (ImportError, ModuleNotFoundError) as e:
             issues.append(f"Koka health check failed: {e}")
             koka_ok = False
@@ -117,14 +117,14 @@ class WillowHealthChecker:
         status = WillowHealthStatus(
             is_healthy=is_healthy,
             circuit_breaker_ok=circuit_ok,
-            koka_responsive=koka_ok,
+            koka_responsive=bool(koka_ok) if koka_ok is not None else False,
             last_check=current_time,
             error_count=self._error_count,
             issues=issues
         )
 
         self._health_cache = status
-        self._last_check = current_time
+        self._last_check = current_time  # type: ignore[assignment]
 
         logger.info(f"🌿 Willow health check complete: {'✅' if is_healthy else '❌'}")
         if issues:

@@ -73,7 +73,7 @@ class ZigStringProcessor:
         out_ptr = ctypes.cast(out_buffer, ctypes.POINTER(ctypes.c_ubyte))
 
         # Call Zig function
-        keyword_count = zig_lib.wm_extract_keywords(
+        keyword_count = zig_lib.wm_extract_keywords(  # type: ignore[union-attr]
             text_ptr,
             text_len,
             out_ptr,

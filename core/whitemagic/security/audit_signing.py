@@ -71,22 +71,22 @@ class AuditSigner:
     def __new__(cls) -> AuditSigner:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._private_key: Any = None
-            cls._instance._public_key: Any = None
-            cls._instance._key_id: str = ""
+            cls._instance._private_key: Any = None  # type: ignore[misc,has-type]
+            cls._instance._public_key: Any = None  # type: ignore[misc,has-type]
+            cls._instance._key_id: str = ""  # type: ignore[misc,has-type]
             import threading
             cls._lock = threading.Lock()
         return cls._instance
 
     def _ensure_key(self) -> bool:
         """Load or generate the Ed25519 keypair. Returns True on success."""
-        if self._private_key is not None:
+        if self._private_key is not None:  # type: ignore[has-type]
             return True
         if not _CRYPTO_AVAILABLE:
             logger.warning("cryptography library unavailable; audit signing disabled")
             return False
         with self._lock:
-            if self._private_key is not None:
+            if self._private_key is not None:  # type: ignore[has-type]
                 return True
             priv_path = _private_key_path()
             pub_path = _public_key_path()
@@ -149,7 +149,8 @@ class AuditSigner:
             return None
         try:
             data = payload.encode("utf-8") if isinstance(payload, str) else payload
-            sig = self._private_key.sign(data)
+            assert self._private_key is not None
+            sig = self._private_key.sign(data)  # type: ignore[union-attr, call-arg]
             return {
                 "signature": base64.b64encode(sig).decode("ascii"),
                 "key_id": self._key_id,

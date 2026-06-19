@@ -214,7 +214,7 @@ class PratCompressor:
                     cv = self._tool.get(v, v)
                 else:
                     cv = self._compress_value(v)
-                out[ck] = cv
+                out[ck] = cv  # type: ignore[index]
             return out
         if isinstance(value, list):
             return [self._compress_value(item) for item in value]
@@ -230,7 +230,7 @@ class PratCompressor:
                     dv = self._tool_rev.get(v, v)
                 else:
                     dv = self._decompress_value(v)
-                out[dk] = dv
+                out[dk] = dv  # type: ignore[index]
             return out
         if isinstance(value, list):
             return [self._decompress_value(item) for item in value]

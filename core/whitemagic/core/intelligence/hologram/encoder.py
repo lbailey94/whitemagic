@@ -391,7 +391,7 @@ class CoordinateEncoder:
                 x, y, z, w, v = self._blend_with_garden(x, y, z, w, garden_bias, v=v)
 
         # --- GANA ALIGNMENT (Phase 11 Precision) ---
-        x, y = self._apply_gana_alignment(memory, x, y)
+        x, y = self._apply_gana_alignment(memory, x, y)  # type: ignore[arg-type]
 
         return HolographicCoordinate(x, y, z, w, v)
 

@@ -3,6 +3,6 @@ try:
     from .genome_tracker import PhylogeneticTracker as GenomeTracker
 except ImportError:
     # Fallback to old filename for compatibility
-    from .GenomeTracker import (
+    from .GenomeTracker import (  # type: ignore[assignment]
         PhylogeneticTracker as GenomeTracker,  # type: ignore[attr-defined]  # noqa: F401
     )

@@ -12,7 +12,7 @@ def handle_kg_extract(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": "text is required"}
     kg = get_knowledge_graph()
     result = kg.extract_from_text(source_id or "manual", text)
-    return {"status": "success", **result}
+    return {"status": "success", **result}  # type: ignore[dict-item]
 
 
 def handle_kg_query(**kwargs: Any) -> dict[str, Any]:

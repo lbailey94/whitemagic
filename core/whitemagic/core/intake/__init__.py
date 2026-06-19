@@ -218,7 +218,7 @@ class HolographicIntake:
             from whitemagic.config.paths import DB_PATH
             db = SQLiteBackend(DB_PATH)
             db.store(memory)
-            db.store_coords(mem_id, coords.x, coords.y, coords.z, coords.w)
+            db.store_coords(mem_id, coords.x, coords.y, coords.z, coords.w)  # type: ignore[call-arg]
 
             # Mark as known
             self._known_hashes.add(h)

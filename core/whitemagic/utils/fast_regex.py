@@ -43,7 +43,7 @@ class FastRegexPattern:
             try:
                 m = self._rust_pattern.search(text)
                 if m:
-                    return re.Match(m)
+                    return re.Match(m)  # type: ignore[call-arg]
             except Exception as e:
                 logger.debug(f"Rust regex search failed for {self.pattern!r}: {e}")
         return self._py_pattern.search(text)

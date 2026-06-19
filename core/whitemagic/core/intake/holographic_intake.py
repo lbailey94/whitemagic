@@ -403,7 +403,7 @@ class HolographicIntake:
             # Store in SQLite
             backend = SQLiteBackend(DB_PATH)
             backend.store(memory)
-            backend.store_coords(memory_id, coords.x, coords.y, coords.z, coords.w)  # type: ignore[union-attr]
+            backend.store_coords(memory_id, coords.x, coords.y, coords.z, coords.w)  # type: ignore[union-attr, call-arg]
 
             # Update item
             item.status = IntakeStatus.COMPLETED

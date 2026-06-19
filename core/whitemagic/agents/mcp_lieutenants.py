@@ -441,7 +441,7 @@ class MCPLieutenantCorps(LieutenantCorps):
         """Get the lieutenant responsible for a specific Gana."""
         domain = GANA_TO_LIEUTENANT.get(gana_name)
         if domain:
-            return self.lieutenants.get(domain)
+            return self.lieutenants.get(domain)  # type: ignore[return-value]
         return None
 
     def corps_status_with_mcp(self) -> dict[str, Any]:

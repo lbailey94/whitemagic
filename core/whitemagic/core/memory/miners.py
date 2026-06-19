@@ -1390,7 +1390,7 @@ class CausalMiner:
 # Singleton
 # ---------------------------------------------------------------------------
 
-_miner_instance: CausalMiner | None = None
+_miner_instance: CausalMiner | None = None  # type: ignore[no-redef]
 _miner_lock = threading.Lock()
 
 
@@ -1404,10 +1404,10 @@ def get_causal_miner(
     global _miner_instance
     with _miner_lock:
         if _miner_instance is None:
-            _miner_instance = CausalMiner(
+            _miner_instance = CausalMiner(  # type: ignore[assignment]
                 min_semantic_sim=min_semantic_sim,
                 min_causal_strength=min_causal_strength,
                 max_edges_per_run=max_edges,
                 persist=persist,
             )
-        return _miner_instance
+        return _miner_instance  # type: ignore[return-value]

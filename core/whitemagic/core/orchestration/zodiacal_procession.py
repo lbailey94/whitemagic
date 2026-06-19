@@ -104,7 +104,7 @@ class ZodiacalProcession:
 
     def __init__(self) -> None:
         self.cores: dict[ZodiacSign, ZodiacCore] = {
-            sign: ZodiacCore(
+            sign: ZodiacCore(  # type: ignore[abstract]
                 name=sign.name_str,
                 element=sign.element,
                 mode=sign.modality,

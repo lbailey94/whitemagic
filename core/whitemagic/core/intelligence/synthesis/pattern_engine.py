@@ -27,7 +27,7 @@ class PatternEngine:
                 from whitemagic.core.intelligence.synthesis.unified_patterns import (
                     UnifiedPatternAPI,
                 )
-                self._unified = UnifiedPatternAPI()
+                self._unified = UnifiedPatternAPI()  # type: ignore[assignment]
             except Exception as e:
                 logger.debug(f"UnifiedPatternAPI unavailable: {e}")
                 self._unified = None
@@ -39,7 +39,7 @@ class PatternEngine:
                 from whitemagic.core.intelligence.hologram.patterns import (
                     HolographicPatternEngine,
                 )
-                self._holographic = HolographicPatternEngine()
+                self._holographic = HolographicPatternEngine()  # type: ignore[assignment]
             except Exception as e:
                 logger.debug(f"HolographicPatternEngine unavailable: {e}")
                 self._holographic = None

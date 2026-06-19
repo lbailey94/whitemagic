@@ -57,7 +57,7 @@ def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> d
         dict[str, Any]
     """
     from whitemagic.core.intelligence.reasoning import get_reasoner
-    res = get_reasoner().reason(question, context or {})
+    res = get_reasoner().reason(question, context or {})  # type: ignore[arg-type]
     return {"question": question, "synthesis": res.get("synthesis", ""), "confidence": res.get("confidence", 0.0)}
 
 # --- WISDOM (I Ching) ---

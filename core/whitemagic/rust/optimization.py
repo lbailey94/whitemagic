@@ -38,7 +38,7 @@ class RustAccelerator:
             Similarity score between 0.0 and 1.0
         """
         if hasattr(self._rust, 'rust_similarity'):
-            return float(self._rust.rust_similarity(text1, text2))
+            return float(self._rust.rust_similarity(text1, text2))  # type: ignore[union-attr]
         # Fallback to pure Python
         from difflib import SequenceMatcher
         return SequenceMatcher(None, text1, text2).ratio()

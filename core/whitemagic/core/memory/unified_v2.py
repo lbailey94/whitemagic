@@ -142,7 +142,7 @@ class UnifiedMemoryV2:
         # Future: Implement in Rust for consistency
         from whitemagic.core.memory.unified import UnifiedMemory
         um = UnifiedMemory()
-        return cast(str, um.store(content, memory_type=memory_type, tags=tags or [], **metadata))
+        return cast(str, um.store(content, memory_type=memory_type, tags=tags or [], **metadata))  # type: ignore[arg-type]
 
     def recall(self, query: str, **kwargs: Any) -> list[dict[str, Any]]:
         """Backward compatibility with old API.

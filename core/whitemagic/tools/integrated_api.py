@@ -87,8 +87,8 @@ def call_tool(
         # Emit to gan ying bus
         if gan_ying:
             try:
-                gan_ying.emit(
-                    "tool.completed",
+                gan_ying.emit(  # type: ignore[call-arg]
+                    "tool.completed",  # type: ignore[arg-type]
                     {
                         "tool": tool_name,
                         "success": success,
@@ -131,8 +131,8 @@ def call_tool(
         # Emit failure to gan ying
         if gan_ying:
             try:
-                gan_ying.emit(
-                    "tool.failed",
+                gan_ying.emit(  # type: ignore[call-arg]
+                    "tool.failed",  # type: ignore[arg-type]
                     {
                         "tool": tool_name,
                         "error": str(e)[:200],
@@ -149,7 +149,7 @@ def call_tool(
             try:
                 blackboard.post("tool.error", {
                     "tool": tool_name,
-                    "error": str(e)[:200],
+                    "error": str(e)[:200],  # type: ignore[misc]
                     "timestamp": time.time(),
                 })
             except Exception as e:
@@ -158,7 +158,7 @@ def call_tool(
 
         return {
             "status": "error",
-            "error": str(e),
+            "error": str(e),  # type: ignore[misc]
             "tool": tool_name,
         }
 

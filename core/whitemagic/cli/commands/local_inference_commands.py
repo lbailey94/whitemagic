@@ -9,7 +9,7 @@ try:
     console = Console()
 except ImportError:
     HAS_RICH = False
-    console = None
+    console = None  # type: ignore[assignment]
 
 __all__ = ['infer_local_query', 'infer_local_status']
 

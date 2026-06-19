@@ -212,7 +212,7 @@ class GanaSwarm:
                 continue
             for res in result_list:
                 if res.output and isinstance(res.output, str):
-                    report = pattern_engine.extract_patterns(res.output)
+                    report = pattern_engine.extract_patterns(res.output)  # type: ignore[arg-type]
                     # Iterate over all categories in the report
                     all_patterns = report.solutions + report.anti_patterns + report.heuristics + report.optimizations
                     for p in all_patterns:

@@ -620,8 +620,8 @@ class ZodiacCores:
 
     def __init__(self) -> None:
         self.cores: dict[str, ZodiacCore] = {
-            "aries": AriesCore(),
-            "taurus": TaurusCore(),
+            "aries": AriesCore(),  # type: ignore[abstract]
+            "taurus": TaurusCore(),  # type: ignore[abstract]
             "gemini": GeminiCore(),
             "cancer": CancerCore(),
             "leo": LeoCore(),

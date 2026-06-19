@@ -73,7 +73,7 @@ class ZodiacalClock:
 
     def __init__(self, state_root: str | None = None) -> None:
         from whitemagic.config.paths import WM_ROOT
-        self.state_root = Path(state_root or os.getenv("WM_STATE_ROOT", str(WM_ROOT)))
+        self.state_root = Path(state_root or os.getenv("WM_STATE_ROOT", str(WM_ROOT)))  # type: ignore[arg-type]
         self.state_file = self.state_root / "zodiac_state.json"
         self._state = self._load_state()
 

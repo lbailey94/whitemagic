@@ -58,7 +58,7 @@ def _handle_pattern_consultation(event: Any) -> None:
         insight_event = getattr(EventType, "INSIGHT_GENERATED", EventType.WISDOM_RECEIVED)
         response_event = ResonanceEvent(
             source="zodiac_council",
-            event_type=insight_event,
+            event_type=insight_event,  # type: ignore[arg-type]
             data={
                 "query": query,
                 "top_core": responses[0].sign.value,
@@ -108,7 +108,7 @@ def emit_core_consultation(sign: ZodiacSign, query: str, response: Any) -> None:
 
     event = ResonanceEvent(
         source=f"zodiac_{sign.value}",
-        event_type=insight_event,
+        event_type=insight_event,  # type: ignore[arg-type]
         data={
             "query": query,
             "perspective": response.perspective,
