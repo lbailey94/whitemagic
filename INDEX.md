@@ -147,6 +147,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 PATCH scope proposal — Tier 1 (version drift guardrail fix) + Tier 2 (roadmap polish items) recommended; ~6 hours; discoverable from a real test failure (TestH1_VersionDrift) caught by the release_readiness guardrail | Jun 18 |
 | `SESSION_REPORT_POLISH_MARATHON_2026-06-18.md` | Session report — polish marathon that produced v22.2.3: ruff 1,833→0, mypy 800→0, 814 logger calls with exc_info, 9 real bugs found and fixed, 8 commits pushed | Jun 18 |
 | `MISSING_MODULES_REPORT_2026-06-18.md` | Missing-modules report — the 87 internal Whitemagic modules referenced in code but absent from the tree, classified into Resurface-from-archives (30), Reimplement-in-v22.3 (40), and Remove-stale-references (17); companion to the planned archaeological excavation session | Jun 18 |
+| `SESSION_REPORT_EXCAVATION_2026-06-19.md` | Session report — full archaeological excavation (5 phases, 56 min): 13+10+2 modules recovered from archives, mcp_api_bridge crash fixed, no regressions | Jun 19 |
 
 ---
 
