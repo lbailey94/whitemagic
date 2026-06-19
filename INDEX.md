@@ -149,6 +149,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `MISSING_MODULES_REPORT_2026-06-18.md` | Missing-modules report — the 87 internal Whitemagic modules referenced in code but absent from the tree, classified into Resurface-from-archives (30), Reimplement-in-v22.3 (40), and Remove-stale-references (17); companion to the planned archaeological excavation session | Jun 18 |
 | `SESSION_REPORT_EXCAVATION_2026-06-19.md` | Session report — full archaeological excavation (5 phases, 56 min): 13+10+2 modules recovered from archives, mcp_api_bridge crash fixed, no regressions | Jun 19 |
 | `SESSION_REPORT_WEBSITE_UPGRADE_2026-06-19.md` | Website upgrade day session report — 5 phases, 1h 37m: v22.2.3 sync, /mcp-bridge page + API, /zodiac interactive, content updates. Vercel project topology needs manual fix | Jun 19 |
+| `SESSION_UPDATE_VERCEL_BLOCKER_2026-06-19.md` | Session update — Vercel auto-deploys broken (all git push creates [0ms] UNKNOWN builds, manual deploys blocked by 'Please retry later' error). 4 backup projects ready, deletion paused | Jun 19 |
 
 ---
 
