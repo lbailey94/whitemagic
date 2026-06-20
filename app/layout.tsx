@@ -65,18 +65,6 @@ export default function RootLayout({
           </div>
           <FloatingLibrarian />
         </ThemeProvider>
-        {/* Synchronous scramble shim. Placed at the END of body so
-            it runs after all page content is parsed. Scrambles every
-            text node immediately so there's no flicker. React
-            re-renders that reset the text are caught by the
-            MutationObserver started by this script. */}
-        {WIP_SCRAMBLE ? (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `(function(){if(typeof document==="undefined")return;var G="0123456789",S=1597334671>>>0,SK=new Set(["SCRIPT","STYLE","CODE","PRE","TEXTAREA","INPUT","SELECT","OPTION","NOSCRIPT","TEMPLATE","SVG","IFRAME","EMBED","OBJECT"]);function sc(t){var o="",s=S>>>0;for(var i=0;i<t.length;i++){var c=t[i];if(c===" "||c==="\\n"||c==="\\t"){o+=c}else if(/[a-zA-Z0-9]/.test(c)){s=(s*1664525+1013904223)>>>0;o+=G[s%G.length]}else{o+=c}}return o}function sk(e){for(var c=e;c;){if(SK.has(c.tagName))return true;if(c.hasAttribute&&(c.hasAttribute("data-no-scramble")||c.hasAttribute("data-wip-scrambled")))return true;c=c.parentElement}return false}function sn(n){if(!n.nodeValue)return;var p=n.parentElement;if(!p)return;if(sk(p))return;if(p.hasAttribute("data-original-text"))return;if(!n.nodeValue.trim())return;var o=n.nodeValue;p.setAttribute("data-original-text",o);n.nodeValue=sc(o)}function w(r){var x=document.createTreeWalker(r,NodeFilter.SHOW_TEXT);var n;while(n=x.nextNode())sn(n)}w(document.body);document.body.classList.remove("wip-scrambling");document.body.classList.add("wip-scrambled");document.documentElement.setAttribute("data-wip-scrambled-by","inline-shim");var pending=false;function sched(muts){if(pending)return;pending=true;requestAnimationFrame(function(){pending=false;for(var i=0;i<muts.length;i++){var m=muts[i];if(m.type==="characterData"&&m.target.nodeType===3){var t=m.target,p=t.parentElement;if(p&&!sk(p)){var o=p.getAttribute("data-original-text");if(o&&t.nodeValue===o){t.nodeValue=sc(o)}else if(o){p.setAttribute("data-original-text",o)}}}else if(m.type==="childList"){m.addedNodes.forEach(function(n){if(n.nodeType===3)sn(n);else if(n.nodeType===1)w(n)})}}});}new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,characterData:true,characterDataOldValue:false})})();`,
-            }}
-          />
-        ) : null}
       </body>
     </html>
   );

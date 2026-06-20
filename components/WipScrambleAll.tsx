@@ -1,33 +1,26 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { useEffect } from "react";
 import { WIP_SCRAMBLE } from "@/lib/wip";
 
 /**
  * WipScrambleAll — when WIP_SCRAMBLE is on, walks the entire DOM
  * and replaces every text node's content with a stream of random
  * digits. The original text is preserved in the parent's
- * `data-original-text` attribute (and via DevTools).
+ * `data-original-text` attribute.
+ *
+ * Uses useEffect (not useLayoutEffect) because in Next.js App
+ * Router, the body content is created by React from RSC data
+ * AFTER the initial commit. We need to wait for the next
+ * animation frame to ensure the full DOM is in place before
+ * walking.
  *
  * Skips: SCRIPT, STYLE, CODE, PRE, TEXTAREA, INPUT, SELECT, OPTION,
  * NOSCRIPT, TEMPLATE, SVG, IFRAME, EMBED, OBJECT. Also skips any
- * element with `data-no-scramble` (escape hatch) or
- * `data-wip-scrambled` (marks spans pre-scrambled by the inline
- * <WipScramble /> component).
+ * element with `data-no-scramble` or `data-wip-scrambled`.
  *
- * Uses useLayoutEffect (synchronous, before paint) so the scramble
- * happens before the user sees the original text. Body starts with
- * wip-scrambling class (opacity 0.01) and is revealed (wip-scrambled,
- * opacity 1) after scrambling.
- *
- * MutationObserver watches for:
- * - childList: new elements added to the DOM (route changes, async
- *   data, chat messages)
- * - characterData: text node content changes (React re-renders
- *   that might reset scrambled text to original)
- *
- * Both trigger a re-scramble pass. Debounced via rAF to avoid
- * thrashing on rapid mutations.
+ * MutationObserver watches for new content and re-renders that
+ * reset scrambled text. Debounced via rAF.
  */
 
 const SCRAMBLE_GLYPHS = "0123456789";
@@ -100,9 +93,6 @@ function walkAndScramble(root: Node): void {
   }
 }
 
-// Re-scramble a text node IF its current value matches the
-// original (meaning it was reset by a re-render). If it's
-// already scrambled, leave it.
 function rescrambleIfReset(node: Text): void {
   if (!node.nodeValue) return;
   const parent = node.parentElement;
@@ -111,31 +101,37 @@ function rescrambleIfReset(node: Text): void {
   const original = parent.getAttribute("data-original-text");
   if (!original) return;
   if (node.nodeValue === original) {
-    // React re-rendered — re-scramble
     node.nodeValue = scrambleText(original, SEED + original.length);
-  } else {
-    // Already scrambled or replaced by something else — re-anchor
-    // the original so future resets get caught
-    parent.setAttribute("data-original-text", original);
   }
 }
 
 export function WipScrambleAll() {
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!WIP_SCRAMBLE) return;
     if (typeof document === "undefined") return;
 
-    // Initial pass
-    walkAndScramble(document.body);
+    // Run the scramble on the next animation frame, after React
+    // has fully committed the DOM (including RSC data).
+    const raf1 = requestAnimationFrame(() => {
+      // Do two passes: one immediately, one more on the next frame
+      // in case React is still streaming in content.
+      walkAndScramble(document.body);
 
-    // Reveal
-    document.body.classList.remove("wip-scrambling");
-    document.body.classList.add("wip-scrambled");
+      // Reveal the body
+      document.body.classList.remove("wip-scrambling");
+      document.body.classList.add("wip-scrambled");
 
-    // Mark a sentinel on document so we can confirm from DevTools
-    // that this component actually ran
-    document.documentElement.setAttribute("data-wip-scrambled-by", "WipScrambleAll");
+      // Mark document so DevTools can confirm
+      document.documentElement.setAttribute("data-wip-scrambled-by", "WipScrambleAll");
 
+      // Second pass on the next frame to catch any late-arriving
+      // content (RSC streaming, async data, etc.)
+      requestAnimationFrame(() => {
+        walkAndScramble(document.body);
+      });
+    });
+
+    // Watch for mutations: new content, React re-renders
     let rafPending = false;
     const scheduleRescramble = (mutations: MutationRecord[]) => {
       if (rafPending) return;
@@ -165,10 +161,12 @@ export function WipScrambleAll() {
       childList: true,
       subtree: true,
       characterData: true,
-      characterDataOldValue: false,
     });
 
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(raf1);
+      observer.disconnect();
+    };
   }, []);
 
   return null;
