@@ -143,6 +143,28 @@ const nextConfig = {
   experimental: {
     mdxRs: true,
   },
+  // Cache headers — in WIP mode, force no-store on HTML responses so
+  // browser + Vercel CDN never serve a stale copy after a content
+  // change. Disabled when WIP_MODE is off (production: standard
+  // caching for performance).
+  async headers() {
+    if (process.env.NEXT_PUBLIC_WIP_MODE !== "1") {
+      return [];
+    }
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, max-age=0",
+          },
+          { key: "Pragma", value: "no-cache" },
+          { key: "Expires", value: "0" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     return [
       // Expose agent-addressable well-known surfaces at canonical paths.

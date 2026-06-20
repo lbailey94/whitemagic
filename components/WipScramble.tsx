@@ -5,12 +5,12 @@ import type { JSX } from "react";
 import { WIP_SCRAMBLE } from "@/lib/wip";
 
 /**
- * Unicode block-element glyphs used to visually scramble text in
- * WIP mode. 22 glyphs, all from the Geometric Shapes / Block
- * Elements Unicode ranges. Looks like a code block.
+ * Digits used to visually scramble text in WIP mode. Each visible
+ * character is replaced with a random digit 0-9, so the prose
+ * renders as a stream of numbers (e.g., "4 7 2 1 8 3 9 0").
+ * Looks like a numeric cipher / instrument readout.
  */
-const SCRAMBLE_GLYPHS =
-  "█▓▒░■□◊◈◇◆◉◎●○◌◍▪▫⬛⬜";
+const SCRAMBLE_GLYPHS = "0123456789";
 
 /**
  * Deterministic seeded scramble. Same text + seed always produces
