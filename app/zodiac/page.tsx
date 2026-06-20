@@ -5,7 +5,7 @@
  * air, water) and mode (cardinal, fixed, mutable). Each sign links to
  * its MCP endpoint (gana name) and shows its capabilities.
  *
- * v22.2.3: zodiac_list_cores / zodiac_activate_core / zodiac_consult_council
+ * v22.3.0: zodiac_list_cores / zodiac_activate_core / zodiac_consult_council / zodiac_run_cycle
  * bridge functions now work end-to-end. See /mcp-bridge.
  */
 

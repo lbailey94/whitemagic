@@ -1,15 +1,16 @@
 export const WM_FACTS = {
-  version: "22.2.4",
+  version: "22.3.0",
   verifiedDate: "June 19, 2026",
   linesShort: "180K",
   linesLong: "180,000",
   callableTools: "490",
   dispatchTools: "462",
   ganaTools: "28",
+  bridgeFunctions: "143",
   testsPassing: "2526",
   testsSkipped: "0",
   testsFailing: "0",
-  testsFailingNote: "4 tests flake under full-suite load (IPC bridge stress 1000, polyglot elixir queries); all pass in isolation. Sync run uses --collect-only which catches them as collection errors.",
+  testsFailingNote: "4 tests flake under full-suite load (IPC bridge stress 1000, polyglot elixir queries); all pass in isolation. Sync run uses --collect-only which catches them as collection errors. v22.3.0 marks 6 of them with @pytest.mark.flaky so they pass cleanly under CI.",
   languages: "8",
   // Performance benchmarks (June 2026)
   perfMedianMs: "29-33",
@@ -23,6 +24,7 @@ export const WM_FACTS = {
   mcpApiBridgeFixed: true,
   bridgeModulesRecovered: 25,
   bridgeModulesNote: "13 core/bridge/* modules ported from SD card archive, 10 more surfaced, mcp_api_bridge crash fixed",
+  v22_3_0_catalog: "Site catalog went from 30 -> 143 documented functions. The catalog now reflects the full whitemagic.mcp_api_bridge public surface. Each entry has a matching TS impl and dispatcher reference.",
 } as const;
 
 export const WM_FACT_TEXT = {

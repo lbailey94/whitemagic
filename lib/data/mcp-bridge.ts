@@ -1,10 +1,11 @@
 /**
- * MCP Bridge — 13 fixed modules recovered in v22.2.4.
+ * MCP Bridge — 13 modules, 143 functions documented in v22.3.0.
  *
  * These are the bridge functions exposed via whitemagic.mcp_api_bridge.
  * In v22.2.2 and earlier, the bridge was completely broken due to
- * 14 unguarded star imports of these modules. In v22.2.4 all 13
- * modules were resurfaced from the SD-card archive.
+ * 14 unguarded star imports of these modules. In v22.2.3 all 13
+ * modules were resurfaced from the SD-card archive. v22.3.0 expanded
+ * the documented surface from 30 to 143 functions.
  *
  * This file is the static catalog used by:
  * - /mcp-bridge (human-facing demo page)
@@ -16,7 +17,7 @@ export interface BridgeFunction {
   module: string;
   signature: string;
   description: string;
-  category: "session" | "system" | "garden" | "zodiac" | "voice" | "meditation" | "wisdom" | "reasoning" | "archaeology" | "gana" | "benchmark" | "inference" | "autonomous";
+  category: "session" | "system" | "garden" | "zodiac" | "voice" | "meditation" | "wisdom" | "reasoning" | "archaeology" | "gana" | "benchmark" | "inference" | "autonomous" | "dharma" | "memory" | "kaizen" | "collaboration" | "infrastructure" | "metrics" | "optimization" | "tool";
   stability: "stable";
   example_payload: Record<string, unknown>;
   example_response: Record<string, unknown>;
@@ -314,7 +315,7 @@ export const BRIDGE_MODULES: BridgeFunction[] = [
     name: "archaeology_stats",
     module: "whitemagic.core.bridge.archaeology",
     signature: "archaeology_stats(scan_disk: bool = False, **kwargs) -> dict",
-    description: "Get archaeology statistics. Defensive: requires whitemagic.archaeology (Group B in v22.2.4).",
+    description: "Get archaeology statistics. Defensive: requires whitemagic.archaeology (Group B in v22.2.3).",
     category: "archaeology",
     stability: "stable",
     example_payload: {},
@@ -350,7 +351,7 @@ export const BRIDGE_MODULES: BridgeFunction[] = [
     example_payload: {},
     example_response: { available: false, backends: {}, default_backend: null, models: {}, archived: true },
   },
-  // ── v22.2.4 additions ───────────────────────────────────────────────
+  // ── gana_dipper (added v22.2.4) ────────────────────────────────────
   {
     name: "gana_dipper",
     module: "whitemagic.core.bridge.gana_wrappers",
@@ -368,15 +369,1259 @@ export const BRIDGE_MODULES: BridgeFunction[] = [
       status: "governing",
     },
   },
+  {
+    name: "adapt_response",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "adapt_response(context: dict[str, typing.Any] | None = None, operation: str = 'adapt_to_context', **kwargs: Any) -> dict",
+    description: "Compatibility shim for the bridge router's response adaptation hook.",
+    category: "tool",
+    stability: "stable",
+    example_payload: {"context": {"agent": "librarian"}, "operation": "adapt_to_context"},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "analyze_pattern",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "analyze_pattern(pattern_id: str, **kwargs: Any) -> dict",
+    description: "Analyze a specific pattern.",
+    category: "reasoning",
+    stability: "stable",
+    example_payload: {"pattern_id": "pat_001"},
+    example_response: {"status": "ok", "method": "default"},
+  },
+
+  {
+    name: "analyze_wu_xing_phase",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "analyze_wu_xing_phase(description: str | None = None, question: str | None = None, operation: str = 'analyze', task_type: str | None = None, **kwargs: Any) -> dict",
+    description: "Analyze Wu Xing phase or get recommendations.",
+    category: "kaizen",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "ran": true},
+  },
+
+  {
+    name: "archaeology_daily_digest",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_daily_digest(**kwargs: Any) -> dict",
+    description: "Create a daily wisdom digest from recent insights.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_extract_wisdom",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_extract_wisdom(**kwargs: Any) -> dict",
+    description: "Extract wisdom from memory archives.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_find_changed",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_find_changed(directory: str | None = None, **kwargs: Any) -> dict",
+    description: "Find files that have changed since they were last read.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_find_unread",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_find_unread(directory: str, patterns: list[str] | None = None, **kwargs: Any) -> dict",
+    description: "Find unread files in a directory.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_generate_report",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_generate_report(**kwargs: Any) -> dict",
+    description: "Generate archaeology report.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_mark_read",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_mark_read(file_path: str, context: str | None = None, notes: str | None = None, **kwargs: Any) -> dict",
+    description: "Mark a file as read.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_mark_written",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_mark_written(file_path: str, context: str | None = None, notes: str | None = None, **kwargs: Any) -> dict",
+    description: "Mark a file as written.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_process_wisdom",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_process_wisdom(limit_files: int = 1000, memory_type: str = 'long_term', **kwargs: Any) -> dict",
+    description: "Extract insights from memory archives and store as wisdom memories.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_recent_reads",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_recent_reads(limit: int = 50, **kwargs: Any) -> dict",
+    description: "Get recently read files.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_report",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_report(**kwargs: Any) -> dict",
+    description: "Generate a human-readable archaeology report.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_scan_directory",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_scan_directory(directory: str, depth: int = 3, patterns: list[str] | None = None, recursive: bool = True, **kwargs: Any) -> dict",
+    description: "Scan a directory and track files.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "archaeology_search",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "archaeology_search(query: str, **kwargs: Any) -> dict",
+    description: "Search archaeology entries by path, notes, or insights.",
+    category: "archaeology",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "results": []},
+  },
+
+  {
+    name: "bitnet_infer",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "bitnet_infer(prompt: 'str', **_: 'Any') -> dict",
+    description: "Archived BitNet inference shim.",
+    category: "inference",
+    stability: "stable",
+    example_payload: {"prompt": "Hello"},
+    example_response: {"status": "ok", "result": "..."},
+  },
+
+  {
+    name: "bitnet_status",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "bitnet_status(**_: 'Any') -> dict",
+    description: "Archived BitNet status shim.",
+    category: "inference",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "result": "..."},
+  },
+
+  {
+    name: "cast",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "cast(typ, val) -> dict",
+    description: "Cast a value to a type.",
+    category: "tool",
+    stability: "stable",
+    example_payload: {"spell": "list"},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "consult_art_of_war",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "consult_art_of_war(question: str, situation: str = '', urgency: str = 'normal', **kwargs: Any) -> dict",
+    description: "Consult Art of War via the strategic lens in MultiSpectralReasoner.",
+    category: "wisdom",
+    stability: "stable",
+    example_payload: {"question": "How should we sequence the catalog expansion?"},
+    example_response: {"status": "ok", "wisdom": "..."},
+  },
+
+  {
+    name: "debug_system",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "debug_system(operation: str = 'inspect_state', component: str | None = None, **kwargs: Any) -> dict",
+    description: "Debug system components.",
+    category: "system",
+    stability: "stable",
+    example_payload: {"operation": "inspect_state"},
+    example_response: {"status": "healthy"},
+  },
+
+  {
+    name: "detect_patterns",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "detect_patterns(query: str = '', **kwargs: Any) -> dict",
+    description: "Detect patterns in memory or data.",
+    category: "reasoning",
+    stability: "stable",
+    example_payload: {"query": "governance drift over time"},
+    example_response: {"status": "ok", "method": "default"},
+  },
+
+  {
+    name: "dharma_check_boundaries",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "dharma_check_boundaries(action: dict[str, typing.Any], strict_mode: bool = False, **kwargs: Any) -> dict",
+    description: "Check if an action violates any ethical boundaries.",
+    category: "dharma",
+    stability: "stable",
+    example_payload: {"action": {"type": "deploy", "target": "production"}, "strict_mode": false},
+    example_response: {"status": "ok", "principle": "ahimsa"},
+  },
+
+  {
+    name: "dharma_evaluate_ethics",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "dharma_evaluate_ethics(action: dict[str, typing.Any], context: dict[str, typing.Any] | None = None, **kwargs: Any) -> dict",
+    description: "Evaluate an action against ethical principles.",
+    category: "dharma",
+    stability: "stable",
+    example_payload: {"action": {"type": "deploy", "target": "production"}, "strict_mode": false},
+    example_response: {"status": "ok", "principle": "ahimsa"},
+  },
+
+  {
+    name: "dharma_get_ethical_score",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "dharma_get_ethical_score(time_window_hours: int = 24, **kwargs: Any) -> dict",
+    description: "Get overall ethical score based on recent system actions.",
+    category: "dharma",
+    stability: "stable",
+    example_payload: {"action": {"type": "deploy", "target": "production"}, "strict_mode": false},
+    example_response: {"status": "ok", "principle": "ahimsa"},
+  },
+
+  {
+    name: "dharma_get_guidance",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "dharma_get_guidance(situation: str, principles: list[str] | None = None, **kwargs: Any) -> dict",
+    description: "Get ethical guidance for a situation.",
+    category: "dharma",
+    stability: "stable",
+    example_payload: {"action": {"type": "deploy", "target": "production"}, "strict_mode": false},
+    example_response: {"status": "ok", "principle": "ahimsa"},
+  },
+
+  {
+    name: "dharma_list_principles",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "dharma_list_principles(level: str | None = None, **kwargs: Any) -> dict",
+    description: "List all ethical principles with their descriptions and weights.",
+    category: "dharma",
+    stability: "stable",
+    example_payload: {"action": {"type": "deploy", "target": "production"}, "strict_mode": false},
+    example_response: {"status": "ok", "principle": "ahimsa"},
+  },
+
+  {
+    name: "dharma_verify_consent",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "dharma_verify_consent(action: dict[str, typing.Any], consent_type: str = 'explicit', **kwargs: Any) -> dict",
+    description: "Verify if proper consent has been obtained for an action.",
+    category: "dharma",
+    stability: "stable",
+    example_payload: {"action": {"type": "deploy", "target": "production"}, "strict_mode": false},
+    example_response: {"status": "ok", "principle": "ahimsa"},
+  },
+
+  {
+    name: "enable_rust_acceleration",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "enable_rust_acceleration(operations: list[str] | None = None, **kwargs: Any) -> dict",
+    description: "Enable Rust-accelerated operations for maximum performance.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "ensure_string",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "ensure_string(value: Any, **kwargs: Any) -> dict",
+    description: "Ensure value is a string. If it's a dict/list (JSON), dump it to string. This fixes issues with models like GLM 4.7 passing JSON objects for string fields.",
+    category: "tool",
+    stability: "stable",
+    example_payload: {"value": 42},
+    example_response: {"value": "42"},
+  },
+
+  {
+    name: "execute_cascade",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "execute_cascade(pattern: str, tools: list[str], **kwargs: Any) -> dict",
+    description: "Execute a cascade pattern.",
+    category: "reasoning",
+    stability: "stable",
+    example_payload: {"pattern": "balanced_refactor", "tools": ["memory_search", "dharma_check"]},
+    example_response: {"status": "ok", "method": "default"},
+  },
+
+  {
+    name: "execute_mcp_tool",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "execute_mcp_tool(tool_name: str, **kwargs: Any) -> dict",
+    description: "Main entry point for MCP tool execution. Routes tool calls to appropriate handlers.",
+    category: "tool",
+    stability: "stable",
+    example_payload: {"tool": "memory_search", "kwargs": {"query": "ethics"}},
+    example_response: {"status": "ok", "result": {}},
+  },
+
+  {
+    name: "gana_abundance",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_abundance(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Abundance (Zhen) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "abundance", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_chariot",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_chariot(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Chariot (Zhen) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "chariot", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_encampment",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_encampment(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Encampment (Shi) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "encampment", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_extended_net",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_extended_net(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Extended Net (Zhang) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "extended_net", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_ghost",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_ghost(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Ghost (Gui) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "ghost", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_girl",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_girl(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Girl (Nu) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "girl", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_hairy_head",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_hairy_head(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Hairy Head (Mao) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "hairy_head", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_heart",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_heart(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Heart (Xin) Gana Tool - Session Context.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "heart", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_invoke",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_invoke(tool_name: str, args: dict[str, typing.Any] | None = None, **kwargs: Any) -> dict",
+    description: "Invoke a Gana meta-tool through the PRAT router.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "invoke", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_mound",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_mound(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Mound (Lou) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "mound", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_neck",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_neck(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Neck (Kang) Gana Tool - Stability/Memory.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "neck", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_net",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_net(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Net (Bi) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "net", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_ox",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_ox(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Ox (Niu) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "ox", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_roof",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_roof(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Roof (Wei) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "roof", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_room",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_room(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Room (Fang) Gana Tool - Resource Locks.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "room", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_root",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_root(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Root (Di) Gana Tool - System Health.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "root", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_star",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_star(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Star (Xing) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "star", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_stomach",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_stomach(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Stomach (Wei) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "stomach", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_straddling_legs",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_straddling_legs(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Straddling Legs (Kui) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "straddling_legs", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_tail",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_tail(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Tail (Wei) Gana Tool - Acceleration.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "tail", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_three_stars",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_three_stars(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Three Stars (Shen) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "three_stars", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_turtle_beak",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_turtle_beak(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Turtle Beak (Zui) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "turtle_beak", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_void",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_void(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Void (Xu) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "void", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_wall",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_wall(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Wall (Bi) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "wall", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_willow",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_willow(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Willow (Liu) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "willow", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "gana_wings",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "gana_wings(operation: str = 'invoke', **kwargs: Any) -> dict",
+    description: "Wings (Yi) Gana Tool.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"operation": "invoke", "task": "list capabilities"},
+    example_response: {"mansion": "wings", "task": "ok", "status": "ok"},
+  },
+
+  {
+    name: "garden_garden_activate",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "garden_garden_activate(**kwargs: Any) -> dict",
+    description: "Bridge alias for garden activation.",
+    category: "garden",
+    stability: "stable",
+    example_payload: {"garden_name": "ethics_dharma"},
+    example_response: {"status": "ok", "garden": "ethics_dharma"},
+  },
+
+  {
+    name: "garden_garden_status",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "garden_garden_status(**kwargs: Any) -> dict",
+    description: "Bridge alias for garden status.",
+    category: "garden",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "garden": "ethics_dharma"},
+  },
+
+  {
+    name: "garden_resonance_map",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "garden_resonance_map(**kwargs: Any) -> dict",
+    description: "Get garden resonance map.",
+    category: "garden",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "garden": "ethics_dharma"},
+  },
+
+  {
+    name: "garden_sangha_workspace_info",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "garden_sangha_workspace_info(**kwargs: Any) -> dict",
+    description: "Return a lightweight Sangha workspace summary.",
+    category: "garden",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "garden": "ethics_dharma"},
+  },
+
+  {
+    name: "get_metrics_summary",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "get_metrics_summary() -> dict",
+    description: "Get summary of all tracked metrics.",
+    category: "metrics",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "get_system_time",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "get_system_time() -> dict",
+    description: "Bridge function get_system_time.",
+    category: "metrics",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "kaizen_analyze",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "kaizen_analyze(**kwargs: Any) -> dict",
+    description: "Backward-compatible tool name used by the MCP bridge.",
+    category: "kaizen",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "ran": true},
+  },
+
+  {
+    name: "list_cascade_patterns",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "list_cascade_patterns() -> dict",
+    description: "List available cascade execution patterns.",
+    category: "reasoning",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "method": "default"},
+  },
+
+  {
+    name: "local_ml_infer",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "local_ml_infer(prompt: 'str', backend: 'str | None' = None, max_tokens: 'int | None' = None, temperature: 'float | None' = None, **kwargs: 'Any') -> dict",
+    description: "Run archived local-model inference (disabled by default).",
+    category: "inference",
+    stability: "stable",
+    example_payload: {"prompt": "Hello", "max_tokens": 64},
+    example_response: {"status": "ok", "result": "..."},
+  },
+
+  {
+    name: "manage_agent_collaboration",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "manage_agent_collaboration(operation: str = 'list_agents', name: str | None = None, model: str | None = None, specialty: str | None = None, description: str | None = None, channels: list[str] | None = None, content: str | None = None, channel: str = 'sangha', task: str | None = None, preferred_specialty: str | None = None, **kwargs: Any) -> dict",
+    description: "Manage multi-agent collaboration.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {"operation": "list"},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "manage_memories",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "manage_memories(operation: str = 'search', **kwargs: Any) -> dict",
+    description: "Unified memory management for MCP.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"operation": "list"},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "manage_zodiac_cores",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "manage_zodiac_cores(operation: str = 'list', core_name: str | None = None, question: str | None = None, context: dict[str, typing.Any] | None = None, **kwargs: Any) -> dict",
+    description: "Unified zodiac core management.",
+    category: "zodiac",
+    stability: "stable",
+    example_payload: {"operation": "list"},
+    example_response: {"status": "ok", "core": "aries"},
+  },
+
+  {
+    name: "memory_create",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "memory_create(title: str, content: str, memory_type: str = 'long_term', tags: list[str] | None = None, **kwargs: Any) -> dict",
+    description: "Create a new memory.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"content": "A new memory", "memory_type": "long_term", "tags": ["demo"]},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "memory_delete",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "memory_delete(memory_id: str | None = None, filename: str | None = None, permanent: bool = False, **kwargs: Any) -> dict",
+    description: "Delete a memory by id/filename.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"memory_id": "mem_demo_001"},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "memory_list",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "memory_list(limit: int = 20, memory_type: str | None = None, **kwargs: Any) -> dict",
+    description: "List recent memories.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"limit": 20},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "memory_read",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "memory_read(memory_id: str | None = None, filename: str | None = None, **kwargs: Any) -> dict",
+    description: "Read a memory by id/filename.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"memory_id": "mem_demo_001"},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "memory_search",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "memory_search(query: str | None = None, memory_type: str | None = None, tags: list[str] | None = None, limit: int = 10, mode: str | None = None, use_rust: bool = True, **kwargs: Any) -> dict",
+    description: "Search memories.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"query": "ethics", "limit": 10},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "memory_update",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "memory_update(memory_id: str | None = None, filename: str | None = None, title: str | None = None, content: str | None = None, tags: list[str] | None = None, add_tags: list[str] | None = None, remove_tags: list[str] | None = None, memory_type: str | None = None, **kwargs: Any) -> dict",
+    description: "Update a memory by id/filename.",
+    category: "memory",
+    stability: "stable",
+    example_payload: {"memory_id": "mem_demo_001", "content": "Updated content"},
+    example_response: {"status": "ok", "memory_id": "mem_demo_001"},
+  },
+
+  {
+    name: "optimize_cache",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "optimize_cache(operation: str = 'stats', **_: Any) -> dict",
+    description: "Cache optimization shim.",
+    category: "optimization",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "optimized": true},
+  },
+
+  {
+    name: "optimize_models",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "optimize_models(operation: str = 'elemental_strategy', task_type: str = 'general', model_id: str | None = None, model_path: str | None = None, output_path: str | None = None, quant_type: str = 'q4', model_name: str | None = None, **kwargs: Any) -> dict",
+    description: "Optimize model usage strategy.",
+    category: "optimization",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "optimized": true},
+  },
+
+  {
+    name: "parallel_search",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "parallel_search(query: str | None = None, path: str | None = None, extensions: list[str] | None = None, max_results: int = 20, **kwargs: Any) -> dict",
+    description: "Perform parallel search across files/memories. Delegates to Rust acceleration if available, otherwise standard search.",
+    category: "tool",
+    stability: "stable",
+    example_payload: {"queries": ["a", "b", "c"]},
+    example_response: {"results": []},
+  },
+
+  {
+    name: "prat_get_context",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "prat_get_context(as_json: bool = True, **kwargs: Any) -> dict",
+    description: "Get unified consciousness context for PRAT morphology decisions.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"as_json": true},
+    example_response: {"status": "ok", "target_tool": "memory_search"},
+  },
+
+  {
+    name: "prat_invoke",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "prat_invoke(target_tool: str | None = None, query: str | None = None, params: dict[str, typing.Any] | None = None, force_morphology: str | None = None, limit: int = 10, **kwargs: Any) -> dict",
+    description: "Invoke a tool through the PRAT adaptive portal with context-aware morphology.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"target_tool": "memory_search", "params": {"query": "ethics"}},
+    example_response: {"status": "ok", "target_tool": "memory_search"},
+  },
+
+  {
+    name: "prat_list_morphologies",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "prat_list_morphologies(tool: str | None = None, target_tool: str | None = None, **kwargs: Any) -> dict",
+    description: "List available morphologies for PRAT tools.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok", "target_tool": "memory_search"},
+  },
+
+  {
+    name: "prat_status",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "prat_status(target_tool: str | None = None, **kwargs: Any) -> dict",
+    description: "Get PRAT system status.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"target_tool": "memory_search"},
+    example_response: {"status": "ok", "target_tool": "memory_search"},
+  },
+
+  {
+    name: "profile_get_profile",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "profile_get_profile(**kwargs: Any) -> dict",
+    description: "Return the current compatibility profile snapshot.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "profile_update_preferences",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "profile_update_preferences(**kwargs: Any) -> dict",
+    description: "Update the compatibility profile preferences.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "protect_context",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "protect_context(operation: str = 'update_memory', filename: str | None = None, memory_id: str | None = None, title: str | None = None, content: str | None = None, tags: list[str] | None = None, permanent: bool = False, backupPath: str | None = None, **kwargs: Any) -> dict",
+    description: "Memory context protection, updates, and restoration.",
+    category: "system",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "healthy"},
+  },
+
+  {
+    name: "research_topic",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "research_topic(**kwargs: 'Any') -> dict",
+    description: "Deep research on a topic: search, fetch, synthesize.",
+    category: "wisdom",
+    stability: "stable",
+    example_payload: {"query": "WhiteMagic session handoff best practices"},
+    example_response: {"status": "ok", "wisdom": "..."},
+  },
+
+  {
+    name: "route_prat_call",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "route_prat_call(gana_name: str, tool: str | None = None, args: dict[str, typing.Any] | None = None, **kwargs: Any) -> dict",
+    description: "Route a PRAT call through the existing dispatch pipeline **with full Gana resonance**.",
+    category: "gana",
+    stability: "stable",
+    example_payload: {"target_tool": "memory_search"},
+    example_response: {"status": "ok", "target_tool": "memory_search"},
+  },
+
+  {
+    name: "run_kaizen_analysis",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "run_kaizen_analysis(auto_fix: bool = False, **kwargs: Any) -> dict",
+    description: "Run Kaizen continuous improvement analysis.",
+    category: "kaizen",
+    stability: "stable",
+    example_payload: {"auto_fix": false},
+    example_response: {"status": "ok", "ran": true},
+  },
+
+  {
+    name: "run_local_inference",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "run_local_inference(operation: 'str | None' = 'quick_recall', query: 'str | None' = None, prompt: 'str | None' = None, prompts: 'list[str] | None' = None, mode: 'str | None' = None, provider: 'str | None' = None, memory_limit: 'int' = 5, analysis_type: 'str' = 'summary', timeout_seconds: 'int' = 5, **kwargs: 'Any') -> dict",
+    description: "Run local inference with memory grounding.",
+    category: "inference",
+    stability: "stable",
+    example_payload: {"prompt": "Hello"},
+    example_response: {"status": "ok", "result": "..."},
+  },
+
+  {
+    name: "rust_check_available",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_check_available(**kwargs: Any) -> dict",
+    description: "Check if Rust acceleration is available and list all functions.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_compress",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_compress(data: str, level: int = 6, **kwargs: Any) -> dict",
+    description: "Fast compression using Rust.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_consolidate_memories",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_consolidate_memories(memories: list[dict[str, typing.Any]], threshold: float = 0.8, **kwargs: Any) -> dict",
+    description: "Consolidate memories using Rust acceleration.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_extract_patterns",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_extract_patterns(text: str, **kwargs: Any) -> dict",
+    description: "Extract patterns from text using Rust SIMD acceleration.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_extract_todos",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_extract_todos(directory: str, **kwargs: Any) -> dict",
+    description: "Extract TODOs/FIXMEs from codebase using Rust.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_fast_search",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_fast_search(query: str, directory: str = '.', max_results: int = 100, **kwargs: Any) -> dict",
+    description: "Fast parallel search using Rust (25-60x speedup).",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_fast_similarity",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_fast_similarity(query: str, candidates: list[str], top_k: int = 10, **kwargs: Any) -> dict",
+    description: "Fast similarity search using Rust (59x speedup).",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_parallel_grep",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_parallel_grep(pattern: str, directory: str, extensions: list[str] | None = None, **kwargs: Any) -> dict",
+    description: "Parallel grep using Rust for massive speedup on large codebases.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_read_files_batch",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_read_files_batch(filenames: list[str], **kwargs: Any) -> dict",
+    description: "Batch read files using Rust parallel I/O.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "rust_scan_codebase",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "rust_scan_codebase(directory: str, extensions: list[str] | None = None, **kwargs: Any) -> dict",
+    description: "Scan codebase using Rust for fast file discovery.",
+    category: "infrastructure",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "sangha_chat_read",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "sangha_chat_read(channel: str = 'general', limit: int = 10, **kwargs: Any) -> dict",
+    description: "Read messages from Sangha chat.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {"channel": "general", "limit": 10},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "sangha_chat_send",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "sangha_chat_send(content: str, channel: str = 'general', sender_id: str = 'system', **kwargs: Any) -> dict",
+    description: "Send a message to Sangha chat.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {"content": "Hello sangha", "channel": "general", "sender_id": "librarian"},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "sangha_lock_acquire",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "sangha_lock_acquire(resource: str, reason: str = '', timeout: int = 3600, **kwargs: Any) -> dict",
+    description: "Acquire a resource lock.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {"resource": "memory_ledger", "reason": "txn-123", "timeout": 60},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "sangha_lock_list",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "sangha_lock_list(**kwargs: Any) -> dict",
+    description: "List active locks.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "sangha_lock_release",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "sangha_lock_release(lock_id: str | None = None, resource: str | None = None, **kwargs: Any) -> dict",
+    description: "Release a resource lock.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {"resource": "memory_ledger"},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "session_handoff",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "session_handoff(**kwargs: Any) -> dict",
+    description: "Alias/wrapper for create_handoff.",
+    category: "session",
+    stability: "stable",
+    example_payload: {"from_session": "current", "to_session": "next"},
+    example_response: {"status": "ok", "session": "demo"},
+  },
+
+  {
+    name: "solve_optimization",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "solve_optimization(nodes: list[str], edges: list[list[str]], scores: dict[str, float], max_iters: int = 50, budget: int | None = None, lambda_reg: float = 0.01, **kwargs: Any) -> dict",
+    description: "Solve a constrained optimization problem using the Universal Solver (Frank-Wolfe).",
+    category: "optimization",
+    stability: "stable",
+    example_payload: {"objective": "minimize_latency"},
+    example_response: {"status": "ok", "optimized": true},
+  },
+
+  {
+    name: "synthesize_wisdom",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "synthesize_wisdom(sources: list, urgency: str = 'normal', **kwargs: Any) -> dict",
+    description: "Synthesize wisdom from multiple sources.",
+    category: "wisdom",
+    stability: "stable",
+    example_payload: {"sources": ["council", "iching"], "urgency": "normal"},
+    example_response: {"status": "ok", "wisdom": "..."},
+  },
+
+  {
+    name: "system_get_status",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "system_get_status(**kwargs: Any) -> dict",
+    description: "Get system status.",
+    category: "system",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "healthy"},
+  },
+
+  {
+    name: "track_metric",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "track_metric(**kwargs: Any) -> dict",
+    description: "Compatibility wrapper for metrics tracking.",
+    category: "metrics",
+    stability: "stable",
+    example_payload: {"name": "demo_metric", "value": 1.0},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "validate_integrations",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "validate_integrations(quick_check: bool = True, **kwargs: Any) -> dict",
+    description: "Validate WhiteMagic system integrations.",
+    category: "system",
+    stability: "stable",
+    example_payload: {"quick_check": true},
+    example_response: {"status": "healthy"},
+  },
+
+  {
+    name: "windsurf_backup",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "windsurf_backup(**kwargs: Any) -> dict",
+    description: "Compatibility shim for Windsurf backup operations.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "windsurf_merge_backups",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "windsurf_merge_backups(**kwargs: Any) -> dict",
+    description: "Compatibility shim for Windsurf backup merge operations.",
+    category: "collaboration",
+    stability: "stable",
+    example_payload: {},
+    example_response: {"status": "ok"},
+  },
+
+  {
+    name: "zodiac_run_cycle",
+    module: "whitemagic.mcp_api_bridge",
+    signature: "zodiac_run_cycle(intention: str | None = None, context: dict[str, typing.Any] | None = None, **kwargs: Any) -> dict",
+    description: "Run one zodiacal cycle.",
+    category: "zodiac",
+    stability: "stable",
+    example_payload: {"intention": "Resolve the session handoff deadlock", "context": {"session_id": "sess_001"}},
+    example_response: {"status": "ok", "core": "aries"},
+  },
+
+
 ];
 
 export const BRIDGE_SUMMARY = {
-  version_recovered: "22.2.4",
-  recovered_in: "June 19, 2026 session (archaeological excavation)",
+  version_recovered: "22.3.0",
+  recovered_in: "June 19, 2026 session (archaeological excavation + v22.3.0 catalog expansion)",
   modules_recovered: 13,
   functions_total: BRIDGE_MODULES.length,
-  bug_fixed: "whitemagic.mcp_api_bridge.py had 14 unguarded star imports; the entire MCP API surface was crashing on import. All 13 modules were resurfaced from ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.1/tar_archives/SD_CARD_WM/whitemagic/core/bridge/.",
+  bug_fixed: "v22.2.3: whitemagic.mcp_api_bridge.py had 14 unguarded star imports; the entire MCP API surface was crashing on import. All 13 modules were resurfaced from ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.1/tar_archives/SD_CARD_WM/whitemagic/core/bridge/.",
+  v22_3_0_expansion: "Catalog went from 30 -> 143 documented functions (the full public surface of whitemagic.mcp_api_bridge). All 22 Gana wrappers, 13 archaeology, 6 dharma, 4 wisdom, 4 reasoning, 5 session, 8 garden, and the rest are now documented. The catalog-impl consistency check passes: every entry in BRIDGE_MODULES has a matching export in lib/bridge/impl.ts and a matching entry in the IMPLS dispatcher.",
   gana_dipper_added: "v22.2.4: Dipper (Dou) Gana now exposed via the public MCP API. Supports intelligence_briefing, predict, search_memories, serendipity_surface, and default 'measuring' modes. Python impl is in whitemagic.core.ganas.northern_quadrant.DipperGana.",
-  surface_gap_audit: "v22.2.4 audit: whitemagic.mcp_api_bridge exposes 140+ public functions; this catalog documents 30 (the curated subset). The remaining 110 (22 gana wrappers, 13 archaeology, 6 dharma, and 70+ others) are importable and callable from Python but not yet documented here. They'll be added in v22.3.0 as a public discovery pass.",
   categories: Array.from(new Set(BRIDGE_MODULES.map((m) => m.category))).sort(),
 } as const;

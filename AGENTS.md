@@ -1,6 +1,6 @@
 # AGENTS.md — whitemagic.dev
 
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Last Updated**: 2026-06-19
 **Audience**: AI agents (LLM-based, agentic, or human collaborators) contributing to or extending the WhiteMagic Labs public site.
 
@@ -141,6 +141,11 @@ npm install
 
 # Type check
 npx tsc --noEmit
+
+# Catalog-impl consistency check (v22.3.0+)
+node scripts/check_catalog_impl_consistency.mjs
+# Verifies: every BRIDGE_MODULES entry has a matching `export function`
+# in lib/bridge/impl.ts and a matching entry in the IMPLS dispatcher.
 
 # Local dev
 npm run dev

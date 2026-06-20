@@ -9,7 +9,7 @@ import { WM_FACTS } from "@/lib/facts";
 export const metadata: Metadata = {
   title: "MCP Bridge — WhiteMagic Labs",
   description:
-    `The 13 whitemagic.core.bridge.* modules recovered in v22.2.3, plus their ${BRIDGE_MODULES.length} public functions. This is the live facade of the whitemagic.mcp_api_bridge — the public MCP API surface for WhiteMagic.`,
+    `The 13 whitemagic.core.bridge.* modules (${BRIDGE_MODULES.length} public functions) — the live facade of whitemagic.mcp_api_bridge and the public MCP API surface for WhiteMagic. v22.3.0 expanded the catalog from 30 to ${BRIDGE_MODULES.length} functions.`,
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -97,8 +97,9 @@ export default function McpBridgePage() {
             <code className="text-lavender">
               ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.1/tar_archives/SD_CARD_WM/whitemagic/core/bridge/
             </code>
-            . The MCP API surface is now importable and functional for the
-            first time.
+            . The MCP API surface is now importable and functional.
+            v22.3.0 documented the full {BRIDGE_MODULES.length}-function
+            public surface.
           </p>
           <p className="text-fg/80">
             Machine-readable catalog:{" "}

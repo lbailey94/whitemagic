@@ -19,7 +19,7 @@ export async function GET() {
     generated_at: new Date().toISOString(),
     system: {
       name: "WhiteMagic",
-      version: "22.2.4",
+      version: "22.3.0",
       url: "https://whitemagic.dev",
       repository: "https://whitemagic.dev",
       license: "MIT",
@@ -30,6 +30,8 @@ export async function GET() {
       gana_tools: 28,
       dispatch_tools: 462,
       nested_unique_tools: 462,
+      bridge_functions: 143,
+      bridge_modules: 13,
       by_stability: {
         stable: 28,
         optional: 462,

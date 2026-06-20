@@ -1,0 +1,115 @@
+name: site-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: site-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── typecheck ──────────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+        name: tsc --noEmit
+
+  # ─── build ─────────────────────────────────────────────────────────
+  build:
+    name: Next.js production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        name: next build
+      - name: Inspect output
+        run: |
+          echo "Build output:"
+          ls -la .next/ 2>&1 | head -10 || true
+          echo ""
+          echo "Route count:"
+          find .next/server/app -name "*.html" 2>/dev/null | wc -l || echo "0"
+
+  # ─── lint ──────────────────────────────────────────────────────────
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+        continue-on-error: false
+
+  # ─── catalog-impl consistency check ──────────────────────────────
+  catalog-consistency:
+    name: BRIDGE_MODULES ↔ impls ↔ dispatcher are in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Run catalog consistency check
+        run: node scripts/check_catalog_impl_consistency.mjs
+
+  # ─── live smoke test (only on main push) ──────────────────────────
+  smoke:
+    name: Live route smoke test (whitemagic.dev)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Smoke 24 routes
+        run: |
+          set +e
+          ok=0; fail=0
+          for path in "" "mcp-bridge" "zodiac" "chat" "librarian" "library" "becoming" "prescience" "services" "open-source" "essays" "about" "contact" "api/manifest" "api/zodiac" "api/mcp-bridge" "api/run-bridge-fn" "llms.txt" "llms-full.txt" "sitemap.xml" "robots.txt" ".well-known/agent.json" ".well-known/agent-economy.json" ".well-known/ai-agent-policy"; do
+            code=$(curl -sL --max-time 8 -o /dev/null -w "%{http_code}" "https://www.whitemagic.dev/$path" 2>/dev/null)
+            if [ "$code" = "200" ]; then
+              ok=$((ok + 1))
+            else
+              fail=$((fail + 1))
+              echo "FAIL: /$path = $code"
+            fi
+          done
+          echo ""
+          echo "PASS: $ok/24, FAIL: $fail"
+          if [ $fail -gt 0 ]; then
+            exit 1
+          fi
+
+      - name: Test gana_dipper live
+        run: |
+          curl -sL --max-time 10 -X POST "https://www.whitemagic.dev/api/run-bridge-fn" \
+            -H "content-type: application/json" \
+            -d '{"function":"gana_dipper","payload":{"task":"intelligence_briefing"}}' \
+            | grep -q '"action": "intelligence_briefing"' || exit 1
+          echo "gana_dipper live OK"
