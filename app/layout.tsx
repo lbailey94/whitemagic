@@ -8,6 +8,7 @@ import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
 import { WipBanner } from "@/components/WipBanner";
 import { WipScrambleAll } from "@/components/WipScrambleAll";
+import { WipUnregisterSw } from "@/components/WipUnregisterSw";
 import { WIP_MODE, WIP_SCRAMBLE } from "@/lib/wip";
 import { organizationLd, websiteLd } from "@/lib/jsonld";
 
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className={WIP_SCRAMBLE ? "wip-scrambling" : ""}>
         <WipScrambleAll />
+        <WipUnregisterSw />
         <JsonLd data={[organizationLd(), websiteLd()]} />
         <ThemeProvider>
           <MatrixRain />

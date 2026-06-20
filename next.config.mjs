@@ -5,7 +5,13 @@ const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === "development",
+  // Disable the service worker in WIP mode — its aggressive HTML
+  // cache (cacheOnFrontEndNav + aggressiveFrontEndNavCaching)
+  // overrides the no-store HTTP cache headers and serves stale
+  // content to users after a content change. PWA is a final-release
+  // feature; WIP users see the latest copy directly from the
+  // origin.
+  disable: process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_WIP_MODE === "1",
   sw: "sw.js",
   buildExcludes: ["app-build-manifest.json"],
   cacheOnFrontEndNav: true,
