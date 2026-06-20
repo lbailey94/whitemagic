@@ -19,6 +19,7 @@ export default function SubscribePage() {
       <section className="container-site py-16">
         <div className="mx-auto max-w-xl">
           <form
+            data-no-scramble
             className="rounded-xl border border-border bg-surface p-6"
             action="mailto:whitemagicdev@proton.me"
             method="post"
