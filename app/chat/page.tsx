@@ -61,7 +61,7 @@ export default function ChatPage() {
                 MCP bridge
               </Link>{" "}
               surface, so it can answer questions about any of the 490
-              tools, the v22.5.0 release notes, the 12 zodiac cores,
+              tools, the v23.0.0 release notes, the 12 zodiac cores,
               the 64 hexagrams, and the rest of the public WhiteMagic
               corpus.
             </p>

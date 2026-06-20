@@ -41,7 +41,7 @@ export async function GET(): Promise<Response> {
   return Response.json(
     {
       status: "ok",
-      version: "22.5.0",
+      version: "23.0.0",
       provider: providerInfo,
       bridge: {
         total_functions: BRIDGE_MODULES.length,

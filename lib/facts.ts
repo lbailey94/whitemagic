@@ -1,5 +1,5 @@
 export const WM_FACTS = {
-  version: "22.5.0",
+  version: "23.0.0",
   verifiedDate: "June 20, 2026",
   linesShort: "180K",
   linesLong: "180,000",
@@ -26,6 +26,7 @@ export const WM_FACTS = {
   bridgeModulesNote: "13 core/bridge/* modules ported from SD card archive, 10 more surfaced, mcp_api_bridge crash fixed",
   v22_3_0_catalog: "Site catalog went from 30 -> 143 documented functions. The catalog now reflects the full whitemagic.mcp_api_bridge public surface. Each entry has a matching TS impl and dispatcher reference.",
   v22_4_0_a2a: "A2A v1.2 discovery surface expanded. New endpoints: /.well-known/agent-skills.json (21 per-category skills), /.well-known/agents.json (12-Gana directory), /.well-known/agents/<gana>.json (per-Gana detail, 12 files). Main Agent Card enhanced to 7 high-level skills (was 6) with 2-layer (high-level + per-category) skills model.",
+  v23_0_0_galactic: "Site catalog expanded to 151 functions (was 143). 8 new galactic functions connect the bridge to the live substrate at ~/.whitemagic/memory/whitemagic.db: galactic_substrate_health, galactic_galaxy_stats, galactic_memory_recent, galactic_memory_search, galactic_memory_by_id, galactic_associations, galactic_event_search, galactic_constellation_count. The substrate holds 12,636 memories, 21,087 associations, 12,686 embeddings, 35,060 dharma audits (35,053 migrated from Whitemagic-Core 2025-11 to 2025-12 era). New category 'galactic' added to the BridgeFunction union. See docs/WHITEMAGIC_CHRONOLOGY_2026-06-20.md for the full timeline.",
 } as const;
 
 export const WM_FACT_TEXT = {

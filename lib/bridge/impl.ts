@@ -1073,6 +1073,142 @@ export function windsurf_merge_backups(payload: Payload) {
   return fnOk("windsurf_merge_backups", {"status": "ok"});
 }
 
+// ─── v23.0.0 galactic substrate (live data via whitemagic.core.galactic) ─
+//
+// These 8 functions connect the site bridge catalog to the live
+// substrate at ~/.whitemagic/memory/whitemagic.db. They shell out to
+// the python bridge module so the site can demo real substrate data
+// without a separate server. On Vercel Hobby the shell-out is best-
+// effort; if python isn't available they return canned TS shapes.
+
+function pythonBridgeAvailable(): boolean {
+  // Heuristic: check for the python interpreter. In a Vercel serverless
+  // function, this will be false; the TS fallback kicks in.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { execSync } = require("node:child_process");
+    execSync("python3 -c 'import whitemagic.core.galactic'", {
+      stdio: "ignore",
+      timeout: 2000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+interface GalacticCall {
+  function: string;
+  args: Record<string, unknown>;
+}
+
+function callGalactic({ function: fnName, args }: GalacticCall) {
+  // Try the python bridge first. Fall back to TS canned responses.
+  if (pythonBridgeAvailable()) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { execSync } = require("node:child_process");
+      const json = JSON.stringify(args).replace(/'/g, "'\\''");
+      const out = execSync(
+        `python3 -c "from whitemagic.core.bridge.galactic import ${fnName}; import json; print(json.dumps(${fnName}(**${json})))"`,
+        { encoding: "utf8", timeout: 5000 }
+      );
+      return fnOk(fnName, JSON.parse(out));
+    } catch (err) {
+      return fnError(fnName, `galactic bridge failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  // Fallback: TS canned responses that mirror the python return shape.
+  return tsGalacticFallback(fnName, args);
+}
+
+function tsGalacticFallback(fnName: string, args: Record<string, unknown>) {
+  switch (fnName) {
+    case "galactic_substrate_health":
+      return fnOk(fnName, {
+        status: "ts-fallback",
+        db_path: "~/.whitemagic/memory/whitemagic.db",
+        note: "Python bridge unavailable; live counts not returned. Set up Python env to enable real data.",
+      });
+    case "galactic_galaxy_stats":
+      return fnOk(fnName, {
+        status: "ts-fallback",
+        function: fnName,
+        result: {
+          total_memories: 0,
+          total_associations: 0,
+          total_embeddings: 0,
+          by_zone: { CORE: 0, INNER_RIM: 0, MID_BAND: 0, OUTER_RIM: 0, FAR_EDGE: 0 },
+          by_type: {},
+          avg_importance: 0,
+          avg_neuro_score: 0,
+          note: "Set up Python env to enable real galactic data.",
+        },
+      });
+    case "galactic_memory_recent":
+      return fnOk(fnName, { count: 0, memories: [], note: "ts-fallback" });
+    case "galactic_memory_search": {
+      const q = String(args["query"] || "");
+      return fnOk(fnName, { query: q, count: 0, memories: [], note: "ts-fallback" });
+    }
+    case "galactic_memory_by_id":
+      return fnOk(fnName, { status: "ts-fallback", memory_id: args["memory_id"] });
+    case "galactic_associations":
+      return fnOk(fnName, {
+        memory_id: args["memory_id"],
+        direction: args["direction"] || "outgoing",
+        count: 0,
+        associations: [],
+        note: "ts-fallback",
+      });
+    case "galactic_event_search":
+      return fnOk(fnName, {
+        query: args["query"],
+        event_type: args["event_type"],
+        since: args["since"],
+        count: 0,
+        events: [],
+        note: "ts-fallback",
+      });
+    case "galactic_constellation_count":
+      return fnOk(fnName, { constellations: 0, note: "ts-fallback" });
+    default:
+      return fnError(fnName, `unknown galactic function: ${fnName}`);
+  }
+}
+
+export function galactic_substrate_health(payload: Payload) {
+  return callGalactic({ function: "galactic_substrate_health", args: payload });
+}
+
+export function galactic_galaxy_stats(payload: Payload) {
+  return callGalactic({ function: "galactic_galaxy_stats", args: payload });
+}
+
+export function galactic_memory_recent(payload: Payload) {
+  return callGalactic({ function: "galactic_memory_recent", args: payload });
+}
+
+export function galactic_memory_search(payload: Payload) {
+  return callGalactic({ function: "galactic_memory_search", args: payload });
+}
+
+export function galactic_memory_by_id(payload: Payload) {
+  return callGalactic({ function: "galactic_memory_by_id", args: payload });
+}
+
+export function galactic_associations(payload: Payload) {
+  return callGalactic({ function: "galactic_associations", args: payload });
+}
+
+export function galactic_event_search(payload: Payload) {
+  return callGalactic({ function: "galactic_event_search", args: payload });
+}
+
+export function galactic_constellation_count(payload: Payload) {
+  return callGalactic({ function: "galactic_constellation_count", args: payload });
+}
+
 // ─── dispatcher ─────────────────────────────────────────────────────
 
 type Impl = (payload: Payload) => unknown;
@@ -1220,6 +1356,15 @@ const IMPLS: Record<string, Impl> = {
   windsurf_backup,
   windsurf_merge_backups,
   zodiac_run_cycle,
+  // v23.0.0 galactic substrate
+  galactic_associations,
+  galactic_constellation_count,
+  galactic_event_search,
+  galactic_galaxy_stats,
+  galactic_memory_by_id,
+  galactic_memory_recent,
+  galactic_memory_search,
+  galactic_substrate_health,
 };
 
 const KNOWN_NAMES = new Set(BRIDGE_MODULES.map((m) => m.name));

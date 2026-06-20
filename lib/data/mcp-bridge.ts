@@ -17,7 +17,7 @@ export interface BridgeFunction {
   module: string;
   signature: string;
   description: string;
-  category: "session" | "system" | "garden" | "zodiac" | "voice" | "meditation" | "wisdom" | "reasoning" | "archaeology" | "gana" | "benchmark" | "inference" | "autonomous" | "dharma" | "memory" | "kaizen" | "collaboration" | "infrastructure" | "metrics" | "optimization" | "tool";
+  category: "session" | "system" | "garden" | "zodiac" | "voice" | "meditation" | "wisdom" | "reasoning" | "archaeology" | "gana" | "benchmark" | "inference" | "autonomous" | "dharma" | "memory" | "kaizen" | "collaboration" | "infrastructure" | "metrics" | "optimization" | "tool" | "galactic";
   stability: "stable";
   example_payload: Record<string, unknown>;
   example_response: Record<string, unknown>;
@@ -1612,16 +1612,160 @@ export const BRIDGE_MODULES: BridgeFunction[] = [
     example_response: {"status": "ok", "core": "aries"},
   },
 
+  // ─── v23.0.0 galactic substrate (live data via ~/.whitemagic/memory/) ─
+  {
+    name: "galactic_substrate_health",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_substrate_health(**kwargs: Any) -> dict",
+    description:
+      "Substrate health check: db path, size, total memories/associations/embeddings/dharma_audits. Returns 'alive' if the substrate at ~/.whitemagic/memory/whitemagic.db is reachable.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: {},
+    example_response: {
+      status: "alive",
+      db_path: "/home/lucas/.whitemagic/memory/whitemagic.db",
+      db_size_bytes: 173801472,
+      total_memories: 12636,
+      total_associations: 21087,
+      total_embeddings: 12686,
+      total_dharma_audits: 35060,
+    },
+  },
+  {
+    name: "galactic_galaxy_stats",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_galaxy_stats(**kwargs: Any) -> dict",
+    description:
+      "Single-pass statistics for the whole substrate: counts, zone distribution (CORE / INNER_RIM / MID_BAND / OUTER_RIM / FAR_EDGE), type distribution, averages, oldest/newest memory timestamps. Use to check substrate liveness.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: {},
+    example_response: {
+      status: "ok",
+      function: "galactic_galaxy_stats",
+      result: {
+        total_memories: 12636,
+        total_associations: 21087,
+        total_embeddings: 12686,
+        by_zone: { CORE: 95, INNER_RIM: 1565, MID_BAND: 10894, OUTER_RIM: 0, FAR_EDGE: 82 },
+        by_type: { LONG_TERM: 12583, SHORT_TERM: 41, tutorial: 12 },
+        avg_importance: 0.531,
+        oldest_memory: "2025-11-22T17:59:25.245458",
+        newest_memory: "2026-06-18T14:39:03.726092",
+      },
+    },
+  },
+  {
+    name: "galactic_memory_recent",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_memory_recent(limit: int = 10, memory_type: str | None = None, **kwargs: Any) -> dict",
+    description:
+      "Most recently updated memories from the live substrate, optionally filtered by type (SHORT_TERM / LONG_TERM / WORKING). Limit capped at 200.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: { "limit": 5, "memory_type": "LONG_TERM" },
+    example_response: {
+      status: "ok",
+      function: "galactic_memory_recent",
+      result: {
+        count: 5,
+        memories: [
+          { "id": "abc123", "title": "Sample memory", "memory_type": "LONG_TERM", "galactic_zone": "INNER_RIM" },
+        ],
+      },
+    },
+  },
+  {
+    name: "galactic_memory_search",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_memory_search(query: str, limit: int = 10, memory_type: str | None = None, **kwargs: Any) -> dict",
+    description:
+      "FTS5 search across memory content (falls back to LIKE if FTS unavailable). Returns matching memories ranked by relevance.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: { "query": "Hermes Gate", "limit": 10 },
+    example_response: {
+      status: "ok",
+      function: "galactic_memory_search",
+      result: { "query": "Hermes Gate", "count": 12, "memories": [] },
+    },
+  },
+  {
+    name: "galactic_memory_by_id",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_memory_by_id(memory_id: str, **kwargs: Any) -> dict",
+    description: "Look up a single memory by its 16-char substrate id. Returns 'not_found' if the id doesn't exist.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: { "memory_id": "83f6d110cf8eb4b4" },
+    example_response: {
+      status: "ok",
+      function: "galactic_memory_by_id",
+      result: { "id": "83f6d110cf8eb4b4", "title": "remembered_thought", "memory_type": "LONG_TERM" },
+    },
+  },
+  {
+    name: "galactic_associations",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_associations(memory_id: str, direction: str = \"outgoing\", limit: int = 25, **kwargs: Any) -> dict",
+    description:
+      "Return associations touching a memory (with the other endpoint, strength, relation type, traversal count). direction: 'outgoing' / 'incoming' / 'both'.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: { "memory_id": "abc123", "direction": "both", "limit": 10 },
+    example_response: {
+      status: "ok",
+      function: "galactic_associations",
+      result: { "memory_id": "abc123", "direction": "both", "count": 3, "associations": [] },
+    },
+  },
+  {
+    name: "galactic_event_search",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_event_search(query: str | None = None, event_type: str | None = None, since: str | None = None, limit: int = 25, **kwargs: Any) -> dict",
+    description:
+      "Search the dharma_audit table (substrate ethics + event log). After v23.0.0-alpha.1 rehydration, this holds 35K+ rows migrated from Whitemagic-Core (2025-11 to 2025-12): voice_expressed, memory_created, oracle_cast, cli_command, and more. Filter by event_type for category, query for substring, since for time bounds.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: { "event_type": "voice_expressed", "limit": 5 },
+    example_response: {
+      status: "ok",
+      function: "galactic_event_search",
+      result: {
+        query: null,
+        event_type: "voice_expressed",
+        since: null,
+        count: 5,
+        events: [
+          { "timestamp": "2025-12-05T11:41:23.331990", "action": "whitemagic-core-rehydrate-2026-06-20::events", "boundary_type": "voice_expressed" },
+        ],
+      },
+    },
+  },
+  {
+    name: "galactic_constellation_count",
+    module: "whitemagic.core.bridge.galactic",
+    signature: "galactic_constellation_count(**kwargs: Any) -> dict",
+    description:
+      "Number of HDBSCAN-detected constellations in the substrate. The v17 era had 30 constellations; the current substrate is pre-HDBSCAN so this typically returns 0. The wire is live for when constellation detection is re-run.",
+    category: "galactic",
+    stability: "stable",
+    example_payload: {},
+    example_response: { status: "ok", function: "galactic_constellation_count", result: { "constellations": 0 } },
+  },
+
 
 ];
 
 export const BRIDGE_SUMMARY = {
-  version_recovered: "22.3.0",
-  recovered_in: "June 19, 2026 session (archaeological excavation + v22.3.0 catalog expansion)",
-  modules_recovered: 13,
+  version_recovered: "23.0.0",
+  recovered_in: "June 20, 2026 session (v23.0.0-alpha.1 rehydration)",
+  modules_recovered: 14,
   functions_total: BRIDGE_MODULES.length,
   bug_fixed: "v22.2.3: whitemagic.mcp_api_bridge.py had 14 unguarded star imports; the entire MCP API surface was crashing on import. All 13 modules were resurfaced from ~/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.1/tar_archives/SD_CARD_WM/whitemagic/core/bridge/.",
   v22_3_0_expansion: "Catalog went from 30 -> 143 documented functions (the full public surface of whitemagic.mcp_api_bridge). All 22 Gana wrappers, 13 archaeology, 6 dharma, 4 wisdom, 4 reasoning, 5 session, 8 garden, and the rest are now documented. The catalog-impl consistency check passes: every entry in BRIDGE_MODULES has a matching export in lib/bridge/impl.ts and a matching entry in the IMPLS dispatcher.",
+  v23_0_0_galactic_rehydration: "v23.0.0-alpha.1: 8 new galactic functions (galactic_substrate_health, galactic_galaxy_stats, galactic_memory_recent, galactic_memory_search, galactic_memory_by_id, galactic_associations, galactic_event_search, galactic_constellation_count) connect the bridge catalog to the live substrate at ~/.whitemagic/memory/whitemagic.db. The substrate holds 12,636 memories, 21,087 associations, 12,686 embeddings, and 35,060 dharma audits (35,053 migrated from Whitemagic-Core 2025-11-11 to 2025-12-27 era via scripts/rehydrate_whitemagic_core.py). The TS impls use a python bridge when available, with TS fallback for Vercel Hobby. See docs/WHITEMAGIC_CHRONOLOGY_2026-06-20.md for the full timeline.",
   gana_dipper_added: "v22.2.4: Dipper (Dou) Gana now exposed via the public MCP API. Supports intelligence_briefing, predict, search_memories, serendipity_surface, and default 'measuring' modes. Python impl is in whitemagic.core.ganas.northern_quadrant.DipperGana.",
   categories: Array.from(new Set(BRIDGE_MODULES.map((m) => m.category))).sort(),
 } as const;
