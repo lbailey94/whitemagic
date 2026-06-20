@@ -1879,7 +1879,7 @@ version = "1.11.0"
 deps = ["Dates", "DifferentialEquations", "JSON", "OrdinaryDiffEq", "SciMLBase"]
 path = "."
 uuid = "12345678-1234-5678-1234-567812345678"
-version = "22.4.0"
+version = "22.5.0"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]

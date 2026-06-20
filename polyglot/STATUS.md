@@ -1,4 +1,4 @@
-# Polyglot Build Status — WhiteMagic v22.4.0
+# Polyglot Build Status — WhiteMagic v22.5.0
 
 **Last verified**: 2026-06-04  
 **Method**: Direct compilation + archive excavation + source recovery + SD card CODEX migration + JSON stdio bridge wiring
