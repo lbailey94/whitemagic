@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+// Module-level log — fires as soon as the module is imported.
+// If you see this in the console, the WipScrambleAll module loaded.
+// eslint-disable-next-line no-console
+console.log("[wip-scramble] MODULE LOADED", new Date().toISOString());
+
+import { useEffect, useState } from "react";
 import { WIP_SCRAMBLE } from "@/lib/wip";
 
 /**
@@ -9,17 +14,10 @@ import { WIP_SCRAMBLE } from "@/lib/wip";
  * digits. The original text is preserved in the parent's
  * `data-original-text` attribute.
  *
- * Approach:
- * 1. useEffect → rAF → walk body (after React first commit)
- * 2. rAF → walk again (catch late RSC streaming)
- * 3. MutationObserver watches for new content + characterData
- *    changes (React re-renders)
- * 4. setTimeout fallback at 1s, 2s, 3s to catch anything missed
- * 5. Visible status badge in bottom-left so user can see progress
- *
- * The status badge is data-no-scramble so it always reads
- * correctly. After the body is fully scrambled, the badge
- * disappears.
+ * Renders a visible status badge as a React component (not via
+ * DOM manipulation) so React manages it. The badge is always
+ * visible in the bottom-left and shows the scramble progress.
+ * data-no-scramble keeps it readable.
  */
 
 const SCRAMBLE_GLYPHS = "0123456789";
@@ -107,45 +105,41 @@ function rescrambleIfReset(node: Text): void {
   }
 }
 
-function showStatus(text: string, kind: "info" | "ok" | "err" = "info"): void {
-  let el = document.getElementById("wip-scramble-status");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "wip-scramble-status";
-    el.setAttribute("data-no-scramble", "");
-    el.style.cssText =
-      "position:fixed;bottom:16px;left:16px;z-index:9999;background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;border:1px solid #8b7ec7;max-width:400px;";
-    document.body.appendChild(el);
-  }
-  const color = kind === "ok" ? "#8b7ec7" : kind === "err" ? "#f87171" : "#fbbf24";
-  el.style.borderColor = color;
-  el.textContent = text;
-}
-
-function hideStatus(): void {
-  const el = document.getElementById("wip-scramble-status");
-  if (el) el.remove();
-}
-
 export function WipScrambleAll() {
+  const [status, setStatus] = useState<string>("scramble: mounted, waiting...");
+  const [count, setCount] = useState<number>(0);
+  const [show, setShow] = useState<boolean>(true);
+
   useEffect(() => {
-    if (!WIP_SCRAMBLE) return;
-    if (typeof document === "undefined") return;
+    // eslint-disable-next-line no-console
+    console.log("[wip-scramble] useEffect FIRED, WIP_SCRAMBLE=", WIP_SCRAMBLE);
+    if (!WIP_SCRAMBLE) {
+      setStatus("scramble: OFF (WIP_SCRAMBLE is false)");
+      return;
+    }
+    if (typeof document === "undefined") {
+      setStatus("scramble: SSR (no document)");
+      return;
+    }
 
-    showStatus("scramble: init", "info");
+    setStatus("scramble: init");
 
-    let totalScrambled = 0;
-
-    const doWalk = (label: string) => {
-      const count = walkAndScramble(document.body);
-      totalScrambled += count;
+    const doWalk = (label: string): number => {
+      const n = walkAndScramble(document.body);
       // eslint-disable-next-line no-console
-      console.log(`[wip-scramble] ${label}: scrambled ${count} text nodes (total ${totalScrambled})`);
-      showStatus(`scramble: ${label} (${count} new, ${totalScrambled} total)`, "info");
-      return count;
+      console.log(`[wip-scramble] ${label}: scrambled ${n} text nodes`);
+      setStatus(`scramble: ${label} (+${n})`);
+      setCount((c) => {
+        const total = c + n;
+        if (label === "done") {
+          setTimeout(() => setShow(false), 3000);
+        }
+        return total;
+      });
+      return n;
     };
 
-    // Reveal the body (even before scramble, so we can see what's happening)
+    // Reveal the body so user can see what's happening
     document.body.classList.remove("wip-scrambling");
     document.body.classList.add("wip-scrambled");
     document.documentElement.setAttribute("data-wip-scrambled-by", "WipScrambleAll");
@@ -153,36 +147,25 @@ export function WipScrambleAll() {
     // First pass: next animation frame
     const raf1 = requestAnimationFrame(() => {
       doWalk("rAF1");
-      // Second pass: another frame later, in case RSC is still streaming
+      // Second pass
       requestAnimationFrame(() => {
         doWalk("rAF2");
-        // Third pass via setTimeout for late-arriving content
         setTimeout(() => doWalk("t=1s"), 1000);
-        setTimeout(() => {
-          doWalk("t=2s");
-          if (totalScrambled > 0) {
-            showStatus(`scramble: ok (${totalScrambled} text nodes)`, "ok");
-            // Auto-hide the status badge after 3s
-            setTimeout(hideStatus, 3000);
-          } else {
-            showStatus("scramble: WARN no text nodes found", "err");
-          }
-        }, 2000);
+        setTimeout(() => doWalk("t=2s"), 2000);
+        setTimeout(() => doWalk("done"), 3000);
       });
     });
 
-    // MutationObserver for ongoing changes
+    // MutationObserver
     let rafPending = false;
-    const scheduleRescramble = (mutations: MutationRecord[]) => {
+    const onMutate = (mutations: MutationRecord[]) => {
       if (rafPending) return;
       rafPending = true;
       requestAnimationFrame(() => {
         rafPending = false;
         for (const m of mutations) {
-          if (m.type === "characterData") {
-            if (m.target.nodeType === Node.TEXT_NODE) {
-              rescrambleIfReset(m.target as Text);
-            }
+          if (m.type === "characterData" && m.target.nodeType === Node.TEXT_NODE) {
+            rescrambleIfReset(m.target as Text);
           } else if (m.type === "childList") {
             m.addedNodes.forEach((n) => {
               if (n.nodeType === Node.TEXT_NODE) {
@@ -196,7 +179,7 @@ export function WipScrambleAll() {
       });
     };
 
-    const observer = new MutationObserver(scheduleRescramble);
+    const observer = new MutationObserver(onMutate);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -209,5 +192,32 @@ export function WipScrambleAll() {
     };
   }, []);
 
-  return null;
+  if (!show) return null;
+
+  return (
+    <div
+      data-no-scramble
+      data-wip-scramble-badge
+      style={{
+        position: "fixed",
+        bottom: 16,
+        left: 16,
+        zIndex: 99999,
+        background: "#1a1a1a",
+        color: "#fff",
+        padding: "8px 12px",
+        borderRadius: 6,
+        fontFamily: "monospace",
+        fontSize: 11,
+        border: "1px solid #8b7ec7",
+        maxWidth: 500,
+        pointerEvents: "none",
+      }}
+    >
+      <div style={{ fontWeight: "bold", color: "#8b7ec7" }}>WIP SCRAMBLE</div>
+      <div>WIP_SCRAMBLE: {String(WIP_SCRAMBLE)}</div>
+      <div>status: {status}</div>
+      <div>total scrambled: {count}</div>
+    </div>
+  );
 }
