@@ -7,7 +7,8 @@ import { MatrixRain } from "@/components/MatrixRain";
 import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
 import { WipBanner } from "@/components/WipBanner";
-import { WIP_MODE } from "@/lib/wip";
+import { WipScrambleAll } from "@/components/WipScrambleAll";
+import { WIP_MODE, WIP_SCRAMBLE } from "@/lib/wip";
 import { organizationLd, websiteLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
@@ -49,7 +50,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body className={WIP_SCRAMBLE ? "wip-scrambling" : ""}>
+        <WipScrambleAll />
         <JsonLd data={[organizationLd(), websiteLd()]} />
         <ThemeProvider>
           <MatrixRain />

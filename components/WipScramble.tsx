@@ -68,6 +68,7 @@ export function WipScramble({
     as,
     {
       className: `wip-scramble ${className}`.trim(),
+      "data-wip-scrambled": "manual",
       "data-original": text,
       title: "[encrypted — original is in data-original]",
       "aria-label": "Encrypted text in WIP mode",

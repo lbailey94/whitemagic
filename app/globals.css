@@ -271,3 +271,17 @@
 .wip-scramble:hover {
   opacity: 0.95;
 }
+
+/* Global scramble — hide the body while the WipScrambleAll
+   component is doing its first pass, then fade in. Prevents the
+   one-frame flicker where original text is visible before the
+   digits appear. The body starts hidden via the wip-scrambling
+   class, then WipScrambleAll removes it after scrambling. */
+body.wip-scrambling {
+  opacity: 0.01;
+  transition: opacity 0.05s linear;
+}
+body.wip-scrambled {
+  opacity: 1;
+  transition: opacity 0.2s ease-out;
+}

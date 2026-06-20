@@ -89,7 +89,7 @@ export function FloatingLibrarian() {
       )}
 
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 flex w-[min(420px,calc(100vw-3rem))] flex-col rounded-2xl border border-border-light bg-bg shadow-2xl shadow-black/20">
+        <div data-no-scramble className="fixed bottom-6 right-6 z-50 flex w-[min(420px,calc(100vw-3rem))] flex-col rounded-2xl border border-border-light bg-bg shadow-2xl shadow-black/20">
           <div className="flex items-center justify-between border-b border-border-light bg-surface-alt px-4 py-2.5">
             <div className="flex items-center gap-2 text-sm font-medium text-ink">
               <MessageSquare className="h-3.5 w-3.5 text-lavender" />

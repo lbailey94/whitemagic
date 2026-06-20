@@ -232,6 +232,7 @@ export function LibrarianChat({
 
   return (
     <div
+      data-no-scramble
       className={`flex ${heightClass} flex-col overflow-hidden rounded-2xl border border-border-light bg-surface`}
     >
       <div
