@@ -1,0 +1,106 @@
+name: core-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: core-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── lint (ruff) ───────────────────────────────────────────────────
+  lint:
+    name: Ruff lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock', 'core/uv.lock', 'core/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+      - name: Install uv
+        run: pip install uv
+      - name: Install package
+        working-directory: core
+        run: uv sync --all-extras --dev
+      - name: Run ruff
+        working-directory: core
+        run: uv run ruff check whitemagic/ tests/
+
+  # ─── type check (mypy) ──────────────────────────────────────────────
+  typecheck:
+    name: mypy type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock', 'core/uv.lock', 'core/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+      - run: pip install uv
+      - working-directory: core
+        run: uv sync --all-extras --dev
+      - name: Run mypy (relaxed, warn-only to allow incremental progress)
+        working-directory: core
+        run: bash -c 'uv run mypy whitemagic/ 2>&1 | tail -20 || echo "mypy had errors - continuing (ruff is the hard gate)"'
+        continue-on-error: true
+
+  # ─── tests (pytest) ────────────────────────────────────────────────
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock', 'core/uv.lock', 'core/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+      - run: pip install uv
+      - working-directory: core
+        run: uv sync --all-extras --dev
+      - name: Run pytest
+        working-directory: core
+        env:
+          WM_STATE_ROOT: /tmp/whitemagic_ci_state
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          uv run pytest tests/ \
+            --ignore=tests/archive_v14 \
+            --ignore=tests/archive_v11 \
+            --ignore=tests/archive \
+            --ignore=tests/archive_polyglot \
+            --ignore=tests/legacy \
+            --ignore=tests/adhoc \
+            --ignore=tests/verify \
+            --ignore=tests/benchmarks \
+            --ignore=tests/pre_v4.5.0_reorganization \
+            --ignore=tests/pending \
+            --ignore=tests/archive_v4.5.0_reorg \
+            -p no:cacheprovider \
+            --timeout=60 \
+            -q

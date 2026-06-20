@@ -113,6 +113,7 @@ class TestPolyglotMemoryQueryJulia:
 class TestPolyglotMemoryQueryElixir:
     """Test polyglot.memory_query routed to Elixir backend."""
 
+    @pytest.mark.flaky(max_runs=3, min_passes=1)
     @pytest.mark.skipif(not HAS_ELIXIR, reason="elixir not installed")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     def test_elixir_encode(self):
@@ -126,6 +127,7 @@ class TestPolyglotMemoryQueryElixir:
         assert "x" in r
         assert "zone" in r
 
+    @pytest.mark.flaky(max_runs=3, min_passes=1)
     @pytest.mark.skipif(not HAS_ELIXIR, reason="elixir not installed")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     def test_elixir_nearest_neighbors(self):

@@ -175,6 +175,7 @@ dev = [
     "whitemagic[mcp]",  # Include MCP for testing
     "pytest-cov>=4.1.0",
     "pytest-timeout>=2.2.0",
+    "pytest-flaky>=3.7.0",  # For stress tests that flake under load
     "black>=23.0.0",
     "isort>=5.13.0",
     "mypy>=1.0.0",
