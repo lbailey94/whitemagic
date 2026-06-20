@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 22.2.1
-**Last Updated**: 2026-06-18
+**Version**: 22.3.0
+**Last Updated**: 2026-06-19
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -15,7 +15,8 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
-- Current local audit baseline: 1,470 passing tests, 0 failures, 2 skipped (as of 2026-06-18)
+- Current local audit baseline: 1,470 passing tests, 0 failures, 2 skipped (as of 2026-06-19)
+- v22.3.0: bridge surface documented to 143 functions (full mcp_api_bridge public surface); 6 IPC + polyglot tests marked flaky for CI; site catalog 30→143
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 

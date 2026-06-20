@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: whitemagic-haskell
-version: 22.2.3
+version: 22.3.0
 synopsis: WhiteMagic Haskell Acceleration Core
 description: Algebraic Dharma rules engine, tool dependency graph planner, Wu Xing elemental mapping, I Ching hexagram engine, boundary detection, and FFI bridge for WhiteMagic cognitive OS.
 license: MIT

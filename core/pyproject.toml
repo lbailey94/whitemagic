@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whitemagic"
-version = "22.2.3"
-description = "The Tool Substrate for Agentic AI — 28 PRAT Ganas, memory, ethical governance, and polyglot accelerators"
+version = "22.3.0"
+description = "The Tool Substrate for Agentic AI — 28 PRAT Ganas, 143 bridge functions, memory, ethical governance, and polyglot accelerators"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -175,7 +175,7 @@ dev = [
     "whitemagic[mcp]",  # Include MCP for testing
     "pytest-cov>=4.1.0",
     "pytest-timeout>=2.2.0",
-    "pytest-flaky>=3.7.0",  # For stress tests that flake under load
+    "flaky>=3.7.0",  # For stress tests that flake under load
     "black>=23.0.0",
     "isort>=5.13.0",
     "mypy>=1.0.0",
