@@ -1,4 +1,4 @@
-# WhiteMagic — Agentic AI Platform (v22.3.0)
+# WhiteMagic — Agentic AI Platform (v22.4.0)
 
 A polyglot agentic AI platform with Python core, Rust performance bridges, and multi-language support for AI agents, memory systems, and distributed orchestration.
 
