@@ -87,11 +87,11 @@ jobs:
     timeout-minutes: 5
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - name: Smoke 24 routes
+      - name: Smoke 30 routes (including A2A v22.4.0 expansion)
         run: |
           set +e
           ok=0; fail=0
-          for path in "" "mcp-bridge" "zodiac" "chat" "librarian" "library" "becoming" "prescience" "services" "open-source" "essays" "about" "contact" "api/manifest" "api/zodiac" "api/mcp-bridge" "api/run-bridge-fn" "llms.txt" "llms-full.txt" "sitemap.xml" "robots.txt" ".well-known/agent.json" ".well-known/agent-economy.json" ".well-known/ai-agent-policy"; do
+          for path in "" "mcp-bridge" "zodiac" "chat" "librarian" "library" "becoming" "prescience" "services" "open-source" "essays" "about" "contact" "api/manifest" "api/zodiac" "api/mcp-bridge" "api/run-bridge-fn" "llms.txt" "llms-full.txt" "sitemap.xml" "robots.txt" ".well-known/agent.json" ".well-known/agent-economy.json" ".well-known/ai-agent-policy" ".well-known/agent-skills.json" ".well-known/agents.json" ".well-known/agents/gana_horn.json" ".well-known/agents/gana_neck.json" ".well-known/agents/gana_dipper.json" ".well-known/agents/gana_wall.json"; do
             code=$(curl -sL --max-time 8 -o /dev/null -w "%{http_code}" "https://www.whitemagic.dev/$path" 2>/dev/null)
             if [ "$code" = "200" ]; then
               ok=$((ok + 1))
@@ -101,7 +101,7 @@ jobs:
             fi
           done
           echo ""
-          echo "PASS: $ok/24, FAIL: $fail"
+          echo "PASS: $ok/30, FAIL: $fail"
           if [ $fail -gt 0 ]; then
             exit 1
           fi

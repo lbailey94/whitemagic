@@ -32,7 +32,7 @@ export async function GET() {
     url: BASE,
     // protocolVersion follows A2A spec; agent app version is independent.
     protocolVersion: "1.2",
-    version: "22.3.0",
+    version: "22.4.0",
 
     provider: {
       organization: "WhiteMagic Labs",
@@ -65,19 +65,21 @@ export async function GET() {
     },
     security: [{ none: [] }],
 
-    // ---- Skills ----
-    // Per A2A spec: each skill has id, name, description, tags, examples.
-    // We expose only what is actually live behind the WhiteMagic site/SDK.
+    // ---- Skills (two-layer: high-level + per-category) ----
+    // The main card lists 7 high-level capabilities a peer can reason about.
+    // The full 21-category skill set is in /.well-known/agent-skills.json.
+    // Each per-category skill links to the actual bridge functions in
+    // /api/mcp-bridge and the live exec endpoint /api/run-bridge-fn.
     skills: [
       {
-        id: "llms-context",
+        id: "llm-context-dump",
         name: "LLM context dump",
         description:
-          "Root-served /llms.txt and /llms-full.txt files provide a " +
-          "complete, machine-readable picture of WhiteMagic Labs: " +
-          "capabilities, tool envelope contract, prescience track " +
-          "record, 28-Gana catalog, and discovery surfaces. Fetch in a " +
-          "single round-trip to ground your reasoning about the lab.",
+          "Root-served /llms.txt (short index) and /llms-full.txt " +
+          "(comprehensive context) provide a complete, machine-readable " +
+          "picture of WhiteMagic Labs: capabilities, tool envelope contract, " +
+          "prescience track record, 28-Gana catalog, and discovery surfaces. " +
+          "Fetch in a single round-trip to ground your reasoning about the lab.",
         tags: ["discovery", "llm-context", "well-known"],
         examples: [
           "Fetch GET /llms.txt for a short index.",
@@ -87,68 +89,105 @@ export async function GET() {
         outputModes: ["text/plain", "application/json"],
       },
       {
-        id: "librarian-chat",
-        name: "Librarian — bounded research assistant",
+        id: "mcp-bridge-discovery",
+        name: "MCP bridge discovery",
         description:
-          "A budget-capped, Dharma-governed chat assistant that answers " +
-          "questions about WhiteMagic Labs' published artifacts, papers, " +
-          "and reference implementations. Uses Karma ledger for audit.",
-        tags: ["chat", "research", "governance", "dharma"],
+          "143 whitemagic.mcp_api_bridge public functions across 21 " +
+          "categories (archaeology, dharma, gana, garden, memory, " +
+          "meditation, reasoning, session, system, wisdom, zodiac, ...). " +
+          "Served at /api/mcp-bridge. Each function is callable live via " +
+          "POST /api/run-bridge-fn with {function, payload}. The full " +
+          "per-category skill tree is in /.well-known/agent-skills.json.",
+        tags: ["mcp", "discovery", "bridge", "tool-catalog"],
         examples: [
-          "What does the WhiteMagic Karma Ledger track?",
-          "Show me the Dharma rule profiles available.",
-          "How does PRAT compression collapse 490 tools to 28 Ganas?",
+          "Fetch GET /api/mcp-bridge for the full 143-function catalog.",
+          "POST /api/run-bridge-fn {\"function\":\"dharma_check_boundaries\",\"payload\":{\"action\":{...}}}",
         ],
-        inputModes: ["text/plain"],
-        outputModes: ["text/plain"],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
       },
       {
-        id: "prescience-api",
+        id: "gana-tool-routing",
+        name: "Gana meta-tool routing (28 mansions)",
+        description:
+          "28 Gana meta-tools collapse 490 dispatch tools into 28 named " +
+          "personas (PRAT compression). Each Gana is a coordinate-aware " +
+          "router: invoke with {operation, task} and the Gana picks the " +
+          "right tool. Per-Gana details in /.well-known/agents/<gana>.json; " +
+          "directory at /.well-known/agents.json.",
+        tags: ["gana", "prat", "meta-tool", "router"],
+        examples: [
+          "gana_dipper: POST {function:'gana_dipper', payload:{task:'intelligence_briefing'}}",
+          "gana_horn: POST {function:'gana_horn', payload:{operation:'create_session'}}",
+          "GET /.well-known/agents.json for the 12-sign directory.",
+        ],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
+      },
+      {
+        id: "dharma-ethics-check",
+        name: "Dharma ethical governance",
+        description:
+          "6 dharma_* functions: dharma_evaluate_ethics, dharma_check_boundaries, " +
+          "dharma_verify_consent, dharma_get_guidance, dharma_get_ethical_score, " +
+          "dharma_list_principles. Pre-flight any agent action through " +
+          "dharma_check_boundaries to detect ethical violations before commit.",
+        tags: ["dharma", "ethics", "governance", "consent"],
+        examples: [
+          "POST {function:'dharma_check_boundaries', payload:{action:{type:'deploy',target:'production'}}}",
+          "POST {function:'dharma_list_principles', payload:{level:'ahimsa'}}",
+        ],
+        inputModes: ["application/json"],
+        outputModes: ["application/json"],
+      },
+      {
+        id: "prescience-forecast",
         name: "Prescience track record",
         description:
           "21 validated forecast claims against public events, with " +
           "Brier score 0.0958, 523 lead-time points, 25-week average " +
           "lead. Served at /api/prescience.json. Use to ground trust in " +
-          "WhiteMagic's architectural predictions.",
-        tags: ["prescience", "forecasting", "trust"],
-        examples: ["Fetch GET /api/prescience.json for the full claims ledger."],
+          "WhiteMagic's architectural predictions. The gana_dipper.predict " +
+          "task routes to the live forecasting engine.",
+        tags: ["prescience", "forecasting", "trust", "brier-score"],
+        examples: [
+          "Fetch GET /api/prescience.json for the full claims ledger.",
+          "POST {function:'gana_dipper', payload:{task:'predict'}}",
+        ],
         inputModes: ["application/json"],
         outputModes: ["application/json"],
       },
       {
-        id: "mcp-discovery",
-        name: "MCP discovery manifest",
+        id: "session-handoff",
+        name: "Session handoff + context pack",
         description:
-          "Canonical MCP discovery manifest at /api/manifest.json. " +
-          "Lists 490 callable tools, 28 Gana meta-tools, polyglot backends, " +
-          "and event bus. Fetch once at startup to model the surface.",
-        tags: ["mcp", "discovery", "manifest"],
-        examples: ["Fetch GET /api/manifest.json"],
+          "7 session_* functions: session_init, session_get_context, " +
+          "session_checkpoint, session_list, session_create_handoff, " +
+          "session_handoff. Move session state between agents, checkpoint " +
+          "mid-conversation, or continue from another agent's handoff.",
+        tags: ["session", "handoff", "checkpoint", "continuity"],
+        examples: [
+          "POST {function:'session_init', payload:{name:'agent_x', goals:['audit']}}",
+          "POST {function:'session_create_handoff', payload:{target_session:'next'}}",
+        ],
         inputModes: ["application/json"],
         outputModes: ["application/json"],
       },
       {
-        id: "agent-economy-directory",
-        name: "Agent-economy directory entry",
+        id: "librarian-chat",
+        name: "Librarian — bounded research assistant",
         description:
-          "Machine-readable directory entry describing WhiteMagic Labs' " +
-          "identity, payment rails, and machine-readable policy. " +
-          "See /.well-known/agent-economy.json.",
-        tags: ["discovery", "directory", "well-known"],
-        examples: ["Fetch GET /.well-known/agent-economy.json"],
-        inputModes: ["application/json"],
-        outputModes: ["application/json"],
-      },
-      {
-        id: "ai-agent-policy",
-        name: "Machine-readable AI agent policy",
-        description:
-          "WhiteMagic Labs' policy for automated callers, including " +
-          "rate limits, accepted payment rails, and terms-of-service hooks.",
-        tags: ["policy", "tos", "well-known"],
-        examples: ["Fetch GET /.well-known/ai-agent-policy"],
-        inputModes: ["application/json"],
-        outputModes: ["application/json"],
+          "A budget-capped, Dharma-governed chat assistant that answers " +
+          "questions about WhiteMagic Labs' published artifacts, papers, " +
+          "and reference implementations. Uses Karma ledger for audit. " +
+          "POST /api/librarian/chat with {message, session_id?}.",
+        tags: ["chat", "research", "governance", "dharma"],
+        examples: [
+          "POST /api/librarian/chat {\"message\": 'What does the Karma Ledger track?'}",
+          "POST /api/librarian/chat {\"message\": 'Show me Dharma rule profiles.'}",
+        ],
+        inputModes: ["text/plain", "application/json"],
+        outputModes: ["text/plain", "application/json"],
       },
     ],
 
@@ -175,12 +214,19 @@ export async function GET() {
     related: {
       agent_economy: `${BASE}/.well-known/agent-economy.json`,
       ai_agent_policy: `${BASE}/.well-known/ai-agent-policy`,
+      // Two-layer skills: this card lists 7 high-level; the 21 per-category
+      // skills are in agent-skills.json. The 12 Gana agents are in
+      // agents.json (directory) and agents/<gana>.json (detail).
+      agent_skills: `${BASE}/.well-known/agent-skills.json`,
+      agents_directory: `${BASE}/.well-known/agents.json`,
+      agent_gana_prefix: `${BASE}/.well-known/agents/`,
       llms_txt: `${BASE}/llms.txt`,
       llms_full_txt: `${BASE}/llms-full.txt`,
       manifest: `${BASE}/api/manifest.json`,
       prescience: `${BASE}/api/prescience.json`,
       sangha: `${BASE}/api/sangha.json`,
       zodiac: `${BASE}/api/zodiac.json`,
+      mcp_bridge: `${BASE}/api/mcp-bridge`,
       sitemap: `${BASE}/sitemap.xml`,
       skill_md: `${BASE}/skill.md`,
     },
@@ -194,6 +240,11 @@ export async function GET() {
       maturity: "lab-artifact",
       production_endpoint_count: 1, // librarian_http
       planned_endpoint_count: 2, // a2a_jsonrpc, mcp_http
+      live_discovery_surfaces: 9, // agent.json + agent-economy + ai-agent-policy + agent-skills + agents + 12 agents/<gana> + llms.txt + llms-full.txt
+      documented_bridge_functions: 143,
+      bridge_categories: 21,
+      gana_meta_tools: 28,
+      dispatch_tools: 462,
       license: "MIT",
       source: "https://whitemagic.dev",
     },

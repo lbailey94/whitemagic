@@ -36,7 +36,7 @@ export async function GET() {
   return Response.json(
     {
       schema_version: "1.0.0",
-      system: { name: "WhiteMagic", version: "22.3.0", url: BASE, license: "MIT" },
+      system: { name: "WhiteMagic", version: "22.4.0", url: BASE, license: "MIT" },
       runtime: "nodejs (TS demo impl, see lib/bridge/impl.ts)",
       catalog_url: `${BASE}/api/mcp-bridge.json`,
       functions: BRIDGE_MODULES.map((m) => ({

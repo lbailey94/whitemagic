@@ -167,6 +167,32 @@ const nextConfig = {
         source: "/.well-known/agent",
         destination: "/api/well-known/agent",
       },
+      // v22.4.0 A2A expansion: per-category skill tree + 12-Gana directory.
+      {
+        source: "/.well-known/agent-skills.json",
+        destination: "/api/well-known/agent-skills",
+      },
+      {
+        source: "/.well-known/agent-skills",
+        destination: "/api/well-known/agent-skills",
+      },
+      {
+        source: "/.well-known/agents.json",
+        destination: "/api/well-known/agents",
+      },
+      {
+        source: "/.well-known/agents",
+        destination: "/api/well-known/agents",
+      },
+      // Per-Gana detail. :gana matches gana_horn, gana_neck, etc.
+      {
+        source: "/.well-known/agents/:gana.json",
+        destination: "/api/well-known/agents/:gana",
+      },
+      {
+        source: "/.well-known/agents/:gana",
+        destination: "/api/well-known/agents/:gana",
+      },
       // Expose .json variants of API endpoints for agent discoverability.
       // Agents in the wild fetch /api/foo.json by convention; these rewrites
       // strip the suffix and route to the actual handler.

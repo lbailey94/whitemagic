@@ -149,7 +149,7 @@ def main() -> int:
         print("[sync_facts] Skipping — build will use existing facts.ts", file=sys.stderr)
         return 0
 
-    version = "22.3.0"
+    version = "22.4.0"
     content = generate_facts(tests, tools, version)
 
     if args.check:

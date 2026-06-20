@@ -1,6 +1,6 @@
 export const WM_FACTS = {
-  version: "22.3.0",
-  verifiedDate: "June 19, 2026",
+  version: "22.4.0",
+  verifiedDate: "June 20, 2026",
   linesShort: "180K",
   linesLong: "180,000",
   callableTools: "490",
@@ -25,6 +25,7 @@ export const WM_FACTS = {
   bridgeModulesRecovered: 25,
   bridgeModulesNote: "13 core/bridge/* modules ported from SD card archive, 10 more surfaced, mcp_api_bridge crash fixed",
   v22_3_0_catalog: "Site catalog went from 30 -> 143 documented functions. The catalog now reflects the full whitemagic.mcp_api_bridge public surface. Each entry has a matching TS impl and dispatcher reference.",
+  v22_4_0_a2a: "A2A v1.2 discovery surface expanded. New endpoints: /.well-known/agent-skills.json (21 per-category skills), /.well-known/agents.json (12-Gana directory), /.well-known/agents/<gana>.json (per-Gana detail, 12 files). Main Agent Card enhanced to 7 high-level skills (was 6) with 2-layer (high-level + per-category) skills model.",
 } as const;
 
 export const WM_FACT_TEXT = {

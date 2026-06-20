@@ -56,6 +56,37 @@ const ROUTES = [
     priority: 0.5,
     changeFrequency: "weekly" as const,
   },
+  // v22.4.0 A2A expansion: per-category skills + 12-Gana directory.
+  {
+    path: "/.well-known/agent-skills.json",
+    priority: 0.5,
+    changeFrequency: "weekly" as const,
+  },
+  {
+    path: "/.well-known/agents.json",
+    priority: 0.5,
+    changeFrequency: "weekly" as const,
+  },
+  {
+    path: "/.well-known/agents/gana_horn.json",
+    priority: 0.4,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/.well-known/agents/gana_neck.json",
+    priority: 0.4,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/.well-known/agents/gana_dipper.json",
+    priority: 0.4,
+    changeFrequency: "monthly" as const,
+  },
+  {
+    path: "/.well-known/agents/gana_wall.json",
+    priority: 0.4,
+    changeFrequency: "monthly" as const,
+  },
   {
     path: "/.well-known/agent-economy.json",
     priority: 0.5,

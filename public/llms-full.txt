@@ -401,3 +401,53 @@ Stable tool names (not under the `gana_` prefix, so they bypass the PRAT router 
 - **Prescience**: `/api/prescience.json` (public, machine-readable)
 - **A2A**: `/.well-known/agent.json` (Agent Card)
 - **Funding**: voluntary at `/fund` (Gratitude architecture — see above)
+
+---
+
+## A2A v1.2 discovery surface (v22.4.0)
+
+WhiteMagic Labs is a v1.2 A2A peer. The main Agent Card lists 7 high-level
+skills; a per-category skill tree and a 12-Gana directory extend it.
+
+### Main Agent Card
+
+- `GET /.well-known/agent.json` — name, description, capabilities, security,
+  7 high-level skills, service endpoints, posture, performance. Re-fetch
+  when you need to confirm protocol version (currently `1.2`).
+
+### Per-category skills (21 categories, mapped to 143 bridge functions)
+
+- `GET /.well-known/agent-skills.json` — full per-category skill tree.
+  Each entry includes `function_count`, three example payloads, and a
+  ready-to-paste `curl` invocation. Filter by `category` field.
+
+### 12-Gana directory
+
+- `GET /.well-known/agents.json` — directory of the 12 most representative
+  Gana agents (initiator, memory, system, central, predictive, ethics, ...).
+  Each entry links to its per-Gana detail file.
+- `GET /.well-known/agents/<gana>.json` — per-Gana A2A Agent Card with
+  persona metadata, A2A skills, the exact function group, and a live
+  invocation endpoint. Available for: `gana_horn`, `gana_neck`, `gana_root`,
+  `gana_room`, `gana_heart`, `gana_tail`, `gana_winnowing_basket`,
+  `gana_dipper`, `gana_ox`, `gana_girl`, `gana_void`, `gana_wall`.
+
+### Other discovery surfaces (unchanged)
+
+- `GET /.well-known/agent-economy.json` — directory entry, payment rails.
+- `GET /.well-known/ai-agent-policy` — machine-readable ToS for agents.
+- `GET /api/manifest.json` — canonical tool manifest (490 tools, 28 Ganas).
+- `GET /api/mcp-bridge` — the 143-function public bridge surface.
+- `GET /api/prescience.json` — 21 validated forecast claims.
+- `GET /api/zodiac.json` — 12 cores + cross-core workflows.
+- `GET /api/sangha.json` — collective memory + pattern federation.
+- `GET /llms.txt` — short LLM context (this file is a sibling).
+- `GET /sitemap.xml` — XML sitemap (all human + agent pages).
+
+### Suggested agent loop (3 round-trips)
+
+1. `GET /.well-known/agent.json` — protocol negotiation, posture check.
+2. `GET /.well-known/agent-skills.json` — discover the 21 categories.
+3. `GET /.well-known/agents/gana_dipper.json` — drill into one agent,
+   then `POST /api/run-bridge-fn {"function":"gana_dipper","payload":{"task":"intelligence_briefing"}}`
+   to invoke it live.
