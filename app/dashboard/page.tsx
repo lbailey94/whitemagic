@@ -67,7 +67,7 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-lg font-semibold">WhiteMagic Dashboard</h1>
                 <p className="text-xs text-gray-400">
-                  v22.4.0 — Cognitive Operating System
+                  v22.5.0 — Cognitive Operating System
                 </p>
               </div>
             </div>

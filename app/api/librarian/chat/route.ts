@@ -16,11 +16,18 @@ import type { ChatMessage, ChatRequest, StreamChunk } from "@/lib/librarian/type
 import { checkDharma } from "@/lib/librarian/dharma";
 import { checkRateLimit } from "@/lib/librarian/rate-limit";
 import { getBudget, recordSpend } from "@/lib/librarian/budget";
-import { streamLLM, type PendingToolCall } from "@/lib/librarian/llm";
+import { streamLLM, getLLMProvider, type PendingToolCall } from "@/lib/librarian/llm";
 import { LIBRARIAN_CONFIG } from "@/lib/librarian/persona";
 import { serializeCorpus } from "@/lib/librarian/corpus";
-import { TOOL_SCHEMAS, executeTool } from "@/lib/librarian/tools";
+import { ALL_TOOL_SCHEMAS, executeTool } from "@/lib/librarian/tools";
 import { recordKarma } from "@/lib/librarian/karma";
+import {
+  appendMessages,
+  getOrCreateSession,
+  recordUsage,
+  SESSION_COOKIE,
+  SESSION_COOKIE_MAX_AGE,
+} from "@/lib/librarian/session-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,8 +152,18 @@ export async function POST(req: NextRequest): Promise<Response> {
       let totalInputTokens = 0;
       let totalOutputTokens = 0;
       let lastModel = "";
+      let lastProvider: "stub" | "openrouter" | "ollama" = "stub";
+      const allToolCallsThisTurn: string[] = [];
 
       try {
+        // Persist the conversation so the user can resume across reloads.
+        if (body.sessionId) {
+          appendMessages(
+            body.sessionId,
+            messages.map((m) => ({ role: m.role, content: m.content })),
+          );
+        }
+
         for (let iter = 0; iter < MAX_TOOL_ITERATIONS + 1; iter++) {
           const pendingToolCalls: PendingToolCall[] = [];
           let finishedWithTools = false;
@@ -155,12 +172,16 @@ export async function POST(req: NextRequest): Promise<Response> {
             messages: conversation,
             maxTokens: LIBRARIAN_CONFIG.maxTokensPerResponse,
             temperature: LIBRARIAN_CONFIG.temperature,
-            tools: iter < MAX_TOOL_ITERATIONS ? TOOL_SCHEMAS : undefined,
+            tools:
+              iter < MAX_TOOL_ITERATIONS
+                ? [...ALL_TOOL_SCHEMAS]
+                : undefined,
           })) {
             if (chunk.kind === "delta") {
               controller.enqueue(jsonLine({ delta: chunk.text }));
             } else if (chunk.kind === "tool_calls") {
               pendingToolCalls.push(...chunk.calls);
+              for (const c of chunk.calls) allToolCallsThisTurn.push(c.name);
               finishedWithTools = true;
             } else if (chunk.kind === "error") {
               controller.enqueue(
@@ -178,6 +199,8 @@ export async function POST(req: NextRequest): Promise<Response> {
               totalOutputTokens += chunk.outputTokens;
               totalCost += chunk.costUsd;
               lastModel = chunk.model;
+              // Track provider for the final done chunk.
+              lastProvider = chunk.provider;
             }
           }
 
@@ -267,9 +290,20 @@ export async function POST(req: NextRequest): Promise<Response> {
               outputTokens: totalOutputTokens,
               costUsd: totalCost,
               model: lastModel,
+              provider: lastProvider,
             },
           }),
         );
+
+        // Record session usage (in-memory, lost on cold start).
+        if (body.sessionId) {
+          recordUsage(body.sessionId, {
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
+            costUsd: totalCost,
+            toolNames: allToolCallsThisTurn,
+          });
+        }
 
         if (totalCost > 0) {
           recordSpend(totalCost).catch((e) =>
@@ -293,11 +327,20 @@ export async function POST(req: NextRequest): Promise<Response> {
     },
   });
 
+  // Build response headers. Set the session cookie if we have a sessionId
+  // (so the user can resume after browser refresh).
+  const headers: Record<string, string> = {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    "Cache-Control": "no-store",
+  };
+  if (body.sessionId) {
+    headers["Set-Cookie"] = `${SESSION_COOKIE}=${body.sessionId}; Path=/; Max-Age=${SESSION_COOKIE_MAX_AGE}; HttpOnly; SameSite=Lax`;
+  }
+  // Expose the active provider in a response header for observability.
+  headers["X-Librarian-Provider"] = getLLMProvider();
+
   return new Response(stream, {
     status: 200,
-    headers: {
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
+    headers,
   });
 }

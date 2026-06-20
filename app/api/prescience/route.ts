@@ -18,7 +18,7 @@ export async function GET() {
     generated_at: new Date().toISOString(),
     system: {
       name: "WhiteMagic",
-      version: "22.4.0",
+      version: "22.5.0",
       url: "https://whitemagic.dev",
     },
     note: "Full track record available at /api/prescience.json",

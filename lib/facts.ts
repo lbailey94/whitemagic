@@ -1,5 +1,5 @@
 export const WM_FACTS = {
-  version: "22.4.0",
+  version: "22.5.0",
   verifiedDate: "June 20, 2026",
   linesShort: "180K",
   linesLong: "180,000",

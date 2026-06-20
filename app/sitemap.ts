@@ -56,7 +56,7 @@ const ROUTES = [
     priority: 0.5,
     changeFrequency: "weekly" as const,
   },
-  // v22.4.0 A2A expansion: per-category skills + 12-Gana directory.
+  // v22.5.0 A2A expansion: per-category skills + 12-Gana directory.
   {
     path: "/.well-known/agent-skills.json",
     priority: 0.5,
@@ -135,6 +135,17 @@ const ROUTES = [
   {
     path: "/chat",
     priority: 0.7,
+    changeFrequency: "monthly" as const,
+  },
+  // v22.5.0 librarian surface.
+  {
+    path: "/api/librarian/status",
+    priority: 0.4,
+    changeFrequency: "weekly" as const,
+  },
+  {
+    path: "/api/librarian/session",
+    priority: 0.4,
     changeFrequency: "monthly" as const,
   },
 ];

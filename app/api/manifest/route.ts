@@ -19,7 +19,7 @@ export async function GET() {
     generated_at: new Date().toISOString(),
     system: {
       name: "WhiteMagic",
-      version: "22.4.0",
+      version: "22.5.0",
       url: "https://whitemagic.dev",
       repository: "https://whitemagic.dev",
       license: "MIT",

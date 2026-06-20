@@ -32,7 +32,7 @@ export async function GET() {
     url: BASE,
     // protocolVersion follows A2A spec; agent app version is independent.
     protocolVersion: "1.2",
-    version: "22.4.0",
+    version: "22.5.0",
 
     provider: {
       organization: "WhiteMagic Labs",

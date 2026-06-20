@@ -451,3 +451,54 @@ skills; a per-category skill tree and a 12-Gana directory extend it.
 3. `GET /.well-known/agents/gana_dipper.json` — drill into one agent,
    then `POST /api/run-bridge-fn {"function":"gana_dipper","payload":{"task":"intelligence_briefing"}}`
    to invoke it live.
+
+---
+
+## Librarian chat (v22.5.0)
+
+The `/chat` and `/librarian` pages route through `/api/librarian/chat`,
+a streaming server-sent response with inline tool-call events. The
+librarian is a real agent: it can call any of 21 curated bridge
+functions (out of 143 in the full surface) as tools, and shows each
+invocation inline with the result.
+
+### LLM provider — env-driven
+
+- `LLM_PROVIDER=stub` (default): keyword-routed mock that uses bridge
+  tools. Streams a real bridge invocation + result, then a short
+  summary. Useful for demos and development.
+- `LLM_PROVIDER=openrouter`: OpenAI-compatible API. Set
+  `OPENROUTER_API_KEY=...` and optionally `OPENROUTER_MODEL=...`
+  (default `anthropic/claude-sonnet-4.5`).
+- `LLM_PROVIDER=ollama`: Self-hosted local LLM. Set
+  `OLLAMA_BASE_URL=http://your-hetzner-box:11434` and optionally
+  `OLLAMA_MODEL=...` (default `llama3.1:8b`).
+
+The active provider is reported in the `X-Librarian-Provider`
+response header and in the `provider` field of the final `done`
+chunk.
+
+### Status + session endpoints
+
+- `GET /api/librarian/status` — provider, model, bridge tool count,
+  active session count.
+- `GET /api/librarian/session?id=<sessionId>` — resume a previous
+  conversation (returns 404 if the in-memory store has been wiped
+  by a Vercel cold start).
+
+### Curated bridge tools (21 of 143)
+
+`dharma_check_boundaries`, `dharma_list_principles`, `session_get_context`,
+`session_list`, `archaeology_search`, `archaeology_recent_reads`,
+`archaeology_daily_digest`, `memory_search`, `memory_list`,
+`zodiac_list_cores`, `zodiac_consult_council`, `consult_iching`,
+`synthesize_wisdom`, `apply_reasoning_methods`, `detect_patterns`,
+`gana_horn`, `gana_dipper`, `gana_wall`, `meditation_pause`,
+`get_system_time`, `get_metrics_summary`.
+
+### Hetzner self-host runbook
+
+See `docs/hetzner/SETUP.md` for provisioning an Ollama host (€17-77/mo
+depending on model size). The librarian is Hetzner-ready: flip
+`LLM_PROVIDER=ollama` + `OLLAMA_BASE_URL` and the same code calls a
+local model with no per-token cost.

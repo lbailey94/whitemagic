@@ -44,6 +44,7 @@ export interface StreamChunk {
     outputTokens: number;
     costUsd: number;
     model: string;
+    provider?: "stub" | "openrouter" | "ollama";
   };
   /** Emitted if the backend refuses (Dharma, rate limit, budget, kill switch). */
   refusal?: {

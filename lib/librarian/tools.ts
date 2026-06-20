@@ -53,6 +53,16 @@ export type ToolResult =
       kind: "contact_submitted";
       data: { reference: string; topic: string; summary: string };
     }
+  | {
+      // v22.5.0: bridge function result. The `data` shape comes from
+      // dispatchBridgeFunction — `{ok, function, result}` or `{ok, function, error}`.
+      kind: "bridge_result";
+      data: {
+        bridge_function: true;
+        function: string;
+        result: unknown;
+      };
+    }
   | { kind: "error"; data: { message: string } };
 
 export interface ToolContext {
@@ -360,19 +370,39 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolResult> {
+  // First check the legacy librarian tools.
   const handler = HANDLERS[name];
-  if (!handler) {
-    return {
-      kind: "error",
-      data: { message: `Unknown tool: ${name}` },
-    };
+  if (handler) {
+    try {
+      return await handler(args, ctx);
+    } catch (e) {
+      console.error(`[librarian/tools] ${name} failed:`, e);
+      return {
+        kind: "error",
+        data: {
+          message: `Tool ${name} failed: ${(e as Error).message ?? "unknown error"}`,
+        },
+      };
+    }
   }
+
+  // Then try the bridge dispatcher (curated bridge tools).
+  // Lazy import to avoid bundling bridge code on every librarian call.
+  const { dispatchBridgeFunction } = await import("@/lib/bridge/impl");
   try {
-    return await handler(args, ctx);
-  } catch (e) {
-    console.error(`[librarian/tools] ${name} failed:`, e);
+    const result = dispatchBridgeFunction(name, args);
     return {
-      kind: "error",
+      kind: "bridge_result" as const,
+      data: {
+        bridge_function: true,
+        function: name,
+        result,
+      },
+    };
+  } catch (e) {
+    console.error(`[librarian/tools] bridge ${name} failed:`, e);
+    return {
+      kind: "error" as const,
       data: {
         message: `Tool ${name} failed: ${(e as Error).message ?? "unknown error"}`,
       },
@@ -380,5 +410,22 @@ export async function executeTool(
   }
 }
 
+/**
+ * Combined tool schemas: legacy librarian tools + curated bridge tools.
+ * Order matters for the LLM — the first N entries are the legacy tools
+ * (more "marketing-shaped"), then the bridge tools (more "API-shaped").
+ */
+import { buildBridgeToolSchemas, LIBRARIAN_BRIDGE_TOOLS } from "./bridge-tools";
+
+export const ALL_TOOL_SCHEMAS = [
+  ...TOOL_SCHEMAS,
+  ...buildBridgeToolSchemas(),
+] as const;
+
 // List of tool names (used by Karma ledger for display filters).
-export const TOOL_NAMES = TOOL_SCHEMAS.map((t) => t.function.name);
+export const TOOL_NAMES = ALL_TOOL_SCHEMAS.map(
+  (t) => (t as { function: { name: string } }).function.name,
+);
+
+// Convenience: the curated bridge tools the librarian can use.
+export { LIBRARIAN_BRIDGE_TOOLS };
