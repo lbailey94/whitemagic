@@ -502,3 +502,77 @@ See `docs/hetzner/SETUP.md` for provisioning an Ollama host (€17-77/mo
 depending on model size). The librarian is Hetzner-ready: flip
 `LLM_PROVIDER=ollama` + `OLLAMA_BASE_URL` and the same code calls a
 local model with no per-token cost.
+
+### v23 era documentation
+
+- `docs/WHITEMAGIC_CHRONOLOGY_2026-06-20.md` — full timeline from
+  codexIDE (2025-10-30) to v22.5.0 (2026-06-20) with 5 phases
+- `docs/ARCHIVE_INVENTORY_2026-06-20.md` — what's in the archives,
+  what to revive first
+- `docs/SITE_WIP_MODE.md` — how the WIP mode flag works
+- `docs/V23_ROADMAP.md` — Phase A (done) → Phase F (final) plan
+- `docs/PWA_SUBSTRATE_ARCHITECTURE.md` — IndexedDB / WASM SQLite,
+  File System Access, galaxy hydration, resonance waves
+
+---
+
+## Data Sovereignty (v23.0.0-alpha.1)
+
+WhiteMagic is a **local-first** cognitive substrate. The principle is
+foundational, not a feature:
+
+- **Your memories stay on your device.** The substrate is installed
+  as a PWA; its storage is IndexedDB (or WASM SQLite) on the user's
+  machine. There is no central database, no cloud sync by default.
+- **whitemagic.dev is a door, not a host.** This site describes the
+  substrate, lists the 151 bridge functions, hosts the A2A Agent
+  Card, and runs a librarian demo. It does NOT store user data.
+- **The bridge catalog is public, the substrate is private.** A2A
+  peers can discover WhiteMagic's skill surface here. Users who
+  install the PWA get their own private substrate. The two never
+  share state.
+- **Cross-substrate sync is opt-in only.** A future P2P mesh (the v17
+  `mesh/` Go stack) will let two PWA users opt in to substrate-to-
+  substrate gossip. Default: no network. The user's data never leaves
+  their device without an explicit, per-connection consent.
+- **The site has a WIP mode.** Set `NEXT_PUBLIC_WIP_MODE=1` in the
+  Vercel environment to replace marketing copy with abstract /
+  invitational language. The technical surface (bridge catalog, A2A,
+  librarian) stays intact. See `docs/SITE_WIP_MODE.md` for the
+  rationale.
+
+### What this means for A2A peers
+
+When you fetch `/.well-known/agent.json`, you get:
+
+- The **public skill surface** (151 functions, 22 categories, 28 Ganas)
+- The **A2A skill tree** (per-category + per-Gana)
+- The **public librarian endpoint** (a demo of the substrate, not a
+  service to upload your data to)
+- The **posture declaration** (`data_residency: "local-first"`,
+  `pwa_installable: true`, `cloud_storage: false`, `sync_model: "opt-in-p2p"`)
+
+You do **not** get access to the dev substrate at
+`~/.whitemagic/memory/whitemagic.db` (which has 12,636 memories,
+21,087 associations, 12,686 embeddings, 35,060 dharma audits). That
+DB is local to the maintainer's laptop, not exposed via the bridge.
+
+If you want to discover what a *deployed* WhiteMagic substrate looks
+like, fetch the A2A Agent Card from a PWA install, not from this
+site. The site is the catalog; the PWA is the runtime.
+
+### Memory sovereignty in the PWA
+
+When the PWA ships (v23.0.0-beta), the substrate will provide:
+
+- A "Your memories" panel showing count, size, location, export
+  button, delete button
+- Per-action consent for every memory write
+- File-system watching via the File System Access API (with explicit
+  per-directory permission, never silent)
+- A clear distinction between *user* memories and *system* memories,
+  with different default permissions
+
+The PWA will not write to disk, network, or any persistent storage
+without an explicit user action. Memory sovereignty is the
+foundation, not a feature.

@@ -6,18 +6,25 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { MatrixRain } from "@/components/MatrixRain";
 import { FloatingLibrarian } from "@/components/FloatingLibrarian";
 import { JsonLd } from "@/components/JsonLd";
+import { WipBanner } from "@/components/WipBanner";
+import { WIP_MODE } from "@/lib/wip";
 import { organizationLd, websiteLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
-  title: "WhiteMagic Labs — Private AI Deployment",
-  description:
-    "Private AI systems deployed on your infrastructure. Persistent memory, tool use, governance, full audit — your data never leaves the building.",
+  title: WIP_MODE
+    ? "WhiteMagic — A door is opening"
+    : "WhiteMagic Labs — Private AI Deployment",
+  description: WIP_MODE
+    ? "A local-first cognitive substrate. Permanent, private, yours. Subscribe to be notified when the public beta opens."
+    : "Private AI systems deployed on your infrastructure. Persistent memory, tool use, governance, full audit — your data never leaves the building.",
   metadataBase: new URL("https://whitemagic.dev"),
   openGraph: {
-    title: "WhiteMagic Labs",
-    description: "Private AI deployment for regulated enterprises.",
+    title: WIP_MODE ? "WhiteMagic — A door is opening" : "WhiteMagic Labs",
+    description: WIP_MODE
+      ? "A local-first cognitive substrate. Permanent, private, yours."
+      : "Private AI deployment for regulated enterprises.",
     url: "https://whitemagic.dev",
-    siteName: "WhiteMagic Labs",
+    siteName: WIP_MODE ? "WhiteMagic" : "WhiteMagic Labs",
     type: "website",
   },
 };
@@ -47,6 +54,7 @@ export default function RootLayout({
         <ThemeProvider>
           <MatrixRain />
           <div className="relative z-10">
+            <WipBanner />
             <Header />
             <main>{children}</main>
             <Footer />

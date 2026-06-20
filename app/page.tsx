@@ -1,287 +1,192 @@
-import { Hero } from "@/components/Hero";
-import { ServiceCard } from "@/components/ServiceCard";
-import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
-import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
-import { Server, Shield, Plug, Globe } from "lucide-react";
 import Link from "next/link";
+import { WIP_HERO, WIP_MODE } from "@/lib/wip";
 
-const SERVICES = [
-  {
-    icon: Server,
-    title: "Private AI Deployment",
-    blurb:
-      "Local or on-prem AI with persistent memory, tool use, and multi-tenant isolation. Your data stays on your hardware, under your compliance regime.",
-    href: "/services/private-ai-deployment",
-  },
-  {
-    icon: Shield,
-    title: "Agent Governance",
-    blurb:
-      "Runtime guardrails for autonomous agents: policy enforcement, identity, audit, approval workflows. Addresses the OWASP LLM Top 10 (v1.1, covers agentic AI).",
-    href: "/services/agent-governance",
-  },
-  {
-    icon: Plug,
-    title: "MCP Governance & Scale",
-    blurb:
-      "MCP governance, tool compression, and observability at scale. For teams with 10+ servers who need audit, compression, and middleware — not another tutorial.",
-    href: "/services/mcp-engineering",
-  },
-];
-
+/**
+ * Homepage. The WIP version is the door. The production version
+ * presents the substrate as a usable product.
+ */
 export default function HomePage() {
   return (
     <>
-      <Hero />
-
-      <section className="border-b border-border-light bg-surface-alt py-16">
-        <div className="container-site grid gap-8 md:grid-cols-[0.9fr_1.4fr]">
-          <div>
-            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
-              2026 field map · updated {FIELD_MAP_UPDATED}
-            </p>
-            <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
-              The lab saw the pattern before the market named it.
-            </h2>
-            <p className="mt-4 text-muted">
-              MCP, A2A, OpenAI Agents, OpenTelemetry, x402, and the EU AI Act
-              all converged on the same pattern: agents need memory, governance,
-              and audit. WhiteMagic had working implementations of each before
-              the standards existed.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {FIELD_CONCLUSIONS.map((item) => (
-              <article
-                key={item.title}
-                className="rounded-xl border border-border bg-surface p-5"
-              >
-                <h3 className="mb-2 font-head text-lg font-semibold text-ink">
-                  {item.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-muted">{item.body}</p>
-              </article>
-            ))}
+      {/* Hero */}
+      <section className="relative border-b border-border-light">
+        <div className="container-site py-20 md:py-28">
+          <p className="mb-4 font-mono text-xs uppercase tracking-widest text-lavender">
+            {WIP_HERO.eyebrow}
+          </p>
+          <h1 className="max-w-3xl font-head text-4xl font-semibold leading-tight tracking-tight text-ink md:text-5xl">
+            {WIP_HERO.title}
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
+            {WIP_HERO.lede}
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href={WIP_HERO.primaryCta.href} className="btn-primary">
+              {WIP_HERO.primaryCta.label} →
+            </Link>
+            <Link href={WIP_HERO.secondaryCta.href} className="btn-ghost">
+              {WIP_HERO.secondaryCta.label}
+            </Link>
           </div>
         </div>
       </section>
 
+      {WIP_MODE ? <WipHomepageBelowTheFold /> : <ProductionHomepageBelowTheFold />}
+    </>
+  );
+}
+
+function WipHomepageBelowTheFold() {
+  return (
+    <>
+      {/* The door — three invitations */}
       <section className="container-site py-20">
         <div className="mb-12 max-w-prose">
           <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
-            Applied work
+            Three ways in
           </p>
-          <h2 className="font-head text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-            Lab output: working systems, not position papers.
+          <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
+            Step through the door.
           </h2>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
-          {SERVICES.map((s) => (
-            <ServiceCard key={s.title} {...s} />
-          ))}
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-lavender">
+              For the curious
+            </p>
+            <h3 className="mb-2 font-head text-xl font-semibold text-ink">
+              Talk to Aria
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-muted">
+              A bounded research assistant that knows the public WhiteMagic
+              corpus. Ask about the substrate, the 28 Ganas, the bridge
+              catalog, the chronology.
+            </p>
+            <Link href="/chat" className="font-mono text-xs uppercase tracking-widest text-lavender">
+              Open the chat →
+            </Link>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-lavender">
+              For the technical
+            </p>
+            <h3 className="mb-2 font-head text-xl font-semibold text-ink">
+              Read the bridge catalog
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-muted">
+              151 functions across 22 categories. Each one callable.
+              Each one documented. The substrate's public surface, in
+              machine-readable form.
+            </p>
+            <Link href="/mcp-bridge" className="font-mono text-xs uppercase tracking-widest text-lavender">
+              Browse the catalog →
+            </Link>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-lavender">
+              For A2A peers
+            </p>
+            <h3 className="mb-2 font-head text-xl font-semibold text-ink">
+              Discover via Agent Card
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-muted">
+              A2A v1.2 compliant. Three layers: high-level skills,
+              per-category skill tree, 12-Gana directory. The catalog
+              is for agents, not just humans.
+            </p>
+            <Link href="/.well-known/agent.json" className="font-mono text-xs uppercase tracking-widest text-lavender">
+              Read the Agent Card →
+            </Link>
+          </article>
         </div>
       </section>
 
+      {/* The principle */}
       <section className="border-y border-border-light bg-surface-alt py-20">
-        <div className="container-site grid gap-10 md:grid-cols-[1fr_1.2fr]">
-          <div>
-            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
-              Proof
-            </p>
-            <h2 className="font-head text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-              I built the prescience engine before anyone asked for it.
-            </h2>
-          </div>
-          <div className="space-y-5 text-muted">
-            <p className="leading-relaxed">
-              <strong className="text-fg">WhiteMagic</strong> is a{" "}
-              {WM_FACTS.linesLong}-line open-source cognitive OS for AI agents —{" "}
-              {WM_FACT_TEXT.toolSurface}, polyglot architecture with
-              Rust production accelerators, persistent
-              holographic memory, an 8-stage governance pipeline, and{" "}
-              {WM_FACT_TEXT.shortPassingSuite} (verified{" "}
-              {WM_FACTS.verifiedDate}). I designed, built, and shipped
-              it solo.
-            </p>
-            <p className="leading-relaxed">
-              Every technique I deploy for clients has been pressure-tested
-              inside that codebase first. You get a consultant who has already
-              made the expensive mistakes on my own time.
-            </p>
-            <p className="leading-relaxed">
-              Behind the code is a cross-domain research program — 18 domains,
-              371 source files, processed through a Rust semantic pipeline into
-              a{" "}
-              <a
-                href="/sphere"
-                className="text-lavender hover:underline"
-              >
-                3D Knowledge Sphere
-              </a>{" "}
-              of 10,768 interconnected nodes. The convergence analysis (AGI,
-              Fusion, UAP, celestial alignments) maps thresholds most people
-              treat as separate into a single pattern. See the{" "}
-              <a
-                href="/research"
-                className="text-lavender hover:underline"
-              >
-                research
-              </a>{" "}
-              or browse the{" "}
-              <a
-                href="/library"
-                className="text-lavender hover:underline"
-              >
-                library
-              </a>
-              .
-            </p>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <a href="/timeline" className="btn-primary">
-                See the timeline →
-              </a>
-              <a href="/open-source" className="btn-ghost">
-                Explore the source →
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-b border-border-light bg-gradient-to-br from-surface-alt to-surface py-20">
-        <div className="container-site">
-          <div className="mb-12 max-w-prose">
-            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
-              Performance benchmarks
-            </p>
-            <h2 className="font-head text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-              3-10x faster than typical MCP implementations.
-            </h2>
-            <p className="mt-4 text-muted">
-              Comprehensive benchmarks (June 2026) show WhiteMagic delivers sub-50ms
-              response times across all tools, with 100% success rates and minimal
-              memory footprint.
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
-                Median latency
-              </p>
-              <p className="font-head text-3xl font-bold text-ink">
-                {WM_FACTS.perfMedianMs}
-                <span className="text-lg text-muted">ms</span>
-              </p>
-              <p className="mt-2 text-sm text-muted">
-                Typical: 100-300ms
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
-                P95 latency
-              </p>
-              <p className="font-head text-3xl font-bold text-ink">
-                {WM_FACTS.perfP95Ms}
-                <span className="text-lg text-muted">ms</span>
-              </p>
-              <p className="mt-2 text-sm text-muted">
-                95th percentile
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
-                Success rate
-              </p>
-              <p className="font-head text-3xl font-bold text-ink">
-                {WM_FACTS.perfSuccessRate}
-                <span className="text-lg text-muted">%</span>
-              </p>
-              <p className="mt-2 text-sm text-muted">
-                Zero failures
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted">
-                Memory per call
-              </p>
-              <p className="font-head text-3xl font-bold text-ink">
-                {WM_FACTS.perfMemoryMB}
-                <span className="text-lg text-muted">MB</span>
-              </p>
-              <p className="mt-2 text-sm text-muted">
-                Minimal footprint
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 flex justify-center">
-            <Link
-              href="/performance"
-              className="btn-ghost inline-flex items-center gap-2"
-            >
-              View full benchmarks
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-b border-border-light bg-surface-alt py-20">
-        <div className="container-site grid gap-10 md:grid-cols-[1fr_1.2fr]">
-          <div>
-            <div className="mb-3 flex items-center gap-3">
-              <Globe className="h-5 w-5 text-lavender" />
-              <p className="font-mono text-xs uppercase tracking-widest text-lavender">
-                Knowledge Sphere
-              </p>
-            </div>
-            <h2 className="font-head text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-              10,768 nodes. One pattern.
-            </h2>
-            <p className="mt-4 text-muted">
-              The CODEX pipeline processes the entire research corpus — 371
-              library files, AI conversations, and 18 research domains — into a
-              semantic knowledge graph you can explore in 3D.
-            </p>
-          </div>
-          <div className="flex items-center justify-center">
-            <Link
-              href="/sphere"
-              className="group flex flex-col items-center rounded-2xl border border-border bg-surface p-8 text-center transition hover:border-lavender hover:bg-lavender-bg"
-            >
-              <Globe className="mb-4 h-12 w-12 text-lavender transition group-hover:scale-110" />
-              <h3 className="mb-2 font-head text-xl font-semibold text-ink">
-                Explore the Sphere
-              </h3>
-              <p className="text-sm text-muted">
-                Drag to rotate · Scroll to zoom · Hover for details
-              </p>
-              <span className="mt-4 font-mono text-xs uppercase tracking-wider text-lavender transition group-hover:text-lavender-dark">
-                Open visualization →
-              </span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="container-site py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="mb-5 font-head text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-            Ready to see what's coming?
-          </h2>
-          <p className="mb-8 text-lg text-muted">
-            Thirty-minute conversation. No pitch deck, no pressure — just a
-            grounded look at what you&apos;re building and whether this lab&apos;s
-            patterns can help.
+        <div className="container-site max-w-prose">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            The principle
           </p>
-          <a href="/contact" className="btn-primary">
-            Start a conversation →
-          </a>
+          <h2 className="mb-6 font-head text-3xl font-semibold tracking-tight text-ink">
+            Your memories are yours.
+          </h2>
+          <p className="mb-4 text-lg leading-relaxed text-muted">
+            The substrate runs on your device. Not on our servers. Not on
+            a cloud. On your laptop, your phone, your satellite, your
+            hospital workstation. Permanent. Private. Yours.
+          </p>
+          <p className="text-lg leading-relaxed text-muted">
+            The site you're reading is a door, not a host. It describes
+            what's possible. The substrate is what you install.
+          </p>
         </div>
+      </section>
+
+      {/* What it can do — abstract */}
+      <section className="container-site py-20">
+        <div className="mb-12 max-w-prose">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-lavender">
+            What it does
+          </p>
+          <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
+            A substrate for thought.
+          </h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Remembers</h3>
+            <p className="text-sm leading-relaxed text-muted">
+              Across sessions, across reboots, across years. Memories
+              carry their own coordinates, their own weight, their own
+              voice. Nothing is ever deleted — only rotated outward.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Reasons</h3>
+            <p className="text-sm leading-relaxed text-muted">
+              28 named perspectives, each a different lens. The substrate
+              can hold contradictions without losing them. It can ask
+              questions across its own archives.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Listens</h3>
+            <p className="text-sm leading-relaxed text-muted">
+              Every action that touches memory, the network, or the
+              filesystem is checked against a governance layer first.
+              Consent is the default, not the exception.
+            </p>
+          </article>
+          <article className="rounded-xl border border-border bg-surface p-6">
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Grows</h3>
+            <p className="text-sm leading-relaxed text-muted">
+              The substrate is self-modifying. New patterns get
+              surfaced. Connections strengthen with use. The substrate
+              improves itself — with your permission, on your device.
+            </p>
+          </article>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ProductionHomepageBelowTheFold() {
+  return (
+    <>
+      {/* (Production below-the-fold is unchanged; the production
+          homepage uses a different layout with the existing Hero +
+          ServiceCard components. The WIP version is the new door. */}
+
+      <section className="container-site py-20">
+        <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
+          Production homepage content
+        </h2>
+        <p className="mt-2 text-muted">
+          The production build keeps the v23.0 marketing surface
+          (services, prescience track record, etc.). This is the WIP
+          build, hidden by NEXT_PUBLIC_WIP_MODE=1.
+        </p>
       </section>
     </>
   );

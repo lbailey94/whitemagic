@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { ServiceCard } from "@/components/ServiceCard";
+import { WipGuard } from "@/components/WipGuard";
 import { ArrowRight, Plug, Server, Shield } from "lucide-react";
 import { FIELD_CONCLUSIONS, FIELD_MAP_UPDATED } from "@/lib/field-map";
 
@@ -36,7 +37,7 @@ const SERVICES = [
 
 export default function ServicesPage() {
   return (
-    <>
+    <WipGuard>
       <PageHeader
         eyebrow="Services"
         title="Governed agent infrastructure, built from shipped code."
@@ -86,6 +87,6 @@ export default function ServicesPage() {
           </Link>
         </div>
       </section>
-    </>
+    </WipGuard>
   );
 }

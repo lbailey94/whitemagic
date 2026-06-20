@@ -1,3 +1,4 @@
+import { WipGuard } from "@/components/WipGuard";
 import Link from "next/link";
 import { ArrowRight, ExternalLink, Heart, Shield, Zap } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,7 +11,8 @@ export const metadata = {
 
 export default function FundPage() {
   return (
-    <>
+    <WipGuard>
+      <>
       <PageHeader
         eyebrow="Fund WhiteMagic"
         title="Support the work."
@@ -175,6 +177,7 @@ export default function FundPage() {
         </div>
       </section>
     </>
+    </WipGuard>
   );
 }
 

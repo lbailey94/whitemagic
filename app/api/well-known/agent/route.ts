@@ -25,10 +25,12 @@ export async function GET() {
     // ---- A2A required identity fields ----
     name: "WhiteMagic Labs",
     description:
-      "Cognitive substrate for AI agents. 490 callable tools across 28 " +
-      "Gana meta-tools, with Dharma ethical governance, Karma audit " +
-      "ledger, 5D holographic memory, bicameral reasoning, prescience " +
-      "forecasting, and gratitude economics. MIT-licensed research lab.",
+      "Local-first cognitive substrate for AI agents. 151 callable " +
+      "tools across 22 categories, with Dharma ethical governance, " +
+      "Karma audit ledger, 5D holographic memory, 28 Gana meta-tools, " +
+      "A2A v1.2 discovery surface. Substrate runs on the user's device " +
+      "via the PWA — whitemagic.dev is a discovery surface + bridge " +
+      "catalog, not a host. MIT-licensed research lab.",
     url: BASE,
     // protocolVersion follows A2A spec; agent app version is independent.
     protocolVersion: "1.2",
@@ -241,10 +243,17 @@ export async function GET() {
       production_endpoint_count: 1, // librarian_http
       planned_endpoint_count: 2, // a2a_jsonrpc, mcp_http
       live_discovery_surfaces: 9, // agent.json + agent-economy + ai-agent-policy + agent-skills + agents + 12 agents/<gana> + llms.txt + llms-full.txt
-      documented_bridge_functions: 143,
-      bridge_categories: 21,
+      documented_bridge_functions: 151,
+      bridge_categories: 22, // 21 prior + new "galactic" category
       gana_meta_tools: 28,
-      dispatch_tools: 462,
+      // v23.0.0-alpha.1: the substrate runs on the user's device, not on
+      // our servers. This site is a discovery surface + bridge catalog.
+      // Per v23 sovereignty principle: whitemagic.dev is the door, not the host.
+      data_residency: "local-first",
+      pwa_installable: true,
+      substrate_default_location: "user-device",
+      cloud_storage: false,
+      sync_model: "opt-in-p2p",
       license: "MIT",
       source: "https://whitemagic.dev",
     },

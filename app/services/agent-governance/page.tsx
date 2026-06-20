@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Prose } from "@/components/Prose";
 import { ArrowRight, Check } from "lucide-react";
 import { JsonLd } from "@/components/JsonLd";
+import { WipGuard } from "@/components/WipGuard";
 import { serviceLd } from "@/lib/jsonld";
 import { FIELD_MAP_UPDATED, FIELD_SIGNALS } from "@/lib/field-map";
 
@@ -41,8 +42,9 @@ const GOVERNANCE_SIGNALS = FIELD_SIGNALS.filter(
 
 export default function Page() {
   return (
-    <>
-      <JsonLd data={serviceLd("agent-governance")} />
+    <WipGuard>
+      <>
+        <JsonLd data={serviceLd("agent-governance")} />
       <PageHeader
         eyebrow="Service · Agent Governance"
         title="Guardrails that turn autonomy into trust."
@@ -191,6 +193,7 @@ export default function Page() {
         </div>
       </section>
     </>
+    </WipGuard>
   );
 }
 

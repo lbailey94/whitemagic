@@ -1,3 +1,4 @@
+import { WipGuard } from "@/components/WipGuard";
 import { PageHeader } from "@/components/PageHeader";
 import { ContactForm } from "@/components/ContactForm";
 import Link from "next/link";
@@ -15,7 +16,8 @@ const EMAIL = "whitemagicdev@proton.me";
 
 export default function ContactPage() {
   return (
-    <>
+    <WipGuard>
+      <>
       <PageHeader
         eyebrow="Contact"
         title="Let's talk."
@@ -74,6 +76,7 @@ export default function ContactPage() {
         </div>
       </section>
     </>
+    </WipGuard>
   );
 }
 

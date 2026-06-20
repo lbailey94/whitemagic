@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { JsonLd } from "@/components/JsonLd";
+import { WipGuard } from "@/components/WipGuard";
 import { serviceLd } from "@/lib/jsonld";
 import { WM_FACTS, WM_FACT_TEXT } from "@/lib/facts";
 import { Prose } from "@/components/Prose";
@@ -46,8 +47,9 @@ const MCP_SIGNALS = FIELD_SIGNALS.filter(
 
 export default function Page() {
   return (
-    <>
-      <JsonLd data={serviceLd("mcp-engineering")} />
+    <WipGuard>
+      <>
+        <JsonLd data={serviceLd("mcp-engineering")} />
       <PageHeader
         eyebrow="Service · MCP Governance & Scale"
         title="MCP at scale: governance, compression, observability."
@@ -168,6 +170,7 @@ export default function Page() {
         </div>
       </section>
     </>
+    </WipGuard>
   );
 }
 
