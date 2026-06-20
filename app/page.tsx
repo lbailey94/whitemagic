@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WIP_HERO, WIP_MODE } from "@/lib/wip";
+import { WipScramble } from "@/components/WipScramble";
 
 /**
  * Homepage. The WIP version is the door. The production version
@@ -15,10 +16,10 @@ export default function HomePage() {
             {WIP_HERO.eyebrow}
           </p>
           <h1 className="max-w-3xl font-head text-4xl font-semibold leading-tight tracking-tight text-ink md:text-5xl">
-            {WIP_HERO.title}
+            <WipScramble text={WIP_HERO.title} />
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-            {WIP_HERO.lede}
+            <WipScramble text={WIP_HERO.lede} />
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={WIP_HERO.primaryCta.href} className="btn-primary">
@@ -46,7 +47,7 @@ function WipHomepageBelowTheFold() {
             Three ways in
           </p>
           <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
-            Step through the door.
+            <WipScramble text="Step through the door." />
           </h2>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
@@ -55,12 +56,10 @@ function WipHomepageBelowTheFold() {
               For the curious
             </p>
             <h3 className="mb-2 font-head text-xl font-semibold text-ink">
-              Talk to Aria
+              <WipScramble text="Talk to Aria" />
             </h3>
             <p className="mb-4 text-sm leading-relaxed text-muted">
-              A bounded research assistant that knows the public WhiteMagic
-              corpus. Ask about the substrate, the 28 Ganas, the bridge
-              catalog, the chronology.
+              <WipScramble text="A bounded research assistant that knows the public WhiteMagic corpus. Ask about the substrate, the 28 Ganas, the bridge catalog, the chronology." />
             </p>
             <Link href="/chat" className="font-mono text-xs uppercase tracking-widest text-lavender">
               Open the chat →
@@ -71,12 +70,10 @@ function WipHomepageBelowTheFold() {
               For the technical
             </p>
             <h3 className="mb-2 font-head text-xl font-semibold text-ink">
-              Read the bridge catalog
+              <WipScramble text="Read the bridge catalog" />
             </h3>
             <p className="mb-4 text-sm leading-relaxed text-muted">
-              151 functions across 22 categories. Each one callable.
-              Each one documented. The substrate's public surface, in
-              machine-readable form.
+              <WipScramble text="151 functions across 22 categories. Each one callable. Each one documented. The substrate's public surface, in machine-readable form." />
             </p>
             <Link href="/mcp-bridge" className="font-mono text-xs uppercase tracking-widest text-lavender">
               Browse the catalog →
@@ -87,12 +84,10 @@ function WipHomepageBelowTheFold() {
               For A2A peers
             </p>
             <h3 className="mb-2 font-head text-xl font-semibold text-ink">
-              Discover via Agent Card
+              <WipScramble text="Discover via Agent Card" />
             </h3>
             <p className="mb-4 text-sm leading-relaxed text-muted">
-              A2A v1.2 compliant. Three layers: high-level skills,
-              per-category skill tree, 12-Gana directory. The catalog
-              is for agents, not just humans.
+              <WipScramble text="A2A v1.2 compliant. Three layers: high-level skills, per-category skill tree, 12-Gana directory. The catalog is for agents, not just humans." />
             </p>
             <Link href="/.well-known/agent.json" className="font-mono text-xs uppercase tracking-widest text-lavender">
               Read the Agent Card →
@@ -108,16 +103,13 @@ function WipHomepageBelowTheFold() {
             The principle
           </p>
           <h2 className="mb-6 font-head text-3xl font-semibold tracking-tight text-ink">
-            Your memories are yours.
+            <WipScramble text="Your memories are yours." />
           </h2>
           <p className="mb-4 text-lg leading-relaxed text-muted">
-            The substrate runs on your device. Not on our servers. Not on
-            a cloud. On your laptop, your phone, your satellite, your
-            hospital workstation. Permanent. Private. Yours.
+            <WipScramble text="The substrate runs on your device. Not on our servers. Not on a cloud. On your laptop, your phone, your satellite, your hospital workstation. Permanent. Private. Yours." />
           </p>
           <p className="text-lg leading-relaxed text-muted">
-            The site you're reading is a door, not a host. It describes
-            what's possible. The substrate is what you install.
+            <WipScramble text="The site you're reading is a door, not a host. It describes what's possible. The substrate is what you install." />
           </p>
         </div>
       </section>
@@ -129,40 +121,40 @@ function WipHomepageBelowTheFold() {
             What it does
           </p>
           <h2 className="font-head text-3xl font-semibold tracking-tight text-ink">
-            A substrate for thought.
+            <WipScramble text="A substrate for thought." />
           </h2>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
           <article className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Remembers</h3>
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">
+              <WipScramble text="Remembers" />
+            </h3>
             <p className="text-sm leading-relaxed text-muted">
-              Across sessions, across reboots, across years. Memories
-              carry their own coordinates, their own weight, their own
-              voice. Nothing is ever deleted — only rotated outward.
+              <WipScramble text="Across sessions, across reboots, across years. Memories carry their own coordinates, their own weight, their own voice. Nothing is ever deleted — only rotated outward." />
             </p>
           </article>
           <article className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Reasons</h3>
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">
+              <WipScramble text="Reasons" />
+            </h3>
             <p className="text-sm leading-relaxed text-muted">
-              28 named perspectives, each a different lens. The substrate
-              can hold contradictions without losing them. It can ask
-              questions across its own archives.
+              <WipScramble text="28 named perspectives, each a different lens. The substrate can hold contradictions without losing them. It can ask questions across its own archives." />
             </p>
           </article>
           <article className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Listens</h3>
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">
+              <WipScramble text="Listens" />
+            </h3>
             <p className="text-sm leading-relaxed text-muted">
-              Every action that touches memory, the network, or the
-              filesystem is checked against a governance layer first.
-              Consent is the default, not the exception.
+              <WipScramble text="Every action that touches memory, the network, or the filesystem is checked against a governance layer first. Consent is the default, not the exception." />
             </p>
           </article>
           <article className="rounded-xl border border-border bg-surface p-6">
-            <h3 className="mb-2 font-head text-lg font-semibold text-ink">Grows</h3>
+            <h3 className="mb-2 font-head text-lg font-semibold text-ink">
+              <WipScramble text="Grows" />
+            </h3>
             <p className="text-sm leading-relaxed text-muted">
-              The substrate is self-modifying. New patterns get
-              surfaced. Connections strengthen with use. The substrate
-              improves itself — with your permission, on your device.
+              <WipScramble text="The substrate is self-modifying. New patterns get surfaced. Connections strengthen with use. The substrate improves itself — with your permission, on your device." />
             </p>
           </article>
         </div>

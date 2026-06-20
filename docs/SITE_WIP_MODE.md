@@ -45,6 +45,42 @@ The flag is checked at module-load time. No code change required to
 toggle. The build artifact is identical; only the rendered output
 differs.
 
+## Scramble mode (text illegibility)
+
+A second, independent flag controls whether the long-form WIP copy is
+visually scrambled to Unicode block glyphs:
+
+```bash
+# Default: when WIP_MODE=1, scramble is on (text is illegible)
+NEXT_PUBLIC_WIP_SCRAMBLE=1  # or just leave unset
+
+# Keep WIP_MODE but show readable text
+NEXT_PUBLIC_WIP_SCRAMBLE=0
+```
+
+When scramble is on, the WIP messages (banner, hero, placeholder,
+footer blurb) render as streams of `█▓▒░■□◊◈◇◆◉◎●○◌◍▪▫⬛⬜` glyphs.
+The original text is preserved in the DOM (`data-original` attribute)
+for DevTools inspection and SEO. The visual effect is a code block,
+not English — readable only as "this is encrypted" without DevTools.
+
+Implementation: `components/WipScramble.tsx`. Uses a deterministic
+seeded LCG so server and client produce the same scramble (no
+hydration mismatch). 22-character glyph set from Unicode Geometric
+Shapes + Block Elements.
+
+When to use:
+- **Scramble on** (default): the site is in a state where you don't
+  want the prose legible to casual readers, but A2A peers and SEO
+  crawlers still need the underlying text. Default in v23.0.0-alpha.2.
+- **Scramble off**: the WIP copy is poetic/abstract but still readable
+  English. Use for soft launches where the marketing voice is OK to
+  share, but the product isn't ready.
+
+Short labels (button text, nav items, captions) are never scrambled —
+they stay readable so users can navigate the site. Only long-form
+prose is affected.
+
 ## What's hidden in WIP
 
 | Route | Non-WIP | WIP |

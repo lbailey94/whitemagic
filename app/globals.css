@@ -244,3 +244,33 @@
 }
 @keyframes fade-out { to { opacity: 0; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* WIP scramble — text wrapped in <WipScramble> is replaced with
+   Unicode block glyphs. The visual effect is "encrypted": the
+   reader sees a stream of block elements that looks like a code
+   block, not English. The original text is preserved in the DOM
+   (data-original) for DevTools inspection and SEO. */
+.wip-scramble {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: 0.08em;
+  word-spacing: 0.3em;
+  color: var(--lavender, #8b7ec7);
+  opacity: 0.75;
+  user-select: none;
+  cursor: help;
+  text-shadow: 0 0 1px rgba(139, 126, 199, 0.4);
+  display: inline;
+  font-feature-settings: "tnum";
+}
+.wip-scramble::before {
+  content: "⌖ ";
+  opacity: 0.5;
+  margin-right: 0.25em;
+}
+/* On hover, show a small "encrypted" hint via the title attribute
+   (handled by the browser). The data-original attribute is also
+   inspectable via DevTools for developers who want to read the
+   underlying copy. */
+.wip-scramble:hover {
+  opacity: 0.95;
+}

@@ -1,5 +1,6 @@
 import { WIP_MODE } from "@/lib/wip";
 import Link from "next/link";
+import { WipScramble } from "@/components/WipScramble";
 
 /**
  * Guard component: replaces a page's content with a WIP placeholder
@@ -23,12 +24,10 @@ function WipPlaceholder() {
           Work in Progress
         </p>
         <h1 className="mb-6 font-head text-3xl font-semibold tracking-tight text-ink">
-          This page is being rewritten.
+          <WipScramble text="This page is being rewritten." />
         </h1>
         <p className="mb-8 text-lg leading-relaxed text-muted">
-          The content that used to live here is being re-thought. Subscribe
-          to be notified when the public version returns, or explore the
-          substrate now.
+          <WipScramble text="The content that used to live here is being re-thought. Subscribe to be notified when the public version returns, or explore the substrate now." />
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/subscribe" className="btn-primary">

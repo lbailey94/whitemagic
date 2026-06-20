@@ -17,6 +17,19 @@
 export const WIP_MODE = process.env.NEXT_PUBLIC_WIP_MODE === "1";
 
 /**
+ * Scramble mode — when true (default in WIP mode), the long-form copy
+ * on the site is replaced with Unicode block glyphs so the text is
+ * visually illegible. The original text is preserved in the DOM
+ * (data-original) for DevTools inspection and SEO, but the rendered
+ * glyphs look like a code block.
+ *
+ * Independent toggle: set NEXT_PUBLIC_WIP_SCRAMBLE=0 to keep WIP
+ * mode but show readable text.
+ */
+export const WIP_SCRAMBLE =
+  WIP_MODE && process.env.NEXT_PUBLIC_WIP_SCRAMBLE !== "0";
+
+/**
  * Hero copy. The WIP version is intentionally abstract / invitational.
  * The production version (used when WIP_MODE is false) preserves the
  * current value prop.

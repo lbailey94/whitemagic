@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WIP_MODE, WIP_FOOTER } from "@/lib/wip";
+import { WipScramble } from "@/components/WipScramble";
 
 export function Footer() {
   return (
@@ -10,7 +11,7 @@ export function Footer() {
             {WIP_MODE ? "WhiteMagic" : "WhiteMagic Labs"}
           </span>
           <p className="mt-2 text-xs leading-relaxed text-dim">
-            {WIP_FOOTER.blurb}
+            <WipScramble text={WIP_FOOTER.blurb} />
           </p>
         </div>
 

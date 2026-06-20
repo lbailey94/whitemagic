@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { WIP_BANNER } from "@/lib/wip";
+import { WipScramble } from "@/components/WipScramble";
 
 /**
  * Site-wide Work in Progress banner. Only renders when WIP_MODE is
@@ -23,7 +24,7 @@ export function WipBanner() {
         Work in Progress
       </span>
       <span className="mx-2 text-muted">·</span>
-      <span className="text-ink">{WIP_BANNER.message}</span>
+      <WipScramble text={WIP_BANNER.message} className="text-ink" />
       <span className="mx-2 text-muted">·</span>
       <Link
         href={WIP_BANNER.cta.href}
