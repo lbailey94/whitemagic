@@ -290,8 +290,10 @@
 body.wip-scrambling {
   opacity: 0.01;
   transition: opacity 0.05s linear;
+  background: #1a0505 !important;
 }
 body.wip-scrambled {
   opacity: 1;
   transition: opacity 0.2s ease-out;
+  background: transparent !important;
 }
