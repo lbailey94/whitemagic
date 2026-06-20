@@ -9,8 +9,9 @@ import { WIP_SCRAMBLE } from "@/lib/wip";
  * WIP mode. This clears the old HTML cache so users see the latest
  * content instead of stale cached pages.
  *
- * Once the SW is unregistered, this component is a no-op on
- * subsequent loads.
+ * Belt-and-suspenders for the sw.js shim. If the shim didn't fire
+ * (e.g., browser hasn't checked for a new SW yet), this component
+ * catches it on the client side and forces a reload.
  */
 export function WipUnregisterSw() {
   useEffect(() => {
@@ -19,21 +20,26 @@ export function WipUnregisterSw() {
       return;
     }
 
+    let needsReload = false;
+
     navigator.serviceWorker.getRegistrations().then((regs) => {
+      if (regs.length > 0) needsReload = true;
       for (const reg of regs) {
-        reg.unregister().catch(() => {
-          // ignore — best effort
-        });
+        reg.unregister().catch(() => {});
       }
     });
 
-    // Also clear any caches created by the SW
     if ("caches" in window) {
       caches.keys().then((keys) => {
+        if (keys.length > 0) needsReload = true;
         for (const key of keys) {
-          caches.delete(key).catch(() => {
-            // ignore
-          });
+          caches.delete(key).catch(() => {});
+        }
+        if (needsReload) {
+          // Force a reload after caches are cleared, once
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
         }
       });
     }

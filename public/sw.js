@@ -12,18 +12,28 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      // Take control of all open clients immediately
+      await self.clients.claim();
       // Delete all caches created by the previous PWA SW
       if ("caches" in self) {
         const keys = await caches.keys();
         await Promise.all(keys.map((key) => caches.delete(key)));
       }
-      // Unregister this no-op SW
-      await self.registration.unregister();
       // Force all open clients to reload so they fetch fresh HTML
-      const clients = await self.clients.matchAll({ type: "window" });
+      const clients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
       for (const client of clients) {
-        client.navigate(client.url);
+        try {
+          client.navigate(client.url);
+        } catch {
+          // ignore
+        }
       }
+      // Unregister this no-op SW so future navigations go straight
+      // to the network
+      await self.registration.unregister();
     })(),
   );
 });

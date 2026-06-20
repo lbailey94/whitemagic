@@ -92,6 +92,16 @@
 .triquetra-hover-pulse:hover .triquetra-mini-arc {
   animation: triquetra-pulse 1.6s ease-in-out infinite;
 }
+/* Default animation on the header triquetra (the "sigil"). The
+   hover state overrides with a slightly faster pulse. Without
+   this, the circles are static — looks broken. */
+.triquetra-mini-arc {
+  animation: triquetra-pulse 3.2s ease-in-out infinite;
+  transform-origin: center;
+}
+.triquetra-mini-arc:nth-child(1) { animation-delay: 0s; }
+.triquetra-mini-arc:nth-child(2) { animation-delay: 1.05s; }
+.triquetra-mini-arc:nth-child(3) { animation-delay: 2.1s; }
 .triquetra-rainbow-animated {
   animation: triquetra-rainbow var(--triquetra-speed, 8s) linear infinite;
 }
