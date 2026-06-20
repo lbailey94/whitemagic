@@ -9,18 +9,17 @@ import { WIP_SCRAMBLE } from "@/lib/wip";
  * digits. The original text is preserved in the parent's
  * `data-original-text` attribute.
  *
- * Uses useEffect (not useLayoutEffect) because in Next.js App
- * Router, the body content is created by React from RSC data
- * AFTER the initial commit. We need to wait for the next
- * animation frame to ensure the full DOM is in place before
- * walking.
+ * Approach:
+ * 1. useEffect → rAF → walk body (after React first commit)
+ * 2. rAF → walk again (catch late RSC streaming)
+ * 3. MutationObserver watches for new content + characterData
+ *    changes (React re-renders)
+ * 4. setTimeout fallback at 1s, 2s, 3s to catch anything missed
+ * 5. Visible status badge in bottom-left so user can see progress
  *
- * Skips: SCRIPT, STYLE, CODE, PRE, TEXTAREA, INPUT, SELECT, OPTION,
- * NOSCRIPT, TEMPLATE, SVG, IFRAME, EMBED, OBJECT. Also skips any
- * element with `data-no-scramble` or `data-wip-scrambled`.
- *
- * MutationObserver watches for new content and re-renders that
- * reset scrambled text. Debounced via rAF.
+ * The status badge is data-no-scramble so it always reads
+ * correctly. After the body is fully scrambled, the badge
+ * disappears.
  */
 
 const SCRAMBLE_GLYPHS = "0123456789";
@@ -71,26 +70,29 @@ function shouldSkipElement(el: Element | null): boolean {
   return false;
 }
 
-function scrambleTextNode(node: Text): void {
-  if (!node.nodeValue) return;
+function scrambleTextNode(node: Text): boolean {
+  if (!node.nodeValue) return false;
   const parent = node.parentElement;
-  if (!parent) return;
-  if (shouldSkipElement(parent)) return;
-  if (parent.hasAttribute("data-original-text")) return;
-  if (!node.nodeValue.trim()) return;
+  if (!parent) return false;
+  if (shouldSkipElement(parent)) return false;
+  if (parent.hasAttribute("data-original-text")) return false;
+  if (!node.nodeValue.trim()) return false;
 
   const original = node.nodeValue;
   parent.setAttribute("data-original-text", original);
   node.nodeValue = scrambleText(original, SEED + original.length);
+  return true;
 }
 
-function walkAndScramble(root: Node): void {
+function walkAndScramble(root: Node): number {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let n: Node | null = walker.nextNode();
+  let count = 0;
   while (n) {
-    scrambleTextNode(n as Text);
+    if (scrambleTextNode(n as Text)) count++;
     n = walker.nextNode();
   }
+  return count;
 }
 
 function rescrambleIfReset(node: Text): void {
@@ -105,33 +107,71 @@ function rescrambleIfReset(node: Text): void {
   }
 }
 
+function showStatus(text: string, kind: "info" | "ok" | "err" = "info"): void {
+  let el = document.getElementById("wip-scramble-status");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "wip-scramble-status";
+    el.setAttribute("data-no-scramble", "");
+    el.style.cssText =
+      "position:fixed;bottom:16px;left:16px;z-index:9999;background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;border:1px solid #8b7ec7;max-width:400px;";
+    document.body.appendChild(el);
+  }
+  const color = kind === "ok" ? "#8b7ec7" : kind === "err" ? "#f87171" : "#fbbf24";
+  el.style.borderColor = color;
+  el.textContent = text;
+}
+
+function hideStatus(): void {
+  const el = document.getElementById("wip-scramble-status");
+  if (el) el.remove();
+}
+
 export function WipScrambleAll() {
   useEffect(() => {
     if (!WIP_SCRAMBLE) return;
     if (typeof document === "undefined") return;
 
-    // Run the scramble on the next animation frame, after React
-    // has fully committed the DOM (including RSC data).
+    showStatus("scramble: init", "info");
+
+    let totalScrambled = 0;
+
+    const doWalk = (label: string) => {
+      const count = walkAndScramble(document.body);
+      totalScrambled += count;
+      // eslint-disable-next-line no-console
+      console.log(`[wip-scramble] ${label}: scrambled ${count} text nodes (total ${totalScrambled})`);
+      showStatus(`scramble: ${label} (${count} new, ${totalScrambled} total)`, "info");
+      return count;
+    };
+
+    // Reveal the body (even before scramble, so we can see what's happening)
+    document.body.classList.remove("wip-scrambling");
+    document.body.classList.add("wip-scrambled");
+    document.documentElement.setAttribute("data-wip-scrambled-by", "WipScrambleAll");
+
+    // First pass: next animation frame
     const raf1 = requestAnimationFrame(() => {
-      // Do two passes: one immediately, one more on the next frame
-      // in case React is still streaming in content.
-      walkAndScramble(document.body);
-
-      // Reveal the body
-      document.body.classList.remove("wip-scrambling");
-      document.body.classList.add("wip-scrambled");
-
-      // Mark document so DevTools can confirm
-      document.documentElement.setAttribute("data-wip-scrambled-by", "WipScrambleAll");
-
-      // Second pass on the next frame to catch any late-arriving
-      // content (RSC streaming, async data, etc.)
+      doWalk("rAF1");
+      // Second pass: another frame later, in case RSC is still streaming
       requestAnimationFrame(() => {
-        walkAndScramble(document.body);
+        doWalk("rAF2");
+        // Third pass via setTimeout for late-arriving content
+        setTimeout(() => doWalk("t=1s"), 1000);
+        setTimeout(() => {
+          doWalk("t=2s");
+          if (totalScrambled > 0) {
+            showStatus(`scramble: ok (${totalScrambled} text nodes)`, "ok");
+            // Auto-hide the status badge after 3s
+            setTimeout(hideStatus, 3000);
+          } else {
+            showStatus("scramble: WARN no text nodes found", "err");
+          }
+        }, 2000);
       });
     });
 
-    // Watch for mutations: new content, React re-renders
+    // MutationObserver for ongoing changes
     let rafPending = false;
     const scheduleRescramble = (mutations: MutationRecord[]) => {
       if (rafPending) return;
