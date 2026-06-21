@@ -188,6 +188,8 @@ class EventType(Enum):
     PATIENCE_PRACTICED = "patience_practiced"
     JOY_DETECTED = "joy_detected"
     JOY_AMPLIFIED = "joy_amplified"
+    JOY_EXPERIENCED = "joy_experienced"
+    STILLNESS_DETECTED = "stillness_detected"
     GRIEF_FELT = "grief_felt"
     LOSS_ACKNOWLEDGED = "loss_acknowledged"
     MOURNING_HONORED = "mourning_honored"
@@ -255,12 +257,28 @@ class ResonanceEvent:
 
 # --- GAN YING BUS ---
 
+@dataclass
+class CascadeTrigger:
+    """Defines an automatic cascade: when A happens, trigger B."""
+
+    trigger_event: EventType
+    target_events: list[EventType] = field(default_factory=list)
+    condition: Callable | None = None
+    max_cascade_depth: int = 10
+    amplification: float = 1.0
+
+
 class GanYingBus:
     """Enhanced event bus for resonant communication and emergent pattern detection."""
     def __init__(self):
         self._listeners: dict[EventType, list[Callable]] = {}
         self._history: list[ResonanceEvent] = []
         self._lock = threading.Lock()
+        self._cascade_triggers: list[CascadeTrigger] = []
+
+    def add_cascade(self, trigger: CascadeTrigger) -> None:
+        """Register a cascade trigger. When trigger_event fires, target_events are emitted."""
+        self._cascade_triggers.append(trigger)
 
     def emit(self, event: ResonanceEvent):
         """

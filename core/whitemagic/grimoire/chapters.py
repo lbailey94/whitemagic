@@ -83,7 +83,7 @@ _CHAPTERS_28: list[Chapter] = [
         "delete_memory.",
         ["memory", "create", "update", "store", "consolidate", "delete",
          "import", "persist", "crud"],
-        gana="gana_neck", garden="practice", quadrant="East",
+        gana="gana_neck", garden="stillness", quadrant="East",
         chinese="亢", pinyin="Kàng",
     ),
 
@@ -105,7 +105,7 @@ _CHAPTERS_28: list[Chapter] = [
         "rust_similarity, ship.check, state.paths, state.summary.",
         ["health", "foundation", "root", "integrity", "diagnosis",
          "doctor", "status", "ship", "state"],
-        gana="gana_root", garden="truth", quadrant="East",
+        gana="gana_root", garden="healing", quadrant="East",
         chinese="氐", pinyin="Dǐ",
     ),
 
@@ -173,7 +173,7 @@ _CHAPTERS_28: list[Chapter] = [
         "list_cascade_patterns, simd.batch, simd.cosine, simd.status.",
         ["performance", "acceleration", "rust", "zig", "simd", "speed",
          "ffi", "polyglot", "mojo", "cascade", "latency"],
-        gana="gana_tail", garden="metal", quadrant="East",
+        gana="gana_tail", garden="courage", quadrant="East",
         chinese="尾", pinyin="Wěi",
     ),
 
@@ -255,7 +255,7 @@ _CHAPTERS_28: list[Chapter] = [
         "rate_limiter.stats.",
         ["dream", "play", "resilience", "flexibility", "grimoire",
          "spell", "cast", "rate limit", "walkthrough"],
-        gana="gana_willow", garden="play", quadrant="South",
+        gana="gana_willow", garden="humor", quadrant="South",
         chinese="柳", pinyin="Liǔ",
     ),
 
@@ -280,7 +280,7 @@ _CHAPTERS_28: list[Chapter] = [
         "forge.validate.",
         ["governance", "dharma", "rules", "profile", "karma", "ethics",
          "governor", "forge", "extension", "yaml", "illumination"],
-        gana="gana_star", garden="beauty", quadrant="South",
+        gana="gana_star", garden="voice", quadrant="South",
         chinese="星", pinyin="Xīng",
     ),
 
@@ -304,7 +304,7 @@ _CHAPTERS_28: list[Chapter] = [
         "learning.status, learning.suggest, tool.graph.",
         ["pattern", "connection", "association", "cluster", "learning",
          "constellation", "graph", "affinity", "mining", "net"],
-        gana="gana_extended_net", garden="connection", quadrant="South",
+        gana="gana_extended_net", garden="sangha", quadrant="South",
         chinese="张", pinyin="Zhāng",
     ),
 
@@ -323,7 +323,7 @@ _CHAPTERS_28: list[Chapter] = [
         "audit.export, mesh.broadcast, mesh.status.",
         ["export", "deploy", "expand", "adventure", "audit", "mesh",
          "portability", "backup", "transfer", "grpc"],
-        gana="gana_wings", garden="adventure", quadrant="South",
+        gana="gana_wings", garden="beauty", quadrant="South",
         chinese="翼", pinyin="Yì",
     ),
 
@@ -345,7 +345,7 @@ _CHAPTERS_28: list[Chapter] = [
         "kg.extract, kg.query, kg.status, kg.top.",
         ["archaeology", "code", "navigation", "history", "transformation",
          "knowledge graph", "entity", "relationship", "dig", "wisdom"],
-        gana="gana_chariot", garden="transformation", quadrant="South",
+        gana="gana_chariot", garden="adventure", quadrant="South",
         chinese="轸", pinyin="Zhěn",
     ),
 
@@ -401,7 +401,7 @@ _CHAPTERS_28: list[Chapter] = [
         "harmony_vector.",
         ["ethics", "balance", "harmony", "consent", "boundaries",
          "patience", "moral", "evaluation", "dharma", "vector"],
-        gana="gana_straddling_legs", garden="patience", quadrant="West",
+        gana="gana_straddling_legs", garden="awe", quadrant="West",
         chinese="奎", pinyin="Kuí",
     ),
 
@@ -443,7 +443,7 @@ _CHAPTERS_28: list[Chapter] = [
         "task.route_smart, task.status, task.list, task.complete.",
         ["pipeline", "task", "energy", "healing", "digestion",
          "distribute", "route", "workflow", "orchestration"],
-        gana="gana_stomach", garden="healing", quadrant="West",
+        gana="gana_stomach", garden="creation", quadrant="West",
         chinese="胃", pinyin="Wèi",
     ),
 
@@ -486,7 +486,7 @@ _CHAPTERS_28: list[Chapter] = [
         "karma.verify_chain.",
         ["prompt", "capture", "filter", "mystery", "pattern",
          "template", "render", "verify", "chain", "tamper"],
-        gana="gana_net", garden="mystery", quadrant="West",
+        gana="gana_net", garden="play", quadrant="West",
         chinese="毕", pinyin="Bì",
     ),
 
@@ -507,7 +507,7 @@ _CHAPTERS_28: list[Chapter] = [
         "edge_batch_infer, edge_stats, bitnet_infer, bitnet_status.",
         ["precision", "validation", "inference", "voice", "edge",
          "bitnet", "local", "quantized", "batch", "model"],
-        gana="gana_turtle_beak", garden="voice", quadrant="West",
+        gana="gana_turtle_beak", garden="practice", quadrant="West",
         chinese="觜", pinyin="Zī",
     ),
 
@@ -536,7 +536,7 @@ _CHAPTERS_28: list[Chapter] = [
         "sabha.status.",
         ["judgment", "council", "ensemble", "reasoning", "dharma",
          "kaizen", "sabha", "bicameral", "optimization", "wisdom"],
-        gana="gana_three_stars", garden="dharma", quadrant="West",
+        gana="gana_three_stars", garden="reverence", quadrant="West",
         chinese="参", pinyin="Shēn",
     ),
 
@@ -566,7 +566,7 @@ _CHAPTERS_28: list[Chapter] = [
         "maturity.assess, starter_packs.",
         ["strategy", "governance", "maturity", "homeostasis", "awe",
          "balance", "correction", "oversight", "starter", "direction"],
-        gana="gana_dipper", garden="awe", quadrant="North",
+        gana="gana_dipper", garden="dharma", quadrant="North",
         chinese="斗", pinyin="Dǒu",
     ),
 
@@ -589,7 +589,7 @@ _CHAPTERS_28: list[Chapter] = [
         "swarm.resolve, swarm.status, worker.status.",
         ["swarm", "endurance", "worker", "persistence", "reverence",
          "decompose", "distributed", "parallel", "vote", "plan"],
-        gana="gana_ox", garden="reverence", quadrant="North",
+        gana="gana_ox", garden="patience", quadrant="North",
         chinese="牛", pinyin="Niú",
     ),
 
@@ -611,7 +611,7 @@ _CHAPTERS_28: list[Chapter] = [
         "agent.trust.",
         ["agent", "nurture", "register", "trust", "wonder",
          "heartbeat", "capability", "multi-agent", "roster", "social"],
-        gana="gana_girl", garden="wonder", quadrant="North",
+        gana="gana_girl", garden="connection", quadrant="North",
         chinese="女", pinyin="Nǚ",
     ),
 
@@ -636,7 +636,7 @@ _CHAPTERS_28: list[Chapter] = [
         "garden_activate, garden_status, garden_health.",
         ["galaxy", "stillness", "void", "meditation", "garden",
          "multi-galaxy", "isolate", "activate", "consciousness"],
-        gana="gana_void", garden="stillness", quadrant="North",
+        gana="gana_void", garden="mystery", quadrant="North",
         chinese="虚", pinyin="Xū",
     ),
 
@@ -684,7 +684,7 @@ _CHAPTERS_28: list[Chapter] = [
         "broker.status.",
         ["sangha", "community", "chat", "broker", "encampment",
          "pubsub", "event", "message", "communication", "ganying"],
-        gana="gana_encampment", garden="sangha", quadrant="North",
+        gana="gana_encampment", garden="transformation", quadrant="North",
         chinese="室", pinyin="Shì",
     ),
 
@@ -709,7 +709,7 @@ _CHAPTERS_28: list[Chapter] = [
         "engagement.revoke, engagement.list, engagement.status.",
         ["vote", "boundary", "wall", "air", "invisible", "token",
          "engagement", "hmac", "governance", "democratic", "scope"],
-        gana="gana_wall", garden="air", quadrant="North",
+        gana="gana_wall", garden="truth", quadrant="North",
         chinese="壁", pinyin="Bì",
     ),
 ]

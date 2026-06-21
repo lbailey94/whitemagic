@@ -7,6 +7,7 @@ Deprecated: Use 'from whitemagic.core.resonance import ...' instead.
 import warnings
 
 from whitemagic.core.resonance import (
+    CascadeTrigger,
     EventType,
     ResonanceEvent,
     emit_event,
@@ -22,6 +23,7 @@ warnings.warn(
 )
 
 __all__ = [
+    "CascadeTrigger",
     "EventType",
     "ResonanceEvent",
     "emit_event",

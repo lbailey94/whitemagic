@@ -5,6 +5,7 @@ and provides access to the Julia-inspired resonance engine.
 """
 
 from ._consolidated import (
+    CascadeTrigger,
     EventType,
     GanYingBus,
     ResonanceEvent,
@@ -21,6 +22,7 @@ from .julia_resonance import (
 )
 
 __all__ = [
+    "CascadeTrigger",
     "EventType",
     "GanYingBus",
     "ResonanceEvent",

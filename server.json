@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.whitemagic-ai/whitemagic",
-  "description": "Cognitive operating system for AI agents — persistent memory, associative recall, ethical governance, and self-awareness across sessions. 28 Gana meta-tools covering 374 capabilities, organized by the Chinese Lunar Mansions.",
+  "description": "Cognitive operating system for AI agents — persistent memory, associative recall, ethical governance, and self-awareness across sessions. 28 Gana meta-tools covering 462 capabilities, organized by the Chinese Lunar Mansions.",
   "repository": {
     "url": "https://github.com/whitemagic-ai/whitemagic",
     "source": "github"
   },
-  "version": "15.8.0",
+  "version": "23.0.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "15.8.0",
+      "version": "23.0.0",
       "transport": {
         "type": "stdio"
       },

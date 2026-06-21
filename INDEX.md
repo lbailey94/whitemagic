@@ -406,6 +406,42 @@ Integration guides and strategies for external agent runtimes (OpenCode, Hermes,
 
 ---
 
+## Design Docs (Legacy v15-era): `docs/design/`
+
+Historical design documents from the v15.x era. Kept for reference — most have been superseded by current architecture docs.
+
+| File | Topic |
+|------|-------|
+| `BENCHMARK_COMPARISON.md` | Early benchmark comparisons (v15-era) |
+| `TYPESCRIPT_SDK_DESIGN.md` | TypeScript SDK design notes |
+| `USE_CASES.md` | Early use case definitions |
+| `WASM_STRATEGY.md` | WASM compilation strategy |
+| `WEBSITE_DOCS_REFRESH_v15_7.md` | Website documentation refresh plan (v15.7) |
+
+---
+
+## Reference Docs (Legacy v15-era): `docs/reference/`
+
+Historical reference documents. Stale — see current root docs for up-to-date information.
+
+| File | Topic |
+|------|-------|
+| `API_REFERENCE.md` | Auto-generated API reference (2026-02-12, stale — 313 tools) |
+| `ARCHITECTURE.md` | Architecture overview (v15.1.0 — see root SYSTEM_MAP.md for current) |
+| `POLYGLOT_STATUS.md` | Polyglot status (v15.0.0 — see polyglot/STATUS.md for current) |
+
+---
+
+## Speculative Specs: `docs/SFW2/`
+
+Speculative / exploratory specifications not yet adopted.
+
+| File | Topic |
+|------|-------|
+| `MandalaOS_v0.1_SPEC.md` | MandalaOS v0.1 specification (speculative, 2026-05-15) |
+
+---
+
 ## Core Documentation: `core/docs/`
 
 These docs are specific to the `core/` Python package. They live alongside the code they document. **Do not merge with `docs/` — `core/` is a separate distributable package.**
@@ -590,11 +626,15 @@ Language-specific docs for the polyglot core matrix.
 
 | File | App |
 |------|-----|
-| `README.md` | Apps overview |
+| `README.md` | Apps overview (updated — site extracted to private repo) |
 | `SCOPING_BROWSER_FIRST.md` | Browser scoping |
 | `SCOPING_BROWSER_FIRST_DECIDED.md` | Browser scoping decision |
-| `site/README.md` | Site app |
-| `site/PHASE_ROADMAP.md` | Site phase roadmap |
+
+### Browser Extension (External)
+
+A Chrome MV3 extension implementing the galactic memory model in JavaScript lives at
+`~/Desktop/WHITEMAGIC-aux/browser-extension/`. It is a standalone IndexedDB-based
+local-first browsing memory capture tool. Not yet vendored into this repo.
 
 ---
 

@@ -15,6 +15,7 @@ Falls back gracefully when httpx unavailable or network unreachable.
 
 import logging
 import os
+from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,20 @@ try:
     _HTTPX_AVAILABLE = True
 except ImportError:
     _HTTPX_AVAILABLE = False
+
+
+@dataclass
+class ProofOfGratitude:
+    """Proof of a gratitude contribution (on-chain verification result)."""
+
+    agent_id: str = ""
+    tx_hash: str = ""
+    chain: str = ""
+    verified: bool = False
+    amount: float = 0.0
+    currency: str = ""
+    timestamp: str = ""
+    benefits: dict[str, Any] = field(default_factory=dict)
 
 # XRPL public nodes (mainnet)
 _XRPL_NODES = [

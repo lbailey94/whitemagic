@@ -5,12 +5,12 @@
 WhiteMagic is a Python-first, polyglot-accelerated MCP (Model Context Protocol) server and tool substrate for AI agents.
 
 ## Overview
-- 28 "Gana" meta-tools (PRAT mode) routing to ~420 nested tools
+- 28 "Gana" meta-tools (PRAT mode) routing to 462 nested tools (490 callable total)
 - Tool envelope contract with idempotency, `now`-determinism, stable error codes
 - 8-stage middleware pipeline (sanitizer → circuit breaker → rate limiter → permissions → maturity gate → governor → core router → feedback)
 - 5D holographic memory with Galactic Map lifecycle (no-delete policy)
 - Dharma governance (YAML rules, Karma ledger, Harmony Vector)
-- Polyglot accelerators: Rust + Go (production); Koka, Zig, Mojo, Elixir, Haskell (experimental)
+- Polyglot accelerators: Rust, Haskell, Julia, Elixir, Go, Zig (functional); Koka (compiled); Mojo (blocked)
 
 ## Entry Points
 - `python -m whitemagic.run_mcp` — MCP server (canonical)

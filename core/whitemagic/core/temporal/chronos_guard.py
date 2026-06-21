@@ -15,7 +15,7 @@ from whitemagic.core.ganas.lunar import (
     get_current_lunar_mansion,
     get_current_lunar_phase,
 )
-from whitemagic.core.memory.memory_matrix.timeline import get_timeline
+from whitemagic.core.memory.memory_matrix import get_timeline
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,8 @@
 {
   "name": "WhiteMagic",
-  "description": "Agentic AI Governance & Metacognition Substrate — 484 callable tools (456 dispatch + 28 PRAT Gana meta-tools), tiered memory with 5D holographic coordinates and Galactic Map lifecycle, ethical governance with 8-stage Dharma security pipeline, Karma Ledger runtime audit, and polyglot accelerators in 7 languages. MIT-licensed research/lab artifact. Gratitude-driven economics via dual-rail settlement.",
+  "description": "Agentic AI Governance & Metacognition Substrate — 490 callable tools (462 dispatch + 28 PRAT Gana meta-tools), tiered memory with 5D holographic coordinates and Galactic Map lifecycle, ethical governance with 8-stage Dharma security pipeline, Karma Ledger runtime audit, and polyglot accelerators in 7 languages. MIT-licensed research/lab artifact. Gratitude-driven economics via dual-rail settlement.",
   "url": "https://github.com/whitemagic-ai/whitemagic",
-  "version": "22.2.0",
+  "version": "23.0.0",
   "provider": {
     "organization": "WhiteMagic Labs",
     "url": "https://github.com/whitemagic-ai/whitemagic"
@@ -46,7 +46,7 @@
     {
       "id": "tool-dispatch",
       "name": "Tool Dispatch & Orchestration",
-      "description": "Unified dispatch pipeline for 484 callable tools (456 dispatch entries + 28 PRAT Gana meta-tools) with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
+      "description": "Unified dispatch pipeline for 490 callable tools (462 dispatch entries + 28 PRAT Gana meta-tools) with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
       "tags": ["tools", "mcp", "dispatch", "orchestration"],
       "examples": [
         "Call any of the 484 registered tools via unified API",

@@ -1,3 +1,11 @@
+# WhiteMagic Release Notes
+
+> **Current version: v23.0.0** — For the full, up-to-date changelog, see [CHANGELOG.md](CHANGELOG.md).
+>
+> The notes below are preserved as historical reference for the v15.x era.
+
+---
+
 # WhiteMagic v15.8.0
 
 **Release Date:** 2026-02-14

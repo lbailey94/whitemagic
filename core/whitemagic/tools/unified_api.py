@@ -733,3 +733,31 @@ def inference_stats() -> dict:
         "status": "error",
         "error": "Local inference (edge_stats) has been archived.",
     }
+
+
+def make_result(tool: str, data: Any = None, *, error: str | None = None) -> dict[str, Any]:
+    """Create a tool result envelope (legacy compatibility helper).
+
+    Used by handler modules that need a simple positional-arg interface.
+    Generates a request_id automatically.
+
+    Args:
+        tool: Tool name (e.g. ``"dream.list"``).
+        data: Payload to include under ``details``.
+        error: If provided, creates an error envelope with this message.
+
+    Returns:
+        Envelope dict conforming to the WhiteMagic tool contract.
+    """
+    from whitemagic.tools.envelope import err, ok
+
+    request_id = str(uuid4())
+    if error is not None:
+        return err(
+            tool=tool,
+            request_id=request_id,
+            error_code="internal_error",
+            message=error,
+            details=data,
+        )
+    return ok(tool=tool, request_id=request_id, details=data)

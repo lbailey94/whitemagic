@@ -86,6 +86,12 @@ rig_debug.log
 core/whitemagic-rust/pkg/
 core/whitemagic-rust/rust_ci_full.log
 
+# === Runtime logs and state artifacts ===
+excavation.log
+*.dream.log
+ops/.env.production.local
+whitemagic_dream.log
+
 # === Large data files (>100MB, exceed GitHub limit) ===
 polyglot/mojo/.pixi/
 data/models/*.onnx

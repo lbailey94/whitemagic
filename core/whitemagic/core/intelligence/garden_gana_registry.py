@@ -73,7 +73,7 @@ GARDEN_GANA_REGISTRY: list[GardenGanaMapping] = [
     # Theme: Growth, Initiation, Structure
     # ─────────────────────────────────────────────────────────────────────────────
     GardenGanaMapping(
-        garden="wonder", gana="Horn (Jiao)", gana_tool="gana_horn",
+        garden="courage", gana="Horn (Jiao)", gana_tool="gana_horn",
         quadrant=Quadrant.EASTERN, element=Element.WOOD,
         primary_emotion="Wonder", description="Session Initialization - The spark of curiosity",
         resonance_keywords=["begin", "start", "what if", "curious", "explore"],

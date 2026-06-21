@@ -4,6 +4,8 @@ Integrates quantum-inspired algorithms into the memory retrieval pipeline
 for 10-100x speedup on specific operations.
 """
 
+from __future__ import annotations
+
 import logging
 import math
 import time
@@ -15,7 +17,12 @@ from whitemagic.core.intelligence.quantum_inspired_graph import (
     QuantumGraphEngine,
     QuantumNode,
 )
-from whitemagic.core.memory.graph_walker import GraphWalker, WalkResult
+
+try:
+    from whitemagic.core.memory.graph_walker import GraphWalker, WalkResult
+except ImportError:
+    GraphWalker = None  # type: ignore[assignment,misc]
+    WalkResult = None  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 

@@ -169,7 +169,7 @@ This codebase has essentially **zero TODO comments** but had 41 **structural stu
 ### How to Avoid Introducing Stubs
 
 1. If you add a placeholder, mark it explicitly: `raise NotImplementedError("Reason + planned implementation date")`.
-2. If you recover code from `~/Desktop/whitemagic-aux/archive/`, diff it against the current version before copying.
+2. If you recover code from `/home/lucas/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/`, diff it against the current version before copying.
 3. If a module shrinks by >50% in a refactor, flag it for review.
 
 ### How to Detect Stubs
@@ -200,13 +200,13 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 ### Before Writing New Code — Archive Reconnaissance
 > **Rule of thumb**: If a module is a stub, missing, or significantly smaller than its archive counterpart, recover before reinventing.
 
-1. **Primary archive**: `~/Desktop/whitemagic-aux/archive/whitemagic0.2/` (965 Python files, 2.2 GB)
+1. **Primary archive**: `/home/lucas/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.2/whitemagic-private-main/` (776 Python files, v21.0.0)
    - Contains substantially more complete versions of at least 8 core modules.
    - Notable recoveries to date: `lifecycle.py` (+383 lines), `solver_engine.py` (+110), `db_manager.py` (+196), `galactic_map.py` (+585), `consolidation.py` (+521), `kaizen_engine.py` (+554).
 2. **Secondary locations**:
    - `core/whitemagic/_archived/` — recently moved modules
    - `docs/archive/` — superseded documentation
-   - `~/Desktop/whitemagic-aux/archive/whitemagic0.1/` — older tar archives
+   - `/home/lucas/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.1/` — older tar archives
 3. **Diff before copying**. Archive code may predate current API changes. Always diff against the current file and merge carefully.
 4. **Validate after recovery**. Run the full test suite. Archive code may have dependencies on modules that no longer exist.
 
@@ -215,7 +215,7 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
    ```bash
    python core/scripts/stress_test_memory.py
    ```
-2. Check `~/Desktop/whitemagic-aux/archive/whitemagic0.2/` for more complete historical implementations.
+2. Check `/home/lucas/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.2/` for more complete historical implementations.
 3. Verify galactic zone boundaries match `grimoire/TRUTH_TABLE.md`.
 
 ---
@@ -233,7 +233,7 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 | `core/whitemagic/config/paths.py` | Path resolution | State root changes |
 | `core/pyproject.toml` | Package config | Dependency changes |
 | `docs/message_board/SESSION_SUMMARY.md` | Latest session log | Handoff/context |
-| `~/Desktop/whitemagic-aux/archive/whitemagic0.2/` | Primary code archive | Before writing new code |
+| `/home/lucas/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.2/` | Primary code archive | Before writing new code |
 
 ---
 
@@ -364,7 +364,7 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 - **Test Command**: `cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q`
 - **Doc Drift Check**: `python core/scripts/check_doc_drift.py`
 - **Memory Stress Test**: `python core/scripts/stress_test_memory.py`
-- **Archive**: `~/Desktop/whitemagic-aux/archive/whitemagic0.2/`
+- **Archive**: `/home/lucas/Desktop/WHITEMAGIC-aux/site/whitemagic-archive-aux/archive/whitemagic0.2/`
 
 **License**: MIT
 **Contact**: whitemagicdev@proton.me

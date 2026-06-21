@@ -2,6 +2,7 @@
 Provides emotional synthesis for the Heart Engine.
 """
 
+import importlib
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ _emotion_names = [
 __all__: list[str] = []
 for _mod, _cls, _fn in _emotion_names:
     try:
-        _m = __import__(f".{_mod}", package=__name__, fromlist=[_cls, _fn])  # type: ignore[call-arg]
+        _m = importlib.import_module(f".{_mod}", package=__name__)
         globals()[_cls] = getattr(_m, _cls)
         globals()[_fn] = getattr(_m, _fn)
         __all__.extend([_fn, _cls])

@@ -1,12 +1,12 @@
 # About WhiteMagic
 
-**Version**: 15.1.0 | **License**: MIT | **Status**: Active Development
+**Version**: 23.0.0 | **License**: MIT | **Status**: Active Development
 
 ---
 
 ## What Is WhiteMagic?
 
-WhiteMagic is a **memory and tool substrate for AI agents**. It gives any AI — whether Claude, GPT, Gemini, Llama, Mistral, or any local model — persistent memory, ethical governance, and 313 tools accessible via the Model Context Protocol (MCP). Agents bring reasoning; WhiteMagic provides **Hands, Memory, and Conscience**.
+WhiteMagic is a **cognitive operating system for AI agents**. It gives any AI — whether Claude, GPT, Gemini, Llama, Mistral, or any local model — persistent memory with 5D holographic coordinates, ethical governance, and 490 tools (28 Gana meta-tools routing to 462 dispatch entries) accessible via the Model Context Protocol (MCP). Agents bring reasoning; WhiteMagic provides **Hands, Memory, and Conscience**.
 
 In practical terms: install WhiteMagic, point your AI client at it, and your AI can now remember things across sessions, search its own knowledge, govern its own behavior, coordinate with other agents, and introspect on its own health — all through a stable, JSON-serializable tool contract.
 

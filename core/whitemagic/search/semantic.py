@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 
-from ..core import MemoryManager  # type: ignore[attr-defined]
+from ..core.memory.core import MemoryManager
 from ..embeddings import (  # type: ignore[import-not-found]
     EmbeddingConfig,
     EmbeddingProvider,
