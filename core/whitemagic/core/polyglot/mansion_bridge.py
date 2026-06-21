@@ -29,6 +29,7 @@ class Backend(Enum):
     RUST = "rust"
     ZIG = "zig"
     MOJO = "mojo"
+    KOKA = "koka"
 
 
 @dataclass

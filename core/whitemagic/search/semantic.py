@@ -17,12 +17,12 @@ from typing import Any
 import numpy as np
 
 from ..core.memory.core import MemoryManager
-from ..embeddings import (  # type: ignore[import-not-found]
+from ..embeddings import (
     EmbeddingConfig,
     EmbeddingProvider,
     get_embedding_provider,
 )
-from ..embeddings.storage import (  # type: ignore[import-not-found]
+from ..embeddings.storage import (
     EmbeddingCache,
     FileBasedEmbeddingCache,
 )

@@ -49,6 +49,7 @@ def _resolve_backend(backend_name: str) -> Any:
         "elixir": _wp.ElixirBackend,
         "haskell": _wp.HaskellBackend,
         "rust": _wp.RustBackend,
+        "koka": _wp.KokaBackend,
     }
     cls = mapping.get(backend_name)
     if cls is None:
@@ -162,6 +163,7 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
         "elixir": _wp.ElixirBackend,
         "haskell": _wp.HaskellBackend,
         "rust": _wp.RustBackend,
+        "koka": _wp.KokaBackend,
     }
 
     for name, cls in backends.items():

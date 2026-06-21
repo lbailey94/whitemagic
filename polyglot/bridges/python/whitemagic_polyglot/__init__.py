@@ -103,10 +103,43 @@ class RustBackend(PolyglotBackend):
         )
 
 
+class KokaBackend(PolyglotBackend):
+    """Koka polyglot backend (compiled binary, fallback to koka run)."""
+
+    def __init__(self):
+        binary = POLYGLOT_ROOT / "bridges" / "koka" / "bridge"
+        if binary.exists():
+            super().__init__(
+                [str(binary)],
+                cwd=POLYGLOT_ROOT / "bridges" / "koka",
+            )
+        else:
+            bridge = POLYGLOT_ROOT / "bridges" / "koka" / "bridge.kk"
+            super().__init__(
+                ["koka", "run", str(bridge)],
+                cwd=POLYGLOT_ROOT / "bridges" / "koka",
+            )
+        self._banner_read = False
+
+    def call(self, method: str, **kwargs) -> Dict[str, Any]:
+        proc = self._ensure_running()
+        if not self._banner_read:
+            # Consume the startup banner line
+            banner = proc.stdout.readline()
+            self._banner_read = True
+        req = {"method": method, "params": kwargs}
+        proc.stdin.write(json.dumps(req) + "\n")
+        proc.stdin.flush()
+        line = proc.stdout.readline()
+        if not line:
+            raise RuntimeError(f"Koka backend returned empty response")
+        return json.loads(line)
+
+
 def auto() -> PolyglotBackend:
-    """Try backends in order: Julia -> Elixir -> Haskell -> Rust."""
+    """Try backends in order: Julia -> Elixir -> Haskell -> Rust -> Koka."""
     errors = []
-    for cls in [JuliaBackend, ElixirBackend, HaskellBackend, RustBackend]:
+    for cls in [JuliaBackend, ElixirBackend, HaskellBackend, RustBackend, KokaBackend]:
         try:
             b = cls()
             b.call("ping")
