@@ -14,6 +14,12 @@ pub const compute = struct {
     pub const distance_matrix = @import("compute/distance_matrix.zig");
     pub const graph_transitions = @import("compute/graph_transitions.zig");
     pub const embedding_quant = @import("compute/embedding_quant.zig");
+    pub const hrr_convolution = @import("compute/hrr_convolution.zig");
+    pub const causal_miner = @import("compute/causal_miner.zig");
+    pub const kmeans = @import("compute/kmeans.zig");
+    pub const linear_predict = @import("compute/linear_predict.zig");
+    pub const batch_norm = @import("compute/batch_norm.zig");
+    pub const community_detection = @import("compute/community_detection.zig");
 };
 pub const iching = @import("iching.zig");
 pub const genomics = struct {
@@ -183,6 +189,12 @@ comptime {
     _ = compute.keyword_extract;
     _ = compute.distance_matrix;
     _ = compute.graph_transitions;
+    _ = compute.hrr_convolution;
+    _ = compute.causal_miner;
+    _ = compute.kmeans;
+    _ = compute.linear_predict;
+    _ = compute.batch_norm;
+    _ = compute.community_detection;
     _ = iching;
     _ = genomics.metabolic;
     _ = io.bridge;

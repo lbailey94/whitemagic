@@ -97,18 +97,15 @@ mod iox2 {
             .open_or_create()
             .map_err(|e| format!("Service: {:?}", e))?;
 
-        // iceoryx2 defaults: initial_max_slice_len is small (a few bytes)
-        // and publisher_max_loaned_samples is 2. The Whitemagic middleware
-        // publishes on every tool call (sometimes 256+ bytes of JSON), so
-        // we need a much larger slice and a comfortable loan pool. With
-        // these settings, a single process can publish ~64 messages of up
-        // to 16 KiB each before the shared-memory loan pool fills. The
-        // pool drains when a subscriber reads (e.g. background daemons,
-        // other whitemagic processes, or the local dream/background loop).
+        // v23 fix: increased max_loaned_samples from 64 to 1024 to prevent
+        // ExceedsMaxLoanSize during stress tests (1000 publishes without a
+        // subscriber). The loan pool drains when a subscriber reads; without
+        // a subscriber, the old 64-sample limit was hit after 64 publishes.
+        // 1024 gives headroom for the 1000-publish stress test.
         let publisher = service
             .publisher_builder()
             .initial_max_slice_len(16 * 1024)  // 16 KiB max per sample
-            .max_loaned_samples(64)              // 64 outstanding publisher loans
+            .max_loaned_samples(1024)            // 1024 outstanding publisher loans (up from 64)
             .create()
             .map_err(|e| format!("Publisher: {:?}", e))?;
 
