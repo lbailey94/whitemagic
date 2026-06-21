@@ -9,6 +9,7 @@ import warnings
 from whitemagic.core.resonance import (
     CascadeTrigger,
     EventType,
+    GanYingBus,
     ResonanceEvent,
     emit_event,
     get_bus,
@@ -25,6 +26,7 @@ warnings.warn(
 __all__ = [
     "CascadeTrigger",
     "EventType",
+    "GanYingBus",
     "ResonanceEvent",
     "emit_event",
     "get_bus",
