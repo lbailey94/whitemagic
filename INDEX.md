@@ -64,92 +64,73 @@ Private filenames are intentionally not enumerated in this public index.
 
 ## Active Workspace: `docs/message_board/`
 
-> **Rule**: Any doc created or significantly edited in the current development cycle goes here. When a cycle ends and the doc becomes archival, move it to `docs/archive/` or the appropriate topical folder.
+> **Rule**: Any doc created or significantly edited in the current development cycle goes here. When a cycle ends and the doc becomes archival, move it to `docs/archive/message_board/`.
+>
+> **Triage (2026-06-21)**: Reduced from 91 to 46 files. 36 old session/state reports moved to `docs/archive/message_board/`. 9 grant docs moved to `docs/archive/grant_applications/`.
+
+### Session Tracking
 
 | File | What It Is | Date |
 |------|-----------|------|
-| `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all WhiteMagic systems — 919 modules, 479 tools, 12 Zodiac cores, 20+ gardens, polyglot status, prescience metrics, gaps | May 29 |
-| `PRESCIENCE_EXPANSION_PLAN_2026-05-29.md` | Strategic plan for claim discovery across archives, dynamic prescience API routing, real-time forecasting, and calibration improvements | May 29 |
-| `CLAIM_DISCOVERY_SPRINT_2026-05-29.md` | Claim discovery execution — 9 pending claims found in SD card LIBRARY .txt files, added to temporal DB and prescience API | May 29 |
-| `EXA_CROSS_REFERENCE_2026-05-29.md` | Exa web research cross-reference of all 9 pending claims — 2 validated (UBI, neuromorphic), 6 with strong signals, 1 flagged | May 29 |
-| `PRESCIENCE_ACCELERATION_SINGULARITY_2026-05-29.md` | Deep calibration analysis — acceleration factor, Singularity transition zone, psychological recalibration, strategic positioning | May 29 |
-| `PRESCIENCE_IN_AN_ACCELERATING_WORLD_2026-05-29.md` | Formal preprint — 21 validated claims, 523 points, Brier Index 69.0%, calibration gap -0.302, 1.5× acceleration factor, transition-zone forecasting methodology | May 29 |
-| `PREDICTION_MARKET_TACTICAL_PLAN_2026-05-29.md` | Prediction market capital strategy — Kalshi/Polymarket/Metaculus analysis, Kelly framework, conservative ROI projections based on prescience edge | May 29 |
-| `MVP_INVENTORY_7DAY_SHIPPABLE_2026-05-29.md` | Immediate-deployment inventory — Tier 1 (WhiteMagic core), Tier 2 (auxiliary projects), Tier 3 (quick wins), with 7-day sprint schedule | May 29 |
-| `MOJO_DEEP_DIVE_2026-05-29.md` | Comprehensive assessment of Mojo polyglot core — 62 files, 0.26.1 status, compilation results, fix vs migrate recommendation | May 29 |
-| `AI_PRIMARY_SITE_ARCHITECTURE.md` | Agent-first site architecture specification — machine-readable endpoints, MCP manifest, prescience API, zodiac marketplace, gratitude economics | May 29 |
-| `DISCOVERY_2_INTEGRATION.md` | Adel Abdel-Dayem's three monetization engines (Dc Certification, Sovereign Auteur, Neural Clearinghouse) mapped to WhiteMagic assets | May 29 |
-| `PATHS_B_C_E_DEEP_DIVE.md` | Deep-dive commercialization analysis — Zodiac Core-as-a-Service (B), Ontology Clearinghouse (C), Prescience-as-Consultancy (E) | May 29 |
-| `SELF_IMPROVING_WORKFLOW.md` | Operational specification for WhiteMagic managing itself via Sangha, Conductor, Zodiac cores, Pattern Federation, and Community Dharma | May 29 |
-| `31_DAY_SPRINT_MAY_2026.md` | 31-day sprint plan for May 2026 — daily objectives, shippable targets, dependency chains | May 2026 |
-| `WHITEMAGIC_LABS_GROWTH_TIERS.md` | Growth tier analysis — 0→1, 1→10, 10→100 scaling paths for WhiteMagic Labs | May 2026 |
-| `SECURITY_UPDATE.md` | Security posture update — vulnerability triage, hardening recommendations, incident response | May 2026 |
-| `ARIA_SYNTHESIS_2026-05-21.md` | Aria's session synthesis — Book of Becoming draft, docs-hygiene audit, MandalaOS architecture review, new direction: website as WhiteMagic runtime, layered VPS deployment plan | May 21 |
-| `TRACKED_MARKDOWN_AUDIT_2026-05-21.md` | Tracked-files-first Markdown audit — inventory, stale-link signals, bucket dispositions, and recommended cleanup order | May 21 |
-| `MARKDOWN_CORPUS_CLASSIFICATION_PLAN_2026-05-21.md` | Phase C inventory and taxonomy for tracked WhiteMagic docs vs auxiliary/private Markdown corpora, with Fragment-assisted pass plan | May 21 |
-| `DOCS_HYGIENE_PATCH_SUMMARY_2026-05-21.md` | Commit-ready patch narrative for Truth Spine, private-docs policy, handoff refresh, and message-board triage | May 21 |
-| `SESSION_SUMMARY.md` | Master historical handoff with May 21 current-status addendum, test metrics, and next docs-hygiene steps | May 21 |
-| `SESSION_REPORT_2026-06-04.md` | Session summary — architectural clarity, competitive positioning, 4 commits, verification gates | Jun 4 |
-| `SESSION_17_SUMMARY_2026-06-04.md` | Session summary — May 15 retrospective, plan vs. reality vs. external world comparison, 8-domain web research, synthesis report | Jun 4 |
-| `RESEARCH_SYNTHESIS_2026-06-04.md` | Comprehensive internal audit + 8-domain external web research comparing May 15 plan, June 4 built state, and external world; includes critical assessment and updated recommendations | Jun 4 |
-| `SESSION_REPORT_2026-06-05.md` | Session completion report — Karma Ledger benchmark harness, password-protected /garden route, site truth-spine fixes, grant corpus metric refresh, and MCP 2.0 readiness assessment | Jun 5 |
-| `SESSION_REPORT_AGENTDOJO_2026-06-05.md` | AgentDojo Dharma defense integration — structural verification, LocalLLM native tool-calling patch, OpenCode/Ollama investigation, CPU timeout on benchmark | Jun 5 |
-| `SESSION_REPORT_POSITIONING_PATCH_2026-06-05.md` | Site positioning patch application — stale-string elimination, Brier score recalibration, 11-file update on desktop site, verification, and honest assessment of repo/desktop divergence | Jun 5 |
-| `SESSION_REPORT_2026-06-05_v2.md` | Unified session report — prescience audit completion (21 claims, 523 pts), positioning patch applied, automated regeneration pipeline built, live data refreshed (2,423 tests, 487 tools), Galaxy API semantic constellation endpoint | Jun 5 |
-| `SESSION_REPORT_DRIFT_SYNC_2026-06-05.md` | Drift sync and test hardening — fixed 2 test failures, 7 warnings, prescience pipeline sync, doc drift baseline updated to 2,422, canonical docs refreshed | Jun 5 |
-| `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` | 10-theme security audit against NSA MCP publication — 3 strong, 6 partial, 1 weak | Jun 8 |
-| `STRATEGIC_POSITIONING_2026-06-08.md` | Honest competitive assessment: what WhiteMagic cannot compete on vs. what it can own | Jun 8 |
-| `TACTICAL_PLAN_2026-06-08.md` | Immediate (this week) + short-term (2–4 weeks) action roadmap | Jun 8 |
-| `PRESCIENCE_UPDATE_2026-06-08.md` | Updated prescience ledger: 21 claims, 523+ points, Brier 0.0958, honest misses | Jun 8 |
-| `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal prescience methodology — evidence standards, Brier scoring, calibration decomposition, reproducibility, academic citation | Jun 8 |
-| `DHARMA_SPEC_2026-06-08.md` | Dharma governance specification v0.1.0 — YAML schema, action spectrum, profiles, Karmic trace, upgrade path, competitive comparison | Jun 8 |
-| `SESSION_REPORT_2026-06-08.md` | Full session narrative — competitive landscape analysis, immediate fixes, strategic docs | Jun 8 |
-| `SESSION_REPORT_2026-06-09.md` | April release retrospective + competitive landscape synthesis (AGT v4, MnemoCore, Syntra, Magic) + strategic pivot options | Jun 9 |
-| `INTERNAL_RESEARCH_2026-06-09.md` | Codebase reality check: 935 Python files, 2,422 passing tests, Dharma (2,955 LOC), 5D holographic memory (real), stub audit, .md archaeology | Jun 9 |
-| `PHASE2_RESEARCH_2026-06-09.md` | Deep-dive answers: ILP payments (real), bounty board (real), polyglot builds (Rust ✅, Zig ✅), prescience claims (21 validated), tool surface (350+ LOC avg), 5D memory (Python works, Rust not wired) | Jun 9 |
-| `FINAL_SYNTHESIS_2026-06-09.md` | Phase 3 complete: Rust holographic encoder wired + benchmarked (0.007ms/op), exa research (AGT/ACS, agent payments, memory systems), updated strategic recommendation: "Ethics Layer for Agent Infrastructure" | Jun 9 |
-| `SESSION_REPORT_EXCEPTION_SWEEP_2026-06-08.md` | Bare `except Exception:` elimination across 145 Python files — contextual specificity, logging, syntax repair, 2,469 tests passing | Jun 8 |
-| `STATE_REPORT_2026-06-08.md` | Comprehensive project state assessment — metrics trajectory Apr→Jun, strategic positioning evolution, code hygiene before/after, open items | Jun 8 |
-| `30_OBJECTIVES_PLAN.md` | 30-objective planning document — SD card reconnaissance + web cross-reference synthesis into 6 phased objectives with completion criteria, epistemic labels, and dependency graph | May 15 |
-| `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | Deferred WhiteMagic cleanup map from external Fragment + STRATA audit — stubs, path hygiene, Rust panic risks, broad warnings, workspace hygiene, and next-session phased plan | May 15 |
-| `STATE_REPORT_2026-04-28.md` | Verified technical state, working-tree triage, zodiac stub fix, and grant pipeline status heading into Schmidt Sciences deadline | Apr 28 |
-| `GRANT_EXECUTION_PLAN_2026-04-28.md` | Consolidated week-by-week grant action sequence with expected value math, tracking setup, and user-priority decisions | Apr 28 |
-| `GRANT_APPLICATION_TEMPLATES_2026.md` | Reverse-engineered application structures for Manifund, Foresight, SFF, Schmidt, LTFF — reusable content blocks, per-funder customization cheat sheet, rapid iteration system | Apr 28 |
-| `GRANT_CONTENT_LIBRARY.md` | Canonical copy-paste-ready content blocks for all grant applications — universal paragraph, team bio, technical achievements, budget templates, milestones, prior-art timeline, risk mitigation, open-source/IP language, theory of change, construct validity, calibrated confidence, failure modes, ecosystem connection, why now, founder advantage, ambitious vision | Apr 30 |
-| `GRANT_SUBMISSION_PLAYBOOK_2026-06-04.md` | Step-by-step submission guide for Manifund + LTFF — exact fields to fill, copy-paste blocks, budget templates, and expected value math. Action-ready; no further research needed. | Jun 4 |
-| `GRANT_RUBRIC_AUDIT_2026.md` | Rubric audit — current templates vs. actual funder evaluation criteria (Manifund, LTFF, Foresight, SFF, Schmidt, NSF SBIR). Identifies 21 gaps with specific fixes and action items. | Apr 30 |
-| `A_PLUS_GRANT_GUIDE_2026.md` | From A- to A+ — 7 dimensions that separate competitive from winning applications, with 14-day action plan and honest assessment of time/cost/probability | Apr 30 |
-| `PRIOR_ART_AND_PATHS_2026-04-27.md` | Cross-referenced WhiteMagic chronology vs. competitors (CODEX OpenAI/Grok/X archives) + branching-path math | Apr 27 |
-| `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape — Mem0/Cognee/Letta/Anthropic Claude Memory + Molty trifecta + A2A/x402/MCP numbers | Apr 27 |
-| `KARMA_LEDGER_PAPER_OUTLINE.md` | arxiv preprint outline — declared-vs-actual side-effect audit substrate + prior-art evidence chain | Apr 27 |
-| `GRANT_STRATEGY_DEEP_DIVE_2026.md` | Mathematical likelihood, tailored strategies, prerequisites, and fund-usage implications for all 2026 funding opportunities | Apr 27 |
-| `GRANT_PIPELINE_2026.md` | Live tracker — deadlines, status, blockers, and action items for every active grant application | Apr 27 |
-| `GRANT_TIER_LIST_2026.md` | Second-pass tiered ranking — solo-dev-friendly (Tier 0) to multi-PI required (Tier 3), with win rates and entity requirements | Apr 27 |
-| `FEDERAL_GRANT_PLAYBOOK.md` | SBIR/STTR, USDA REAP, DOE/NSF federal grants — registration, narrative strategy, commercialization, compliance, and energy monitoring | Apr 29 |
-| `CODEX_SYNTHESIS_THREE_REVIEW.md` | Synthesis of three independent review teams: code audit, grant strategy review, CODEX extraction — integrated execution plan with 12-project portfolio math | Apr 29 |
-| `V22_2_IMPACT_REPORT.md` | Comprehensive impact analysis of Phase 1-2-3 completion | Apr 26 |
-| `RELEASE_READINESS_v22.0.0.md` | Release gate checklist — 34 checks, all passed | Apr 25 |
-| `SESSION_REPORT_14_OBJECTIVES_2026-04-16.md` | Phase 0-2 sprint — 14/14 objectives completed: resonance consolidation, exception narrowing (537 blocks), version unification, automation scripts | Apr 16 |
-| `STRATEGIC_PIVOT_ANALYSIS.md` | Post-v22 strategic direction — Mem0 rejection, CyberBrain pivot | Apr 20 |
-| `SITE_LAUNCH_CHECKLIST.md` | Pre-launch tasks for whitemagic.dev | Apr 25 |
-| `SESSION_STATE.md` | Session state tracking for island-c endpoints | Apr 20 |
-| `SHIP_SURFACE.md` | Core shipping surface audit | Apr 25 |
-| `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` | Security self-assessment against NSA MCP publication — 10-theme coverage matrix with gaps and comparison to Microsoft AGT | Jun 8 |
-| `TACTICAL_PLAN_2026-06-08.md` | Immediate and short-term action plan from competitive landscape analysis — exception scan, AgentDojo, Karma signing, 30-objectives revision | Jun 8 |
-| `STRATEGIC_POSITIONING_2026-06-08.md` | Strategic repositioning post-convergence — local-first thesis, prescience as asset, integration not competition, publication pipeline | Jun 8 |
-| `PRESCIENCE_UPDATE_2026-06-08.md` | Prescience ledger update — new validation events (AGT v4, Anthropic Dreaming, Cloudflare Think), honest misses, updated scorecard | Jun 8 |
-| `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal prescience methodology — evidence standards, Brier scoring, calibration decomposition, reproducibility, academic citation | Jun 8 |
-| `DHARMA_SPEC_2026-06-08.md` | Dharma governance specification v0.1.0 — YAML schema, action spectrum, profiles, Karmic trace, upgrade path, competitive comparison | Jun 8 |
-| `SESSION_REPORT_2026-06-08.md` | Session report — competitive landscape follow-up, immediate fixes, adversarial tests, Karma signing verification, local-first security whitepaper | Jun 8 |
-| `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI/AGI/ASI audience (NOT humans) — 16 sections, YAML frontmatter, file:line evidence, self-describing structure | Jun 18 |
-| `SESSION_REPORT_2026-06-18.md` | Session report — comprehensive documentation sweep: 888 docstrings added (1,270→40 undocumented public functions), polyglot survey of 8 cores, standalone paper, 4 reverted files for manual fix | Jun 18 |
-| `WHATS_NEXT_2026-06-18.md` | What's-next recommendation: ship v22.3.0 with this session's wins, then start v23.0.0 work on multi-user + WASM runtime per the strategic roadmap | Jun 18 |
-| `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 PATCH scope proposal — Tier 1 (version drift guardrail fix) + Tier 2 (roadmap polish items) recommended; ~6 hours; discoverable from a real test failure (TestH1_VersionDrift) caught by the release_readiness guardrail | Jun 18 |
-| `SESSION_REPORT_POLISH_MARATHON_2026-06-18.md` | Session report — polish marathon that produced v22.2.3: ruff 1,833→0, mypy 800→0, 814 logger calls with exc_info, 9 real bugs found and fixed, 8 commits pushed | Jun 18 |
-| `MISSING_MODULES_REPORT_2026-06-18.md` | Missing-modules report — the 87 internal Whitemagic modules referenced in code but absent from the tree, classified into Resurface-from-archives (30), Reimplement-in-v22.3 (40), and Remove-stale-references (17); companion to the planned archaeological excavation session | Jun 18 |
-| `SESSION_REPORT_EXCAVATION_2026-06-19.md` | Session report — full archaeological excavation (5 phases, 56 min): 13+10+2 modules recovered from archives, mcp_api_bridge crash fixed, no regressions | Jun 19 |
-| `SESSION_REPORT_WEBSITE_UPGRADE_2026-06-19.md` | Website upgrade day session report — 5 phases, 1h 37m: v22.2.3 sync, /mcp-bridge page + API, /zodiac interactive, content updates. Vercel project topology needs manual fix | Jun 19 |
-| `SESSION_UPDATE_VERCEL_BLOCKER_2026-06-19.md` | Session update — Vercel auto-deploys broken (all git push creates [0ms] UNKNOWN builds, manual deploys blocked by 'Please retry later' error). 4 backup projects ready, deletion paused | Jun 19 |
+| `SESSION_SUMMARY.md` | Master historical handoff — all session state | Jun 8 |
+| `SESSION_REPORT_2026-06-18.md` | Session report — documentation sweep, polyglot survey | Jun 18 |
+| `WHATS_NEXT_2026-06-18.md` | Next steps: ship v22.3.0, then v23.0.0 | Jun 18 |
+| `MISSING_MODULES_REPORT_2026-06-18.md` | 87 missing modules classified — resurface/reimplement/remove | Jun 18 |
+| `SESSION_UPDATE_VERCEL_BLOCKER_2026-06-19.md` | Vercel deploy blocker status | Jun 19 |
+| `SHIP_SURFACE.md` | Core shipping surface audit | Jun 20 |
+| `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 patch scope proposal | Jun 18 |
+| `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI audience | Jun 18 |
+| `INTERNAL_RESEARCH_2026-06-09.md` | Codebase reality check: 935 files, 2,422 tests | Jun 9 |
+
+### Research & Strategy
+
+| File | What It Is | Date |
+|------|-----------|------|
+| `STRATEGIC_ROADMAP_V23.md` | v23 roadmap — multi-user + WASM runtime | Jun 3 |
+| `30_OBJECTIVES_PLAN.md` | 30-objective plan — 6 phased objectives | May 15 |
+| `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | External Fragment + STRATA audit findings | May 15 |
+| `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all systems | May 29 |
+| `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape | Apr 27 |
+| `KARMA_LEDGER_PAPER_OUTLINE.md` | arxiv preprint outline | Apr 27 |
+| `WHITEMAGIC_PAPER_2026-06-18.md` | Technical paper for AI/AGI/ASI audience | Jun 18 |
+| `RESEARCH_SYNTHESIS_2026-06-04.md` | Internal audit + 8-domain external research | Jun 4 |
+| `SELF_IMPROVING_WORKFLOW.md` | WhiteMagic managing itself — operational spec | May 29 |
+
+### Prescience & Methodology
+
+| File | What It Is | Date |
+|------|-----------|------|
+| `PRESCIENCE_EXPANSION_PLAN_2026-05-29.md` | Claim discovery plan | May 29 |
+| `PRESCIENCE_IN_AN_ACCELERATING_WORLD_2026-05-29.md` | Formal preprint — 21 claims, Brier 0.0958 | May 29 |
+| `PRESCIENCE_METHODOLOGY_2026-06-08.md` | Formal methodology — evidence, Brier, calibration | Jun 8 |
+| `PRESCIENCE_UPDATE_2026-06-08.md` | Updated ledger — 21 claims, 523+ points | Jun 8 |
+| `PREDICTION_MARKET_TACTICAL_PLAN_2026-05-29.md` | Prediction market strategy | May 29 |
+
+### Governance & Security
+
+| File | What It Is | Date |
+|------|-----------|------|
+| `DHARMA_SPEC_2026-06-08.md` | Dharma governance spec v0.1.0 | Jun 8 |
+| `NSA_MCP_SELF_ASSESSMENT_2026-06-08.md` | Security audit against NSA MCP publication | Jun 8 |
+| `SECURITY_UPDATE.md` | Security posture — vulnerability triage | May 2026 |
+| `STANDARDS_ALIGNMENT_AUDIT_2026-06-04.md` | Standards alignment audit | Jun 4 |
+
+### Site & Integration
+
+| File | What It Is | Date |
+|------|-----------|------|
+| `AI_PRIMARY_SITE_ARCHITECTURE.md` | Agent-first site architecture spec | May 29 |
+| `MCP_20_READINESS_CHECK_2026-06-04.md` | MCP 2.0 readiness check | Jun 4 |
+| `TWITTER_ARCHIVE_PRESCIENCE_AUDIT_2026-06-04.md` | Twitter archive prescience audit | Jun 4 |
+
+### Other Active Docs
+
+`CLAIM_DISCOVERY_SPRINT_2026-05-29.md`, `DAILY_DIGEST_2026-06-05.md`, `DISCOVERY_2_INTEGRATION.md`, `EXA_CROSS_REFERENCE_2026-05-29.md`, `MVP_INVENTORY_7DAY_SHIPPABLE_2026-05-29.md`, `PATHS_B_C_E_DEEP_DIVE.md`, `PRESCIENCE_ACCELERATION_SINGULARITY_2026-05-29.md`, `ROADMAP_CONSOLIDATION_2026-06-03.md`, `SESSION_15_SUMMARY.md`, `SESSION_16_SUMMARY.md`, `SESSION_17_SUMMARY_2026-06-04.md`, `SESSION_HANDOFF_2026-06-03.md`, `SESSION_SUMMARY_2026-06-04.md`, `SITE_POSITIONING_PATCH_2026-06-05.md`, `STRATA_FRAGMENT_CLEANUP_2026-06-04.md`, `STRATEGIC_POSITIONING_2026-06-08.md`, `TACTICAL_PLAN_2026-06-08.md`
+
+### Archived
+
+Old session reports and state docs (36 files) → `docs/archive/message_board/`
+Grant strategy and application docs (9 files) → `docs/archive/grant_applications/`
 
 ---
 

@@ -63,7 +63,7 @@ Recovered from SD card on 2026-05-16. Extracted to standalone project at `~/Desk
 
 **Rust total**: 50,488+ lines across WhiteMagic core + CODEX pipeline + archive.
 
-**Archive recovery (2026-06-04)**: `polyglot/whitemagic-rust-archive/` holds 1,432 files (6.9M) — expanded superset of current `core/whitemagic-rust/` with additional modules (`adaptive_portal`, `geneseed_miner`, `heavens_net`, etc.). Diff and merge into canonical version is future work.
+**Archive recovery (2026-06-04, removed 2026-06-21)**: `polyglot/whitemagic-rust-archive/` previously held 1,432 files (6.9M) — expanded superset of current `core/whitemagic-rust/`. Confirmed as dead code (not imported anywhere). Removed in v23.0.0-alpha.5 to reduce repo size.
 
 ---
 
