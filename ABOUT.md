@@ -62,7 +62,7 @@ Per-project memory galaxies that remember architecture decisions, bug fixes, cod
 Shared memory, task distribution, ensemble voting, and swarm decomposition for teams of AI agents working on the same problem.
 
 ### Local LLM Enhancement
-WhiteMagic + Ollama = a fully local AI with 313 tools, persistent memory, and ethical governance. No API keys, no cloud, no data leaving your machine.
+WhiteMagic + Ollama = a fully local AI with 490 tools, persistent memory, and ethical governance. No API keys, no cloud, no data leaving your machine.
 
 ### Research & Knowledge Management
 Knowledge graphs, association mining, hybrid recall (text + graph + vector), and a dream cycle that consolidates knowledge over time.

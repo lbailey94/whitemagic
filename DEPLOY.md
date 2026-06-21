@@ -1,6 +1,6 @@
 # WhiteMagic Deployment Guide
 
-> **Version:** 15.0.0 | **Last Updated:** February 2026
+> **Version:** 23.0.0 | **Last Updated:** June 2026
 
 ---
 
@@ -34,8 +34,8 @@ echo "15.0.0" > VERSION
 
 # 2. Commit and tag
 git add -A
-git commit -m "release: v15.0.0"
-git tag v15.0.0
+git commit -m "release: v23.0.0"
+git tag v23.0.0
 
 # 3. Push (triggers CI + release workflow)
 git push origin main --tags

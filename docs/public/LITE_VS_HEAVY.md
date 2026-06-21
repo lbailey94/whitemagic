@@ -124,7 +124,7 @@ An agent equipped with Heavy gets everything in Standard, plus:
 | **Metrics** | harmony_vector |
 | **Audit** | karma_report |
 
-### Standard/Heavy (313 tools across 28 Gana meta-tools)
+### Standard/Heavy (462 tools across 28 Gana meta-tools)
 
 Everything in Lite, plus:
 
@@ -173,14 +173,14 @@ Everything in Lite, plus:
 ├─────────────────────────────────────────────────────┤
 │  Standard (pip install)                             │
 │  pip install whitemagic[mcp] → python -m ...        │
-│  313 tools, ~25MB, Python 3.10+, ~60s               │
+│  462 tools, ~25MB, Python 3.10+, ~60s               │
 │  Same state directory, same memories                │
 │                                                     │
 │  Agent decides it needs polyglot acceleration →     │
 ├─────────────────────────────────────────────────────┤
 │  Heavy (Docker)                                     │
 │  docker pull whitemagic-ai/whitemagic:heavy         │
-│  313 tools + 11 polyglot cores, ~200-800MB, ~30s    │
+│  462 tools + 8 polyglot cores, ~200-800MB, ~30s    │
 │  Mount state directory: -v ~/.whitemagic:/data/...  │
 │  10-200× faster on compute-heavy operations         │
 └─────────────────────────────────────────────────────┘

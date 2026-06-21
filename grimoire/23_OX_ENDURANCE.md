@@ -28,11 +28,20 @@ Use this chapter when you need to:
 
 | Tool | Description | Usage |
 |------|-------------|-------|
-| `check_system_health` (continuous) | Ongoing monitoring | Watchdog mode |
-| `manage_resonance` (monitor) | Network health watching | Sustained observation |
-| `emit_event` | Heartbeat signals | Liveness indication |
-| `manage_gardens` (activate) | Enter sangha garden | Community awareness |
-| `track_metric` | Long-term trends | Historical monitoring |
+| `swarm.decompose` | Break complex objectives into sub-tasks | Campaign planning |
+| `swarm.route` | Route sub-tasks to available workers | Task distribution |
+| `swarm.plan` | Create execution plan for swarm | Strategy |
+| `swarm.resolve` | Resolve conflicts between workers | Consensus |
+| `swarm.vote` | Vote on proposals within swarm | Democratic decisions |
+| `swarm.status` | Check swarm health and progress | Monitoring |
+| `swarm.complete` | Mark swarm task as complete | Completion |
+| `war_room.campaigns` | List active campaigns | Overview |
+| `war_room.execute` | Execute a campaign phase | Action |
+| `war_room.hierarchy` | Show command hierarchy | Organization |
+| `war_room.phase` | Get/set current campaign phase | Phase tracking |
+| `war_room.plan` | Create war room plan | Strategy |
+| `war_room.status` | War room overall status | Health check |
+| `worker.status` | Individual worker health and stats | Worker monitoring |
 
 ---
 
@@ -417,6 +426,44 @@ Aggregate across the collective using `swarm.status`:
 - `alert_count_by_severity` — Histogram of emitted events.
 
 Surface these metrics through the war room dashboard or stream them to external observability stacks. The Ox prefers slow, reliable trends over noisy instantaneous values. When in doubt, widen the aggregation window and trust the long slope.
+
+---
+
+## 🛠️ Troubleshooting
+
+### Worker Heartbeat Loss
+
+**Symptom**: `worker.status` reports `last_heartbeat` older than expected threshold.
+
+**Diagnosis**: The worker may be blocked on a long-running task, crashed without cleanup, or network-partitioned from the swarm coordinator.
+
+**Fix**:
+1. Check `swarm.status` for the worker's `error_rate_5m` — if climbing, the worker is alive but struggling.
+2. If `memory_pressure` is high, the worker needs task rebalancing — call `swarm.route` to redistribute.
+3. If heartbeat is truly stale (> 3× check interval), declare the worker dead: `swarm.resolve` with a `worker_failed` conflict type.
+4. The Girl (Ch 24) should then handle worker deregistration and replacement.
+
+### Swarm Deadlock
+
+**Symptom**: `swarm.status` shows `active_workers > 0` but `campaign_progress_pct` is not advancing.
+
+**Diagnosis**: Workers may be waiting on each other (circular dependency) or all waiting on a single bottleneck resource.
+
+**Fix**:
+1. Call `war_room.hierarchy` to inspect the command tree — look for a single node blocking all children.
+2. Use `swarm.vote` to break ties — if quorum is unreachable, the Dipper (Ch 22) can force a decision via `doctrine.force`.
+3. If the deadlock is resource-based, the Mound (Ch 16) can release cached resources via `cache.flush`.
+
+### Campaign Phase Regression
+
+**Symptom**: `war_room.phase` reports a lower phase number than previously achieved.
+
+**Diagnosis**: A phase was rolled back due to quality gate failure or external intervention.
+
+**Fix**:
+1. Check `war_room.status` for the `rollback_reason` field.
+2. If quality gates failed, the Hairy Head (Ch 18) should have logged the specific assertion in `anomaly.history`.
+3. Re-enter the phase with `war_room.execute` only after the root cause is addressed — the Ox does not skip phases.
 
 ---
 

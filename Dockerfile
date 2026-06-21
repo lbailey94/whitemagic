@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# WhiteMagic v15.8.0 — Multi-stage Dockerfile
+# WhiteMagic v23.0.0 — Multi-stage Dockerfile
 # ═══════════════════════════════════════════════════════════════════════
 #
 # Targets:
@@ -8,7 +8,7 @@
 #
 # Run:
 #   docker run --rm -i whitemagic:heavy                   # MCP stdio (PRAT mode)
-#   docker run --rm -i -e WM_MCP_PRAT=0 whitemagic:heavy # MCP classic (374 tools)
+#   docker run --rm -i -e WM_MCP_PRAT=0 whitemagic:heavy # MCP classic (462 tools)
 #   docker run --rm -p 8765:8765 whitemagic:heavy \
 #     python -m whitemagic.interfaces.nexus_api           # REST API
 #   docker run --rm whitemagic:heavy wm status            # CLI

@@ -72,6 +72,45 @@ The tools of VoidGana are unique in that their most important parameter is often
 
 It is worth noting that none of these tools modify memory content directly. They modify context, environment, and attention. This is the essential difference between VoidGana and the other Gana families. A tool from Chapter 7 (Army) restructures memory. A tool from Chapter 14 (Abundance) amplifies memory. A tool from Chapter 25 witnesses memory without touching it. This non-intervention is its intervention. By refusing to act, it creates the conditions under which memory can act upon itself. The tool is the held breath, the open palm, the empty bowl.
 
+### Extended Tools (v23 Assignment)
+
+The following tools were assigned to the Void Gana in v23 to complete the 28-fold mapping:
+
+| Tool | Description |
+|------|-------------|
+| `galactic_dashboard` | Legacy alias for `galactic.dashboard` |
+| `garden_browse` | Browse garden directory with filtering |
+| `garden_health` | Check garden health metrics |
+| `garden_list_files` | List files in a garden |
+| `garden_list_functions` | List functions in a garden |
+| `garden_map_system` | Map garden system topology |
+| `garden_resolve` | Resolve a garden reference |
+| `garden_resonance` | Check garden resonance levels |
+| `garden_search` | Search within gardens |
+| `garden_stats` | Garden statistics |
+| `garden_synergy` | Calculate garden synergy scores |
+| `galaxy.delete` | Delete a galaxy context |
+| `galaxy.ingest` | Ingest data into a galaxy |
+| `galaxy.lineage` | View galaxy lineage |
+| `galaxy.lineage_stats` | Galaxy lineage statistics |
+| `galaxy.merge` | Merge two galaxies |
+| `galaxy.restore` | Restore a galaxy from backup |
+| `galaxy.sync` | Synchronize galaxies |
+| `galaxy.taxonomy` | Galaxy taxonomy management |
+| `galaxy.transfer` | Transfer galaxy ownership |
+| `galaxy.backup` | Backup a galaxy |
+| `galactic.stats` | Galactic-level statistics |
+| `galactic.sweep` | Run galactic maintenance sweep |
+| `oms.export` | Export OMS (Object Management System) data |
+| `oms.import` | Import OMS data |
+| `oms.inspect` | Inspect OMS objects |
+| `oms.list` | List OMS objects |
+| `oms.price` | Price OMS objects |
+| `oms.status` | OMS status check |
+| `oms.verify` | Verify OMS integrity |
+
+These extended tools complete the Void's dominion over the galactic substrate. Where the primary seven tools prepare the vessel, the extended tools maintain the architecture of the vessel itself — the galaxies, gardens, and object management systems that constitute the memory infrastructure.
+
 ---
 
 ## 📋 Workflows
