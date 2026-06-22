@@ -2,7 +2,7 @@
 
 Get from zero to productive in 5 minutes.
 
-**Performance**: 29-33ms median latency (3-10x faster than typical MCP implementations). See [benchmarks](https://whitemagic.dev/performance).
+**Performance**: Sub-millisecond core operations with polyglot acceleration (Rust 0.012ms cosine, Zig 0.044ms cosine, Julia 0.001ms neighbor search, memory recall 0.037ms). See full benchmarks below.
 
 ---
 
@@ -174,33 +174,88 @@ call_tool("set_dharma_profile", profile="secure")
 
 ## 9. Dream Cycle
 
-WhiteMagic has a 5-phase dream cycle that runs during idle time:
+WhiteMagic has a **12-phase dream cycle** that runs during idle time, inspired by biological sleep — the brain consolidates memories, prunes weak connections, surfaces serendipitous associations, and integrates new knowledge during rest.
+
+```bash
+# CLI commands (new in v23)
+wm dream start           # Start automatic dreaming
+wm dream stop            # Stop
+wm dream status          # Check current phase and stats
+wm dream run             # Run a single phase now
+wm dream report          # Show dream artifacts
+wm dream phases          # List all 12 phases
+wm dream read <id>       # Read a specific dream
+wm dream promote <id>    # Promote a dream to permanent memory
+```
+
+### The 12 Dream Phases
+
+| Phase | What It Does |
+|-------|-------------|
+| 1. TRIAGE | Quick scan — identify memories needing attention, auto-tag, correct drift |
+| 2. CONSOLIDATION | Hippocampal replay — cluster and promote memories to long-term |
+| 3. SERENDIPITY | Surface unexpected cross-temporal connections between distant memories |
+| 4. GOVERNANCE | Echo chamber detection — check for circular reasoning in memory graph |
+| 5. NARRATIVE | Narrative compression — condense verbose memories without losing meaning |
+| 6. KAIZEN | Analyze tool usage patterns for continuous improvement hints |
+| 7. ORACLE | Consult the Grimoire for contextual spell recommendations |
+| 8. DECAY | Mindful forgetting — rotate old memories toward the galactic edge |
+| 9. CONSTELLATION | Auto-merge related memory constellations that drifted apart |
+| 10. PREDICTION | Predictive drift detection — forecast which memories will become relevant |
+| 11. ENRICHMENT | Entity extraction & semantic enrichment of unstructured content |
+| 12. HARMONIZE | Wu Xing balance & harmony tuning across all subsystems |
 
 ```python
-call_tool("dream_start")   # Start dreaming
-call_tool("dream_status")  # Check phase: CONSOLIDATION → SERENDIPITY → KAIZEN → ORACLE → DECAY
-call_tool("dream_stop")    # Stop
+# Python API
+from whitemagic.tools.unified_api import call_tool
+
+call_tool("dream_start")    # Start dreaming
+call_tool("dream_status")   # Check phase
+call_tool("dream_now")      # Trigger a cycle immediately
+call_tool("dream_stop")     # Stop
+call_tool("dream_list")     # List dream artifacts
 ```
 
 ## 10. Performance
 
-WhiteMagic delivers **3-10x faster response times** than typical MCP implementations:
+WhiteMagic delivers **sub-millisecond core operations** with polyglot acceleration:
 
-- **Median latency**: 29-33ms
-- **P95 latency**: 36-55ms
-- **Success rate**: 100%
-- **Memory per call**: 0-0.18MB
+| Operation | Latency | Technology |
+|-----------|---------|-----------|
+| Julia KD-tree neighbors (100) | **0.001ms** | Julia JSON-stdio |
+| Rust cosine similarity (384d) | **0.012ms** | Rust + IceOryx2 zero-copy |
+| Zig cosine similarity (384d) | **0.044ms** | Zig C-ABI SIMD |
+| Memory recall (by ID) | **0.037ms** | SQLite + connection pool |
+| Memory count | **0.025ms** | SQLite index |
+| Cached garden aggregation | **0.071ms** | Materialized cache |
+| Decay prediction | **0.020ms** | Python scipy |
+| Memory search (FTS5) | **0.271ms** | SQLite full-text search |
+| Rust galactic batch (100) | **0.445ms** | Rust spatial index |
+| Haskell hexagram cast | **0.368ms** | Haskell FFI |
+| Pattern detection (100) | **0.823ms** | Python resonance models |
 
-See full benchmarks at [whitemagic.dev/performance](https://whitemagic.dev/performance).
+### Polyglot Acceleration Stack
+
+| Language | Role | Status |
+|----------|------|--------|
+| **Rust** (PyO3 + IceOryx2 + Arrow) | Zero-copy memory operations, SIMD | ✅ Production |
+| **Zig** (C-ABI shared lib) | SIMD kernels: HRR, causal, k-means, matmul, batch norm | ✅ Production |
+| **Julia** (JSON-stdio) | Scientific computing: stats, forecasting, PageRank, RRF | ✅ Production |
+| **Haskell** (FFI + LD_PRELOAD) | Dharma rules, I Ching, dependency graph | ✅ Production |
+| **Koka** (compiled binary) | Algebraic effects, PRAT resonance, holographic encoding | ✅ Functional |
+| **Elixir** (BEAM) | Concurrent state, OTP GenServer | ✅ Functional |
+| **Go** (sidecar daemon) | P2P mesh, libp2p networking | ✅ Functional |
+
+All cores are **free, open-source, no accounts required**.
 
 ## 11. Next Steps
 
-- **[API Reference](../reference/API_REFERENCE.md)** — Full tool documentation
-- **[Architecture](../reference/ARCHITECTURE.md)** — System diagrams and data flow
-- **[MCP Config Examples](./MCP_CONFIG_EXAMPLES.md)** — Client-specific configs
-- **[Example Workflows](./docs/guides/EXAMPLE_WORKFLOWS.md)** — Real-world usage patterns
-- **[Contributing](../../CONTRIBUTING.md)** — How to add tools and accelerators
-- **[Use Cases](../design/USE_CASES.md)** — Detailed usage scenarios
+- **[AI_PRIMARY.md](AI_PRIMARY.md)** — Authoritative AI-agent contract
+- **[SYSTEM_MAP.md](SYSTEM_MAP.md)** — Full system architecture and runtime state
+- **[AGENTS.md](AGENTS.md)** — Developer guide (conventions, testing, architecture)
+- **[docs/guides/](docs/guides/)** — Example workflows and integration guides
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — How to add tools and accelerators
+- **[grimoire/](grimoire/)** — The 28 Lunar Mansion chapters (cognitive taxonomy)
 
 ---
 

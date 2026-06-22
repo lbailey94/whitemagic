@@ -280,6 +280,13 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     except ImportError:
         pass
 
+    # 16b. Dream Cycle
+    try:
+        from whitemagic.cli.commands.dream_commands import dream_group
+        main_group.add_command(dream_group, name="dream")
+    except ImportError:
+        pass
+
     # 17. Rust bridge
     @main_group.group(cls=LazyGroup, name="rust")
     def rust_group():
