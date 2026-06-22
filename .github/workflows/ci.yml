@@ -27,7 +27,7 @@ jobs:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -52,7 +52,7 @@ jobs:
       run:
         working-directory: ./core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -109,7 +109,7 @@ jobs:
       run:
         working-directory: ./core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -129,7 +129,7 @@ jobs:
       run:
         working-directory: ./core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -162,7 +162,7 @@ jobs:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_extras
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -196,7 +196,7 @@ jobs:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -228,7 +228,7 @@ jobs:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state_opt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -253,7 +253,7 @@ jobs:
       run:
         working-directory: ./core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -289,7 +289,7 @@ jobs:
       run:
         working-directory: ./core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -371,7 +371,7 @@ jobs:
       WM_STATE_ROOT: /tmp/whitemagic_state_network
       WM_RUN_NETWORK_TESTS: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -393,7 +393,7 @@ jobs:
     name: Version Consistency
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -407,7 +407,7 @@ jobs:
     name: Doc Drift Detection
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -426,7 +426,7 @@ jobs:
     name: Site Facts Sync Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -445,7 +445,7 @@ jobs:
     name: Stub Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
@@ -463,7 +463,7 @@ jobs:
       run:
         working-directory: ./core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set Up Python
         uses: actions/setup-python@v5
