@@ -121,6 +121,37 @@ def shutdown_ipc():
     global _ipc_initialized
     _ipc_initialized = False
 
+
+def tap_commands(max_samples: int = 100) -> list[dict]:
+    """Tap the wm/commands channel for observability.
+
+    Returns pending command messages (karmic consent requests, tool call
+    notifications, agent coordination commands) as a list of dicts.
+    Non-blocking: returns whatever is currently in the subscriber buffer.
+
+    This is the observability consumer for the wm/commands channel that
+    the middleware publishes to on every karmic consent event. Use it to
+    audit consent decisions, monitor tool governance, or feed a dashboard.
+    """
+    return try_receive_json("wm/commands", max_samples=max_samples)
+
+
+def tap_events(max_samples: int = 100) -> list[dict]:
+    """Tap the wm/events channel for observability.
+
+    Returns pending GanYing event bus messages as a list of dicts.
+    Non-blocking: returns whatever is currently in the subscriber buffer.
+    """
+    return try_receive_json("wm/events", max_samples=max_samples)
+
+
+def tap_harmony(max_samples: int = 10) -> list[dict]:
+    """Tap the wm/harmony channel for health pulse monitoring.
+
+    Returns pending harmony vector broadcast messages as a list of dicts.
+    """
+    return try_receive_json("wm/harmony", max_samples=max_samples)
+
 # Auto-initialize on first use if WM_AUTO_IPC is set
 if os.environ.get("WM_AUTO_IPC", "0") == "1":
     init_ipc()

@@ -987,7 +987,7 @@ def keyword_extract_batch(texts: list[str], max_keywords: int = 50) -> list[set[
 
 _RUST_ARROW = False
 try:
-    if _rs is not None and hasattr(_rs, "arrow_encode_memories"):
+    if _rs is not None and hasattr(_rs, "arrow_bridge"):
         _RUST_ARROW = True
         logger.debug("Rust Arrow IPC bridge available")
 except Exception:
@@ -1009,7 +1009,7 @@ def arrow_encode_memories(memories_json: str) -> bytes | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(bytes, _rs.arrow_encode_memories(memories_json))
+        return cast(bytes, _rs.arrow_bridge.arrow_encode_memories(memories_json))
     except Exception as e:
         logger.debug(f"Rust arrow_encode_memories failed: {e}")
         return None
@@ -1023,7 +1023,7 @@ def arrow_decode_memories(ipc_bytes: bytes) -> str | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(str, _rs.arrow_decode_memories(ipc_bytes))
+        return cast(str, _rs.arrow_bridge.arrow_decode_memories(ipc_bytes))
     except Exception as e:
         logger.debug(f"Rust arrow_decode_memories failed: {e}")
         return None
@@ -1034,7 +1034,7 @@ def arrow_schema_info() -> dict[str, Any] | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(dict[str, Any], json.loads(_rs.arrow_schema_info()))
+        return cast(dict[str, Any], json.loads(_rs.arrow_bridge.arrow_schema_info()))
     except Exception as e:
         logger.debug(f"Rust arrow_schema_info failed: {e}")
         return None
@@ -1048,7 +1048,7 @@ def arrow_roundtrip_bench(n: int = 1000) -> tuple[int, int, int] | None:
     if not _RUST_ARROW:
         return None
     try:
-        return cast(tuple[int, int, int], _rs.arrow_roundtrip_bench(n))
+        return cast(tuple[int, int, int], _rs.arrow_bridge.arrow_roundtrip_bench(n))
     except Exception as e:
         logger.debug(f"Rust arrow_roundtrip_bench failed: {e}")
         return None
@@ -1127,7 +1127,7 @@ def tokio_clone_stats() -> dict[str, Any] | None:
 
 _RUST_IPC = False
 try:
-    if _rs is not None and hasattr(_rs, "ipc_bridge_status"):
+    if _rs is not None and hasattr(_rs, "ipc_bridge"):
         _RUST_IPC = True
         logger.debug("Rust IPC bridge available")
 except Exception:
@@ -1144,7 +1144,7 @@ def ipc_status() -> dict[str, Any] | None:
     if not _RUST_IPC:
         return None
     try:
-        return cast(dict[str, Any], json.loads(_rs.ipc_bridge_status()))
+        return cast(dict[str, Any], json.loads(_rs.ipc_bridge.ipc_status()))
     except Exception as e:
         logger.debug(f"Rust ipc_bridge_status failed: {e}")
         return None

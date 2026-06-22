@@ -39,7 +39,6 @@ def clean_shm():
     _wipe()
 
 
-@pytest.mark.flaky(max_runs=3, min_passes=1)
 def test_ipc_try_receive_is_exposed():
     """ipc_try_receive must be exposed as a Python-callable function."""
     import whitemagic_rust
@@ -47,7 +46,6 @@ def test_ipc_try_receive_is_exposed():
         "ipc_try_receive is not exposed on whitemagic_rust.ipc_bridge"
 
 
-@pytest.mark.flaky(max_runs=3, min_passes=1)
 def test_publish_then_status_increments_counter():
     """Each successful publish must increment the published counter in status."""
     import whitemagic_rust
@@ -61,7 +59,6 @@ def test_publish_then_status_increments_counter():
     assert after - before == 10, f"expected +10 published, got +{after - before}"
 
 
-@pytest.mark.flaky(max_runs=3, min_passes=1)
 def test_publish_json_helper_round_trip():
     """publish_json must serialize dicts and accept the json helper back via try_receive_json."""
     from whitemagic.core.ipc_bridge import init_ipc, publish_json
@@ -84,7 +81,6 @@ def test_try_receive_returns_list():
     shutdown_ipc()
 
 
-@pytest.mark.flaky(max_runs=3, min_passes=1)
 def test_publish_stress_1000():
     """1000 publishes with 0 errors — matches the 4000-publish baseline from the polyglot survey."""
     import whitemagic_rust
