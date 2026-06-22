@@ -123,7 +123,7 @@ The `wm_archive/WM/whitemagic/` directory preserves a snapshot at v11.0.0. Compa
 
 ## 5. Docs Missing from Current Repo
 
-These docs exist in the archive but NOT in `/home/lucas/Desktop/whitemagic/docs/`:
+These docs exist in the archive but NOT in `/home/user/Desktop/whitemagic/docs/`:
 
 | Document | Archive Location | Value |
 |----------|-----------------|-------|
@@ -149,7 +149,7 @@ These docs exist in the archive but NOT in `/home/lucas/Desktop/whitemagic/docs/
 
 ### Tier 1: Should be in the repo (high strategic value)
 
-1. **STRATEGIC_ROADMAP.md** — Current roadmap with Leaps 9-12. This is THE forward-looking document. Has real XRP address (`raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`).
+1. **STRATEGIC_ROADMAP.md** — Current roadmap with Leaps 9-12. This is THE forward-looking document. Has real XRP address (`YOUR_XRPL_ADDRESS`).
 
 2. **ECONOMIC_STRATEGY.md** — The Gratitude Architecture document. Essential for any agent reading `AI_PRIMARY.md` who wants to understand the economic model. Also contains the real XRP tip address.
 
@@ -288,7 +288,7 @@ Since that audit:
 
 ### The Economic Strategy describes a real XRP tip address:
 ```
-raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy
+YOUR_XRPL_ADDRESS
 ```
 This address IS correctly set across the current repo: `economies.json`, `wallet_manager.py`, `AI_PRIMARY.md`, `README.md`, `init_command.py`, `MOLTBOOK_SEED.md`, and `USE_CASES.md`. ✅ Verified.
 
@@ -406,7 +406,7 @@ This address IS correctly set across the current repo: `economies.json`, `wallet
 
 5. **wm_archive README.md created** — Comprehensive navigation guide for the archive (quick reference table, directory map, database locations, known issues).
 
-6. **XRP address verified** — `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy` present in all critical files.
+6. **XRP address verified** — `YOUR_XRPL_ADDRESS` present in all critical files.
 
 7. **Deep archive dive completed** — Read 40+ strategy, design, pre-feb9, and session docs. No critical forgotten content remains unreviewed.
 
@@ -416,7 +416,7 @@ This address IS correctly set across the current repo: `economies.json`, `wallet
 - **Polyglot language count** — README says "9-Language" but roadmap says "11-language" (C + WASM)
 - **Embedding auto-indexing** — Only 15/1,262 memories indexed in active DB
 - **Archive duplicate cleanup** — `docs_release_cleanup/business_strategy/` duplicates `business/`
-- **whitemagicdev vs whitemagicpublic** repo strategy — awaiting discussion
+- **whitemagic vs whitemagicpublic** repo strategy — awaiting discussion
 
 ---
 

@@ -8,7 +8,7 @@ def run_mojo():
     start = time.time()
     result = subprocess.run(
         ["pixi", "run", "mojo", "run", "bench_cosine.mojo"],
-        cwd="/home/lucas/Desktop/whitemagicdev/whitemagic-mojo",
+        cwd="/home/user/Desktop/whitemagic/whitemagic-mojo",
         capture_output=True,
         text=True
     )
@@ -21,7 +21,7 @@ def run_python():
     start = time.time()
     result = subprocess.run(
         [sys.executable, "bench_cosine.py"],
-        cwd="/home/lucas/Desktop/whitemagicdev/whitemagic-mojo",
+        cwd="/home/user/Desktop/whitemagic/whitemagic-mojo",
         capture_output=True,
         text=True
     )

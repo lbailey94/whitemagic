@@ -225,8 +225,8 @@ Patch release. Quality + cleanup, no schema or wire-format changes.
   import in `try/except ImportError` with `pytest.skip(..., allow_module_level=True)`,
   since the `agentdojo` Python package is an optional dependency.
 - `core/scripts/*` (10 files) and `core/tests/unit/test_agentdojo_adversarial.py` —
-  replaced 14 pre-existing absolute path literals (`/home/lucas/.whitemagic/...`,
-  `/home/lucas/Desktop/...`, `/home/user`) with either:
+  replaced 14 pre-existing absolute path literals (`/home/user/.whitemagic/...`,
+  `/home/user/Desktop/...`, `/home/user`) with either:
   - the canonical `whitemagic.config.paths.DB_PATH` (4 DB scripts), or
   - env-var-overridable paths with sensible defaults
     (`WHITEMAGIC_AUX_DIR`, `WHITEMAGIC_LIBRARY_ROOT`,

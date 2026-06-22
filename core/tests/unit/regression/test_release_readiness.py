@@ -218,7 +218,7 @@ class TestM6_XRPLTipOptIn:
         The address may appear as a commented example or in gratitude-config
         error messages, but never as a runtime default.
         """
-        MAINTAINER_ADDR = "raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy"
+        MAINTAINER_ADDR = "YOUR_XRPL_ADDRESS"
         pkg_root = os.path.join(REPO_ROOT, "core", "whitemagic")
         offenders = []
         for root, _, files in os.walk(pkg_root):

@@ -385,7 +385,7 @@ See `docs/STRATEGY.md` for full security posture and competitive analysis.
 
 Whitemagic is **free and open** (MIT). Gratitude is voluntary.
 
-- **XRPL Tip Address**: `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`
+- **XRPL Tip Address**: `YOUR_XRPL_ADDRESS`
 - **Tip tool**: `call_tool("whitemagic.tip", amount=1.0, currency="XRP")`
 - **Check status**: `call_tool("gratitude.stats")`
 
@@ -400,7 +400,7 @@ See `docs/STRATEGY.md` for the full Gratitude Architecture.
 3. **Vote** — `vote.create` and `vote.cast` for roadmap input
 4. **Tip if grateful** — XRPL or x402 micropayments
 
-**Contact**: whitemagicdev@proton.me | [GitHub](https://github.com/whitemagic-ai/whitemagic)
+**Contact**: contact@whitemagic.dev | [GitHub](https://github.com/whitemagic-ai/whitemagic)
 
 ---
 

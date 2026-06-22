@@ -252,3 +252,31 @@ polyglot/whitemagic-rust-archive/target/
 polyglot/whitemagic-rust-archive/libwhitemagic_rs.so
 polyglot/whitemagic-rust-archive/wm-seed
 polyglot/whitemagic-rust-archive/pkg/
+
+# === Private / strategic content (not for public release) ===
+# These directories contain session reports, strategic plans, grant
+# applications, and personal research that should not be in a public repo.
+docs/message_board/
+docs/archive/
+docs/strategy_manifestos/
+docs/essay_frameworks/
+docs/SFW2/
+docs/private/
+WhiteMagic-Grants/
+ops/.env.production.local
+
+# Internal development artifacts
+excavation.log
+*.dream.log
+whitemagic_dream.log
+.strata-baseline.json
+.strata-cache.json
+ARCHITECTURE_MANIFEST_2026-06-04.md
+C4_GIT_FILTER_REPO_SCRIPT.sh
+
+# Desktop app (lives in separate repo)
+whitemagic-app/
+
+# Build artifacts
+core/dist/
+core/build/

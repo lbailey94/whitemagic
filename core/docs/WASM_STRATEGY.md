@@ -221,4 +221,4 @@ With WASM:
 
 ## Contact
 
-Questions or contributions: whitemagicdev@proton.me
+Questions or contributions: contact@whitemagic.dev

@@ -12,7 +12,7 @@ print("\n1. Running COMPILED Mojo binary...")
 start = time.time()
 result = subprocess.run(
     ["./bench_cosine_mojo"],
-    cwd="/home/lucas/Desktop/whitemagicdev/whitemagic-mojo",
+    cwd="/home/user/Desktop/whitemagic/whitemagic-mojo",
     capture_output=True,
     text=True
 )
@@ -24,7 +24,7 @@ print("\n2. Running Python...")
 start = time.time()
 result = subprocess.run(
     [sys.executable, "bench_cosine.py"],
-    cwd="/home/lucas/Desktop/whitemagicdev/whitemagic-mojo",
+    cwd="/home/user/Desktop/whitemagic/whitemagic-mojo",
     capture_output=True,
     text=True
 )

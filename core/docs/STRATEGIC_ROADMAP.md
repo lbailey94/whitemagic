@@ -291,5 +291,5 @@ It changes **nothing** in the engine:
 
 ---
 
-**Contact**: whitemagicdev@proton.me
+**Contact**: contact@whitemagic.dev
 **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)

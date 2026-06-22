@@ -3,11 +3,11 @@
 set -euo pipefail
 
 # Resolve the dev root from env or a sensible default.
-DEV_ROOT="${WHITEMAGIC_DEV_ROOT:-$HOME/Desktop/whitemagicdev}"
+DEV_ROOT="${WHITEMAGIC_DEV_ROOT:-$HOME/Desktop/whitemagic}"
 
 if [ ! -d "$DEV_ROOT" ]; then
     echo "ERROR: DEV_ROOT does not exist: $DEV_ROOT" >&2
-    echo "Set WHITEMAGIC_DEV_ROOT to the path of the whitemagicdev checkout." >&2
+    echo "Set WHITEMAGIC_DEV_ROOT to the path of the whitemagic checkout." >&2
     exit 1
 fi
 

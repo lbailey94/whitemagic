@@ -9,7 +9,7 @@
 ## Quick Start
 
 ```bash
-cd /home/lucas/Desktop/WHITEMAGIC
+cd <WHITEMAGIC_ROOT>
 source .venv/bin/activate
 python -m whitemagic.run_mcp_lean  # stdio mode (default)
 ```
@@ -34,14 +34,14 @@ OpenCode uses `~/.config/opencode/opencode.jsonc` (global) or project-local `ope
     "whitemagic": {
       "type": "local",
       "command": [
-        "/home/lucas/Desktop/WHITEMAGIC/.venv/bin/python",
+        "<WHITEMAGIC_ROOT>/.venv/bin/python",
         "-m",
         "whitemagic.run_mcp_lean"
       ],
       "enabled": true,
       "environment": {
         "WM_SILENT_INIT": "1",
-        "PYTHONPATH": "/home/lucas/Desktop/WHITEMAGIC/core"
+        "PYTHONPATH": "<WHITEMAGIC_ROOT>/core"
       }
     }
   }
@@ -86,8 +86,8 @@ Hermes MCP uses a wrapper script (env vars cannot be passed directly via CLI).
 cat > /tmp/whitemagic_mcp.sh << 'EOF'
 #!/bin/bash
 export WM_SILENT_INIT=1
-export PYTHONPATH=/home/lucas/Desktop/WHITEMAGIC/core
-exec /home/lucas/Desktop/WHITEMAGIC/.venv/bin/python -m whitemagic.run_mcp_lean
+export PYTHONPATH=<WHITEMAGIC_ROOT>/core
+exec <WHITEMAGIC_ROOT>/.venv/bin/python -m whitemagic.run_mcp_lean
 EOF
 chmod +x /tmp/whitemagic_mcp.sh
 ```
@@ -122,7 +122,7 @@ hermes chat -q "Call whitemagic gana_root health_report" -Q --accept-hooks
 If running Hermes in ACP mode (`hermes acp`), WhiteMagic registers automatically as an external tool provider:
 
 ```bash
-hermes acp --mcp-command "/home/lucas/Desktop/WHITEMAGIC/.venv/bin/python -m whitemagic.run_mcp_lean"
+hermes acp --mcp-command "<WHITEMAGIC_ROOT>/.venv/bin/python -m whitemagic.run_mcp_lean"
 ```
 
 ---

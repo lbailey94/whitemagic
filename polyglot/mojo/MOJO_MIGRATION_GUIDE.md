@@ -39,7 +39,7 @@ fn main():
 ## Pixi Environment
 
 ```bash
-cd /home/lucas/Desktop/whitemagicdev/whitemagic-mojo
+cd /home/user/Desktop/whitemagic/whitemagic-mojo
 pixi run mojo run your_file.mojo
 ```
 

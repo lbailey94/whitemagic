@@ -20,7 +20,7 @@ ELIXIR_VERSION=$(elixir --version | grep "Elixir" | awk '{print $2}')
 echo "✅ Elixir $ELIXIR_VERSION found"
 
 # Navigate to Elixir directory
-ELIXIR_DIR="$HOME/Desktop/whitemagicdev/elixir"
+ELIXIR_DIR="$HOME/Desktop/whitemagic/elixir"
 
 if [ ! -d "$ELIXIR_DIR" ]; then
     echo "❌ Elixir directory not found at $ELIXIR_DIR"

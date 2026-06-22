@@ -41,7 +41,7 @@ def mcp_call(tool_name, args=None, tool=None):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd="/home/lucas/Desktop/WHITEMAGIC",
+        cwd="<WHITEMAGIC_ROOT>",
         env={**os.environ, "PYTHONPATH": "core"}
     )
     

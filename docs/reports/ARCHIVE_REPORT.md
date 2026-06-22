@@ -2,7 +2,7 @@
 
 **Author**: Cascade, with Lucas
 **Date**: 2026-04-21
-**Scope**: Full pass across `/home/lucas/Desktop/WHITEMAGIC/archive/` + extracted SQLite DBs
+**Scope**: Full pass across `<WHITEMAGIC_ROOT>/archive/` + extracted SQLite DBs
 **Purpose**: Inventory, editorial triage, "museum" plan, decisions about what to resurface
 
 ---

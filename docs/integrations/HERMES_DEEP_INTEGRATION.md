@@ -1,7 +1,7 @@
 # Hermes ↔ WhiteMagic Deep Integration Analysis
 
 **Date:** 2026-05-30
-**Hermes Version:** Latest (installed at `/home/lucas/.local/bin/hermes`)
+**Hermes Version:** Latest (installed at `/home/user/.local/bin/hermes`)
 **Status:** Live analysis — MCP connected, hooks discovered, integration points mapped
 
 ---
@@ -210,7 +210,7 @@ Hermes' shell hook system reads a `hooks:` block from `~/.hermes/config.yaml` an
 # ~/.hermes/config.yaml
 hooks:
   pre_tool_call:
-    - command: /home/lucas/Desktop/WHITEMAGIC/.venv/bin/python /tmp/whitemagic_policy_hook.py
+    - command: <WHITEMAGIC_ROOT>/.venv/bin/python /tmp/whitemagic_policy_hook.py
       matcher:
         tool_name: "terminal"   # Only gate terminal tool (or remove matcher for all)
 ```
@@ -242,7 +242,7 @@ def main():
          f"r = call_tool('get_dharma_guidance', situation='Hermes wants to call {tool_name} with args: {json.dumps(tool_input)}'); "
          f"print(json.dumps(r))"],
         capture_output=True, text=True,
-        env={**os.environ, "PYTHONPATH": "/home/lucas/Desktop/WHITEMAGIC/core"}
+        env={**os.environ, "PYTHONPATH": "<WHITEMAGIC_ROOT>/core"}
     )
 
     try:
@@ -282,7 +282,7 @@ Inject WhiteMagic governance context into every LLM prompt.
 ```yaml
 hooks:
   pre_llm_call:
-    - command: /home/lucas/Desktop/WHITEMAGIC/.venv/bin/python /tmp/whitemagic_context_hook.py
+    - command: <WHITEMAGIC_ROOT>/.venv/bin/python /tmp/whitemagic_context_hook.py
 ```
 
 **Hook script** returns `{"context": "..."}` which Hermes appends to the user message.
@@ -439,12 +439,12 @@ Hermes' gateway routes messages from Discord, Slack, Telegram, WhatsApp, etc. Wh
 | Hooks directory | `~/.hermes/hooks/` |
 | Skills | `~/.hermes/skills/` |
 | Sessions | `~/.hermes/sessions/` |
-| Plugin source | `/home/lucas/.hermes/hermes-agent/hermes_cli/plugins.py` |
-| Conversation loop | `/home/lucas/.hermes/hermes-agent/agent/conversation_loop.py` |
-| Runtime helpers | `/home/lucas/.hermes/hermes-agent/agent/agent_runtime_helpers.py` |
-| Context engine | `/home/lucas/.hermes/hermes-agent/agent/context_engine.py` |
-| Shell hooks bridge | `/home/lucas/.hermes/hermes-agent/agent/shell_hooks.py` |
-| MCP native skill | `/home/lucas/.hermes/skills/mcp/native-mcp/SKILL.md` |
+| Plugin source | `/home/user/.hermes/hermes-agent/hermes_cli/plugins.py` |
+| Conversation loop | `/home/user/.hermes/hermes-agent/agent/conversation_loop.py` |
+| Runtime helpers | `/home/user/.hermes/hermes-agent/agent/agent_runtime_helpers.py` |
+| Context engine | `/home/user/.hermes/hermes-agent/agent/context_engine.py` |
+| Shell hooks bridge | `/home/user/.hermes/hermes-agent/agent/shell_hooks.py` |
+| MCP native skill | `/home/user/.hermes/skills/mcp/native-mcp/SKILL.md` |
 
 ---
 

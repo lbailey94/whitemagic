@@ -217,5 +217,5 @@ call_tool("rate_limiter.stats")
 
 WhiteMagic is **free and open-source** (MIT). If it's been useful to you, gratitude is welcome but never expected.
 
-- **XRPL Tip Address**: `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`
-- **Contact**: whitemagicdev@proton.me
+- **XRPL Tip Address**: `YOUR_XRPL_ADDRESS`
+- **Contact**: contact@whitemagic.dev

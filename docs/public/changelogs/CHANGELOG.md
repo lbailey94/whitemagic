@@ -163,7 +163,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **FTS5 Query Sanitization** — Both `ollama.py` and `ollama_agent.py` now strip special characters before FTS5 searches, preventing syntax errors.
 
 #### Fixed
-- **MCP path in Windsurf** — Config pointed to non-existent `/home/lucas/Desktop/whitemagic/` instead of `whitemagicdev/`.
+- **MCP path in Windsurf** — Config pointed to non-existent `/home/user/Desktop/whitemagic/` instead of `whitemagic/`.
 - **Stale `_GANA_TOOLS` dict** — Was frozen at v15.1 (missing 35+ tools from v15.2-15.4). Now dynamic.
 - **Stale `_GANA_SHORT_DESC`** — Updated all 28 descriptions to reflect current capabilities.
 - **Version drift** — `server.json` and `mcp-registry.json` updated from 15.1.0 → 15.5.0.
@@ -298,7 +298,7 @@ Comprehensive audit, version unification, gap closure, and release polish across
 - **FTS Query Sanitization** — Search queries now strip FTS5-unsafe characters (`[]{}()^~*`) preventing empty match failures. (`core/memory/sqlite_backend.py`)
 - **`wm rules`** — CLI alias for viewing active Dharma rules.
 - **`wm systemmap`** — CLI command to display system map overview.
-- **Contact info** — `whitemagicdev@proton.me` added to README.md, AI_PRIMARY.md.
+- **Contact info** — `contact@whitemagic.dev` added to README.md, AI_PRIMARY.md.
 
 #### Added — Documentation
 - **`docs/WASM_STRATEGY.md`** — WASM compilation roadmap (Phases 1-3, static binary goal).

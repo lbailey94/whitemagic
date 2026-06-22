@@ -64,7 +64,7 @@ def generate_report(stats: dict) -> str:
     
     lines = []
     lines.append("╔══════════════════════════════════════════════════════════════════╗")
-    lines.append("║          WHITEMAGIC CODEBASE COMPOSITION (whitemagicdev)         ║")
+    lines.append("║          WHITEMAGIC CODEBASE COMPOSITION (whitemagic)         ║")
     lines.append("╠══════════════════════════════════════════════════════════════════╣")
     lines.append(f"║  Total: {total_files:,} files | {total_loc:,} lines of code{'':>17}║")
     lines.append("╚══════════════════════════════════════════════════════════════════╝")
@@ -107,7 +107,7 @@ def generate_report(stats: dict) -> str:
 if __name__ == '__main__':
     import os
     root = Path(os.environ.get("WHITEMAGIC_DEV_ROOT")
-                or (str(Path.home() / "Desktop" / "whitemagicdev"))).expanduser()
+                or (str(Path.home() / "Desktop" / "whitemagic"))).expanduser()
     stats = count_loc(root)
     report = generate_report(stats)
     print(report)

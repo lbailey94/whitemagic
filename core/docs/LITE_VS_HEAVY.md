@@ -209,5 +209,5 @@ The key insight: **state is portable across all tiers**. The SQLite database, Ka
 
 ## Contact
 
-Questions or contributions: whitemagicdev@proton.me
+Questions or contributions: contact@whitemagic.dev
 GitHub: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)

@@ -23,7 +23,7 @@ import re
 import subprocess
 from pathlib import Path
 
-ROOT = Path("/home/lucas/Desktop/WHITEMAGIC/core")
+ROOT = Path("<WHITEMAGIC_ROOT>/core")
 
 
 def add_ignore_comment(path: Path, line_no: int, code: str = "assignment") -> bool:

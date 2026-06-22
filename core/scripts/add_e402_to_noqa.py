@@ -17,8 +17,8 @@ NOQA_PATTERN = re.compile(r"^#\s*ruff:\s*noqa:\s*([A-Z0-9, ]+?)\s*$", re.MULTILI
 def has_e402(path: Path) -> bool:
     """Check if ruff finds E402 hits in this file."""
     result = subprocess.run(
-        ["/home/lucas/Desktop/WHITEMAGIC/core/.venv/bin/ruff", "check", str(path.resolve()), "--select", "E402", "--output-format", "concise"],
-        capture_output=True, text=True, cwd="/home/lucas/Desktop/WHITEMAGIC/core",
+        ["<WHITEMAGIC_ROOT>/core/.venv/bin/ruff", "check", str(path.resolve()), "--select", "E402", "--output-format", "concise"],
+        capture_output=True, text=True, cwd="<WHITEMAGIC_ROOT>/core",
     )
     return "Found" in result.stdout and "0 found" not in result.stdout.lower()
 

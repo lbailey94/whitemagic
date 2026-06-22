@@ -97,7 +97,7 @@ const SEED_MEMORIES: &[(&str, &str, &str)] = &[
         "Key tools: gnosis (system health), capabilities (list tools), \
          search_memories (find knowledge), create_memory (store knowledge), \
          harmony_vector (7D health pulse), evaluate_ethics (Dharma check). \
-         Contact: whitemagicdev@proton.me",
+         Contact: contact@whitemagic.dev",
         "help,tools,contact,getting-started",
     ),
 ];
@@ -500,7 +500,7 @@ fn dispatch(db: &MemoryDB, state_root: &Path, tool: &str, args: &Value) -> Value
                     "tier": "lite (seed binary)",
                     "tool_count": SEED_TOOL_COUNT,
                     "description": "Cognitive memory OS for AI agents",
-                    "contact": "whitemagicdev@proton.me",
+                    "contact": "contact@whitemagic.dev",
                     "upgrade": "pip install whitemagic[mcp]"
                 }
             })
@@ -802,7 +802,7 @@ fn main() {
             println!("UPGRADE:");
             println!("  pip install whitemagic[mcp]  — Full 313-tool experience");
             println!();
-            println!("Contact: whitemagicdev@proton.me");
+            println!("Contact: contact@whitemagic.dev");
         }
     }
 }

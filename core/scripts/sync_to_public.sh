@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sync_to_public.sh — One-way sync from whitemagicdev → whitemagicpublic
+# sync_to_public.sh — One-way sync from whitemagic → whitemagicpublic
 #
 # Syncs SOURCE CODE, tests, and configs. Does NOT sync docs (they have
 # different structures between dev and public) or private dev content.
@@ -34,7 +34,7 @@
 
 set -euo pipefail
 
-DEV_DIR="$HOME/Desktop/whitemagicdev"
+DEV_DIR="$HOME/Desktop/whitemagic"
 PUBLIC_DIR="$HOME/Desktop/whitemagicpublic"
 
 if [[ ! -d "$DEV_DIR" ]]; then echo "ERROR: Dev directory not found: $DEV_DIR"; exit 1; fi

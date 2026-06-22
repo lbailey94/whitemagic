@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whitemagic"
 version = "23.0.0"
-description = "The Tool Substrate for Agentic AI — 28 PRAT Ganas, 143 bridge functions, memory, ethical governance, and polyglot accelerators"
+description = "Cognitive operating system for AI agents — 490 tools across 28 Gana meta-tools, 5D holographic memory, ethical governance, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}

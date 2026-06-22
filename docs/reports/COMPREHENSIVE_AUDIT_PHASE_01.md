@@ -101,7 +101,7 @@ These are **good** — short, decision-focused, dated. They should be referenced
 ### Directory Tree at a Glance
 
 ```
-/home/lucas/Desktop/WHITEMAGIC/
+<WHITEMAGIC_ROOT>/
 ├── README.md, AI_PRIMARY.md, SYSTEM_MAP.md, CHANGELOG.md  (root docs)
 ├── core/                    # Main Python package (v22.0.0)
 │   ├── whitemagic/          # 732 items — main source

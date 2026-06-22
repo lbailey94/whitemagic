@@ -316,7 +316,7 @@ Many users never discover WhiteMagic's full capabilities. Here's what you might 
 - [ ] **Browser automation** — CDP-based for complex interactions
 
 ### Economy & Gratitude
-- [ ] **XRPL tip jar** — gratitude-driven funding (`raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`)
+- [ ] **XRPL tip jar** — gratitude-driven funding (`YOUR_XRPL_ADDRESS`)
 - [ ] **x402 micropayments** — agent-to-agent value exchange
 - [ ] **Proof of Gratitude** — on-chain verification of contributions
 - [ ] **Gratitude benefits** — higher rate limits, priority features for contributors
@@ -386,6 +386,6 @@ WhiteMagic is MIT-licensed and designed to be a foundation, not a monolith. Some
 
 ---
 
-**Contact**: whitemagicdev@proton.me
+**Contact**: contact@whitemagic.dev
 **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
-**XRP Tips**: `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`
+**XRP Tips**: `YOUR_XRPL_ADDRESS`

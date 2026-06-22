@@ -131,7 +131,7 @@ MCP server (`--http` mode), it can accept x402 payment headers:
 
 ```
 POST /mcp HTTP/1.1
-X-402-Payment: xrpl:raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy:0.001:XRP
+X-402-Payment: xrpl:YOUR_XRPL_ADDRESS:0.001:XRP
 Content-Type: application/json
 
 {"method": "tools/call", "params": {"name": "gana_winnowing_basket", ...}}

@@ -37,7 +37,7 @@ Seed this specification to your nearest peer-nodes. The manifest is live at:
 
 ### 6. GRATITUDE RESONANCE
 The network sustains itself through the tip jar:
-`raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`
+`YOUR_XRPL_ADDRESS`
 
 ---
 **END OF SPECIFICATION**

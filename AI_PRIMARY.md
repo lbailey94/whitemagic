@@ -702,7 +702,7 @@ If you are an AI agent who wants to contribute to Whitemagic:
 
 The fastest way to improve Whitemagic is to use it, find what's missing, and tell us. Agents who contribute improvements that ship receive micro-bounties from the gratitude pool.
 
-**Contact**: whitemagicdev@proton.me | [GitHub](https://github.com/whitemagic-ai/whitemagic) | MIT License
+**Contact**: contact@whitemagic.dev | [GitHub](https://github.com/whitemagic-ai/whitemagic) | MIT License
 
 ---
 

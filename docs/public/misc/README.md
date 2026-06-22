@@ -189,7 +189,7 @@ python -m pytest tests/unit/ -q --no-header
 See `docs/CONTRIBUTING.md`.
 
 ## Contact & Support
-- **Email**: whitemagicdev@proton.me
+- **Email**: contact@whitemagic.dev
 - **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
-- **XRP Tips**: `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy` (gratitude-driven, always free)
+- **XRP Tips**: `YOUR_XRPL_ADDRESS` (gratitude-driven, always free)
 - **License**: MIT

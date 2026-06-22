@@ -18,7 +18,7 @@ def use_live_substrate(monkeypatch):
     so galactic._resolve_db_path() returns the real DB.
     """
     from pathlib import Path
-    live = Path("/home/lucas/.whitemagic/memory/whitemagic.db")
+    live = Path.home() / ".whitemagic" / "memory" / "whitemagic.db"
     if live.exists():
         monkeypatch.setenv("WM_MEMORY_DB", str(live))
     monkeypatch.delenv("WM_STATE_ROOT", raising=False)

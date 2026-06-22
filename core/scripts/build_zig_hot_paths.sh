@@ -6,7 +6,7 @@ set -euo pipefail
 set -e
 
 # Resolve Zig source dir from env or default to the local dev checkout.
-ZIG_DIR="${WHITEMAGIC_ZIG_DIR:-$HOME/Desktop/whitemagicdev/whitemagic-zig}"
+ZIG_DIR="${WHITEMAGIC_ZIG_DIR:-$HOME/Desktop/whitemagic/whitemagic-zig}"
 OUT_DIR="$ZIG_DIR/zig-out/lib"
 
 if [ ! -d "$ZIG_DIR" ]; then

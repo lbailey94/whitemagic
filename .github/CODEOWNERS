@@ -2,20 +2,20 @@
 # These owners will be requested for review on PRs touching their areas.
 
 # Global fallback
-* @lbailey94
+* @whitemagic-ai
 
 # Core memory system
-whitemagic/core/memory/ @lbailey94
+whitemagic/core/memory/ @whitemagic-ai
 
 # Security-critical paths
-whitemagic/security/ @lbailey94
-whitemagic/dharma/ @lbailey94
+whitemagic/security/ @whitemagic-ai
+whitemagic/dharma/ @whitemagic-ai
 
 # MCP server
-whitemagic/run_mcp_lean.py @lbailey94
+whitemagic/run_mcp_lean.py @whitemagic-ai
 
 # Rust accelerators
-whitemagic-rust/ @lbailey94
+whitemagic-rust/ @whitemagic-ai
 
 # CI/CD
-.github/ @lbailey94
+.github/ @whitemagic-ai

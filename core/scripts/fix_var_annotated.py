@@ -65,7 +65,7 @@ def main() -> None:
     # Get list of (file, line) for var-annotated errors
     result = subprocess.run(
         [".venv/bin/mypy", "whitemagic/"],
-        capture_output=True, text=True, cwd="/home/lucas/Desktop/WHITEMAGIC/core",
+        capture_output=True, text=True, cwd="<WHITEMAGIC_ROOT>/core",
     )
     # mypy writes errors to stderr
     output = result.stdout + result.stderr
@@ -84,7 +84,7 @@ def main() -> None:
         # targets have file_path like "whitemagic/foo.py" and ROOT is "whitemagic"
         # so the full path is just ROOT / "foo.py"
         rel = file_path[len("whitemagic/"):] if file_path.startswith("whitemagic/") else file_path
-        path = Path("/home/lucas/Desktop/WHITEMAGIC/core") / file_path
+        path = Path("<WHITEMAGIC_ROOT>/core") / file_path
         if not path.exists():
             continue
         if add_var_annotation(path, line_no):

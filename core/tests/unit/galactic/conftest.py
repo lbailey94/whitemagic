@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-LIVE_SUBSTRATE_DB = Path("/home/lucas/.whitemagic/memory/whitemagic.db")
+LIVE_SUBSTRATE_DB = Path.home() / ".whitemagic" / "memory" / "whitemagic.db"
 
 
 @pytest.fixture(autouse=True)

@@ -14,7 +14,7 @@ import re
 import subprocess
 from pathlib import Path
 
-ROOT = Path("/home/lucas/Desktop/WHITEMAGIC/core")
+ROOT = Path("<WHITEMAGIC_ROOT>/core")
 
 
 def update_ignore(path: Path, line_no: int, actual_code: str) -> bool:

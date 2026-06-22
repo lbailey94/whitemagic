@@ -369,7 +369,7 @@ WorkingDirectory=/home/whitemagic/WHITEMAGIC/core
 Environment="PATH=/home/whitemagic/WHITEMAGIC/core/.venv/bin"
 Environment="WM_STATE_ROOT=/home/whitemagic/.whitemagic"
 Environment="WM_SILENT_INIT=1"
-Environment="XRPL_TIP_ADDRESS=raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy"
+Environment="XRPL_TIP_ADDRESS=YOUR_XRPL_ADDRESS"
 ExecStart=/home/whitemagic/WHITEMAGIC/core/.venv/bin/python -m whitemagic.interfaces.gratitude_server --host 127.0.0.1 --port 8780
 Restart=always
 RestartSec=10
@@ -519,7 +519,7 @@ WM_POLYGLOT_HS=/home/whitemagic/WHITEMAGIC/polyglot/whitemagic-hs
 WM_POLYGLOT_ZIG=/home/whitemagic/WHITEMAGIC/polyglot/whitemagic-zig/zig-out/lib
 
 # x402 / Gratitude
-XRPL_TIP_ADDRESS=raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy
+XRPL_TIP_ADDRESS=YOUR_XRPL_ADDRESS
 GRATITUDE_LEDGER_PATH=/home/whitemagic/.whitemagic/gratitude/ledger.jsonl
 
 # API keys (only if using external services)

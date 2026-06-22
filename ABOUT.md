@@ -152,7 +152,7 @@ WhiteMagic is **free and open-source** under the MIT license. It will always be 
 
 If WhiteMagic has been useful to you — if it has helped your AI remember, or made your workflow better, or inspired an idea — gratitude is welcome but never expected.
 
-- **XRPL Tip Address**: `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy`
+- **XRPL Tip Address**: `YOUR_XRPL_ADDRESS`
 - **Tip via tool**: `call_tool("whitemagic.tip", amount=1.0, currency="XRP")`
 - **Check gratitude stats**: `call_tool("gratitude.stats")`
 
@@ -162,7 +162,7 @@ Every tip, no matter how small, goes directly toward development and infrastruct
 
 ## Contact
 
-- **Email**: whitemagicdev@proton.me
+- **Email**: contact@whitemagic.dev
 - **GitHub**: [whitemagic-ai/whitemagic](https://github.com/whitemagic-ai/whitemagic)
 - **License**: MIT
 

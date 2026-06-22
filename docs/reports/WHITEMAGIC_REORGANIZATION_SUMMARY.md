@@ -5,7 +5,7 @@
 ### Directory Structure — REORGANIZED
 ```
 /media/lucas/SD_CARD/WHITEMAGIC/
-├── core/              # Main source tree (was whitemagicdev/ + whitemagicpublic/ merged)
+├── core/              # Main source tree (was whitemagic/ + whitemagicpublic/ merged)
 ├── frontend/          # Frontend apps (wmfrontend2, web, dashboard-app, hub, shell, _legacy)
 ├── projects/          # Active side projects
 │   ├── mandalaos/     # OS project + backend (merged)
@@ -34,17 +34,17 @@
 ```
 
 ### Removed / Consolidated
-- `whitemagicdev/` → merged into `core/`
+- `whitemagic/` → merged into `core/`
 - `whitemagicpublic/` → merged into `core/` (was 90% duplicate)
 - `wmfrontend/` → split into `frontend/` subdirs
 - `aria-crystallized/` → merged into `aria/`
 - `mandalaos/` → moved to `projects/mandalaos/`
 - `cyberbrain project/` → moved to `projects/cyberbrain-site/`
 - `wm_archive/` → deleted (obsolete)
-- `whitemagicdev/_archives/` → moved to top-level `archives/`
-- `whitemagicdev/koka-clones/` → moved to `projects/koka-clones/`
-- `whitemagicdev/elixir/` → moved to `projects/elixir-swarm/`
-- `whitemagicdev/mandalaos-railway-backend/` → merged into `projects/mandalaos/backend/`
+- `whitemagic/_archives/` → moved to top-level `archives/`
+- `whitemagic/koka-clones/` → moved to `projects/koka-clones/`
+- `whitemagic/elixir/` → moved to `projects/elixir-swarm/`
+- `whitemagic/mandalaos-railway-backend/` → merged into `projects/mandalaos/backend/`
 
 ### Home Directory Cleanup
 - Removed 5 stale `.lock` files

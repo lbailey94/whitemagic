@@ -125,7 +125,7 @@ fn cosine_similarity(a: List[Float32], b: List[Float32]) -> Float32:
 ```bash
 # 1. Create test environment
 cd /tmp
-cp -r ~/Desktop/whitemagicdev/whitemagic-mojo ./mojo-test
+cp -r ~/Desktop/whitemagic/whitemagic-mojo ./mojo-test
 
 # 2. Try newer version in isolation
 cd mojo-test
@@ -141,7 +141,7 @@ pixi run mojo build bench_cosine.mojo -o test_binary
 ./test_binary
 
 # 5. Only if all pass, update main repo
-cd ~/Desktop/whitemagicdev/whitemagic-mojo
+cd ~/Desktop/whitemagic/whitemagic-mojo
 pixi add "mojo==0.27.0"
 pixi lock
 ```
