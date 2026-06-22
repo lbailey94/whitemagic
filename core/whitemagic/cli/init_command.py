@@ -41,7 +41,7 @@ WhiteMagic is a **cognitive scaffolding layer** for AI agents. It provides:
 - **Ethical governance** via Dharma rules, Karma ledger, and Harmony Vector
 - **Self-awareness** through Gnosis introspection, Self-Model forecasting, and Homeostasis
 - **Multi-agent coordination** with task distribution, voting, and pipelines
-- **9-language polyglot accelerators** (Rust, Zig, Haskell, Elixir, Go, Mojo, Julia, TypeScript)
+- **7-language polyglot accelerators** (Rust, Zig, Julia, Haskell, Koka, Elixir, Go) — all free, no accounts needed
 
 ## Quick Start
 
@@ -86,6 +86,65 @@ wm doctor
 # Interactive playground
 python playground.py
 ```
+
+## Your First 5 Minutes
+
+### Step 1: Create a Memory
+
+```bash
+wm remember "I just installed WhiteMagic. This is my first memory." \
+  --title "First Memory" --tags onboarding,first
+```
+
+### Step 2: Search for It
+
+```bash
+wm recall "first memory"
+```
+
+You should see the memory you just created. The system searched its database
+and found your memory by content. This is **full-text search** — WhiteMagic
+also supports semantic search and graph traversal once you have more memories.
+
+### Step 3: See the Galactic Map
+
+Every memory gets 5D holographic coordinates (x, y, z, w, v) that encode
+its semantic position. Memories cluster in a "galaxy" with zones:
+
+```
+CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE
+```
+
+New memories start in CORE (frequently accessed). Over time, if not
+accessed, they drift outward. No memory is ever deleted — only rotated.
+
+```bash
+wm stats  # See your memory statistics
+```
+
+### Step 4: Explore the Dream Cycle
+
+WhiteMagic has a 12-phase dream cycle inspired by biological sleep.
+When the system is idle, it consolidates memories, finds serendipitous
+connections, and tunes its own balance.
+
+```bash
+wm dream phases   # See all 12 phases
+wm dream run      # Run a single dream phase now
+wm dream report   # See what the system dreamed
+```
+
+### Step 5: Connect Your AI
+
+Add the generated `.mcp.json` to your AI client (Claude Desktop, Cursor,
+Windsurf, etc.) and your AI will have persistent memory across sessions.
+
+Your AI can now:
+- **Remember** what happened in previous conversations
+- **Search** its memories by content, semantics, or associations
+- **Dream** — consolidate and find connections during idle time
+- **Govern itself** — ethical checks before destructive actions
+- **Reflect** on its own state through introspection tools
 
 ## MCP Configuration
 

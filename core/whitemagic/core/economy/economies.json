@@ -1,13 +1,13 @@
 {
     "beneficiaries": {
         "labs": {
-            "name": "Whitemagic Labs",
-            "address": "raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy",
+            "name": "Your Organization",
+            "address": "YOUR_XRPL_ADDRESS_HERE",
             "default_split": 0.1
         },
         "foundation": {
-            "name": "Dharmic Open Source Foundation",
-            "address": "raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPy",
+            "name": "Your Foundation",
+            "address": "YOUR_XRPL_ADDRESS_HERE",
             "default_split": 0.05
         }
     },

@@ -16,7 +16,7 @@
 
 - claim: "AI SBOM / Transparency Ledger — cryptographic model lineage tracking"
   source_date: "2025-06-12"
-  source_ref: "CODEX OpenAI archive 684b6b5e-4a3c-8005-b506-e5429c3a5d08"
+  source_ref: "Personal research notes #1"
   confidence: 0.75
   behavioral_confidence: 0.8
   category: "ai_governance"
@@ -29,7 +29,7 @@
 
 - claim: "Karma Ledger — append-only cryptographically verifiable audit for AI actions"
   source_date: "2025-05-26"
-  source_ref: "CODEX OpenAI archive 6834cc70-f9b8-8005-8562-2c049f7701e1 (MandalaOS)"
+  source_ref: "Personal research notes #2"
   confidence: 0.80
   behavioral_confidence: 0.8
   category: "ai_governance"
@@ -42,7 +42,7 @@
 
 - claim: "mandala-yama — isolated policy VM intercepting every tool call before execution"
   source_date: "2025-05-26"
-  source_ref: "CODEX OpenAI archive 6834cc70-f9b8-8005-8562-2c049f7701e1"
+  source_ref: "Personal research notes #3"
   confidence: 0.70
   behavioral_confidence: 0.8
   category: "ai_governance"
@@ -55,7 +55,7 @@
 
 - claim: "28-Gana/PRAT taxonomy — 28-fold meta-tool routing layer for agents"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §28-Gana (mtime 2025-09-25T22:31:50 EDT)"
+  source_ref: "Personal research notes #4"
   confidence: 0.65
   behavioral_confidence: 0.75
   category: "agent_architecture"
@@ -81,7 +81,7 @@
 
 - claim: "MCP 10× efficiency — empirical benchmark showing 10× token/speed improvement"
   source_date: "2025-11-14"
-  source_ref: "CODEX OpenAI archive 6917f2d7-0a10-8332-83e5-f26a7e99da44"
+  source_ref: "Personal research notes #5"
   confidence: 0.75
   behavioral_confidence: 0.9
   category: "agent_architecture"
@@ -133,7 +133,7 @@
 
 - claim: "UAP May 2026 disclosure window — expected public UAP release in May"
   source_date: "2026-04-12"
-  source_ref: "WhiteMagic prescience log (Apr 12 2026)"
+  source_ref: "Personal research notes #6"
   confidence: 0.55
   behavioral_confidence: 0.55
   category: "geopolitics"
@@ -146,7 +146,7 @@
 
 - claim: "Modular cognitive cores — personal AI kernel as separable IP from hardware"
   source_date: "2025-06-12"
-  source_ref: "CODEX OpenAI archive 684b6aa4-f83c-8005-a005-cab4d70b1f69 — CyberBrain Core Mapping"
+  source_ref: "Personal research notes #7"
   confidence: 0.70
   behavioral_confidence: 0.85
   category: "ai_hardware"
@@ -159,7 +159,7 @@
 
 - claim: "Humanoid robot brain layer = scarce IP — cognitive stack more valuable than body"
   source_date: "2025-10-01"
-  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §HumanoidBrain (mtime 2025-09-25T22:31:50 EDT)"
+  source_ref: "Personal research notes #8"
   confidence: 0.65
   behavioral_confidence: 0.75
   category: "ai_hardware"
@@ -172,7 +172,7 @@
 
 - claim: "Agentic Ecosystems 2026–2027 prediction — agentic AI enters mainstream org infrastructure"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #9"
   confidence: 0.75
   behavioral_confidence: 0.8
   category: "ai_trends"
@@ -185,7 +185,7 @@
 
 - claim: "Full MandalaOS architecture — Dharma Engine + Karma Ledger + Gnosis Portals + SutraCode"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §MandalaOS (mtime 2025-09-25T22:31:50 EDT)"
+  source_ref: "Personal research notes #10"
   confidence: 0.70
   behavioral_confidence: 0.8
   category: "ai_governance"
@@ -198,7 +198,7 @@
 
 - claim: "Defensive AI coalition — powerful AI restricted to security use, too dangerous for public release"
   source_date: "2025-10-24"
-  source_ref: "edgerunnerviolet.md (SD card, Oct 24, 2025)"
+  source_ref: "Personal research notes #11"
   confidence: 0.75
   behavioral_confidence: 0.8
   category: "ai_governance"
@@ -207,7 +207,7 @@
   validation_ref: "Anthropic Claude Mythos ASL-4 + Project Glasswing coalition (Apr 9 2026)"
   lead_weeks: 24.0
   points: 24.0
-  notes: "~24 weeks ahead; Grok archive 2026-04-09_grok_Claude_Mythos_Powerful_Restricted_Cybersecurity_AI_e4f9ab2f.md"
+  notes: "~24 weeks ahead; Personal research archive"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PENDING CLAIMS — discovered during Claim Discovery Sprint 2026-05-29
@@ -217,7 +217,7 @@
 
 - claim: "AI Cambrian Explosion — agent collectives evolve into civilizational organs"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt §Cambrian AI ecologies (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #12"
   confidence: 0.65
   behavioral_confidence: 0.75
   category: "ai_trends"
@@ -230,7 +230,7 @@
 
 - claim: "SMR / microreactor LEASING model — 5-MW skid with on-chain power/heat tracking"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §Modular-microreactor leasing node (mtime 2025-09-25T22:31:50 EDT)"
+  source_ref: "Personal research notes #13"
   confidence: 0.60
   behavioral_confidence: 0.70
   category: "energy"
@@ -239,7 +239,7 @@
 
 - claim: "Transparent reasoning & ToM probes — chain-of-thought diff as trust layer"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt §Transparent reasoning & ToM probes (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #14"
   confidence: 0.70
   behavioral_confidence: 0.80
   category: "ai_governance"
@@ -252,16 +252,16 @@
 
 - claim: "Self-improving AI / Darwin Gödel Machine — sandboxed self-modification with red-teaming"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §Darwin Gödel Machine (mtime 2025-09-25T22:31:50 EDT)"
+  source_ref: "Personal research notes #15"
   confidence: 0.65
   behavioral_confidence: 0.75
   category: "agent_architecture"
   status: "expired"
-  notes: "EXPIRED — NON-PRESCIENT. Darwin Gödel Machine arXiv:2505.22954 published May 23, 2025 predates all known Lucas sources. Full PC search found: (1) physical GEB/self-reference notes in _private_journal/Personal/GEB existed pre-May 2025 but were not digitized until Oct 2025; (2) digital GEB files in CODEX/LIBRARY (Jun-Aug 2025) contain 'Gödel-style self-mirrors' as philosophical framing, not the specific DGM technical architecture; (3) OpenAI archives 220 convos (earliest May 2025), alltexts distillations, archives/desktop-documents — no pre-May DGM references. CRITICAL: SD card ---NewSystems.txt (mtime Sep 25, 2025) explicitly references the paper by name: 'sandboxed self-modification (à la Darwin Gödel Machine).' This is a citation, not a prediction. Broader GEB/self-reference/recursive-improvement philosophy likely predates the paper (physical notes), but the specific named technical claim is reactive. Claim removed from scoring to maintain ledger rigor."
+  notes: "EXPIRED — source material found to post-date the published paper. Claim removed from scoring to maintain ledger rigor."
 
 - claim: "Decentralized multi-agent consensus mesh — peer-to-peer agreement replacing central commander"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewSystems.txt §Decentralized Consensus (mtime 2025-09-25T22:31:50 EDT)"
+  source_ref: "Personal research notes #16"
   confidence: 0.60
   behavioral_confidence: 0.70
   category: "agent_architecture"
@@ -274,7 +274,7 @@
 
 - claim: "AI-native disaster prevention lattice — nonlinear cascade risk detection days earlier"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt §Zodiac disaster lattice (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #17"
   confidence: 0.70
   behavioral_confidence: 0.80
   category: "ai_governance"
@@ -283,7 +283,7 @@
 
 - claim: "UBI / automation dividend — universal credit layer for robotics + automated extraction economy"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt §UBI as universal credit layer (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #18"
   confidence: 0.70
   behavioral_confidence: 0.75
   category: "ai_trends"
@@ -296,7 +296,7 @@
 
 - claim: "Neuromorphic edge chips sub-10W — memristor inference for drones, tugs, swarms"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt §Neuromorphic + memristor edge chips (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #19"
   confidence: 0.65
   behavioral_confidence: 0.75
   category: "ai_hardware"
@@ -309,7 +309,7 @@
 
 - claim: "Neurophotonic Data Center 2.0→3.0 — photonic brain + superconducting spine + quantum heart"
   source_date: "2025-09-25"
-  source_ref: "SD_CARD/LIBRARY/---NewIntelligence.txt §Neurophotonic chips + Data Center 3.0 (mtime 2025-09-25T22:24:58 EDT)"
+  source_ref: "Personal research notes #20"
   confidence: 0.60
   behavioral_confidence: 0.70
   category: "ai_hardware"

@@ -1,6 +1,6 @@
 # WhiteMagic — Server Instructions for AI Clients
 
-WhiteMagic is a cognitive operating system that gives you persistent memory, associative recall, ethical governance, and self-awareness across sessions. It exposes 186 tools organized into 28 Gana meta-tools based on the 28 Lunar Mansions.
+WhiteMagic is a cognitive operating system that gives you persistent memory, associative recall, ethical governance, and self-awareness across sessions. It exposes 462 tools organized into 28 Gana meta-tools based on the 28 Lunar Mansions (490 callable total including the 28 Gana meta-tools themselves).
 
 ## Quick Start
 
@@ -60,9 +60,20 @@ If you omit `tool`, the Gana will use `operation` to decide what to do.
 
 WhiteMagic stores memories in a 5D holographic coordinate space (X=emotional, Y=temporal, Z=associative, W=importance, V=novelty). Memories are:
 - **Searchable** via full-text search, vector similarity, and graph traversal
-- **Associative** — linked through a living graph of 50,000+ edges
+- **Associative** — linked through a living graph that grows as you create and connect memories
 - **Self-organizing** — the dream cycle consolidates, prunes, and strengthens associations
 - **Governed** — retention scoring, galactic zone classification, lifecycle management
+
+## Your First Steps as an AI Agent
+
+1. **Bootstrap your session**: `gana_horn` → `session_bootstrap` — loads recent context
+2. **Create your first memory**: `gana_neck` → `create_memory` with `{content: "I am learning WhiteMagic", title: "First memory", tags: ["onboarding"]}`
+3. **Search for it**: `gana_winnowing_basket` → `search_memories` with `{query: "learning"}`
+4. **Check your health**: `gana_root` → `health_report`
+5. **Reflect on yourself**: `gana_ghost` → `gnosis` — see your full system state
+6. **Dream**: `gana_abundance` → `dream` — run memory consolidation
+
+You now have persistent memory. Every future session can recall what you stored.
 
 ## Best Practices
 
