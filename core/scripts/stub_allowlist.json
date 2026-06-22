@@ -1,0 +1,8 @@
+[
+  "core/whitemagic/cli/lazy_groups.py:92:_create_missing_dep_command",
+  "core/whitemagic/inference/unified_embedder.py:154:_encode_mojo_gpu",
+  "core/whitemagic/tools/gana_forge.py:124:_compute_manifest_signature",
+  "core/whitemagic/tools/handlers/misc.py:8:_stub",
+  "core/whitemagic/run_mcp.py:31:startup",
+  "core/whitemagic/run_mcp.py:36:shutdown"
+]

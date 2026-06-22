@@ -1,0 +1,117 @@
+"""Idempotency Ledger.
+==================
+
+For AI/tool callers, retries are normal. Write tools should support
+`idempotency_key` so the caller can safely retry without duplicating writes.
+
+Implementation:
+- Store one JSON record per (tool, idempotency_key) under WM_STATE_ROOT.
+- Read-before-write to replay prior successful result.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from whitemagic.config.paths import ARTIFACTS_DIR
+from whitemagic.tools.envelope import coerce_jsonable
+from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import loads as _json_loads
+from whitemagic.utils.fileio import atomic_write, file_lock
+
+logger = logging.getLogger(__name__)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+def _safe_tool_filename(tool: str) -> str:
+    return "".join(c if c.isalnum() or c in {"_", "-", "."} else "_" for c in tool)
+
+
+def _record_path(tool: str, key: str) -> Path:
+    h = hashlib.sha256(f"{tool}:{key}".encode()).hexdigest()[:24]
+    base = Path(ARTIFACTS_DIR) / "idempotency"
+    base.mkdir(parents=True, exist_ok=True)
+    return Path(base / f"{_safe_tool_filename(tool)}__{h}.json")
+
+
+@dataclass(frozen=True)
+class IdempotencyRecord:
+    """IdempotencyRecord: idempotency record.
+
+    Value object: equality and repr are field-based."""
+    tool: str
+    key: str
+    stored_at: str
+    response: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Convert to/from dict.
+
+        Returns:
+            dict[str, Any]
+        """
+        return {
+            "tool": self.tool,
+            "key": self.key,
+            "stored_at": self.stored_at,
+            "response": coerce_jsonable(self.response),
+        }
+
+
+def get_record(tool: str, key: str) -> IdempotencyRecord | None:
+    """
+    Get the record.
+
+    Args:
+        tool: Parameter description.
+        key: Parameter description.
+
+    Returns:
+        IdempotencyRecord | None
+    """
+    path = _record_path(tool, key)
+    if not path.exists():
+        return None
+    try:
+        with file_lock(path):
+            data = _json_loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return None
+        resp = data.get("response")
+        if not isinstance(resp, dict):
+            return None
+        return IdempotencyRecord(
+            tool=str(data.get("tool", tool)),
+            key=str(data.get("key", key)),
+            stored_at=str(data.get("stored_at", "")),
+            response=resp,
+        )
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def put_record(tool: str, key: str, response: dict[str, Any]) -> None:
+    """
+    Perform the put record operation.
+
+    Args:
+        tool: Parameter description.
+        key: Parameter description.
+        response: Parameter description.
+
+    Returns:
+        None
+    """
+    path = _record_path(tool, key)
+    record = IdempotencyRecord(tool=tool, key=key, stored_at=_utc_now_iso(), response=response)
+    with file_lock(path):
+        atomic_write(path, _json_dumps(record.to_dict(), indent=2, sort_keys=True))

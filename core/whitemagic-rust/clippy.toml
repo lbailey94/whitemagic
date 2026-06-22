@@ -1,0 +1,5 @@
+# WhiteMagic Clippy configuration
+# Allow certain pedantic lints that are common in this codebase
+cognitive-complexity-threshold = 50
+too-many-arguments-threshold = 10
+type-complexity-threshold = 500

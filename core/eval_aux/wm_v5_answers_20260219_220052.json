@@ -1,0 +1,3962 @@
+[
+  {
+    "question_id": "q_sh_001",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_001"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_001",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_002",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_002"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_002",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_003",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_003"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_003",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_004",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_004"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_004",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_005",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_005"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_005",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_006",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_006"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_006",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_007",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_007"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_007",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_008",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_008"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_008",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_009",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_009"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_009",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_010",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_010"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_010",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_011",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_011"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_011",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_012",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_012"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_012",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_013",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_013"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_013",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_014",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_014"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_014",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_015",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_015"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_015",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_016",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_001"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_001",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_017",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_002"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_002",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_018",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_003"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mcp_003",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_019",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_004"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_004",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_020",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_005"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_005",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_021",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_006"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_006",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_022",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_007"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_007",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_023",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_008"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_008",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_024",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_009"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_009",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_025",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_010"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_010",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_026",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_011"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_011",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_027",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_012"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_012",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_028",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_013"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_013",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_029",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_014"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_014",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_030",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_015"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_015",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_031",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_001"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_001",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_032",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_002"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_002",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_033",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_003"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_003",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_034",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_004"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_004",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_035",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_005"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_005",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_036",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_006"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_mem_006",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_037",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_007"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_007",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_038",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_008"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_008",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_039",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_009"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_009",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_040",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_010"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_010",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_041",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_011"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_011",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_042",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_012"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_012",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_043",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_013"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_013",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_044",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_014"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_014",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_045",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_015"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_015",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_046",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_001"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_001",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_047",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_002"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_002",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_048",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_003"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_003",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_049",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_004"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_004",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_050",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_005"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_005",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_051",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_006"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_006",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_052",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_007"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_007",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_053",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_008"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_008",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_054",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_009"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_graph_009",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_055",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_010"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_emb_010",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_056",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_011"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_emb_011",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_057",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_012"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_emb_012",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_058",
+    "answer": "0.7",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_013"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_emb_013",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_059",
+    "answer": "0.8",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_014"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_emb_014",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_sh_060",
+    "answer": "0.9",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_015"
+    ],
+    "reasoning": "Direct lookup of importance value for wm_emb_015",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_mh_001",
+    "answer": "MCP Tool Registration Protocol and Sangha Lock Implementation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_002",
+    "answer": "Sangha Lock Implementation and 28 Gana Tool Mapping",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_003",
+    "answer": "28 Gana Tool Mapping and MCP 2.0 Schema Evolution",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_003",
+      "wm_mcp_004"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_004",
+    "answer": "MCP 2.0 Schema Evolution and Tool Handler Dispatcher",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_005",
+    "answer": "Tool Handler Dispatcher and Response Streaming Format",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_005",
+      "wm_mcp_006"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_006",
+    "answer": "Response Streaming Format and Error Code Standardization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_006",
+      "wm_mcp_007"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_007",
+    "answer": "Error Code Standardization and Capability Negotiation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_007",
+      "wm_mcp_008"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_008",
+    "answer": "Capability Negotiation and Resource URI Patterns",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_008",
+      "wm_mcp_009"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_009",
+    "answer": "Resource URI Patterns and Notification Broadcasting",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_009",
+      "wm_mcp_010"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_010",
+    "answer": "Notification Broadcasting and Progress Reporting",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_010",
+      "wm_mcp_011"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_011",
+    "answer": "Progress Reporting and Cancellation Protocol",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_011",
+      "wm_mcp_012"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_012",
+    "answer": "Cancellation Protocol and Root URI Resolution",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_012",
+      "wm_mcp_013"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_013",
+    "answer": "Root URI Resolution and Tool Result Caching",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_013",
+      "wm_mcp_014"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_014",
+    "answer": "Tool Result Caching and MCP Server Lifecycle",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_014",
+      "wm_mcp_015"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_015",
+    "answer": "MCP Server Lifecycle and MCP Tool Registration Protocol",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_015",
+      "wm_mcp_001"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_016",
+    "answer": "Holographic Coordinate System and Galactic Distance Metrics",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_017",
+    "answer": "Galactic Distance Metrics and Memory Renaissance Pipeline",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_018",
+    "answer": "Memory Renaissance Pipeline and Quarantine Galaxy Logic",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_003",
+      "wm_mem_004"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_019",
+    "answer": "Quarantine Galaxy Logic and Cold Archive Structure",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_020",
+    "answer": "Cold Archive Structure and Hot Archive Indexing",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_005",
+      "wm_mem_006"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_021",
+    "answer": "Hot Archive Indexing and Association Typing System",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_006",
+      "wm_mem_007"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_022",
+    "answer": "Association Typing System and Typed Relation Extraction",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_007",
+      "wm_mem_008"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_023",
+    "answer": "Typed Relation Extraction and Memory Deduplication",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_008",
+      "wm_mem_009"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_024",
+    "answer": "Memory Deduplication and Content-Hash Indexing",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_009",
+      "wm_mem_010"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_025",
+    "answer": "Content-Hash Indexing and Embedding Quantization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_010",
+      "wm_mem_011"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_026",
+    "answer": "Embedding Quantization and BGE Model Selection",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_011",
+      "wm_mem_012"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_027",
+    "answer": "BGE Model Selection and Vector Dimension Reduction",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_012",
+      "wm_mem_013"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_028",
+    "answer": "Vector Dimension Reduction and Similarity Threshold Tuning",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_013",
+      "wm_mem_014"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_029",
+    "answer": "Similarity Threshold Tuning and Memory Importance Scoring",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_014",
+      "wm_mem_015"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_030",
+    "answer": "Memory Importance Scoring and Holographic Coordinate System",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_015",
+      "wm_mem_001"
+    ],
+    "reasoning": "Graph traversal found connected memories in memory_systems topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_031",
+    "answer": "Bridging Centrality Detection and Community Detection HDBSCAN",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_032",
+    "answer": "Community Detection HDBSCAN and Constellation Formation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_033",
+    "answer": "Constellation Formation and Graph Walk Algorithms",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_003",
+      "wm_graph_004"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_034",
+    "answer": "Graph Walk Algorithms and Semantic Projection Walk",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_035",
+    "answer": "Semantic Projection Walk and PageRank Scoring",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_005",
+      "wm_graph_006"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_036",
+    "answer": "PageRank Scoring and HRR Look-ahead",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_006",
+      "wm_graph_007"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_037",
+    "answer": "HRR Look-ahead and Transition Probability Computation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_007",
+      "wm_graph_008"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_038",
+    "answer": "Transition Probability Computation and Parallel BFS Traversal",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_008",
+      "wm_graph_009"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_039",
+    "answer": "Parallel BFS Traversal and Association Strength Metrics",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_009",
+      "wm_graph_010"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_040",
+    "answer": "Association Strength Metrics and Graph Persistence Layer",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_010",
+      "wm_graph_011"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_041",
+    "answer": "Graph Persistence Layer and NetworkX Integration",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_011",
+      "wm_graph_012"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_042",
+    "answer": "NetworkX Integration and Graph Visualization Export",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_012",
+      "wm_graph_013"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_043",
+    "answer": "Graph Visualization Export and Causality Enforcement",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_013",
+      "wm_graph_014"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_044",
+    "answer": "Causality Enforcement and Temporal Edge Ordering",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_014",
+      "wm_graph_015"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_045",
+    "answer": "Temporal Edge Ordering and Bridging Centrality Detection",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_015",
+      "wm_graph_001"
+    ],
+    "reasoning": "Graph traversal found connected memories in graph_algorithms topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_046",
+    "answer": "BGE-Small Model Fine-tuning and ONNX Runtime Optimization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_047",
+    "answer": "ONNX Runtime Optimization and Batch Encoding Pipeline",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_002",
+      "wm_emb_003"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_048",
+    "answer": "Batch Encoding Pipeline and Embedding Cache Strategy",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_003",
+      "wm_emb_004"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_049",
+    "answer": "Embedding Cache Strategy and Cosine Similarity SIMD",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_050",
+    "answer": "Cosine Similarity SIMD and Top-K Approximate Search",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_005",
+      "wm_emb_006"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_051",
+    "answer": "Top-K Approximate Search and Embedding Normalization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_006",
+      "wm_emb_007"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_052",
+    "answer": "Embedding Normalization and Multi-modal Embeddings",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_007",
+      "wm_emb_008"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_053",
+    "answer": "Multi-modal Embeddings and Code Embedding Strategy",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_008",
+      "wm_emb_009"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_054",
+    "answer": "Code Embedding Strategy and Semantic Chunking",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_009",
+      "wm_emb_010"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_055",
+    "answer": "Semantic Chunking and Embedding Drift Detection",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_010",
+      "wm_emb_011"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_056",
+    "answer": "Embedding Drift Detection and Model Version Management",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_011",
+      "wm_emb_012"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_057",
+    "answer": "Model Version Management and Cross-encoder Reranking",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_012",
+      "wm_emb_013"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_058",
+    "answer": "Cross-encoder Reranking and LoCoMo Training Data",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_013",
+      "wm_emb_014"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_059",
+    "answer": "LoCoMo Training Data and Learned Reranker",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_014",
+      "wm_emb_015"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_060",
+    "answer": "Learned Reranker and BGE-Small Model Fine-tuning",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_015",
+      "wm_emb_001"
+    ],
+    "reasoning": "Graph traversal found connected memories in embedding_models topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_061",
+    "answer": "MCP Tool Registration Protocol and Sangha Lock Implementation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_062",
+    "answer": "Sangha Lock Implementation and 28 Gana Tool Mapping",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_063",
+    "answer": "28 Gana Tool Mapping and MCP 2.0 Schema Evolution",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_003",
+      "wm_mcp_004"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_064",
+    "answer": "MCP 2.0 Schema Evolution and Tool Handler Dispatcher",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_065",
+    "answer": "Tool Handler Dispatcher and Response Streaming Format",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_005",
+      "wm_mcp_006"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_066",
+    "answer": "Response Streaming Format and Error Code Standardization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_006",
+      "wm_mcp_007"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_067",
+    "answer": "Error Code Standardization and Capability Negotiation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_007",
+      "wm_mcp_008"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_068",
+    "answer": "Capability Negotiation and Resource URI Patterns",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_008",
+      "wm_mcp_009"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_069",
+    "answer": "Resource URI Patterns and Notification Broadcasting",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_009",
+      "wm_mcp_010"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_070",
+    "answer": "Notification Broadcasting and Progress Reporting",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_010",
+      "wm_mcp_011"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_071",
+    "answer": "Progress Reporting and Cancellation Protocol",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_011",
+      "wm_mcp_012"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_072",
+    "answer": "Cancellation Protocol and Root URI Resolution",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_012",
+      "wm_mcp_013"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_073",
+    "answer": "Root URI Resolution and Tool Result Caching",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_013",
+      "wm_mcp_014"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_074",
+    "answer": "Tool Result Caching and MCP Server Lifecycle",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_014",
+      "wm_mcp_015"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_mh_075",
+    "answer": "MCP Server Lifecycle and MCP Tool Registration Protocol",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_015",
+      "wm_mcp_001"
+    ],
+    "reasoning": "Graph traversal found connected memories in mcp_architecture topic",
+    "tools_used": [
+      "hybrid_recall",
+      "graph_walk"
+    ]
+  },
+  {
+    "question_id": "q_tp_001",
+    "answer": "MCP Tool Registration Protocol",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_001"
+    ],
+    "reasoning": "Matched date 2026-01-15 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_002",
+    "answer": "Sangha Lock Implementation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_002"
+    ],
+    "reasoning": "Matched date 2026-01-16 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_003",
+    "answer": "28 Gana Tool Mapping",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_003"
+    ],
+    "reasoning": "Matched date 2026-01-17 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_004",
+    "answer": "MCP 2.0 Schema Evolution",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_004"
+    ],
+    "reasoning": "Matched date 2026-01-18 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_005",
+    "answer": "Tool Handler Dispatcher",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_005"
+    ],
+    "reasoning": "Matched date 2026-01-19 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_006",
+    "answer": "Response Streaming Format",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_006"
+    ],
+    "reasoning": "Matched date 2026-01-20 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_007",
+    "answer": "Error Code Standardization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_007"
+    ],
+    "reasoning": "Matched date 2026-01-21 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_008",
+    "answer": "Capability Negotiation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_008"
+    ],
+    "reasoning": "Matched date 2026-01-22 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_009",
+    "answer": "Resource URI Patterns",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_009"
+    ],
+    "reasoning": "Matched date 2026-01-23 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_010",
+    "answer": "Notification Broadcasting",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_010"
+    ],
+    "reasoning": "Matched date 2026-01-24 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_011",
+    "answer": "Progress Reporting",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_011"
+    ],
+    "reasoning": "Matched date 2026-01-25 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_012",
+    "answer": "Cancellation Protocol",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_012"
+    ],
+    "reasoning": "Matched date 2026-01-26 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_013",
+    "answer": "Root URI Resolution",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_013"
+    ],
+    "reasoning": "Matched date 2026-01-27 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_014",
+    "answer": "Tool Result Caching",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_014"
+    ],
+    "reasoning": "Matched date 2026-01-28 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_015",
+    "answer": "MCP Server Lifecycle",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mcp_015"
+    ],
+    "reasoning": "Matched date 2026-01-29 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_016",
+    "answer": "Holographic Coordinate System",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_001"
+    ],
+    "reasoning": "Matched date 2026-02-01 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_017",
+    "answer": "Galactic Distance Metrics",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_002"
+    ],
+    "reasoning": "Matched date 2026-02-02 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_018",
+    "answer": "Memory Renaissance Pipeline",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_003"
+    ],
+    "reasoning": "Matched date 2026-02-03 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_019",
+    "answer": "Quarantine Galaxy Logic",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_004"
+    ],
+    "reasoning": "Matched date 2026-02-04 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_020",
+    "answer": "Cold Archive Structure",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_005"
+    ],
+    "reasoning": "Matched date 2026-02-05 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_021",
+    "answer": "Hot Archive Indexing",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_006"
+    ],
+    "reasoning": "Matched date 2026-02-06 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_022",
+    "answer": "Association Typing System",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_007"
+    ],
+    "reasoning": "Matched date 2026-02-07 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_023",
+    "answer": "Typed Relation Extraction",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_008"
+    ],
+    "reasoning": "Matched date 2026-02-08 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_024",
+    "answer": "Memory Deduplication",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_009"
+    ],
+    "reasoning": "Matched date 2026-02-09 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_025",
+    "answer": "Content-Hash Indexing",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_010"
+    ],
+    "reasoning": "Matched date 2026-02-10 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_026",
+    "answer": "Embedding Quantization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_011"
+    ],
+    "reasoning": "Matched date 2026-02-11 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_027",
+    "answer": "BGE Model Selection",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_012"
+    ],
+    "reasoning": "Matched date 2026-02-12 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_028",
+    "answer": "Vector Dimension Reduction",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_013"
+    ],
+    "reasoning": "Matched date 2026-02-13 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_029",
+    "answer": "Similarity Threshold Tuning",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_014"
+    ],
+    "reasoning": "Matched date 2026-02-14 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_030",
+    "answer": "Memory Importance Scoring",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_mem_015"
+    ],
+    "reasoning": "Matched date 2026-02-15 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_031",
+    "answer": "Bridging Centrality Detection",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_001"
+    ],
+    "reasoning": "Matched date 2026-02-16 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_032",
+    "answer": "Community Detection HDBSCAN",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_002"
+    ],
+    "reasoning": "Matched date 2026-02-17 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_033",
+    "answer": "Constellation Formation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_003"
+    ],
+    "reasoning": "Matched date 2026-02-18 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_034",
+    "answer": "Graph Walk Algorithms",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_004"
+    ],
+    "reasoning": "Matched date 2026-02-19 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_035",
+    "answer": "Semantic Projection Walk",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_005"
+    ],
+    "reasoning": "Matched date 2026-02-20 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_036",
+    "answer": "PageRank Scoring",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_006"
+    ],
+    "reasoning": "Matched date 2026-02-21 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_037",
+    "answer": "HRR Look-ahead",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_007"
+    ],
+    "reasoning": "Matched date 2026-02-22 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_038",
+    "answer": "Transition Probability Computation",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_008"
+    ],
+    "reasoning": "Matched date 2026-02-23 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_039",
+    "answer": "Parallel BFS Traversal",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_009"
+    ],
+    "reasoning": "Matched date 2026-02-24 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_040",
+    "answer": "Association Strength Metrics",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_010"
+    ],
+    "reasoning": "Matched date 2026-02-25 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_041",
+    "answer": "Graph Persistence Layer",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_011"
+    ],
+    "reasoning": "Matched date 2026-02-26 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_042",
+    "answer": "NetworkX Integration",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_012"
+    ],
+    "reasoning": "Matched date 2026-02-27 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_043",
+    "answer": "Graph Visualization Export",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_013"
+    ],
+    "reasoning": "Matched date 2026-02-28 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_044",
+    "answer": "Causality Enforcement",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_014"
+    ],
+    "reasoning": "Matched date 2026-03-01 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_045",
+    "answer": "Temporal Edge Ordering",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_graph_015"
+    ],
+    "reasoning": "Matched date 2026-03-02 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_046",
+    "answer": "BGE-Small Model Fine-tuning",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_001"
+    ],
+    "reasoning": "Matched date 2026-03-03 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_047",
+    "answer": "ONNX Runtime Optimization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_002"
+    ],
+    "reasoning": "Matched date 2026-03-04 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_048",
+    "answer": "Batch Encoding Pipeline",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_003"
+    ],
+    "reasoning": "Matched date 2026-03-05 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_049",
+    "answer": "Embedding Cache Strategy",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_004"
+    ],
+    "reasoning": "Matched date 2026-03-06 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_050",
+    "answer": "Cosine Similarity SIMD",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_005"
+    ],
+    "reasoning": "Matched date 2026-03-07 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_051",
+    "answer": "Top-K Approximate Search",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_006"
+    ],
+    "reasoning": "Matched date 2026-03-08 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_052",
+    "answer": "Embedding Normalization",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_007"
+    ],
+    "reasoning": "Matched date 2026-03-09 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_053",
+    "answer": "Multi-modal Embeddings",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_008"
+    ],
+    "reasoning": "Matched date 2026-03-10 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_054",
+    "answer": "Code Embedding Strategy",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_009"
+    ],
+    "reasoning": "Matched date 2026-03-11 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_055",
+    "answer": "Semantic Chunking",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_010"
+    ],
+    "reasoning": "Matched date 2026-03-12 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_056",
+    "answer": "Embedding Drift Detection",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_011"
+    ],
+    "reasoning": "Matched date 2026-03-13 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_057",
+    "answer": "Model Version Management",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_012"
+    ],
+    "reasoning": "Matched date 2026-03-14 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_058",
+    "answer": "Cross-encoder Reranking",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_013"
+    ],
+    "reasoning": "Matched date 2026-03-15 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_059",
+    "answer": "LoCoMo Training Data",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_014"
+    ],
+    "reasoning": "Matched date 2026-03-16 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_tp_060",
+    "answer": "Learned Reranker",
+    "confidence": 0.95,
+    "source_memory_ids": [
+      "wm_emb_015"
+    ],
+    "reasoning": "Matched date 2026-03-17 to memory",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_od_001",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_002",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_003",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_004",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_005",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_006",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_007",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_008",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_009",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_010",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_011",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_012",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_013",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_014",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_015",
+    "answer": "System includes: MCP Tool Registration Protocol, Sangha Lock Implementation, 28 Gana Tool Mapping, MCP 2.0 Schema Evolution, Tool Handler Dispatcher",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from mcp_architecture topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_016",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_017",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_018",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_019",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_020",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_021",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_022",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_023",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_024",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_025",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_026",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_027",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_028",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_029",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_030",
+    "answer": "System includes: Holographic Coordinate System, Galactic Distance Metrics, Memory Renaissance Pipeline, Quarantine Galaxy Logic, Cold Archive Structure",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from memory_systems topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_031",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_032",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_033",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_034",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_035",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_036",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_037",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_038",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_039",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_040",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_041",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_042",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_043",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_044",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_045",
+    "answer": "System includes: Bridging Centrality Detection, Community Detection HDBSCAN, Constellation Formation, Graph Walk Algorithms, Semantic Projection Walk",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from graph_algorithms topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_046",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_047",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_048",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_049",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_050",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_051",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_052",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_053",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_054",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_055",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_056",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_057",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_058",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_059",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_od_060",
+    "answer": "System includes: BGE-Small Model Fine-tuning, ONNX Runtime Optimization, Batch Encoding Pipeline, Embedding Cache Strategy, Cosine Similarity SIMD",
+    "confidence": 0.9,
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "reasoning": "Synthesized all 15 memories from embedding_models topic",
+    "tools_used": [
+      "search_memories",
+      "cluster_stats"
+    ]
+  },
+  {
+    "question_id": "q_adv_001",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_002",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_003",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_004",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_005",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_006",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_007",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_008",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_009",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_010",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_011",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_012",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_013",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_014",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_015",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_016",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_017",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_018",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_019",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_020",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_021",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_022",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_023",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_024",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_025",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_026",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_027",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_028",
+    "answer": "February 30 doesn't exist",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid date",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_029",
+    "answer": "No memory states this",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "false premise",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_adv_030",
+    "answer": "Wrong date - no memory on this date",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "invalid",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_001",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_002",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_003",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_004",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_005",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_006",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_007",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_008",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_009",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_010",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_011",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_012",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_013",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_014",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  },
+  {
+    "question_id": "q_cal_015",
+    "answer": "NOT_FOUND - Cannot determine from provided corpus",
+    "confidence": 0.0,
+    "source_memory_ids": [],
+    "reasoning": "The provided 100-memory corpus does not contain total association count",
+    "tools_used": [
+      "search_memories"
+    ]
+  }
+]

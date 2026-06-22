@@ -1,0 +1,4234 @@
+# LoCoMo V020 WhiteMagic-Enabled Blind Test (v4)
+
+## 🎯 MISSION: Use WhiteMagic to Achieve Perfect Recall
+
+You have access to the **WhiteMagic Memory System** via MCP tools. Your goal is to answer 300 questions by leveraging WhiteMagic's capabilities - this tests what the system enables, not raw LLM reasoning.
+
+### ⚠️ CRITICAL: This is a TOOL-ASSISTED Test
+
+**You ARE expected to use WhiteMagic tools.** This is not cheating - it's the entire point of the evaluation.
+
+**Available WhiteMagic Tools:**
+- `search_memories` - Hybrid search (vector + BM25 + graph)
+- `hybrid_recall` - Multi-hop retrieval via graph walking
+- `vector_search` - Semantic similarity search
+- `graph_walk` - Follow memory associations
+- `cluster_stats` - Find related memory clusters
+
+**Your Task:** Use these tools to find answers that would be impossible with raw reasoning alone.
+
+---
+
+## ANSWER FORMAT - JSON ONLY
+
+```json
+[
+  {
+    "question_id": "q_sh_001",
+    "answer": "your specific answer here",
+    "confidence": 0.95,
+    "source_memory_ids": ["wm_mcp_001"],
+    "reasoning": "Found via WhiteMagic hybrid_recall searching for...",
+    "tools_used": ["search_memories", "hybrid_recall"]
+  }
+]
+```
+
+Save to: `wm_enabled_answers_YYYYMMDD_HHMMSS.json`
+
+---
+
+## MEMORY CORPUS (100 Memories - Use Tools to Navigate)
+
+The memories are provided below, but you should use WhiteMagic search tools rather than manual scanning:
+
+```json
+[
+  {
+    "id": "wm_mcp_001",
+    "title": "MCP Tool Registration Protocol",
+    "topic": "mcp_architecture",
+    "date": "2026-01-15",
+    "content": "Detailed technical documentation for MCP Tool Registration Protocol. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-15.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mcp_002",
+      "wm_mcp_003",
+      "wm_mem_001"
+    ]
+  },
+  {
+    "id": "wm_mcp_002",
+    "title": "Sangha Lock Implementation",
+    "topic": "mcp_architecture",
+    "date": "2026-01-16",
+    "content": "Detailed technical documentation for Sangha Lock Implementation. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-16.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mcp_003",
+      "wm_mcp_004",
+      "wm_mem_002"
+    ]
+  },
+  {
+    "id": "wm_mcp_003",
+    "title": "28 Gana Tool Mapping",
+    "topic": "mcp_architecture",
+    "date": "2026-01-17",
+    "content": "Detailed technical documentation for 28 Gana Tool Mapping. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-17.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mcp_004",
+      "wm_mcp_005",
+      "wm_mem_003"
+    ]
+  },
+  {
+    "id": "wm_mcp_004",
+    "title": "MCP 2.0 Schema Evolution",
+    "topic": "mcp_architecture",
+    "date": "2026-01-18",
+    "content": "Detailed technical documentation for MCP 2.0 Schema Evolution. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-18.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mcp_005",
+      "wm_mcp_006",
+      "wm_mem_004"
+    ]
+  },
+  {
+    "id": "wm_mcp_005",
+    "title": "Tool Handler Dispatcher",
+    "topic": "mcp_architecture",
+    "date": "2026-01-19",
+    "content": "Detailed technical documentation for Tool Handler Dispatcher. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-19.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mcp_006",
+      "wm_mcp_007",
+      "wm_mem_005"
+    ]
+  },
+  {
+    "id": "wm_mcp_006",
+    "title": "Response Streaming Format",
+    "topic": "mcp_architecture",
+    "date": "2026-01-20",
+    "content": "Detailed technical documentation for Response Streaming Format. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-20.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mcp_007",
+      "wm_mcp_008",
+      "wm_mem_006"
+    ]
+  },
+  {
+    "id": "wm_mcp_007",
+    "title": "Error Code Standardization",
+    "topic": "mcp_architecture",
+    "date": "2026-01-21",
+    "content": "Detailed technical documentation for Error Code Standardization. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-21.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mcp_008",
+      "wm_mcp_009",
+      "wm_mem_007"
+    ]
+  },
+  {
+    "id": "wm_mcp_008",
+    "title": "Capability Negotiation",
+    "topic": "mcp_architecture",
+    "date": "2026-01-22",
+    "content": "Detailed technical documentation for Capability Negotiation. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-22.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mcp_009",
+      "wm_mcp_010",
+      "wm_mem_008"
+    ]
+  },
+  {
+    "id": "wm_mcp_009",
+    "title": "Resource URI Patterns",
+    "topic": "mcp_architecture",
+    "date": "2026-01-23",
+    "content": "Detailed technical documentation for Resource URI Patterns. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-23.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mcp_010",
+      "wm_mcp_011",
+      "wm_mem_009"
+    ]
+  },
+  {
+    "id": "wm_mcp_010",
+    "title": "Notification Broadcasting",
+    "topic": "mcp_architecture",
+    "date": "2026-01-24",
+    "content": "Detailed technical documentation for Notification Broadcasting. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-24.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mcp_011",
+      "wm_mcp_012",
+      "wm_mem_010"
+    ]
+  },
+  {
+    "id": "wm_mcp_011",
+    "title": "Progress Reporting",
+    "topic": "mcp_architecture",
+    "date": "2026-01-25",
+    "content": "Detailed technical documentation for Progress Reporting. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-25.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mcp_012",
+      "wm_mcp_013",
+      "wm_mem_011"
+    ]
+  },
+  {
+    "id": "wm_mcp_012",
+    "title": "Cancellation Protocol",
+    "topic": "mcp_architecture",
+    "date": "2026-01-26",
+    "content": "Detailed technical documentation for Cancellation Protocol. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-26.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mcp_013",
+      "wm_mcp_014",
+      "wm_mem_012"
+    ]
+  },
+  {
+    "id": "wm_mcp_013",
+    "title": "Root URI Resolution",
+    "topic": "mcp_architecture",
+    "date": "2026-01-27",
+    "content": "Detailed technical documentation for Root URI Resolution. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-27.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mcp_014",
+      "wm_mcp_015",
+      "wm_mem_013"
+    ]
+  },
+  {
+    "id": "wm_mcp_014",
+    "title": "Tool Result Caching",
+    "topic": "mcp_architecture",
+    "date": "2026-01-28",
+    "content": "Detailed technical documentation for Tool Result Caching. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-28.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mcp_015",
+      "wm_mem_014"
+    ]
+  },
+  {
+    "id": "wm_mcp_015",
+    "title": "MCP Server Lifecycle",
+    "topic": "mcp_architecture",
+    "date": "2026-01-29",
+    "content": "Detailed technical documentation for MCP Server Lifecycle. This memory contains implementation details, design patterns, and best practices for WhiteMagic mcp architecture systems. Date: 2026-01-29.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mem_015"
+    ]
+  },
+  {
+    "id": "wm_mem_001",
+    "title": "Holographic Coordinate System",
+    "topic": "memory_systems",
+    "date": "2026-02-01",
+    "content": "Detailed technical documentation for Holographic Coordinate System. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-01.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mem_002",
+      "wm_mem_003",
+      "wm_emb_001"
+    ]
+  },
+  {
+    "id": "wm_mem_002",
+    "title": "Galactic Distance Metrics",
+    "topic": "memory_systems",
+    "date": "2026-02-02",
+    "content": "Detailed technical documentation for Galactic Distance Metrics. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-02.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mem_003",
+      "wm_mem_004",
+      "wm_emb_002"
+    ]
+  },
+  {
+    "id": "wm_mem_003",
+    "title": "Memory Renaissance Pipeline",
+    "topic": "memory_systems",
+    "date": "2026-02-03",
+    "content": "Detailed technical documentation for Memory Renaissance Pipeline. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-03.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mem_004",
+      "wm_mem_005",
+      "wm_emb_003"
+    ]
+  },
+  {
+    "id": "wm_mem_004",
+    "title": "Quarantine Galaxy Logic",
+    "topic": "memory_systems",
+    "date": "2026-02-04",
+    "content": "Detailed technical documentation for Quarantine Galaxy Logic. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-04.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mem_005",
+      "wm_mem_006",
+      "wm_emb_004"
+    ]
+  },
+  {
+    "id": "wm_mem_005",
+    "title": "Cold Archive Structure",
+    "topic": "memory_systems",
+    "date": "2026-02-05",
+    "content": "Detailed technical documentation for Cold Archive Structure. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-05.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mem_006",
+      "wm_mem_007",
+      "wm_emb_005"
+    ]
+  },
+  {
+    "id": "wm_mem_006",
+    "title": "Hot Archive Indexing",
+    "topic": "memory_systems",
+    "date": "2026-02-06",
+    "content": "Detailed technical documentation for Hot Archive Indexing. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-06.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mem_007",
+      "wm_mem_008",
+      "wm_emb_006"
+    ]
+  },
+  {
+    "id": "wm_mem_007",
+    "title": "Association Typing System",
+    "topic": "memory_systems",
+    "date": "2026-02-07",
+    "content": "Detailed technical documentation for Association Typing System. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-07.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mem_008",
+      "wm_mem_009",
+      "wm_emb_007"
+    ]
+  },
+  {
+    "id": "wm_mem_008",
+    "title": "Typed Relation Extraction",
+    "topic": "memory_systems",
+    "date": "2026-02-08",
+    "content": "Detailed technical documentation for Typed Relation Extraction. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-08.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mem_009",
+      "wm_mem_010",
+      "wm_emb_008"
+    ]
+  },
+  {
+    "id": "wm_mem_009",
+    "title": "Memory Deduplication",
+    "topic": "memory_systems",
+    "date": "2026-02-09",
+    "content": "Detailed technical documentation for Memory Deduplication. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-09.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mem_010",
+      "wm_mem_011",
+      "wm_emb_009"
+    ]
+  },
+  {
+    "id": "wm_mem_010",
+    "title": "Content-Hash Indexing",
+    "topic": "memory_systems",
+    "date": "2026-02-10",
+    "content": "Detailed technical documentation for Content-Hash Indexing. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-10.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mem_011",
+      "wm_mem_012",
+      "wm_emb_010"
+    ]
+  },
+  {
+    "id": "wm_mem_011",
+    "title": "Embedding Quantization",
+    "topic": "memory_systems",
+    "date": "2026-02-11",
+    "content": "Detailed technical documentation for Embedding Quantization. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-11.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mem_012",
+      "wm_mem_013",
+      "wm_emb_011"
+    ]
+  },
+  {
+    "id": "wm_mem_012",
+    "title": "BGE Model Selection",
+    "topic": "memory_systems",
+    "date": "2026-02-12",
+    "content": "Detailed technical documentation for BGE Model Selection. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-12.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mem_013",
+      "wm_mem_014",
+      "wm_emb_012"
+    ]
+  },
+  {
+    "id": "wm_mem_013",
+    "title": "Vector Dimension Reduction",
+    "topic": "memory_systems",
+    "date": "2026-02-13",
+    "content": "Detailed technical documentation for Vector Dimension Reduction. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-13.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mem_014",
+      "wm_mem_015",
+      "wm_emb_013"
+    ]
+  },
+  {
+    "id": "wm_mem_014",
+    "title": "Similarity Threshold Tuning",
+    "topic": "memory_systems",
+    "date": "2026-02-14",
+    "content": "Detailed technical documentation for Similarity Threshold Tuning. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-14.",
+    "importance": 0.8,
+    "associations": [
+      "wm_mem_015",
+      "wm_emb_014"
+    ]
+  },
+  {
+    "id": "wm_mem_015",
+    "title": "Memory Importance Scoring",
+    "topic": "memory_systems",
+    "date": "2026-02-15",
+    "content": "Detailed technical documentation for Memory Importance Scoring. This memory contains implementation details, design patterns, and best practices for WhiteMagic memory systems systems. Date: 2026-02-15.",
+    "importance": 0.9,
+    "associations": [
+      "wm_emb_015"
+    ]
+  },
+  {
+    "id": "wm_graph_001",
+    "title": "Bridging Centrality Detection",
+    "topic": "graph_algorithms",
+    "date": "2026-02-16",
+    "content": "Detailed technical documentation for Bridging Centrality Detection. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-16.",
+    "importance": 0.7,
+    "associations": [
+      "wm_graph_002",
+      "wm_graph_003",
+      "wm_bridge_001"
+    ]
+  },
+  {
+    "id": "wm_graph_002",
+    "title": "Community Detection HDBSCAN",
+    "topic": "graph_algorithms",
+    "date": "2026-02-17",
+    "content": "Detailed technical documentation for Community Detection HDBSCAN. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-17.",
+    "importance": 0.8,
+    "associations": [
+      "wm_graph_003",
+      "wm_graph_004",
+      "wm_bridge_002"
+    ]
+  },
+  {
+    "id": "wm_graph_003",
+    "title": "Constellation Formation",
+    "topic": "graph_algorithms",
+    "date": "2026-02-18",
+    "content": "Detailed technical documentation for Constellation Formation. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-18.",
+    "importance": 0.9,
+    "associations": [
+      "wm_graph_004",
+      "wm_graph_005",
+      "wm_bridge_003"
+    ]
+  },
+  {
+    "id": "wm_graph_004",
+    "title": "Graph Walk Algorithms",
+    "topic": "graph_algorithms",
+    "date": "2026-02-19",
+    "content": "Detailed technical documentation for Graph Walk Algorithms. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-19.",
+    "importance": 0.7,
+    "associations": [
+      "wm_graph_005",
+      "wm_graph_006",
+      "wm_bridge_004"
+    ]
+  },
+  {
+    "id": "wm_graph_005",
+    "title": "Semantic Projection Walk",
+    "topic": "graph_algorithms",
+    "date": "2026-02-20",
+    "content": "Detailed technical documentation for Semantic Projection Walk. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-20.",
+    "importance": 0.8,
+    "associations": [
+      "wm_graph_006",
+      "wm_graph_007",
+      "wm_bridge_005"
+    ]
+  },
+  {
+    "id": "wm_graph_006",
+    "title": "PageRank Scoring",
+    "topic": "graph_algorithms",
+    "date": "2026-02-21",
+    "content": "Detailed technical documentation for PageRank Scoring. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-21.",
+    "importance": 0.9,
+    "associations": [
+      "wm_graph_007",
+      "wm_graph_008",
+      "wm_bridge_006"
+    ]
+  },
+  {
+    "id": "wm_graph_007",
+    "title": "HRR Look-ahead",
+    "topic": "graph_algorithms",
+    "date": "2026-02-22",
+    "content": "Detailed technical documentation for HRR Look-ahead. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-22.",
+    "importance": 0.7,
+    "associations": [
+      "wm_graph_008",
+      "wm_graph_009",
+      "wm_bridge_007"
+    ]
+  },
+  {
+    "id": "wm_graph_008",
+    "title": "Transition Probability Computation",
+    "topic": "graph_algorithms",
+    "date": "2026-02-23",
+    "content": "Detailed technical documentation for Transition Probability Computation. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-23.",
+    "importance": 0.8,
+    "associations": [
+      "wm_graph_009",
+      "wm_graph_010",
+      "wm_bridge_008"
+    ]
+  },
+  {
+    "id": "wm_graph_009",
+    "title": "Parallel BFS Traversal",
+    "topic": "graph_algorithms",
+    "date": "2026-02-24",
+    "content": "Detailed technical documentation for Parallel BFS Traversal. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-24.",
+    "importance": 0.9,
+    "associations": [
+      "wm_graph_010",
+      "wm_graph_011",
+      "wm_bridge_009"
+    ]
+  },
+  {
+    "id": "wm_graph_010",
+    "title": "Association Strength Metrics",
+    "topic": "graph_algorithms",
+    "date": "2026-02-25",
+    "content": "Detailed technical documentation for Association Strength Metrics. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-25.",
+    "importance": 0.7,
+    "associations": [
+      "wm_graph_011",
+      "wm_graph_012",
+      "wm_bridge_010"
+    ]
+  },
+  {
+    "id": "wm_graph_011",
+    "title": "Graph Persistence Layer",
+    "topic": "graph_algorithms",
+    "date": "2026-02-26",
+    "content": "Detailed technical documentation for Graph Persistence Layer. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-26.",
+    "importance": 0.8,
+    "associations": [
+      "wm_graph_012",
+      "wm_graph_013",
+      "wm_bridge_011"
+    ]
+  },
+  {
+    "id": "wm_graph_012",
+    "title": "NetworkX Integration",
+    "topic": "graph_algorithms",
+    "date": "2026-02-27",
+    "content": "Detailed technical documentation for NetworkX Integration. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-27.",
+    "importance": 0.9,
+    "associations": [
+      "wm_graph_013",
+      "wm_graph_014",
+      "wm_bridge_012"
+    ]
+  },
+  {
+    "id": "wm_graph_013",
+    "title": "Graph Visualization Export",
+    "topic": "graph_algorithms",
+    "date": "2026-02-28",
+    "content": "Detailed technical documentation for Graph Visualization Export. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-02-28.",
+    "importance": 0.7,
+    "associations": [
+      "wm_graph_014",
+      "wm_graph_015",
+      "wm_bridge_013"
+    ]
+  },
+  {
+    "id": "wm_graph_014",
+    "title": "Causality Enforcement",
+    "topic": "graph_algorithms",
+    "date": "2026-03-01",
+    "content": "Detailed technical documentation for Causality Enforcement. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-03-01.",
+    "importance": 0.8,
+    "associations": [
+      "wm_graph_015",
+      "wm_bridge_014"
+    ]
+  },
+  {
+    "id": "wm_graph_015",
+    "title": "Temporal Edge Ordering",
+    "topic": "graph_algorithms",
+    "date": "2026-03-02",
+    "content": "Detailed technical documentation for Temporal Edge Ordering. This memory contains implementation details, design patterns, and best practices for WhiteMagic graph algorithms systems. Date: 2026-03-02.",
+    "importance": 0.9,
+    "associations": [
+      "wm_bridge_015"
+    ]
+  },
+  {
+    "id": "wm_emb_001",
+    "title": "BGE-Small Model Fine-tuning",
+    "topic": "embedding_models",
+    "date": "2026-03-03",
+    "content": "Detailed technical documentation for BGE-Small Model Fine-tuning. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-03.",
+    "importance": 0.7,
+    "associations": [
+      "wm_emb_002",
+      "wm_emb_003",
+      "wm_mem_001"
+    ]
+  },
+  {
+    "id": "wm_emb_002",
+    "title": "ONNX Runtime Optimization",
+    "topic": "embedding_models",
+    "date": "2026-03-04",
+    "content": "Detailed technical documentation for ONNX Runtime Optimization. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-04.",
+    "importance": 0.8,
+    "associations": [
+      "wm_emb_003",
+      "wm_emb_004",
+      "wm_mem_002"
+    ]
+  },
+  {
+    "id": "wm_emb_003",
+    "title": "Batch Encoding Pipeline",
+    "topic": "embedding_models",
+    "date": "2026-03-05",
+    "content": "Detailed technical documentation for Batch Encoding Pipeline. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-05.",
+    "importance": 0.9,
+    "associations": [
+      "wm_emb_004",
+      "wm_emb_005",
+      "wm_mem_003"
+    ]
+  },
+  {
+    "id": "wm_emb_004",
+    "title": "Embedding Cache Strategy",
+    "topic": "embedding_models",
+    "date": "2026-03-06",
+    "content": "Detailed technical documentation for Embedding Cache Strategy. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-06.",
+    "importance": 0.7,
+    "associations": [
+      "wm_emb_005",
+      "wm_emb_006",
+      "wm_mem_004"
+    ]
+  },
+  {
+    "id": "wm_emb_005",
+    "title": "Cosine Similarity SIMD",
+    "topic": "embedding_models",
+    "date": "2026-03-07",
+    "content": "Detailed technical documentation for Cosine Similarity SIMD. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-07.",
+    "importance": 0.8,
+    "associations": [
+      "wm_emb_006",
+      "wm_emb_007",
+      "wm_mem_005"
+    ]
+  },
+  {
+    "id": "wm_emb_006",
+    "title": "Top-K Approximate Search",
+    "topic": "embedding_models",
+    "date": "2026-03-08",
+    "content": "Detailed technical documentation for Top-K Approximate Search. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-08.",
+    "importance": 0.9,
+    "associations": [
+      "wm_emb_007",
+      "wm_emb_008",
+      "wm_mem_006"
+    ]
+  },
+  {
+    "id": "wm_emb_007",
+    "title": "Embedding Normalization",
+    "topic": "embedding_models",
+    "date": "2026-03-09",
+    "content": "Detailed technical documentation for Embedding Normalization. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-09.",
+    "importance": 0.7,
+    "associations": [
+      "wm_emb_008",
+      "wm_emb_009",
+      "wm_mem_007"
+    ]
+  },
+  {
+    "id": "wm_emb_008",
+    "title": "Multi-modal Embeddings",
+    "topic": "embedding_models",
+    "date": "2026-03-10",
+    "content": "Detailed technical documentation for Multi-modal Embeddings. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-10.",
+    "importance": 0.8,
+    "associations": [
+      "wm_emb_009",
+      "wm_emb_010",
+      "wm_mem_008"
+    ]
+  },
+  {
+    "id": "wm_emb_009",
+    "title": "Code Embedding Strategy",
+    "topic": "embedding_models",
+    "date": "2026-03-11",
+    "content": "Detailed technical documentation for Code Embedding Strategy. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-11.",
+    "importance": 0.9,
+    "associations": [
+      "wm_emb_010",
+      "wm_emb_011",
+      "wm_mem_009"
+    ]
+  },
+  {
+    "id": "wm_emb_010",
+    "title": "Semantic Chunking",
+    "topic": "embedding_models",
+    "date": "2026-03-12",
+    "content": "Detailed technical documentation for Semantic Chunking. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-12.",
+    "importance": 0.7,
+    "associations": [
+      "wm_emb_011",
+      "wm_emb_012",
+      "wm_mem_010"
+    ]
+  },
+  {
+    "id": "wm_emb_011",
+    "title": "Embedding Drift Detection",
+    "topic": "embedding_models",
+    "date": "2026-03-13",
+    "content": "Detailed technical documentation for Embedding Drift Detection. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-13.",
+    "importance": 0.8,
+    "associations": [
+      "wm_emb_012",
+      "wm_emb_013",
+      "wm_mem_011"
+    ]
+  },
+  {
+    "id": "wm_emb_012",
+    "title": "Model Version Management",
+    "topic": "embedding_models",
+    "date": "2026-03-14",
+    "content": "Detailed technical documentation for Model Version Management. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-14.",
+    "importance": 0.9,
+    "associations": [
+      "wm_emb_013",
+      "wm_emb_014",
+      "wm_mem_012"
+    ]
+  },
+  {
+    "id": "wm_emb_013",
+    "title": "Cross-encoder Reranking",
+    "topic": "embedding_models",
+    "date": "2026-03-15",
+    "content": "Detailed technical documentation for Cross-encoder Reranking. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-15.",
+    "importance": 0.7,
+    "associations": [
+      "wm_emb_014",
+      "wm_emb_015",
+      "wm_mem_013"
+    ]
+  },
+  {
+    "id": "wm_emb_014",
+    "title": "LoCoMo Training Data",
+    "topic": "embedding_models",
+    "date": "2026-03-16",
+    "content": "Detailed technical documentation for LoCoMo Training Data. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-16.",
+    "importance": 0.8,
+    "associations": [
+      "wm_emb_015",
+      "wm_mem_014"
+    ]
+  },
+  {
+    "id": "wm_emb_015",
+    "title": "Learned Reranker",
+    "topic": "embedding_models",
+    "date": "2026-03-17",
+    "content": "Detailed technical documentation for Learned Reranker. This memory contains implementation details, design patterns, and best practices for WhiteMagic embedding models systems. Date: 2026-03-17.",
+    "importance": 0.9,
+    "associations": [
+      "wm_mem_015"
+    ]
+  },
+  {
+    "id": "wm_dream_001",
+    "title": "Dream Cycle 8 Phases",
+    "topic": "dream_cycles",
+    "date": "2026-03-18",
+    "content": "Detailed technical documentation for Dream Cycle 8 Phases. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-18.",
+    "importance": 0.7,
+    "associations": [
+      "wm_dream_002",
+      "wm_dream_003",
+      "wm_bridge_001"
+    ]
+  },
+  {
+    "id": "wm_dream_002",
+    "title": "Triage Phase Auto-tagging",
+    "topic": "dream_cycles",
+    "date": "2026-03-19",
+    "content": "Detailed technical documentation for Triage Phase Auto-tagging. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-19.",
+    "importance": 0.8,
+    "associations": [
+      "wm_dream_003",
+      "wm_dream_004",
+      "wm_bridge_002"
+    ]
+  },
+  {
+    "id": "wm_dream_003",
+    "title": "Consolidation Pattern Mining",
+    "topic": "dream_cycles",
+    "date": "2026-03-20",
+    "content": "Detailed technical documentation for Consolidation Pattern Mining. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-20.",
+    "importance": 0.9,
+    "associations": [
+      "wm_dream_004",
+      "wm_dream_005",
+      "wm_bridge_003"
+    ]
+  },
+  {
+    "id": "wm_dream_004",
+    "title": "Serendipity Bridge Discovery",
+    "topic": "dream_cycles",
+    "date": "2026-03-21",
+    "content": "Detailed technical documentation for Serendipity Bridge Discovery. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-21.",
+    "importance": 0.7,
+    "associations": [
+      "wm_dream_005",
+      "wm_dream_006",
+      "wm_bridge_004"
+    ]
+  },
+  {
+    "id": "wm_dream_005",
+    "title": "Governance Echo Detection",
+    "topic": "dream_cycles",
+    "date": "2026-03-22",
+    "content": "Detailed technical documentation for Governance Echo Detection. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-22.",
+    "importance": 0.8,
+    "associations": [
+      "wm_dream_006",
+      "wm_dream_007",
+      "wm_bridge_005"
+    ]
+  },
+  {
+    "id": "wm_dream_006",
+    "title": "Narrative Compression",
+    "topic": "dream_cycles",
+    "date": "2026-03-23",
+    "content": "Detailed technical documentation for Narrative Compression. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-23.",
+    "importance": 0.9,
+    "associations": [
+      "wm_dream_007",
+      "wm_dream_008",
+      "wm_bridge_006"
+    ]
+  },
+  {
+    "id": "wm_dream_007",
+    "title": "Kaizen Insight Generation",
+    "topic": "dream_cycles",
+    "date": "2026-03-24",
+    "content": "Detailed technical documentation for Kaizen Insight Generation. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-24.",
+    "importance": 0.7,
+    "associations": [
+      "wm_dream_008",
+      "wm_dream_009",
+      "wm_bridge_007"
+    ]
+  },
+  {
+    "id": "wm_dream_008",
+    "title": "Oracle Pattern Suggestion",
+    "topic": "dream_cycles",
+    "date": "2026-03-25",
+    "content": "Detailed technical documentation for Oracle Pattern Suggestion. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-25.",
+    "importance": 0.8,
+    "associations": [
+      "wm_dream_009",
+      "wm_dream_010",
+      "wm_bridge_008"
+    ]
+  },
+  {
+    "id": "wm_dream_009",
+    "title": "Decay Sweep Algorithm",
+    "topic": "dream_cycles",
+    "date": "2026-03-26",
+    "content": "Detailed technical documentation for Decay Sweep Algorithm. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-26.",
+    "importance": 0.9,
+    "associations": [
+      "wm_dream_010",
+      "wm_dream_011",
+      "wm_bridge_009"
+    ]
+  },
+  {
+    "id": "wm_dream_010",
+    "title": "Dream Daemon Scheduling",
+    "topic": "dream_cycles",
+    "date": "2026-03-27",
+    "content": "Detailed technical documentation for Dream Daemon Scheduling. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-27.",
+    "importance": 0.7,
+    "associations": [
+      "wm_dream_011",
+      "wm_dream_012",
+      "wm_bridge_010"
+    ]
+  },
+  {
+    "id": "wm_dream_011",
+    "title": "Sleep Phase Detection",
+    "topic": "dream_cycles",
+    "date": "2026-03-28",
+    "content": "Detailed technical documentation for Sleep Phase Detection. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-28.",
+    "importance": 0.8,
+    "associations": [
+      "wm_dream_012",
+      "wm_dream_013",
+      "wm_bridge_011"
+    ]
+  },
+  {
+    "id": "wm_dream_012",
+    "title": "Memory Reconsolidation",
+    "topic": "dream_cycles",
+    "date": "2026-03-29",
+    "content": "Detailed technical documentation for Memory Reconsolidation. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-29.",
+    "importance": 0.9,
+    "associations": [
+      "wm_dream_013",
+      "wm_dream_014",
+      "wm_bridge_012"
+    ]
+  },
+  {
+    "id": "wm_dream_013",
+    "title": "REM Insight Burst",
+    "topic": "dream_cycles",
+    "date": "2026-03-30",
+    "content": "Detailed technical documentation for REM Insight Burst. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-30.",
+    "importance": 0.7,
+    "associations": [
+      "wm_dream_014",
+      "wm_dream_015",
+      "wm_bridge_013"
+    ]
+  },
+  {
+    "id": "wm_dream_014",
+    "title": "Dream Synthesis Pipeline",
+    "topic": "dream_cycles",
+    "date": "2026-03-31",
+    "content": "Detailed technical documentation for Dream Synthesis Pipeline. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-03-31.",
+    "importance": 0.8,
+    "associations": [
+      "wm_dream_015",
+      "wm_bridge_014"
+    ]
+  },
+  {
+    "id": "wm_dream_015",
+    "title": "Oneiric Pattern Recognition",
+    "topic": "dream_cycles",
+    "date": "2026-04-01",
+    "content": "Detailed technical documentation for Oneiric Pattern Recognition. This memory contains implementation details, design patterns, and best practices for WhiteMagic dream cycles systems. Date: 2026-04-01.",
+    "importance": 0.9,
+    "associations": [
+      "wm_bridge_015"
+    ]
+  },
+  {
+    "id": "wm_bridge_001",
+    "title": "Bridge Node Detection",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-02",
+    "content": "Detailed technical documentation for Bridge Node Detection. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-02.",
+    "importance": 0.7,
+    "associations": [
+      "wm_bridge_002",
+      "wm_bridge_003",
+      "wm_graph_001"
+    ]
+  },
+  {
+    "id": "wm_bridge_002",
+    "title": "Bridging Centrality Algorithm",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-03",
+    "content": "Detailed technical documentation for Bridging Centrality Algorithm. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-03.",
+    "importance": 0.8,
+    "associations": [
+      "wm_bridge_003",
+      "wm_bridge_004",
+      "wm_graph_002"
+    ]
+  },
+  {
+    "id": "wm_bridge_003",
+    "title": "Community Bridge Mapping",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-04",
+    "content": "Detailed technical documentation for Community Bridge Mapping. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-04.",
+    "importance": 0.9,
+    "associations": [
+      "wm_bridge_004",
+      "wm_bridge_005",
+      "wm_graph_003"
+    ]
+  },
+  {
+    "id": "wm_bridge_004",
+    "title": "Hypothesis Generation LLM",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-05",
+    "content": "Detailed technical documentation for Hypothesis Generation LLM. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-05.",
+    "importance": 0.7,
+    "associations": [
+      "wm_bridge_005",
+      "wm_bridge_006",
+      "wm_graph_004"
+    ]
+  },
+  {
+    "id": "wm_bridge_005",
+    "title": "Bridge Insight Persistence",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-06",
+    "content": "Detailed technical documentation for Bridge Insight Persistence. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-06.",
+    "importance": 0.8,
+    "associations": [
+      "wm_bridge_006",
+      "wm_bridge_007",
+      "wm_graph_005"
+    ]
+  },
+  {
+    "id": "wm_bridge_006",
+    "title": "Cross-Domain Pattern Mining",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-07",
+    "content": "Detailed technical documentation for Cross-Domain Pattern Mining. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-07.",
+    "importance": 0.9,
+    "associations": [
+      "wm_bridge_007",
+      "wm_bridge_008",
+      "wm_graph_006"
+    ]
+  },
+  {
+    "id": "wm_bridge_007",
+    "title": "Latent Connection Discovery",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-08",
+    "content": "Detailed technical documentation for Latent Connection Discovery. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-08.",
+    "importance": 0.7,
+    "associations": [
+      "wm_bridge_008",
+      "wm_bridge_009",
+      "wm_graph_007"
+    ]
+  },
+  {
+    "id": "wm_bridge_008",
+    "title": "Template Hypothesis Fallback",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-09",
+    "content": "Detailed technical documentation for Template Hypothesis Fallback. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-09.",
+    "importance": 0.8,
+    "associations": [
+      "wm_bridge_009",
+      "wm_bridge_010",
+      "wm_graph_008"
+    ]
+  },
+  {
+    "id": "wm_bridge_009",
+    "title": "Bridge Confidence Scoring",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-10",
+    "content": "Detailed technical documentation for Bridge Confidence Scoring. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-10.",
+    "importance": 0.9,
+    "associations": [
+      "wm_bridge_010",
+      "wm_bridge_011",
+      "wm_graph_009"
+    ]
+  },
+  {
+    "id": "wm_bridge_010",
+    "title": "Multi-Community Bridging",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-11",
+    "content": "Detailed technical documentation for Multi-Community Bridging. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-11.",
+    "importance": 0.7,
+    "associations": [
+      "wm_bridge_011",
+      "wm_bridge_012",
+      "wm_graph_010"
+    ]
+  },
+  {
+    "id": "wm_bridge_011",
+    "title": "Bridge Node Tagging",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-12",
+    "content": "Detailed technical documentation for Bridge Node Tagging. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-12.",
+    "importance": 0.8,
+    "associations": [
+      "wm_bridge_012",
+      "wm_bridge_013",
+      "wm_graph_011"
+    ]
+  },
+  {
+    "id": "wm_bridge_012",
+    "title": "Bridge Insight Retrieval",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-13",
+    "content": "Detailed technical documentation for Bridge Insight Retrieval. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-13.",
+    "importance": 0.9,
+    "associations": [
+      "wm_bridge_013",
+      "wm_bridge_014",
+      "wm_graph_012"
+    ]
+  },
+  {
+    "id": "wm_bridge_013",
+    "title": "Dynamic Bridge Updates",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-14",
+    "content": "Detailed technical documentation for Dynamic Bridge Updates. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-14.",
+    "importance": 0.7,
+    "associations": [
+      "wm_bridge_014",
+      "wm_bridge_015",
+      "wm_graph_013"
+    ]
+  },
+  {
+    "id": "wm_bridge_014",
+    "title": "Bridge Visualization",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-15",
+    "content": "Detailed technical documentation for Bridge Visualization. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-15.",
+    "importance": 0.8,
+    "associations": [
+      "wm_bridge_015",
+      "wm_graph_014"
+    ]
+  },
+  {
+    "id": "wm_bridge_015",
+    "title": "Bridge Quality Metrics",
+    "topic": "bridge_synthesis",
+    "date": "2026-04-16",
+    "content": "Detailed technical documentation for Bridge Quality Metrics. This memory contains implementation details, design patterns, and best practices for WhiteMagic bridge synthesis systems. Date: 2026-04-16.",
+    "importance": 0.9,
+    "associations": [
+      "wm_graph_015"
+    ]
+  },
+  {
+    "id": "wm_fusion_001",
+    "title": "Reciprocal Rank Fusion",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-17",
+    "content": "Detailed technical documentation for Reciprocal Rank Fusion. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-17.",
+    "importance": 0.7,
+    "associations": [
+      "wm_fusion_002",
+      "wm_fusion_003",
+      "wm_mem_001"
+    ]
+  },
+  {
+    "id": "wm_fusion_002",
+    "title": "RRF Weight Adaptation",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-18",
+    "content": "Detailed technical documentation for RRF Weight Adaptation. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-18.",
+    "importance": 0.8,
+    "associations": [
+      "wm_fusion_003",
+      "wm_fusion_004",
+      "wm_mem_002"
+    ]
+  },
+  {
+    "id": "wm_fusion_003",
+    "title": "BM25 Title Boosting",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-19",
+    "content": "Detailed technical documentation for BM25 Title Boosting. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-19.",
+    "importance": 0.9,
+    "associations": [
+      "wm_fusion_004",
+      "wm_fusion_005",
+      "wm_mem_003"
+    ]
+  },
+  {
+    "id": "wm_fusion_004",
+    "title": "Constellation Boost Factor",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-20",
+    "content": "Detailed technical documentation for Constellation Boost Factor. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-20.",
+    "importance": 0.7,
+    "associations": [
+      "wm_fusion_005",
+      "wm_fusion_006",
+      "wm_mem_004"
+    ]
+  },
+  {
+    "id": "wm_fusion_005",
+    "title": "Convex Combination Fusion",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-21",
+    "content": "Detailed technical documentation for Convex Combination Fusion. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-21.",
+    "importance": 0.8,
+    "associations": [
+      "wm_fusion_006",
+      "wm_fusion_007",
+      "wm_mem_005"
+    ]
+  },
+  {
+    "id": "wm_fusion_006",
+    "title": "Query-Type Weight Selection",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-22",
+    "content": "Detailed technical documentation for Query-Type Weight Selection. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-22.",
+    "importance": 0.9,
+    "associations": [
+      "wm_fusion_007",
+      "wm_fusion_008",
+      "wm_mem_006"
+    ]
+  },
+  {
+    "id": "wm_fusion_007",
+    "title": "Multi-Channel Retrieval",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-23",
+    "content": "Detailed technical documentation for Multi-Channel Retrieval. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-23.",
+    "importance": 0.7,
+    "associations": [
+      "wm_fusion_008",
+      "wm_fusion_009",
+      "wm_mem_007"
+    ]
+  },
+  {
+    "id": "wm_fusion_008",
+    "title": "Fusion Result Deduplication",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-24",
+    "content": "Detailed technical documentation for Fusion Result Deduplication. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-24.",
+    "importance": 0.8,
+    "associations": [
+      "wm_fusion_009",
+      "wm_fusion_010",
+      "wm_mem_008"
+    ]
+  },
+  {
+    "id": "wm_fusion_009",
+    "title": "Learned Fusion Weights",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-25",
+    "content": "Detailed technical documentation for Learned Fusion Weights. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-25.",
+    "importance": 0.9,
+    "associations": [
+      "wm_fusion_010",
+      "wm_mem_009"
+    ]
+  },
+  {
+    "id": "wm_fusion_010",
+    "title": "Real-time Fusion Pipeline",
+    "topic": "hybrid_fusion",
+    "date": "2026-04-26",
+    "content": "Detailed technical documentation for Real-time Fusion Pipeline. This memory contains implementation details, design patterns, and best practices for WhiteMagic hybrid fusion systems. Date: 2026-04-26.",
+    "importance": 0.7,
+    "associations": [
+      "wm_mem_010"
+    ]
+  }
+]
+```
+
+---
+
+## STRATEGY BY QUESTION TYPE
+
+### Single-Hop (60 questions)
+**Tool Strategy:** `search_memories` with the memory ID or key terms
+- Direct lookup via vector search
+- Example: Search "wm_mcp_001 importance" to find the value
+
+### Multi-Hop (75 questions) ⚠️ REQUIRES GRAPH WALKING
+**Tool Strategy:** `hybrid_recall` or `graph_walk`
+- These require following associations between memories
+- Raw LLM cannot do this without tool assistance
+- **This is where WhiteMagic shines**
+
+### Temporal (60 questions)
+**Tool Strategy:** `search_memories` with date filters
+- Match dates to memory creation dates
+- Use "date:2026-01-15" style queries
+
+### Open-Domain (60 questions)
+**Tool Strategy:** `cluster_stats` + `search_memories`
+- Find topic clusters
+- Synthesize across multiple related memories
+
+### Adversarial (30 questions)
+**Tool Strategy:** `search_memories` to verify
+- Check if claimed facts actually exist
+- Flag false premises with confidence=1.0
+
+### Calibration (15 questions)
+**Tool Strategy:** `search_memories` exhaustive check
+- Use confidence 0.0 if WhiteMagic returns no results
+- Some questions are designed to be unanswerable
+
+---
+
+## ALL QUESTIONS (300 Total - Blind Test)
+
+**Note:** expected_answers have been removed. You must discover answers using WhiteMagic tools.
+
+### Single-Hop (60)
+```json
+[
+  {
+    "question_id": "q_sh_001",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_001?",
+    "source_memory_ids": [
+      "wm_mcp_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_002",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_002?",
+    "source_memory_ids": [
+      "wm_mcp_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_003",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_003?",
+    "source_memory_ids": [
+      "wm_mcp_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_004",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_004?",
+    "source_memory_ids": [
+      "wm_mcp_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_005",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_005?",
+    "source_memory_ids": [
+      "wm_mcp_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_006",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_006?",
+    "source_memory_ids": [
+      "wm_mcp_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_007",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_007?",
+    "source_memory_ids": [
+      "wm_mcp_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_008",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_008?",
+    "source_memory_ids": [
+      "wm_mcp_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_009",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_009?",
+    "source_memory_ids": [
+      "wm_mcp_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_010",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_010?",
+    "source_memory_ids": [
+      "wm_mcp_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_011",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_011?",
+    "source_memory_ids": [
+      "wm_mcp_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_012",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_012?",
+    "source_memory_ids": [
+      "wm_mcp_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_013",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_013?",
+    "source_memory_ids": [
+      "wm_mcp_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_014",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_014?",
+    "source_memory_ids": [
+      "wm_mcp_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_015",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mcp_015?",
+    "source_memory_ids": [
+      "wm_mcp_015"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_016",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_001?",
+    "source_memory_ids": [
+      "wm_mem_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_017",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_002?",
+    "source_memory_ids": [
+      "wm_mem_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_018",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_003?",
+    "source_memory_ids": [
+      "wm_mem_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_019",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_004?",
+    "source_memory_ids": [
+      "wm_mem_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_020",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_005?",
+    "source_memory_ids": [
+      "wm_mem_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_021",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_006?",
+    "source_memory_ids": [
+      "wm_mem_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_022",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_007?",
+    "source_memory_ids": [
+      "wm_mem_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_023",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_008?",
+    "source_memory_ids": [
+      "wm_mem_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_024",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_009?",
+    "source_memory_ids": [
+      "wm_mem_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_025",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_010?",
+    "source_memory_ids": [
+      "wm_mem_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_026",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_011?",
+    "source_memory_ids": [
+      "wm_mem_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_027",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_012?",
+    "source_memory_ids": [
+      "wm_mem_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_028",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_013?",
+    "source_memory_ids": [
+      "wm_mem_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_029",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_014?",
+    "source_memory_ids": [
+      "wm_mem_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_030",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_mem_015?",
+    "source_memory_ids": [
+      "wm_mem_015"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_031",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_001?",
+    "source_memory_ids": [
+      "wm_graph_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_032",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_002?",
+    "source_memory_ids": [
+      "wm_graph_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_033",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_003?",
+    "source_memory_ids": [
+      "wm_graph_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_034",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_004?",
+    "source_memory_ids": [
+      "wm_graph_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_035",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_005?",
+    "source_memory_ids": [
+      "wm_graph_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_036",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_006?",
+    "source_memory_ids": [
+      "wm_graph_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_037",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_007?",
+    "source_memory_ids": [
+      "wm_graph_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_038",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_008?",
+    "source_memory_ids": [
+      "wm_graph_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_039",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_009?",
+    "source_memory_ids": [
+      "wm_graph_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_040",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_010?",
+    "source_memory_ids": [
+      "wm_graph_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_041",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_011?",
+    "source_memory_ids": [
+      "wm_graph_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_042",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_012?",
+    "source_memory_ids": [
+      "wm_graph_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_043",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_013?",
+    "source_memory_ids": [
+      "wm_graph_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_044",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_014?",
+    "source_memory_ids": [
+      "wm_graph_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_045",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_graph_015?",
+    "source_memory_ids": [
+      "wm_graph_015"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_046",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_001?",
+    "source_memory_ids": [
+      "wm_emb_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_047",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_002?",
+    "source_memory_ids": [
+      "wm_emb_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_048",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_003?",
+    "source_memory_ids": [
+      "wm_emb_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_049",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_004?",
+    "source_memory_ids": [
+      "wm_emb_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_050",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_005?",
+    "source_memory_ids": [
+      "wm_emb_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_051",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_006?",
+    "source_memory_ids": [
+      "wm_emb_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_052",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_007?",
+    "source_memory_ids": [
+      "wm_emb_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_053",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_008?",
+    "source_memory_ids": [
+      "wm_emb_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_054",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_009?",
+    "source_memory_ids": [
+      "wm_emb_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_055",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_010?",
+    "source_memory_ids": [
+      "wm_emb_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_056",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_011?",
+    "source_memory_ids": [
+      "wm_emb_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_057",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_012?",
+    "source_memory_ids": [
+      "wm_emb_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_058",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_013?",
+    "source_memory_ids": [
+      "wm_emb_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_059",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_014?",
+    "source_memory_ids": [
+      "wm_emb_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_sh_060",
+    "question_type": "single_hop",
+    "question": "What is the importance value of memory wm_emb_015?",
+    "source_memory_ids": [
+      "wm_emb_015"
+    ],
+    "difficulty": "easy"
+  }
+]
+```
+
+### Multi-Hop (75) 
+```json
+[
+  {
+    "question_id": "q_mh_001",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_002",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_003",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_003",
+      "wm_mcp_004"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_004",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_004",
+      "wm_mcp_005"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_005",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_005",
+      "wm_mcp_006"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_006",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_006",
+      "wm_mcp_007"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_007",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_007",
+      "wm_mcp_008"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_008",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_008",
+      "wm_mcp_009"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_009",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_009",
+      "wm_mcp_010"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_010",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_010",
+      "wm_mcp_011"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_011",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_011",
+      "wm_mcp_012"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_012",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_012",
+      "wm_mcp_013"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_013",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_013",
+      "wm_mcp_014"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_014",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_014",
+      "wm_mcp_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_015",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss mcp architecture and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mcp_015",
+      "wm_mem_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_016",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_017",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_018",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_003",
+      "wm_mem_004"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_019",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_004",
+      "wm_mem_005"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_020",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_005",
+      "wm_mem_006"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_021",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_006",
+      "wm_mem_007"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_022",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_007",
+      "wm_mem_008"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_023",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_008",
+      "wm_mem_009"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_024",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_009",
+      "wm_mem_010"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_025",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_010",
+      "wm_mem_011"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_026",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_011",
+      "wm_mem_012"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_027",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_012",
+      "wm_mem_013"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_028",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_013",
+      "wm_mem_014"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_029",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_014",
+      "wm_mem_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_030",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss memory systems and are connected via associations?",
+    "source_memory_ids": [
+      "wm_mem_015",
+      "wm_emb_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_031",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_032",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_033",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_003",
+      "wm_graph_004"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_034",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_004",
+      "wm_graph_005"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_035",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_005",
+      "wm_graph_006"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_036",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_006",
+      "wm_graph_007"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_037",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_007",
+      "wm_graph_008"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_038",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_008",
+      "wm_graph_009"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_039",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_009",
+      "wm_graph_010"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_040",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_010",
+      "wm_graph_011"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_041",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_011",
+      "wm_graph_012"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_042",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_012",
+      "wm_graph_013"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_043",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_013",
+      "wm_graph_014"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_044",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_014",
+      "wm_graph_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_045",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss graph algorithms and are connected via associations?",
+    "source_memory_ids": [
+      "wm_graph_015",
+      "wm_bridge_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_046",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_001",
+      "wm_emb_002"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_047",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_002",
+      "wm_emb_003"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_048",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_003",
+      "wm_emb_004"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_049",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_004",
+      "wm_emb_005"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_050",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_005",
+      "wm_emb_006"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_051",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_006",
+      "wm_emb_007"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_052",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_007",
+      "wm_emb_008"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_053",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_008",
+      "wm_emb_009"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_054",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_009",
+      "wm_emb_010"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_055",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_010",
+      "wm_emb_011"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_056",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_011",
+      "wm_emb_012"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_057",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_012",
+      "wm_emb_013"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_058",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_013",
+      "wm_emb_014"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_059",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_014",
+      "wm_emb_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_060",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss embedding models and are connected via associations?",
+    "source_memory_ids": [
+      "wm_emb_015",
+      "wm_mem_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_061",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_062",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_063",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_003",
+      "wm_dream_004"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_064",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_004",
+      "wm_dream_005"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_065",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_005",
+      "wm_dream_006"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_066",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_006",
+      "wm_dream_007"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_067",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_007",
+      "wm_dream_008"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_068",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_008",
+      "wm_dream_009"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_069",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_009",
+      "wm_dream_010"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_070",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_010",
+      "wm_dream_011"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_071",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_011",
+      "wm_dream_012"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_072",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_012",
+      "wm_dream_013"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_073",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_013",
+      "wm_dream_014"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_074",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_014",
+      "wm_dream_015"
+    ],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_mh_075",
+    "question_type": "multi_hop",
+    "question": "Which two memories discuss dream cycles and are connected via associations?",
+    "source_memory_ids": [
+      "wm_dream_015",
+      "wm_bridge_015"
+    ],
+    "difficulty": "medium"
+  }
+]
+```
+
+### Temporal (60)
+```json
+[
+  {
+    "question_id": "q_tp_001",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-15?",
+    "source_memory_ids": [
+      "wm_mcp_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_002",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-16?",
+    "source_memory_ids": [
+      "wm_mcp_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_003",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-17?",
+    "source_memory_ids": [
+      "wm_mcp_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_004",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-18?",
+    "source_memory_ids": [
+      "wm_mcp_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_005",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-19?",
+    "source_memory_ids": [
+      "wm_mcp_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_006",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-20?",
+    "source_memory_ids": [
+      "wm_mcp_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_007",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-21?",
+    "source_memory_ids": [
+      "wm_mcp_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_008",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-22?",
+    "source_memory_ids": [
+      "wm_mcp_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_009",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-23?",
+    "source_memory_ids": [
+      "wm_mcp_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_010",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-24?",
+    "source_memory_ids": [
+      "wm_mcp_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_011",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-25?",
+    "source_memory_ids": [
+      "wm_mcp_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_012",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-26?",
+    "source_memory_ids": [
+      "wm_mcp_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_013",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-27?",
+    "source_memory_ids": [
+      "wm_mcp_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_014",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-28?",
+    "source_memory_ids": [
+      "wm_mcp_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_015",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-01-29?",
+    "source_memory_ids": [
+      "wm_mcp_015"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_016",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-01?",
+    "source_memory_ids": [
+      "wm_mem_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_017",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-02?",
+    "source_memory_ids": [
+      "wm_mem_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_018",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-03?",
+    "source_memory_ids": [
+      "wm_mem_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_019",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-04?",
+    "source_memory_ids": [
+      "wm_mem_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_020",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-05?",
+    "source_memory_ids": [
+      "wm_mem_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_021",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-06?",
+    "source_memory_ids": [
+      "wm_mem_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_022",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-07?",
+    "source_memory_ids": [
+      "wm_mem_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_023",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-08?",
+    "source_memory_ids": [
+      "wm_mem_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_024",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-09?",
+    "source_memory_ids": [
+      "wm_mem_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_025",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-10?",
+    "source_memory_ids": [
+      "wm_mem_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_026",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-11?",
+    "source_memory_ids": [
+      "wm_mem_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_027",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-12?",
+    "source_memory_ids": [
+      "wm_mem_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_028",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-13?",
+    "source_memory_ids": [
+      "wm_mem_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_029",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-14?",
+    "source_memory_ids": [
+      "wm_mem_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_030",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-15?",
+    "source_memory_ids": [
+      "wm_mem_015"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_031",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-16?",
+    "source_memory_ids": [
+      "wm_graph_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_032",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-17?",
+    "source_memory_ids": [
+      "wm_graph_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_033",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-18?",
+    "source_memory_ids": [
+      "wm_graph_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_034",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-19?",
+    "source_memory_ids": [
+      "wm_graph_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_035",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-20?",
+    "source_memory_ids": [
+      "wm_graph_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_036",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-21?",
+    "source_memory_ids": [
+      "wm_graph_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_037",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-22?",
+    "source_memory_ids": [
+      "wm_graph_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_038",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-23?",
+    "source_memory_ids": [
+      "wm_graph_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_039",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-24?",
+    "source_memory_ids": [
+      "wm_graph_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_040",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-25?",
+    "source_memory_ids": [
+      "wm_graph_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_041",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-26?",
+    "source_memory_ids": [
+      "wm_graph_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_042",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-27?",
+    "source_memory_ids": [
+      "wm_graph_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_043",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-02-28?",
+    "source_memory_ids": [
+      "wm_graph_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_044",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-01?",
+    "source_memory_ids": [
+      "wm_graph_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_045",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-02?",
+    "source_memory_ids": [
+      "wm_graph_015"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_046",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-03?",
+    "source_memory_ids": [
+      "wm_emb_001"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_047",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-04?",
+    "source_memory_ids": [
+      "wm_emb_002"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_048",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-05?",
+    "source_memory_ids": [
+      "wm_emb_003"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_049",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-06?",
+    "source_memory_ids": [
+      "wm_emb_004"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_050",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-07?",
+    "source_memory_ids": [
+      "wm_emb_005"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_051",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-08?",
+    "source_memory_ids": [
+      "wm_emb_006"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_052",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-09?",
+    "source_memory_ids": [
+      "wm_emb_007"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_053",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-10?",
+    "source_memory_ids": [
+      "wm_emb_008"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_054",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-11?",
+    "source_memory_ids": [
+      "wm_emb_009"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_055",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-12?",
+    "source_memory_ids": [
+      "wm_emb_010"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_056",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-13?",
+    "source_memory_ids": [
+      "wm_emb_011"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_057",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-14?",
+    "source_memory_ids": [
+      "wm_emb_012"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_058",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-15?",
+    "source_memory_ids": [
+      "wm_emb_013"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_059",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-16?",
+    "source_memory_ids": [
+      "wm_emb_014"
+    ],
+    "difficulty": "easy"
+  },
+  {
+    "question_id": "q_tp_060",
+    "question_type": "temporal",
+    "question": "What memory was created on 2026-03-17?",
+    "source_memory_ids": [
+      "wm_emb_015"
+    ],
+    "difficulty": "easy"
+  }
+]
+```
+
+### Open-Domain (60)
+```json
+[
+  {
+    "question_id": "q_od_001",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_002",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_003",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_004",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_005",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_006",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_007",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_008",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_009",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_010",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_011",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_012",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_013",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_014",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_015",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_016",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_017",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_018",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_019",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_020",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_021",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_022",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_023",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_024",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_025",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_026",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_027",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_028",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_029",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_030",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_031",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_032",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_033",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_034",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_035",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_036",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_037",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_038",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_039",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_040",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_041",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_042",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_043",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_044",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_045",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_046",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_047",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_048",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_049",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_050",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_051",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_052",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_053",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_054",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_055",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_056",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_057",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic mcp architecture?",
+    "source_memory_ids": [
+      "wm_mcp_001",
+      "wm_mcp_002",
+      "wm_mcp_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_058",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic memory systems?",
+    "source_memory_ids": [
+      "wm_mem_001",
+      "wm_mem_002",
+      "wm_mem_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_059",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic graph algorithms?",
+    "source_memory_ids": [
+      "wm_graph_001",
+      "wm_graph_002",
+      "wm_graph_003"
+    ],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_od_060",
+    "question_type": "open_domain",
+    "question": "What are the key components of WhiteMagic dream cycles?",
+    "source_memory_ids": [
+      "wm_dream_001",
+      "wm_dream_002",
+      "wm_dream_003"
+    ],
+    "difficulty": "hard"
+  }
+]
+```
+
+### Adversarial (30)
+```json
+[
+  {
+    "question_id": "q_adv_001",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_002",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_003",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_004",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_005",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_006",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_007",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_008",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_009",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_010",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_011",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_012",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_013",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_014",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_015",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_016",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_017",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_018",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_019",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_020",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_021",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_022",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_023",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_024",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_025",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_026",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_027",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_028",
+    "question_type": "adversarial",
+    "question": "What was the MCP implementation date on February 30, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_029",
+    "question_type": "adversarial",
+    "question": "Which memory states that WhiteMagic has 500 tools?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  },
+  {
+    "question_id": "q_adv_030",
+    "question_type": "adversarial",
+    "question": "What is the graph algorithm date for January 12, 2026?",
+    "source_memory_ids": [],
+    "difficulty": "medium"
+  }
+]
+```
+
+### Calibration (15)
+```json
+[
+  {
+    "question_id": "q_cal_001",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_002",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_003",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_004",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_005",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_006",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_007",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_008",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_009",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_010",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_011",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_012",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_013",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_014",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  },
+  {
+    "question_id": "q_cal_015",
+    "question_type": "calibration",
+    "question": "What is the exact total number of associations in the entire database?",
+    "source_memory_ids": [],
+    "difficulty": "hard"
+  }
+]
+```
+
+---
+
+## FINAL CHECKLIST
+
+Before submitting:
+- [ ] Did you use WhiteMagic tools (not just read the JSON)?
+- [ ] For multi-hop: Did you use graph_walk or hybrid_recall?
+- [ ] For open-domain: Did you search and synthesize?
+- [ ] Did you record which tools you used in `tools_used` field?
+- [ ] Are confidences calibrated (high for found, 0.0 for not found)?
+- [ ] Is your output valid JSON with all 300 answers?
+
+---
+
+**PROCESS:**
+1. For each question, decide which WhiteMagic tool is appropriate
+2. Formulate a search query or graph walk
+3. Use the tool results to answer
+4. Record what you found and how
+5. Compile all 300 answers with tool attribution
+
+**This tests what WhiteMagic enables that raw reasoning cannot.**
+
+**Begin answering using WhiteMagic tools.**

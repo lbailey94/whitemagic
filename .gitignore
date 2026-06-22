@@ -1,0 +1,282 @@
+# WhiteMagic Workspace .gitignore
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# === Virtual Environments ===
+.venv/
+venv/
+env/
+# Python venv lib dirs (scoped — do NOT match apps/site/lib or similar source dirs)
+/lib/
+/lib64/
+**/.venv/lib/
+**/venv/lib/
+
+# === Node ===
+node_modules
+**/node_modules
+.next/
+**/.next/
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
+# === Rust ===
+core/whitemagic-rust/target/
+core/whitemagic-math/target/
+core/haskell/dist-newstyle/
+polyglot/codex/target/
+**/Cargo.lock
+
+# === Databases ===
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite3-journal
+
+# === Logs ===
+*.log
+*.stats
+*.jsonl
+!apps/site/public/consolidated_*.jsonl
+
+# === Build Artifacts ===
+*.bak
+*.backup
+*.bak.*
+dist/wasm/
+BUILD_HASHES.json
+
+# === Generated Reports ===
+core/reports/
+# Runtime dump files (avoid committing by accident)
+llms-full.txt
+# llms.txt is now a canonical project file per llmstxt.org convention
+benchmark_output.txt
+
+# === Removed from history (C4 filter-repo) - do not re-add ===
+.restructure_backups/
+docs/ci-logs/
+docs/reports/auxiliary_reports/
+polyglot/BitNet/
+projects/
+core/scripts/archaeology_results/
+aria/
+omega_results.json
+rig_debug.log
+core/whitemagic-rust/pkg/
+core/whitemagic-rust/rust_ci_full.log
+
+# === Runtime logs and state artifacts ===
+excavation.log
+*.dream.log
+ops/.env.production.local
+whitemagic_dream.log
+
+# === Large data files (>100MB, exceed GitHub limit) ===
+polyglot/mojo/.pixi/
+data/models/*.onnx
+apps/site/public/models/*.onnx
+*.onnx
+
+# === Mojo compiled binaries ===
+polyglot/mojo/association_miner
+polyglot/mojo/batch_encoder
+polyglot/mojo/bench_cosine
+polyglot/mojo/bench_cosine_mojo
+polyglot/mojo/causal_miner
+polyglot/mojo/clone_accelerator
+polyglot/mojo/community_detection
+polyglot/mojo/embedding_engine
+polyglot/mojo/embedding_index
+polyglot/mojo/emergence_detection
+polyglot/mojo/gpu_*
+polyglot/mojo/graph_search
+polyglot/mojo/hrr
+polyglot/mojo/hrr_engine
+polyglot/mojo/knowledge_graph
+polyglot/mojo/ml_pipeline
+polyglot/mojo/mojo_compat
+polyglot/mojo/pattern_matching
+polyglot/mojo/predictive_analytics
+polyglot/mojo/reasoning_accelerator
+polyglot/mojo/semantic_clustering
+polyglot/mojo/surprise_gate
+polyglot/mojo/synthesis_engine
+polyglot/mojo/temporal_analysis
+polyglot/mojo/test_hello
+polyglot/mojo/vector_index
+polyglot/mojo/workflow_accelerator
+
+# === Koka compiled binaries (no extension) ===
+polyglot/whitemagic-koka/.koka_build/
+polyglot/whitemagic-koka/*
+!polyglot/whitemagic-koka/*.kk
+!polyglot/whitemagic-koka/*.md
+!polyglot/whitemagic-koka/*.sh
+!polyglot/whitemagic-koka/*.mk
+!polyglot/whitemagic-koka/*.toml
+!polyglot/whitemagic-koka/*.lock
+!polyglot/whitemagic-koka/.gitattributes
+!polyglot/whitemagic-koka/.gitignore
+!polyglot/whitemagic-koka/.koka/
+!polyglot/whitemagic-koka/src/
+!polyglot/whitemagic-koka/docs/
+!polyglot/whitemagic-koka/cache/
+
+# === Rust specific binaries ===
+core/whitemagic-rust/libwhitemagic_rs.so
+core/whitemagic-rust/wm-seed
+core/whitemagic-rust/target/debug/whitemagic_rust
+core/whitemagic-rust/target/release/whitemagic_rust
+
+# === Rust auto-generated stubs (prevent re-creation) ===
+core/whitemagic-rust/src/enterprise_*.rs
+core/whitemagic-rust/src/memory_safe_*.rs
+core/whitemagic-rust/src/ml_inference_*.rs
+core/whitemagic-rust/src/optimized_*.rs
+core/whitemagic-rust/src/simd_advanced_*.rs
+core/whitemagic-rust/src/*_v[0-9].rs
+core/whitemagic-rust/src/*_v[0-9][0-9].rs
+core/whitemagic-rust/src/*_final.rs
+
+# === IDE / Tool caches ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.windsurf_conversations/
+.strata-baseline.json
+.strata-cache.json
+.fragment/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Sensitive ===
+.env
+.mcp.json
+
+# === Private / Not for public release ===
+aria/
+!apps/site/app/api/aria/
+archive/
+legacy/
+whitemagic-site/
+core/whitemagic/legacy/
+data/
+projects/
+
+# === Polyglot build artifacts ===
+polyglot/whitemagic-koka/.koka_build/
+polyglot/whitemagic-koka/.koka/
+polyglot/mojo/*.so
+polyglot/mojo/*.ll
+polyglot/mojo/.pixi/
+polyglot/rust/
+polyglot/whitemagic-zig/zig-out/
+polyglot/whitemagic-zig/zig-cache/
+polyglot/whitemagic-zig/.zig-cache/
+polyglot/whitemagic-zig/lib/
+polyglot/whitemagic-zig/*.so
+polyglot/whitemagic-zig/*.a
+polyglot/whitemagic-zig/*.o
+polyglot/elixir/_build/
+
+# === Docs: Three-tier structure ===
+# Ignore internal and private docs, keep public un-ignored
+docs/internal/
+docs/private/
+docs/README.md
+
+# === Public docs (un-ignored) ===
+# These are the ONLY docs visible in public releases
+!docs/public/
+!docs/public/*.md
+!docs/public/guides/
+!docs/public/changelogs/
+!docs/public/community/
+!docs/public/design/
+!docs/public/misc/
+
+# === Polyglot Haskell build ===
+polyglot/whitemagic-hs/dist-newstyle/
+polyglot/whitemagic-hs/src/*.hi
+polyglot/whitemagic-hs/src/*.o
+polyglot/whitemagic-hs/src/*_stub.h
+polyglot/whitemagic-hs/wm_hs_bridge.c
+polyglot/whitemagic-hs/wm_hs_bridge.o
+
+# === External projects (not part of WhiteMagic core) ===
+whitemagic-app/
+whitemagic-aux/
+WhiteMagic-Grants/
+/auxiliary projects/
+apps/site/
+test_zig
+
+# === Temporary ===
+tmp/
+temp_venv/
+scratch/
+wm
+.restructure_backups/whitemagic-legacy-v21.0.0.tar.gz
+polyglot/codex/
+polyglot/codex/00_source/
+.koka/
+
+# === Recovered polyglot build artifacts ===
+polyglot/whitemagic-go/whitemagic-go-mesh
+polyglot/whitemagic-rust-archive/target/
+polyglot/whitemagic-rust-archive/libwhitemagic_rs.so
+polyglot/whitemagic-rust-archive/wm-seed
+polyglot/whitemagic-rust-archive/pkg/
+
+# === Private / strategic content (not for public release) ===
+# These directories contain session reports, strategic plans, grant
+# applications, and personal research that should not be in a public repo.
+docs/message_board/
+docs/archive/
+docs/strategy_manifestos/
+docs/essay_frameworks/
+docs/SFW2/
+docs/private/
+WhiteMagic-Grants/
+ops/.env.production.local
+
+# Internal development artifacts
+excavation.log
+*.dream.log
+whitemagic_dream.log
+.strata-baseline.json
+.strata-cache.json
+ARCHITECTURE_MANIFEST_2026-06-04.md
+C4_GIT_FILTER_REPO_SCRIPT.sh
+
+# Desktop app (lives in separate repo)
+whitemagic-app/
+
+# Build artifacts
+core/dist/
+core/build/

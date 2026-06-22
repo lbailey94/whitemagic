@@ -1,0 +1,26 @@
+# ruff: noqa: BLE001
+"""Bridge module: benchmark runner (Group A — resurfaced from archive)."""
+
+from typing import Any
+
+
+def run_benchmarks(
+    suite: str = "full",
+    benchmark_type: str | None = None,
+    mode: str | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Run benchmark suites."""
+    from whitemagic.benchmarks.performance_suite import PerformanceBenchmark
+
+    if benchmark_type:
+        suite = benchmark_type
+    elif mode:
+        suite = mode
+
+    benchmark = PerformanceBenchmark()
+    if suite == "full":
+        results = benchmark.run_full_benchmark()
+    else:
+        results = benchmark.benchmark_import_time()
+    return {"status": "completed", "suite": suite, "benchmark_type": suite, "results": results}

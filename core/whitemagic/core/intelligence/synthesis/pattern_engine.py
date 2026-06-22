@@ -1,0 +1,148 @@
+# ruff: noqa: BLE001
+"""Pattern Engine - Pattern detection and analysis (v2.0 — Wired to Real Engines).
+==================================================================================
+Delegates to real pattern engines:
+- UnifiedPatternAPI from unified_patterns.py
+- HolographicPatternEngine from hologram/patterns.py
+- Memory pattern engine from memory/pattern_engine.py
+"""
+
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class PatternEngine:
+    """Pattern detection and analysis engine — wires to real implementations."""
+
+    def __init__(self) -> None:
+        self._unified = None
+        self._holographic = None
+        self._memory = None
+
+    def _get_unified(self) -> Any:
+        if self._unified is None:
+            try:
+                from whitemagic.core.intelligence.synthesis.unified_patterns import (
+                    UnifiedPatternAPI,
+                )
+                self._unified = UnifiedPatternAPI()  # type: ignore[assignment]
+            except Exception as e:
+                logger.debug("UnifiedPatternAPI unavailable: %s", e, exc_info=True)
+                self._unified = None
+        return self._unified
+
+    def _get_holographic(self) -> Any:
+        if self._holographic is None:
+            try:
+                from whitemagic.core.intelligence.hologram.patterns import (
+                    HolographicPatternEngine,
+                )
+                self._holographic = HolographicPatternEngine()  # type: ignore[assignment]
+            except Exception as e:
+                logger.debug("HolographicPatternEngine unavailable: %s", e, exc_info=True)
+                self._holographic = None
+        return self._holographic
+
+    def _get_memory(self) -> Any:
+        if self._memory is None:
+            try:
+                from whitemagic.core.memory.pattern_engine import MemoryPatternEngine
+                self._memory = MemoryPatternEngine()
+            except Exception as e:
+                logger.debug("MemoryPatternEngine unavailable: %s", e, exc_info=True)
+                self._memory = None
+        return self._memory
+
+    def detect(self, query: str = "", **kwargs: Any) -> list[dict[str, Any]]:
+        """Detect patterns in data — tries all engines."""
+        results = []
+
+        # Try unified pattern API first
+        unified = self._get_unified()
+        if unified:
+            try:
+                unified_results = unified.search_patterns(query, limit=kwargs.get("limit", 20))
+                results.extend(unified_results)
+            except Exception as e:
+                logger.debug("Unified pattern search failed: %s", e, exc_info=True)
+
+        # Try holographic patterns
+        holographic = self._get_holographic()
+        if holographic:
+            try:
+                holo_results = holographic.find_patterns(query, **kwargs)
+                results.extend(holo_results)
+            except Exception as e:
+                logger.debug("Holographic pattern search failed: %s", e, exc_info=True)
+
+        # Try memory patterns
+        memory = self._get_memory()
+        if memory:
+            try:
+                mem_results = memory.extract_patterns(**kwargs)
+                results.extend(mem_results)
+            except Exception as e:
+                logger.debug("Memory pattern extraction failed: %s", e, exc_info=True)
+
+        return results
+
+    def analyze(self, pattern_id: str, **kwargs: Any) -> dict[str, Any]:
+        """Analyze a specific pattern."""
+        unified = self._get_unified()
+        if unified:
+            try:
+                return unified.analyze_pattern(pattern_id, **kwargs)
+            except Exception as e:
+                logger.debug("Unified pattern analysis failed: %s", e, exc_info=True)
+
+        holographic = self._get_holographic()
+        if holographic:
+            try:
+                return holographic.analyze_pattern(pattern_id, **kwargs)
+            except Exception as e:
+                logger.debug("Holographic pattern analysis failed: %s", e, exc_info=True)
+
+        return {"status": "not_found", "pattern_id": pattern_id}
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get pattern engine statistics."""
+        stats: dict[str, Any] = {"engines": {}}
+
+        unified = self._get_unified()
+        if unified:
+            try:
+                stats["engines"]["unified"] = unified.get_stats()
+            except Exception as e:
+                logger.debug("Unified pattern stats failed: %s", e, exc_info=True)
+
+        holographic = self._get_holographic()
+        if holographic:
+            try:
+                stats["engines"]["holographic"] = holographic.get_stats()
+            except Exception as e:
+                logger.debug("Holographic pattern stats failed: %s", e, exc_info=True)
+
+        memory = self._get_memory()
+        if memory:
+            try:
+                stats["engines"]["memory"] = memory.get_stats()
+            except Exception as e:
+                logger.debug("Memory pattern stats failed: %s", e, exc_info=True)
+
+        return stats
+
+
+# Singleton
+_pattern_engine: PatternEngine | None = None
+_pattern_engine_lock = __import__("threading").Lock()
+
+def get_pattern_engine(**kwargs: Any) -> PatternEngine:
+    """Get the global PatternEngine singleton."""
+    global _pattern_engine
+    if _pattern_engine is None:
+        with _pattern_engine_lock:
+            if _pattern_engine is None:
+                _pattern_engine = PatternEngine(**kwargs)
+    return _pattern_engine

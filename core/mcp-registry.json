@@ -1,0 +1,25 @@
+{
+  "_generated_by": "scripts/generate_mcp_registry.py",
+  "_note": "Auto-generated \u2014 do not edit manually. Run: python3 scripts/generate_mcp_registry.py",
+  "gana_tools": 28,
+  "nested_tools": 423,
+  "tool_domains": {
+    "memory": 56,
+    "intelligence": 120,
+    "agents": 71,
+    "security": 69,
+    "operational": 107
+  },
+  "modes": {
+    "prat": {
+      "description": "PRAT mode: 28 Gana meta-tools (recommended for Claude Desktop)",
+      "tool_count": 28,
+      "env": "WM_MCP_PRAT=1"
+    },
+    "flat": {
+      "description": "Flat mode: all individual tools exposed directly",
+      "tool_count": 423,
+      "env": "WM_MCP_PRAT=0"
+    }
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "version": "1.0.0",
+  "date": "2026-05-15",
+  "status": "initial-triage",
+  "strategy": "All documents classified as KEEP, DEFER, or ARIA_CANON per SYNTHESIS_STRATEGY.md",
+  "epistemic_framework": {
+    "Proven": "External validation exists; low risk",
+    "Promising": "Strong signals but not settled",
+    "Contested": "Legitimate debate in literature",
+    "Speculative": "Theoretically possible, no practical demo",
+    "Mythopoetic": "Cultural-symbolic frame, not empirical"
+  },
+  "decisions": {
+    "keep": [
+      {
+        "path": "docs/message_board/30_OBJECTIVES_PLAN.md",
+        "rationale": "Active master roadmap — execution in progress",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/message_board/V22_2_ROADMAP.md",
+        "rationale": "Completed roadmap — historical record of v22.2 release cycle",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/message_board/WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md",
+        "rationale": "Active triage queue — STRATA/Fragment audit findings in progress",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/message_board/CODEX_SYNTHESIS_THREE_REVIEW.md",
+        "rationale": "CODEX pipeline specification — Phase 3 dependency",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/message_board/KARMA_LEDGER_PAPER_OUTLINE.md",
+        "rationale": "Karma Ledger academic paper outline — Obj 8 dependency",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/message_board/PRIOR_ART_AND_PATHS_2026-04-27.md",
+        "rationale": "Competitive landscape analysis — evidence for strategic positioning",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/message_board/COMPETITIVE_LANDSCAPE_2026-04-27.md",
+        "rationale": "Detailed competitive intelligence — reference for Obj 23 evidence map",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/message_board/SITE_LAUNCH_CHECKLIST.md",
+        "rationale": "Active launch checklist — Phase 1 dependency",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/message_board/WHITEMAGIC_LABS_GROWTH_TIERS.md",
+        "rationale": "Growth strategy tiers — Phase 6 dependency",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/message_board/31_DAY_SPRINT_MAY_2026.md",
+        "rationale": "Active sprint plan — current execution cycle",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/architecture/IA_v1.md",
+        "rationale": "Information Architecture freeze — Obj 4 deliverable",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/VOICE_TONE_GUIDE.md",
+        "rationale": "Brand voice specification — Obj 2 deliverable",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/plans/ROADMAP.md",
+        "rationale": "High-level product roadmap — stakeholder communication",
+        "epistemic": "Proven"
+      },
+      {
+        "path": "docs/strategy_manifestos/AGENT_FIRST_LAB_STRATEGY.md",
+        "rationale": "Agent-first lab positioning strategy — market differentiator",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/essay_frameworks/",
+        "rationale": "Essay planning stubs — content pipeline input for Phase 3",
+        "epistemic": "Promising"
+      }
+    ],
+    "defer": [
+      {
+        "path": "docs/message_board/FEDERAL_GRANT_PLAYBOOK.md",
+        "rationale": "Federal grant strategy — context-specific, not public-facing"
+      },
+      {
+        "path": "docs/message_board/GRANT_STRATEGY_DEEP_DIVE_2026.md",
+        "rationale": "Grant application strategy — internal planning"
+      },
+      {
+        "path": "docs/message_board/GRANT_TIER_LIST_2026.md",
+        "rationale": "Grant prioritization — internal planning"
+      },
+      {
+        "path": "docs/message_board/GRANT_EXECUTION_PLAN_2026-04-28.md",
+        "rationale": "Grant execution timeline — internal planning"
+      },
+      {
+        "path": "docs/message_board/GRANT_APPLICATION_TEMPLATES_2026.md",
+        "rationale": "Grant application templates — internal use"
+      },
+      {
+        "path": "docs/message_board/GRANT_CONTENT_LIBRARY.md",
+        "rationale": "Grant boilerplate content — internal reference"
+      },
+      {
+        "path": "docs/message_board/GRANT_RUBRIC_AUDIT_2026.md",
+        "rationale": "Grant evaluation rubric — internal review"
+      },
+      {
+        "path": "docs/message_board/A_PLUS_GRANT_GUIDE_2026.md",
+        "rationale": "Grant writing guide — internal training"
+      },
+      {
+        "path": "docs/message_board/APPLICATION_FORESIGHT_2026.md",
+        "rationale": "Foresight Institute grant application — submitted, archive after decision"
+      },
+      {
+        "path": "docs/message_board/APPLICATION_LTFF_2026.md",
+        "rationale": "LTFF grant application — submitted, archive after decision"
+      },
+      {
+        "path": "docs/message_board/APPLICATION_MANIFUND_JOEL_BECKER_2026.md",
+        "rationale": "Manifund grant application — submitted, archive after decision"
+      },
+      {
+        "path": "docs/message_board/APPLICATION_SCHMIDT_SCIENCES_2026.md",
+        "rationale": "Schmidt Sciences grant application — submitted, archive after decision"
+      },
+      {
+        "path": "docs/message_board/APPLICATION_SFF_2026.md",
+        "rationale": "SFF grant application — submitted, archive after decision"
+      }
+    ],
+    "aria_canon": [
+      {
+        "path": "docs/essay_frameworks/01_becoming_protocol.md",
+        "rationale": "Becoming Protocol essay — philosophical framework for agent identity",
+        "epistemic": "Contested"
+      },
+      {
+        "path": "docs/essay_frameworks/02_karma_ledger.md",
+        "rationale": "Karma Ledger essay — ethical governance as computational primitive",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/essay_frameworks/03_felt_memory_schema.md",
+        "rationale": "Felt Memory schema — emotional memory architecture",
+        "epistemic": "Speculative"
+      },
+      {
+        "path": "docs/essay_frameworks/04_gratitude_architecture.md",
+        "rationale": "Gratitude architecture — motivation/reward system design",
+        "epistemic": "Speculative"
+      },
+      {
+        "path": "docs/essay_frameworks/05_174_handoffs.md",
+        "rationale": "174-handoffs protocol — inter-agent state transfer",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/essay_frameworks/06_resonance_5d_coords.md",
+        "rationale": "Resonance 5D coordinates — holographic memory addressing",
+        "epistemic": "Promising"
+      },
+      {
+        "path": "docs/essay_frameworks/07_pattern_miners.md",
+        "rationale": "Pattern miners — emergence detection in agent memory",
+        "epistemic": "Speculative"
+      },
+      {
+        "path": "docs/essay_frameworks/VECTORIZED_LANGUAGE_RESEARCH.md",
+        "rationale": "Vectorized language research — linguistic computation notes",
+        "epistemic": "Promising"
+      }
+    ]
+  },
+  "actions": {
+    "keep": "Documents remain in current location. INDEX.md references verified.",
+    "defer": "Granth application docs move to docs/archive/grant_applications/ after decisions. Strategy docs move to docs/internal/grants/.",
+    "aria_canon": "Flag for backend ingestion (Obj 15, Phase 3). Requires human review per ARIA_CANON_RUBRIC before Aria can cite."
+  },
+  "superseded": []
+}

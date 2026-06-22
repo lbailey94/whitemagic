@@ -1,0 +1,34 @@
+[Unit]
+Description=WhiteMagic REST API
+After=network.target
+
+[Service]
+Type=simple
+User=whitemagic
+WorkingDirectory=/home/whitemagic/WHITEMAGIC/core
+
+# Python environment
+Environment="PATH=/home/whitemagic/WHITEMAGIC/core/.venv/bin"
+Environment="WM_SILENT_INIT=1"
+Environment="WM_STATE_ROOT=/home/whitemagic/.whitemagic"
+
+# Haskell FFI — required for polyglot hexagram operations
+Environment="LD_LIBRARY_PATH=/home/whitemagic/.ghcup/ghc/9.6.6/lib/ghc-9.6.6/lib/x86_64-linux-ghc-9.6.6"
+Environment="LD_PRELOAD=/home/whitemagic/.ghcup/ghc/9.6.6/lib/ghc-9.6.6/lib/x86_64-linux-ghc-9.6.6/libHSrts_thr-ghc9.6.6.so"
+
+# Polyglot libraries
+Environment="WM_POLYGLOT_HS=/home/whitemagic/WHITEMAGIC/polyglot/whitemagic-hs"
+Environment="WM_POLYGLOT_ZIG=/home/whitemagic/WHITEMAGIC/polyglot/whitemagic-zig/zig-out/lib"
+
+ExecStart=/home/whitemagic/WHITEMAGIC/core/.venv/bin/python scripts/wm_rest_server.py --host 127.0.0.1 --port 8770
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/whitemagic/.whitemagic
+
+[Install]
+WantedBy=multi-user.target

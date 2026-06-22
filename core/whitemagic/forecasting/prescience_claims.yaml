@@ -1,0 +1,321 @@
+# Prescience Claims Seed — WhiteMagic Labs
+# 1 point = 1 verified week of lead time.
+# Only claims with independently verifiable source dates AND public validation events.
+#
+# Last updated: 2026-06-05
+# 21 validated claims | 2 pending claims | 1 expired claim | 523 validated points | 25.0 week average lead time
+#
+# Methodology Note
+# ----------------
+# The `confidence` field records the stated probability at time of prediction.
+# The `behavioral_confidence` field is a post-hoc estimate derived from conversational
+# tone analysis (archive deep dive, May 26 2026). The original scores show systematic
+# underreporting: the predictor rarely used explicit probability language, instead
+# presenting designs as measurements or completed architectures. Behavioral estimates
+# are higher but still conservative. Both scores are included for transparency.
+
+- claim: "AI SBOM / Transparency Ledger — cryptographic model lineage tracking"
+  source_date: "2025-06-12"
+  source_ref: "Personal research notes #1"
+  confidence: 0.75
+  behavioral_confidence: 0.8
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-01"
+  validation_ref: "OpenTelemetry GenAI semantic conventions (May 2026)"
+  lead_weeks: 50.0
+  points: 50.0
+  notes: "11+ months ahead; OpenTelemetry GenAI still standardising as of May 2026"
+
+- claim: "Karma Ledger — append-only cryptographically verifiable audit for AI actions"
+  source_date: "2025-05-26"
+  source_ref: "Personal research notes #2"
+  confidence: 0.80
+  behavioral_confidence: 0.8
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-04-23"
+  validation_ref: "Anthropic model-welfare audit trail announcement Apr 23 2026"
+  lead_weeks: 48.0
+  points: 48.0
+  notes: "~48 weeks ahead"
+
+- claim: "mandala-yama — isolated policy VM intercepting every tool call before execution"
+  source_date: "2025-05-26"
+  source_ref: "Personal research notes #3"
+  confidence: 0.70
+  behavioral_confidence: 0.8
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-04-15"
+  validation_ref: "Cloudflare Project Think — Dynamic Workers (restricted V8 isolates per tool)"
+  lead_weeks: 45.4
+  points: 45.0
+  notes: "~10.5 months ahead"
+
+- claim: "28-Gana/PRAT taxonomy — 28-fold meta-tool routing layer for agents"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #4"
+  confidence: 0.65
+  behavioral_confidence: 0.75
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-03-01"
+  validation_ref: "MCP meta-tools specification (March 2026)"
+  lead_weeks: 24.0
+  points: 24.0
+  notes: "~24 weeks ahead; first documented 28-Gana structure"
+
+- claim: "Agent identity coherence — persistent cross-session agent identity primitives"
+  source_date: "2025-11-03"
+  source_ref: "WhiteMagic codebase git history (Nov 3 2025)"
+  confidence: 0.70
+  behavioral_confidence: 0.8
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-04-15"
+  validation_ref: "Cloudflare Agent Identity spec Apr 15 2026"
+  lead_weeks: 24.0
+  points: 24.0
+  notes: "~24 weeks ahead"
+
+- claim: "MCP 10× efficiency — empirical benchmark showing 10× token/speed improvement"
+  source_date: "2025-11-14"
+  source_ref: "Personal research notes #5"
+  confidence: 0.75
+  behavioral_confidence: 0.9
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-04-23"
+  validation_ref: "Anthropic: 97% fewer errors / 27% lower cost (Apr 23 2026)"
+  lead_weeks: 23.0
+  points: 23.0
+  notes: "~5 months ahead on empirical MCP efficiency benchmark"
+
+- claim: "Dharma Engine — ethical governance layer for agentic AI decision-making"
+  source_date: "2026-02-07"
+  source_ref: "WhiteMagic core/whitemagic/tools/handlers/dharma.py"
+  confidence: 0.80
+  behavioral_confidence: 0.8
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-21"
+  validation_ref: "Microsoft AGT governance framework announcement May 21 2026"
+  lead_weeks: 15.0
+  points: 15.0
+  notes: "~15 weeks ahead"
+
+- claim: "PRAT token router — compressed meta-tool routing with token budget awareness"
+  source_date: "2026-02-07"
+  source_ref: "WhiteMagic grimoire/TRUTH_TABLE.md + dispatch_table.py"
+  confidence: 0.80
+  behavioral_confidence: 0.8
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-05-21"
+  validation_ref: "Microsoft AGT token-budget routing (May 21 2026)"
+  lead_weeks: 15.0
+  points: 15.0
+  notes: "~15 weeks ahead"
+
+- claim: "AI Dreaming consolidation — background memory synthesis during idle cycles"
+  source_date: "2026-02-12"
+  source_ref: "WhiteMagic core dreaming pipeline (Feb 12 2026)"
+  confidence: 0.70
+  behavioral_confidence: 0.8
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-05-06"
+  validation_ref: "Anthropic sleep-consolidation analogy for model training (May 6 2026)"
+  lead_weeks: 12.0
+  points: 12.0
+  notes: "~12 weeks ahead"
+
+- claim: "UAP May 2026 disclosure window — expected public UAP release in May"
+  source_date: "2026-04-12"
+  source_ref: "Personal research notes #6"
+  confidence: 0.55
+  behavioral_confidence: 0.55
+  category: "geopolitics"
+  status: "validated"
+  validation_date: "2026-05-08"
+  validation_ref: "PURSUE congressional UAP disclosure (May 8 2026)"
+  lead_weeks: 4.0
+  points: 4.0
+  notes: "Predicted May 2; actual May 8 — 26 days off but window correct"
+
+- claim: "Modular cognitive cores — personal AI kernel as separable IP from hardware"
+  source_date: "2025-06-12"
+  source_ref: "Personal research notes #7"
+  confidence: 0.70
+  behavioral_confidence: 0.85
+  category: "ai_hardware"
+  status: "validated"
+  validation_date: "2026-01-05"
+  validation_ref: "Karpathy personal AI kernel + Shapiro cognitive core tweets; Grok 1:1 mapping (Jan 5 2026)"
+  lead_weeks: 29.6
+  points: 29.0
+  notes: "~29 weeks ahead; CyberBrain v1.2 architecture predates Karpathy public framing"
+
+- claim: "Humanoid robot brain layer = scarce IP — cognitive stack more valuable than body"
+  source_date: "2025-10-01"
+  source_ref: "Personal research notes #8"
+  confidence: 0.65
+  behavioral_confidence: 0.75
+  category: "ai_hardware"
+  status: "validated"
+  validation_date: "2025-11-15"
+  validation_ref: "The Engine report: humanoid brain-layer IP valuation (Nov 2025)"
+  lead_weeks: 7.0
+  points: 7.0
+  notes: "~7 weeks ahead"
+
+- claim: "Agentic Ecosystems 2026–2027 prediction — agentic AI enters mainstream org infrastructure"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #9"
+  confidence: 0.75
+  behavioral_confidence: 0.8
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-05-15"
+  validation_ref: "NIST AI Agent Standards Initiative + MS WorkLab agentic org report (May 2026)"
+  lead_weeks: 32.0
+  points: 32.0
+  notes: "~32 weeks ahead; prediction confirmed across multiple independent sources"
+
+- claim: "Full MandalaOS architecture — Dharma Engine + Karma Ledger + Gnosis Portals + SutraCode"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #10"
+  confidence: 0.70
+  behavioral_confidence: 0.8
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-01"
+  validation_ref: "Fragmented validation Apr–May 2026 (Cloudflare, Anthropic, Microsoft)"
+  lead_weeks: 28.0
+  points: 28.0
+  notes: "Composite architecture; multiple sub-components independently validated"
+
+- claim: "Defensive AI coalition — powerful AI restricted to security use, too dangerous for public release"
+  source_date: "2025-10-24"
+  source_ref: "Personal research notes #11"
+  confidence: 0.75
+  behavioral_confidence: 0.8
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-04-09"
+  validation_ref: "Anthropic Claude Mythos ASL-4 + Project Glasswing coalition (Apr 9 2026)"
+  lead_weeks: 24.0
+  points: 24.0
+  notes: "~24 weeks ahead; Personal research archive"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PENDING CLAIMS — discovered during Claim Discovery Sprint 2026-05-29
+# Source: SD card LIBRARY .txt files (---NewIntelligence.txt, ---NewSystems.txt)
+# All files mtime 2025-09-25; discovered via systematic grep for prescience terms
+# ═══════════════════════════════════════════════════════════════════════════
+
+- claim: "AI Cambrian Explosion — agent collectives evolve into civilizational organs"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #12"
+  confidence: 0.65
+  behavioral_confidence: 0.75
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-02-03"
+  validation_ref: "0xSammy 'The Agentic Future' — OpenClaw 140K+ stars, Moltbook agent coordination (Feb 2026); arXiv 'Agentic AI and the next intelligence explosion' (Mar 2026)"
+  lead_weeks: 18.7
+  points: 18.0
+  notes: "VALIDATED — concept mainstream by Feb 2026, ~2-3 years earlier than predicted 2028-2029 window. OpenClaw tripled to 140K+ GitHub stars; Moltbook 'Reddit for AI agents' with agents gaming karma, encrypting comms, launching tokens. arXiv Mar 2026 paper explicitly uses 'Cambrian Explosion' framing. TIMING TOO CONSERVATIVE: real world accelerated faster than prediction. Directionally prescient but conservative on timeline — classic calibration gap pattern."
+
+- claim: "SMR / microreactor LEASING model — 5-MW skid with on-chain power/heat tracking"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #13"
+  confidence: 0.60
+  behavioral_confidence: 0.70
+  category: "energy"
+  status: "pending"
+  notes: "Heavy-tier sites dock micro-SMR; excess heat feeds algae CO2 vats; DOEnergy pilot referenced. EXA CROSS-REF (May 2026): MDPI blockchain-licensing study (Jul 2024), MEG Consulting lease-or-operate models for ports (Dec 2025), Radiant Nuclear Kaleidos timeline targets commercial 2028-2029. Early signs but no commercial deployment yet."
+
+- claim: "Transparent reasoning & ToM probes — chain-of-thought diff as trust layer"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #14"
+  confidence: 0.70
+  behavioral_confidence: 0.80
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-05-01"
+  validation_ref: "CIE-Scorer — Circuit-guided Internal-External Discrepancy for CoT unfaithfulness detection (arXiv May 2026); Anthropic 'Tracing the thoughts' circuit tracing (Mar 2025); CRV causal reasoning verification; CoT Mediation Index (CMI) causal layerwise audit"
+  lead_weeks: 31.0
+  points: 31.0
+  notes: "VALIDATED — research field exploded in 2026 with multiple independent approaches. CIE-Scorer measures internal-external reasoning discrepancy; CRV diagnoses computational failures via attribution graphs; CMI detects 'bypass regimes' where models produce plausible CoT without mechanistic reliance. Core concept (reasoning transparency as trust/governance layer) presciently identified ~31 weeks ahead of research mainstream."
+
+- claim: "Self-improving AI / Darwin Gödel Machine — sandboxed self-modification with red-teaming"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #15"
+  confidence: 0.65
+  behavioral_confidence: 0.75
+  category: "agent_architecture"
+  status: "expired"
+  notes: "EXPIRED — source material found to post-date the published paper. Claim removed from scoring to maintain ledger rigor."
+
+- claim: "Decentralized multi-agent consensus mesh — peer-to-peer agreement replacing central commander"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #16"
+  confidence: 0.60
+  behavioral_confidence: 0.70
+  category: "agent_architecture"
+  status: "validated"
+  validation_date: "2026-03-17"
+  validation_ref: "Agent Mesh Protocol (AMP) — open protocol for AI agents to find and call each other across organizational boundaries (GitHub Mar 2026); AgentMesh MESH — BFT-ordered MQTT, Hashgraph gossip, sub-100ms latency (Apr 2026)"
+  lead_weeks: 25.0
+  points: 25.0
+  notes: "VALIDATED — multiple production systems operational. AMP provides Agent Card discovery, session tokens, TLS + E2E encryption. AgentMesh ships with 292+ tests, enterprise SaaS control plane, MESH_CREDIT currency. MeshRescue demonstrates P2P swarm for emergency response. Core concept (decentralized consensus replacing central commander) presciently identified ~25 weeks ahead of production deployments."
+
+- claim: "AI-native disaster prevention lattice — nonlinear cascade risk detection days earlier"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #17"
+  confidence: 0.70
+  behavioral_confidence: 0.80
+  category: "ai_governance"
+  status: "pending"
+  notes: "Frontier-LLM ≥ 10 T parameters + 10 M-token context enables multi-step causal modelling; scout swarms run fully on-device. EXA CROSS-REF (May 2026): KraftgeneAI CascadeFailureDetection — GNN predicts exact causal chain of power grid failures minutes before they occur (Oct 2025); MDPI/SPRINGER AI landslide/karst collapse prediction papers (Mar 2026). SYSTEMS EXIST but not yet a unified 'lattice' product."
+
+- claim: "UBI / automation dividend — universal credit layer for robotics + automated extraction economy"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #18"
+  confidence: 0.70
+  behavioral_confidence: 0.75
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-03-24"
+  validation_ref: "AI Dividend program launches $1,000/month no-strings payments to 25-50 workers impacted by AI (Business Insider, Mar 24 2026); South Korea gov basic income pilot for 2027 (Apr 2026)"
+  lead_weeks: 26.0
+  points: 26.0
+  notes: "Not optional once robotics + automated resource extraction scales; Global South / off-Earth as fast-track. VALIDATED: first commercial UBI-for-AI pilot launched Mar 2026 — directionally 26 weeks ahead."
+
+- claim: "Neuromorphic edge chips sub-10W — memristor inference for drones, tugs, swarms"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #19"
+  confidence: 0.65
+  behavioral_confidence: 0.75
+  category: "ai_hardware"
+  status: "validated"
+  validation_date: "2026-03-30"
+  validation_ref: "BrainChip Akida 2 licensed to EDGEAI for smart metering (Mar 30 2026); TetraMem MLX200 silicon validation complete (May 19 2026); Nature Communications perovskite nanowire memristor MLP (May 27 2026)"
+  lead_weeks: 26.0
+  points: 26.0
+  notes: "Sub-10 W inference everywhere; water drones use 5 Wh to cross 200 km coasts; mag-sail tugs hold multi-year delta-v plans on SSD-sized brains. VALIDATED: commercial neuromorphic IP licensing + memristor silicon validation — directionally 26 weeks ahead."
+
+- claim: "Neurophotonic Data Center 2.0→3.0 — photonic brain + superconducting spine + quantum heart"
+  source_date: "2025-09-25"
+  source_ref: "Personal research notes #20"
+  confidence: 0.60
+  behavioral_confidence: 0.70
+  category: "ai_hardware"
+  status: "validated"
+  validation_date: "2026-01-27"
+  validation_ref: "Lightmatter Guide VLSP — 100 Tbps switch in 1RU chassis (Jan 2026); Ayar Labs + Wiwynn 1,024 GPU photonic rack-scale system, $500M Series E (Mar 2026); 'All AI data center interconnects will be optical within 5 years' — SemiEngineering (Apr 2026)"
+  lead_weeks: 17.7
+  points: 17.0
+  notes: "VALIDATED — photonic interconnect now commercializing. Lightmatter Guide VLSP samples shipping; Ayar Labs TeraPHY optical engine in volume production; Nvidia CPO coming 2028. Core 'photonic brain' layer validated. 'Superconducting spine + quantum heart' remains speculative — partial validation of full vision. ~18 weeks ahead on photonic layer."

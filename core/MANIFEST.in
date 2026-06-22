@@ -1,0 +1,101 @@
+include README.md
+include pyproject.toml
+include VERSION
+include LICENSE
+recursive-include whitemagic *.py *.typed *.md
+
+# Exclude test, doc, and extra directories
+recursive-exclude tests *
+recursive-exclude docs *
+recursive-exclude extra *
+
+# Exclude polyglot bridge directories (ships as separate packages)
+recursive-exclude whitemagic-mojo *
+recursive-exclude whitemagic-rust *
+recursive-exclude whitemagic-zig *
+recursive-exclude whitemagic-go *
+recursive-exclude whitemagic-julia *
+recursive-exclude whitemagic-haskell *
+recursive-exclude whitemagic-elixir *
+recursive-exclude whitemagic-erlang *
+recursive-exclude whitemagic-gleam *
+recursive-exclude whitemagic-nim *
+recursive-exclude whitemagic-koka *
+
+# Exclude scripts (development tools, not part of public package)
+recursive-exclude scripts *
+# Include verification scripts referenced by CI/Make
+include scripts/check_ship.py
+include scripts/check_versions.py
+include scripts/generate_mcp_registry.py
+
+# Exclude top-level runtime/operational directories (never ship)
+recursive-exclude _aria *
+recursive-exclude _memories *
+recursive-exclude archives *
+recursive-exclude artifacts *
+recursive-exclude autodidactic *
+recursive-exclude benchmarks *
+recursive-exclude cache *
+recursive-exclude campaigns *
+recursive-exclude campaigns_public_backup *
+recursive-exclude core_system *
+recursive-exclude data *
+recursive-exclude dharma *
+recursive-exclude economy *
+recursive-exclude eval *
+recursive-exclude examples *
+recursive-exclude extensions *
+recursive-exclude geneseed *
+recursive-exclude gratitude *
+recursive-exclude haskell *
+recursive-exclude identity *
+recursive-exclude inbox *
+recursive-exclude keys *
+recursive-exclude knowledge *
+recursive-exclude learning *
+recursive-exclude logs *
+recursive-exclude memory *
+recursive-exclude mesh *
+recursive-exclude models *
+recursive-exclude modular *
+recursive-exclude monte_carlo_output *
+recursive-exclude nexus *
+recursive-exclude payments *
+recursive-exclude pipeline_state *
+recursive-exclude pipelines *
+recursive-exclude plugins *
+recursive-exclude prompts *
+recursive-exclude reports *
+recursive-exclude research *
+recursive-exclude restoration *
+recursive-exclude roadmaps *
+recursive-exclude sangha *
+recursive-exclude sdk *
+recursive-exclude security *
+recursive-exclude sessions *
+recursive-exclude tasks *
+recursive-exclude tmp *
+recursive-exclude votes *
+recursive-exclude wisdom *
+
+# Exclude build/cache artifacts
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude *.dylib
+global-exclude *.dll
+
+# Exclude runtime and log files
+exclude *.log
+exclude *.stats
+exclude *.jsonl
+exclude *.db
+exclude *.db-shm
+exclude *.db-wal
+exclude *.db-journal
+exclude *.sqlite*
+exclude excavation.log
+exclude BUILD_HASHES.json
+exclude .mcp.json
+exclude .test_lock.txt.lock

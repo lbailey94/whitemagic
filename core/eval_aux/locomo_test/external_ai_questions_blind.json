@@ -1,0 +1,615 @@
+{
+  "generated_at": "2026-02-18T22:30:00Z",
+  "version": "blind_v1",
+  "source_memories": 31,
+  "total_questions": 100,
+  "question_distribution": {
+    "single_hop": 25,
+    "multi_hop": 25,
+    "temporal": 25,
+    "open_domain": 25
+  },
+  "note": "source_memory_ids and expected_answer removed for blind retrieval test",
+  "questions": [
+    {
+      "question_id": "q001",
+      "question_type": "single_hop",
+      "question": "What is the title of the memory with ID 75bc9494a5361ca1?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q002",
+      "question_type": "single_hop",
+      "question": "On what date was the MCP 2.0 + Sangha Implementation completed?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q003",
+      "question_type": "single_hop",
+      "question": "What is the purpose of the KaizenEngine class?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q004",
+      "question_type": "single_hop",
+      "question": "How many tools were operational in the MCP Toolset according to memory 123bc732d7219bb1?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q005",
+      "question_type": "single_hop",
+      "question": "What is the galactic zone of memory 60b2627e318eca24?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q006",
+      "question_type": "single_hop",
+      "question": "What is the default max_duration_seconds for StopConditions in the Bounded Autonomy System?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q007",
+      "question_type": "single_hop",
+      "question": "What is the title of the Grimoire Index chapter that covers the 28-Fold Mandala?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q008",
+      "question_type": "single_hop",
+      "question": "What version of WhiteMagic does the AI reflection document (60b2627e318eca24) reference?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q009",
+      "question_type": "single_hop",
+      "question": "What is the maximum memory limit per agent in the Bounded Autonomy System?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q010",
+      "question_type": "single_hop",
+      "question": "What does the WellGana class in northern_quadrant.py map to in terms of garden?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q011",
+      "question_type": "single_hop",
+      "question": "What is the date of the Final Consolidation Report (memory 555dd05e47d9c1fef6948b5f1188d37f)?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q012",
+      "question_type": "single_hop",
+      "question": "How many markdown files were consolidated in the comprehensive consolidation report?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q013",
+      "question_type": "single_hop",
+      "question": "What is the purpose of the Memory Injector module (memory d48bf2a353443f7e7bba60014758d01d)?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q014",
+      "question_type": "single_hop",
+      "question": "What is the name of the file containing the AI Tools Integration Guide?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q015",
+      "question_type": "single_hop",
+      "question": "What version is mentioned in the Multi-AI Tool Integration Guide?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q016",
+      "question_type": "single_hop",
+      "question": "What does the safe_cleanup_v4_15_0.sh script archive to?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q017",
+      "question_type": "single_hop",
+      "question": "What is the default Wu Xing phase for the Phase 4 Implementation Plan?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q018",
+      "question_type": "single_hop",
+      "question": "What is the importance score of memory edb17f96aeb4beda?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q019",
+      "question_type": "single_hop",
+      "question": "How many categories of tools are listed in the MCP Toolset at 34 Tools memory?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q020",
+      "question_type": "single_hop",
+      "question": "What is the maximum plateau_threshold in the Bounded Autonomy System?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q021",
+      "question_type": "single_hop",
+      "question": "What is the name of the bounded executor class in autonomy.py?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q022",
+      "question_type": "single_hop",
+      "question": "What does the Terminal Best Practices document (987395e121d952e3d4236e9dd8668950) identify as the primary problem?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q023",
+      "question_type": "single_hop",
+      "question": "What is the total number of tools tested in test_all_52_tools.py?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q024",
+      "question_type": "single_hop",
+      "question": "What is the target token multiplier mentioned in memory d7b0aaefbb615a762dc397001dab7015?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q025",
+      "question_type": "single_hop",
+      "question": "What garden does the NeckGana map to in primary-tools.js?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q026",
+      "question_type": "multi_hop",
+      "question": "Which two memories discuss MCP tools and their implementation?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q027",
+      "question_type": "multi_hop",
+      "question": "Which memories are related to autonomous execution and bounded autonomy?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q028",
+      "question_type": "multi_hop",
+      "question": "Which memories reference both the 28 Gana system and the Grimoire?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q029",
+      "question_type": "multi_hop",
+      "question": "Which two memories discuss the Sangha workspace and multi-agent collaboration?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q030",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both local model integration and memory augmentation?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q031",
+      "question_type": "multi_hop",
+      "question": "Which memories mention the CHANGELOG.md and version information?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q032",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both testing and the v4.3.0 Memory Phoenix systems?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q033",
+      "question_type": "multi_hop",
+      "question": "Which memories mention the comprehensive consolidation effort from January 2026?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q034",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss Dharma and ethical systems?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q035",
+      "question_type": "multi_hop",
+      "question": "Which memories reference the Northern Quadrant and Black Tortoise theme?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q036",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss the Kaizen engine and continuous improvement?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q037",
+      "question_type": "multi_hop",
+      "question": "Which memories mention Phase 2 and data migration planning?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q038",
+      "question_type": "multi_hop",
+      "question": "Which memories reference both terminal best practices and bounded autonomy?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q039",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss the WhiteMagic version 4.13.0 and v5.0.0?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q040",
+      "question_type": "multi_hop",
+      "question": "Which memories mention Antigravity and the Mass Remediation Waves?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q041",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both the 28 Ganas and the 4 Biological Phases?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q042",
+      "question_type": "multi_hop",
+      "question": "Which memories reference SANGHA and multi-agent coordination?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q043",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both frontend design and shell ecosystem?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q044",
+      "question_type": "multi_hop",
+      "question": "Which memories mention both Rust acceleration and local AI?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q045",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both the Grand Strategy and Phase planning?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q046",
+      "question_type": "multi_hop",
+      "question": "Which memories reference both session handoff and the Roof Gana?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q047",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both quality improvement and test coverage?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q048",
+      "question_type": "multi_hop",
+      "question": "Which memories mention both the Circuit Breaker pattern and anti-loop detection?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q049",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both the Eastern Quadrant and garden philosophy?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q050",
+      "question_type": "multi_hop",
+      "question": "Which memories mention both archive consolidation and file organization?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q051",
+      "question_type": "temporal",
+      "question": "What was implemented on January 9, 2026 at 07:51 UTC?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q052",
+      "question_type": "temporal",
+      "question": "When was the Multi-Agent Collaboration System implemented?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q053",
+      "question_type": "temporal",
+      "question": "What date is mentioned in the Phase 2 Pre-Planning Report?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q054",
+      "question_type": "temporal",
+      "question": "When was the MCP Toolset expanded to 34 tools?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q055",
+      "question_type": "temporal",
+      "question": "What date is the Final Consolidation Report from?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q056",
+      "question_type": "temporal",
+      "question": "What was the date of the AI reflection written about WhiteMagic?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q057",
+      "question_type": "temporal",
+      "question": "When was the state server backup from memory ce769a959995f9c108306208e40c865a created?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q058",
+      "question_type": "temporal",
+      "question": "What date was version 4.13.0 released according to the CHANGELOG?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q059",
+      "question_type": "temporal",
+      "question": "When was the Terminal Best Practices document created?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q060",
+      "question_type": "temporal",
+      "question": "What was the backup date mentioned in the state_server_backup memory?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q061",
+      "question_type": "temporal",
+      "question": "What date was mentioned for the Phase 4 Implementation Plan?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q062",
+      "question_type": "temporal",
+      "question": "When was the Personal Reflection about WhiteMagic written?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q063",
+      "question_type": "temporal",
+      "question": "What date is referenced in the Antigravity Walkthrough memory?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q064",
+      "question_type": "temporal",
+      "question": "What was the Wu Xing timestamp for the Phase 4 Implementation Plan?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q065",
+      "question_type": "temporal",
+      "question": "What was the Wu Xing timestamp for the Multi-Agent Collaboration System?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q066",
+      "question_type": "temporal",
+      "question": "When was the Front End Shells Design Spec created?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q067",
+      "question_type": "temporal",
+      "question": "What date was the SANGHA onboarding document created?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q068",
+      "question_type": "temporal",
+      "question": "What was the date mentioned in the AI Tools Integration Guide?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q069",
+      "question_type": "temporal",
+      "question": "When was the safe cleanup script for v4.15.0 created?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q070",
+      "question_type": "temporal",
+      "question": "What was the date in the bandit_report.json memory?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q071",
+      "question_type": "temporal",
+      "question": "What date was the PROJECT_RECONNAISSANCE report from?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q072",
+      "question_type": "temporal",
+      "question": "What timestamp was in the memory sample generation?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q073",
+      "question_type": "temporal",
+      "question": "When was the Local Model Enhancement document dated?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q074",
+      "question_type": "temporal",
+      "question": "What was the date of the Grand Strategy 100 Steps document?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q075",
+      "question_type": "temporal",
+      "question": "What was the importance value of the memory created on January 9, 2026 about Sangha Implementation?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q076",
+      "question_type": "open_domain",
+      "question": "What is the overall architecture of WhiteMagic based on the provided memories?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q077",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic handle multi-agent coordination according to the memories?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q078",
+      "question_type": "open_domain",
+      "question": "What are the four quadrants in the WhiteMagic Grimoire system?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q079",
+      "question_type": "open_domain",
+      "question": "What is the philosophy behind WhiteMagic's memory system?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q080",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic prevent runaway autonomous execution?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q081",
+      "question_type": "open_domain",
+      "question": "What is the relationship between MCP tools and local models in WhiteMagic?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q082",
+      "question_type": "open_domain",
+      "question": "What are the main safety features of the WhiteMagic system?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q083",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic organize its knowledge and documentation?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q084",
+      "question_type": "open_domain",
+      "question": "What is the Kaizen approach in WhiteMagic?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q085",
+      "question_type": "open_domain",
+      "question": "What is the significance of the 28 Ganas in WhiteMagic?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q086",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic handle data migration and consolidation?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q087",
+      "question_type": "open_domain",
+      "question": "What is the Dharma system in WhiteMagic?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q088",
+      "question_type": "open_domain",
+      "question": "What are the key phases in WhiteMagic's development roadmap according to the memories?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q089",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic integrate ancient wisdom into modern AI systems?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q090",
+      "question_type": "open_domain",
+      "question": "What is the role of testing in WhiteMagic development?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q091",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic's frontend design philosophy work?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q092",
+      "question_type": "open_domain",
+      "question": "What is the significance of the four biological phases (ORO, IBAH, ARSL, HCTGA) in the Grimoire?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q093",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic handle terminal command safety?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q094",
+      "question_type": "open_domain",
+      "question": "What is the cascade intelligence system in WhiteMagic?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q095",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic compare to standard local models?",
+      "difficulty": "easy"
+    },
+    {
+      "question_id": "q096",
+      "question_type": "open_domain",
+      "question": "What security measures are implemented in the Antigravity Mass Remediation Waves?",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "q097",
+      "question_type": "open_domain",
+      "question": "What is the purpose of the Well Gana in the Northern Quadrant?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q098",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic track and measure improvement?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q099",
+      "question_type": "open_domain",
+      "question": "What is the relationship between the Horn Gana and session initiation?",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "q100",
+      "question_type": "open_domain",
+      "question": "What makes WhiteMagic different from traditional AI assistants according to the memories?",
+      "difficulty": "medium"
+    }
+  ]
+}

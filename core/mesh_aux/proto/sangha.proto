@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package whitemagic.sangha;
+
+option go_package = "whitemagic-go/proto/sangha";
+
+message SanghaSignal {
+    string id = 1;
+    string sender_id = 2;
+    string content = 3;
+    string channel = 4;
+    repeated string tags = 5;
+    string priority = 6; // low, normal, high, urgent
+    string reply_to = 7;
+    int64 timestamp = 8;
+    
+    // 5D Coordinates
+    float x = 9; // Logic <-> Emotion
+    float y = 10; // Micro <-> Macro
+    float z = 11; // Time
+    float w = 12; // Importance/Gravity
+    float v = 13; // Vitality/Galactic Distance
+}
+
+message SanghaSubscription {
+    string agent_id = 1;
+    string webhook_url = 2;
+    
+    // Spatial Subscription (Sphere)
+    float center_x = 3;
+    float center_y = 4;
+    float center_z = 5;
+    float center_w = 6;
+    float center_v = 7;
+    float radius = 8;
+    
+    // Semantic Filters
+    repeated string required_tags = 9;
+    string min_priority = 10;
+}

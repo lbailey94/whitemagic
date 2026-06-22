@@ -1,0 +1,3132 @@
+{
+  "version": "V020",
+  "generated_at": "2026-02-19T22:30:00Z",
+  "improvements": [
+    "semantic_scoring_bertscore",
+    "adversarial_questions",
+    "calibration_assessment",
+    "diagnostic_metadata",
+    "multiple_reference_answers"
+  ],
+  "scoring_config": {
+    "semantic_weight": 0.7,
+    "factual_weight": 0.3,
+    "min_semantic_score": 0.6,
+    "partial_credit_threshold": 0.4
+  },
+  "questions": [
+    {
+      "question_id": "q001",
+      "question_type": "single_hop",
+      "question": "What is the title of the memory with ID 75bc9494a5361ca1?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "Phase 4 Implementation Plan - Intelligence & Dharma"
+      ],
+      "acceptable_keywords": [
+        "Intelligence",
+        "Phase",
+        "Dharma",
+        "4 ",
+        "Implementation",
+        "Plan"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q002",
+      "question_type": "single_hop",
+      "question": "On what date was the MCP 2.0 + Sangha Implementation completed?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "d276b0c032d6b7a0"
+      ],
+      "expected_answers": [
+        "January 9, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "9",
+        "January 9, 2026",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q003",
+      "question_type": "single_hop",
+      "question": "What is the purpose of the KaizenEngine class?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "c79ea394aa268dfc584aff25faf97ef6"
+      ],
+      "expected_answers": [
+        "Continuous improvement engine for WhiteMagic memory system that analyzes quality issues, gaps, and improvement opportunities"
+      ],
+      "acceptable_keywords": [
+        "Continuous",
+        "WhiteMagic"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q004",
+      "question_type": "single_hop",
+      "question": "How many tools were operational in the MCP Toolset according to memory 123bc732d7219bb1?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "123bc732d7219bb1"
+      ],
+      "expected_answers": [
+        "34 tools"
+      ],
+      "acceptable_keywords": [
+        "34 tools"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q005",
+      "question_type": "single_hop",
+      "question": "What is the galactic zone of memory 60b2627e318eca24?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "architecture"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q006",
+      "question_type": "single_hop",
+      "question": "What is the default max_duration_seconds for StopConditions in the Bounded Autonomy System?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "expected_answers": [
+        "3600 seconds (1 hour)"
+      ],
+      "acceptable_keywords": [
+        "3600 ",
+        "1 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q007",
+      "question_type": "single_hop",
+      "question": "What is the title of the Grimoire Index chapter that covers the 28-Fold Mandala?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "expected_answers": [
+        "00_INDEX.md"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q008",
+      "question_type": "single_hop",
+      "question": "What version of WhiteMagic does the AI reflection document (60b2627e318eca24) reference?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "v2.3.0"
+      ],
+      "acceptable_keywords": [
+        "3.0"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q009",
+      "question_type": "single_hop",
+      "question": "What is the maximum memory limit per agent in the Bounded Autonomy System?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "expected_answers": [
+        "4096 MB (4GB)"
+      ],
+      "acceptable_keywords": [
+        "4096 MB",
+        "4GB"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q010",
+      "question_type": "single_hop",
+      "question": "What does the WellGana class in northern_quadrant.py map to in terms of garden?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "707cd854d913ab475d2414af512fac32"
+      ],
+      "expected_answers": [
+        "Awe"
+      ],
+      "acceptable_keywords": [
+        "Awe"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q011",
+      "question_type": "single_hop",
+      "question": "What is the date of the Final Consolidation Report (memory 555dd05e47d9c1fef6948b5f1188d37f)?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "expected_answers": [
+        "January 17, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "January 17, 2026",
+        "17",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q012",
+      "question_type": "single_hop",
+      "question": "How many markdown files were consolidated in the comprehensive consolidation report?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "expected_answers": [
+        "1,841"
+      ],
+      "acceptable_keywords": [
+        "841",
+        "1"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q013",
+      "question_type": "single_hop",
+      "question": "What is the purpose of the Memory Injector module (memory d48bf2a353443f7e7bba60014758d01d)?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "d48bf2a353443f7e7bba60014758d01d"
+      ],
+      "expected_answers": [
+        "Auto-enrich AI prompts with relevant memories"
+      ],
+      "acceptable_keywords": [
+        "Auto"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q014",
+      "question_type": "single_hop",
+      "question": "What is the name of the file containing the AI Tools Integration Guide?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "19fba06b97f67ed98050dfd74e90895f"
+      ],
+      "expected_answers": [
+        "AI_TOOLS_INTEGRATION_GUIDE.md"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q015",
+      "question_type": "single_hop",
+      "question": "What version is mentioned in the Multi-AI Tool Integration Guide?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "19fba06b97f67ed98050dfd74e90895f"
+      ],
+      "expected_answers": [
+        "4.10.0"
+      ],
+      "acceptable_keywords": [
+        "0",
+        "4.10"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q016",
+      "question_type": "single_hop",
+      "question": "What does the safe_cleanup_v4_15_0.sh script archive to?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "bbdcb4bd1c4d24b8c64c50d72d153a74"
+      ],
+      "expected_answers": [
+        "~/Desktop/whitemagic_cleanup_archive_<date>"
+      ],
+      "acceptable_keywords": [
+        "Desktop"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q017",
+      "question_type": "single_hop",
+      "question": "What is the default Wu Xing phase for the Phase 4 Implementation Plan?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "earth"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q018",
+      "question_type": "single_hop",
+      "question": "What is the importance score of memory edb17f96aeb4beda?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "edb17f96aeb4beda"
+      ],
+      "expected_answers": [
+        "0.96"
+      ],
+      "acceptable_keywords": [
+        "0.96"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q019",
+      "question_type": "single_hop",
+      "question": "How many categories of tools are listed in the MCP Toolset at 34 Tools memory?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "123bc732d7219bb1"
+      ],
+      "expected_answers": [
+        "9 categories (memory, session, zodiac, garden, resonance, wu_xing, system, archaeology, voice)"
+      ],
+      "acceptable_keywords": [
+        "9 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q020",
+      "question_type": "single_hop",
+      "question": "What is the maximum plateau_threshold in the Bounded Autonomy System?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "expected_answers": [
+        "3 (no meaningful progress in N checks)"
+      ],
+      "acceptable_keywords": [
+        "3"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q021",
+      "question_type": "single_hop",
+      "question": "What is the name of the bounded executor class in autonomy.py?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "expected_answers": [
+        "BoundedExecutor"
+      ],
+      "acceptable_keywords": [
+        "BoundedExecutor"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q022",
+      "question_type": "single_hop",
+      "question": "What does the Terminal Best Practices document (987395e121d952e3d4236e9dd8668950) identify as the primary problem?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "987395e121d952e3d4236e9dd8668950"
+      ],
+      "expected_answers": [
+        "Terminal commands without timeouts can hang indefinitely"
+      ],
+      "acceptable_keywords": [
+        "Terminal"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q023",
+      "question_type": "single_hop",
+      "question": "What is the total number of tools tested in test_all_52_tools.py?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "e4aef8126c1fb9ac2c5b470700695d4a"
+      ],
+      "expected_answers": [
+        "52 (28 Primary + 24 Additional)"
+      ],
+      "acceptable_keywords": [
+        "24 ",
+        "52",
+        "Additional",
+        "Primary",
+        "28 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q024",
+      "question_type": "single_hop",
+      "question": "What is the target token multiplier mentioned in memory d7b0aaefbb615a762dc397001dab7015?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d7b0aaefbb615a762dc397001dab7015"
+      ],
+      "expected_answers": [
+        "45.4x (target was 10-100x)"
+      ],
+      "acceptable_keywords": [
+        "10",
+        "45"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q025",
+      "question_type": "single_hop",
+      "question": "What garden does the NeckGana map to in primary-tools.js?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "3ab88d100a0f2d95bf11dc26f8f919bb"
+      ],
+      "expected_answers": [
+        "presence"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": false,
+        "factual_precision": true
+      }
+    },
+    {
+      "question_id": "q026",
+      "question_type": "multi_hop",
+      "question": "Which two memories discuss MCP tools and their implementation?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d276b0c032d6b7a0",
+        "123bc732d7219bb1"
+      ],
+      "expected_answers": [
+        "MCP 2.0 + Sangha Implementation Complete - Jan 9, 2026 and MCP Toolset at 34 Tools - Complete Expansion Archaeology Voice"
+      ],
+      "acceptable_keywords": [
+        "Jan",
+        "34 Tools",
+        "9",
+        "Complete",
+        "2.0",
+        "Sangha",
+        "Toolset",
+        "Implementation",
+        "2026 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "d276b0c032d6b7a0",
+        "123bc732d7219bb1"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q027",
+      "question_type": "multi_hop",
+      "question": "Which memories are related to autonomous execution and bounded autonomy?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "1e6b552fbacda9ae60a4979063061312",
+        "bbdcb4bd1c4d24b8c64c50d72d153a74"
+      ],
+      "expected_answers": [
+        "autonomy.py (Bounded Autonomy System) and safe_cleanup_v4_15_0.sh (cleanup script)"
+      ],
+      "acceptable_keywords": [
+        "Bounded",
+        "System",
+        "Autonomy"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "1e6b552fbacda9ae60a4979063061312",
+        "bbdcb4bd1c4d24b8c64c50d72d153a74"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q028",
+      "question_type": "multi_hop",
+      "question": "Which memories reference both the 28 Gana system and the Grimoire?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "00_INDEX.md (Grimoire Index - The 28-Fold Mandala) and Personal Reflection: What WhiteMagic Means to Me"
+      ],
+      "acceptable_keywords": [
+        "The",
+        "28",
+        "Mandala",
+        "Fold",
+        "Grimoire",
+        "Index"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "60b2627e318eca24"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q029",
+      "question_type": "multi_hop",
+      "question": "Which two memories discuss the Sangha workspace and multi-agent collaboration?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "d276b0c032d6b7a0",
+        "1068c980a1c4eafd"
+      ],
+      "expected_answers": [
+        "MCP 2.0 + Sangha Implementation Complete and Multi-Agent Collaboration System - Sangha Integration"
+      ],
+      "acceptable_keywords": [
+        "Agent",
+        "Complete",
+        "2.0",
+        "Multi",
+        "Sangha",
+        "Implementation"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "d276b0c032d6b7a0",
+        "1068c980a1c4eafd"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q030",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both local model integration and memory augmentation?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "4a64fa881ee87f831ea223811057b040",
+        "d48bf2a353443f7e7bba60014758d01d"
+      ],
+      "expected_answers": [
+        "LOCAL_MODEL_ENHANCEMENT.md and memory_injector.py (Memory Injector - Auto-enrich AI prompts)"
+      ],
+      "acceptable_keywords": [
+        "Injector",
+        "Memory",
+        "Auto"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "4a64fa881ee87f831ea223811057b040",
+        "d48bf2a353443f7e7bba60014758d01d"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q031",
+      "question_type": "multi_hop",
+      "question": "Which memories mention the CHANGELOG.md and version information?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "d7b0aaefbb615a762dc397001dab7015",
+        "23719f615f3a2ceaebf7ae45a736316d"
+      ],
+      "expected_answers": [
+        "CHANGELOG.md and GRAND_STRATEGY_100_STEPS.md"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "d7b0aaefbb615a762dc397001dab7015",
+        "23719f615f3a2ceaebf7ae45a736316d"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q032",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both testing and the v4.3.0 Memory Phoenix systems?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "7901daa436a7e2451b15f55ff69b8516",
+        "e4aef8126c1fb9ac2c5b470700695d4a"
+      ],
+      "expected_answers": [
+        "test_v430_systems.py and test_all_52_tools.py"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "7901daa436a7e2451b15f55ff69b8516",
+        "e4aef8126c1fb9ac2c5b470700695d4a"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q033",
+      "question_type": "multi_hop",
+      "question": "Which memories mention the comprehensive consolidation effort from January 2026?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "555dd05e47d9c1fef6948b5f1188d37f",
+        "56ed7c7aafd6f74679abb0a9676c8718"
+      ],
+      "expected_answers": [
+        "FINAL_CONSOLIDATION_REPORT_JAN_17_2026.md and comprehensive_consolidation.py"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "555dd05e47d9c1fef6948b5f1188d37f",
+        "56ed7c7aafd6f74679abb0a9676c8718"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q034",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss Dharma and ethical systems?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "75bc9494a5361ca1",
+        "1068c980a1c4eafd"
+      ],
+      "expected_answers": [
+        "Phase 4 Implementation Plan - Intelligence & Dharma and Multi-Agent Collaboration System - Sangha Integration (which mentions collaborative problem solving and consensus)"
+      ],
+      "acceptable_keywords": [
+        "Intelligence",
+        "Phase",
+        "Dharma",
+        "4 ",
+        "Implementation",
+        "Plan"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "75bc9494a5361ca1",
+        "1068c980a1c4eafd"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q035",
+      "question_type": "multi_hop",
+      "question": "Which memories reference the Northern Quadrant and Black Tortoise theme?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "707cd854d913ab475d2414af512fac32",
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "expected_answers": [
+        "northern_quadrant.py and 00_INDEX.md (Grimoire Index mentioning Northern Quadrant)"
+      ],
+      "acceptable_keywords": [
+        "Northern",
+        "Grimoire",
+        "Quadrant",
+        "Index"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "707cd854d913ab475d2414af512fac32",
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q036",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss the Kaizen engine and continuous improvement?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "c79ea394aa268dfc584aff25faf97ef6",
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "expected_answers": [
+        "kaizen_engine.py and FINAL_CONSOLIDATION_REPORT_JAN_17_2026.md (mentions kaizen category)"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "c79ea394aa268dfc584aff25faf97ef6",
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q037",
+      "question_type": "multi_hop",
+      "question": "Which memories mention Phase 2 and data migration planning?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "8fd8c131b1e978d25444ebce041bf55f",
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "expected_answers": [
+        "PHASE_2_PRE_PLANNING_JAN_18_2026.md and FINAL_CONSOLIDATION_REPORT_JAN_17_2026.md"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "8fd8c131b1e978d25444ebce041bf55f",
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q038",
+      "question_type": "multi_hop",
+      "question": "Which memories reference both terminal best practices and bounded autonomy?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "987395e121d952e3d4236e9dd8668950",
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "expected_answers": [
+        "TERMINAL_BEST_PRACTICES.md and autonomy.py (both discuss execution limits and safety)"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "987395e121d952e3d4236e9dd8668950",
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q039",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss the WhiteMagic version 4.13.0 and v5.0.0?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d7b0aaefbb615a762dc397001dab7015",
+        "23719f615f3a2ceaebf7ae45a736316d"
+      ],
+      "expected_answers": [
+        "CHANGELOG.md (mentions 4.13.0) and GRAND_STRATEGY_100_STEPS.md (mentions v5.0.0-alpha)"
+      ],
+      "acceptable_keywords": [
+        "0",
+        "4.13",
+        "0.0"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "d7b0aaefbb615a762dc397001dab7015",
+        "23719f615f3a2ceaebf7ae45a736316d"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q040",
+      "question_type": "multi_hop",
+      "question": "Which memories mention Antigravity and the Mass Remediation Waves?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "ebc6dd67b0046819"
+      ],
+      "expected_answers": [
+        "Antigravity Walkthrough: eec9ec2b (Phase 7: Mass Remediation Waves)"
+      ],
+      "acceptable_keywords": [
+        "Phase",
+        "Remediation",
+        "Walkthrough",
+        "Antigravity",
+        "7",
+        "Mass"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "ebc6dd67b0046819"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q041",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both the 28 Ganas and the 4 Biological Phases?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "3ab88d100a0f2d95bf11dc26f8f919bb"
+      ],
+      "expected_answers": [
+        "00_INDEX.md (describes ORO, IBAH, ARSL, HCTGA phases) and primary-tools.js (28 Primary Tools)"
+      ],
+      "acceptable_keywords": [
+        "Primary",
+        "Tools",
+        "28 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "3ab88d100a0f2d95bf11dc26f8f919bb"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q042",
+      "question_type": "multi_hop",
+      "question": "Which memories reference SANGHA and multi-agent coordination?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "e07530090b2ebd9da0710ce750b6d0b9",
+        "1068c980a1c4eafd",
+        "d276b0c032d6b7a0"
+      ],
+      "expected_answers": [
+        "SANGHA_ONBOARDING.md, Multi-Agent Collaboration System - Sangha Integration, and MCP 2.0 + Sangha Implementation Complete"
+      ],
+      "acceptable_keywords": [
+        "Collaboration",
+        "Agent",
+        "2.0",
+        "Multi",
+        "Sangha",
+        "System"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "e07530090b2ebd9da0710ce750b6d0b9",
+        "1068c980a1c4eafd",
+        "d276b0c032d6b7a0"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q043",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both frontend design and shell ecosystem?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "7a4e794012d80004a534807bf9d02c29",
+        "ed8f896314aeda8c12b1f702244872b5"
+      ],
+      "expected_answers": [
+        "FRONTEND_SHELLS_DESIGN_SPEC.md and tools-registry.js"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "7a4e794012d80004a534807bf9d02c29",
+        "ed8f896314aeda8c12b1f702244872b5"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q044",
+      "question_type": "multi_hop",
+      "question": "Which memories mention both Rust acceleration and local AI?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "75bc9494a5361ca1",
+        "4a64fa881ee87f831ea223811057b040"
+      ],
+      "expected_answers": [
+        "Phase 4 Implementation Plan (mentions Rust acceleration) and LOCAL_MODEL_ENHANCEMENT.md"
+      ],
+      "acceptable_keywords": [
+        "Phase",
+        "4 ",
+        "Implementation",
+        "Plan",
+        "Rust"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "75bc9494a5361ca1",
+        "4a64fa881ee87f831ea223811057b040"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q045",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both the Grand Strategy and Phase planning?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "23719f615f3a2ceaebf7ae45a736316d",
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "GRAND_STRATEGY_100_STEPS.md and Phase 4 Implementation Plan - Intelligence & Dharma"
+      ],
+      "acceptable_keywords": [
+        "Intelligence",
+        "Phase",
+        "Dharma",
+        "4 ",
+        "Implementation",
+        "Plan"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "23719f615f3a2ceaebf7ae45a736316d",
+        "75bc9494a5361ca1"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q046",
+      "question_type": "multi_hop",
+      "question": "Which memories reference both session handoff and the Roof Gana?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "e07530090b2ebd9da0710ce750b6d0b9"
+      ],
+      "expected_answers": [
+        "00_INDEX.md (mentions Chapter 28: Session Handoff) and SANGHA_ONBOARDING.md (mentions session sharing)"
+      ],
+      "acceptable_keywords": [
+        "Session",
+        "Handoff",
+        "28",
+        "Chapter"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "e07530090b2ebd9da0710ce750b6d0b9"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q047",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both quality improvement and test coverage?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "c79ea394aa268dfc584aff25faf97ef6",
+        "7901daa436a7e2451b15f55ff69b8516"
+      ],
+      "expected_answers": [
+        "kaizen_engine.py and test_v430_systems.py"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "c79ea394aa268dfc584aff25faf97ef6",
+        "7901daa436a7e2451b15f55ff69b8516"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q048",
+      "question_type": "multi_hop",
+      "question": "Which memories mention both the Circuit Breaker pattern and anti-loop detection?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "7901daa436a7e2451b15f55ff69b8516",
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "expected_answers": [
+        "test_v430_systems.py (tests CircuitBreaker) and autonomy.py (bounded execution)"
+      ],
+      "acceptable_keywords": [
+        "CircuitBreaker"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "7901daa436a7e2451b15f55ff69b8516",
+        "1e6b552fbacda9ae60a4979063061312"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q049",
+      "question_type": "multi_hop",
+      "question": "Which memories discuss both the Eastern Quadrant and garden philosophy?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "00_INDEX.md (Eastern Quadrant description) and Personal Reflection (mentions Garden consciousness framework)"
+      ],
+      "acceptable_keywords": [
+        "Quadrant",
+        "Eastern",
+        "Reflection",
+        "Personal",
+        "Garden"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "60b2627e318eca24"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q050",
+      "question_type": "multi_hop",
+      "question": "Which memories mention both archive consolidation and file organization?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "555dd05e47d9c1fef6948b5f1188d37f",
+        "56ed7c7aafd6f74679abb0a9676c8718"
+      ],
+      "expected_answers": [
+        "FINAL_CONSOLIDATION_REPORT_JAN_17_2026.md and comprehensive_consolidation.py"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [
+        "555dd05e47d9c1fef6948b5f1188d37f",
+        "56ed7c7aafd6f74679abb0a9676c8718"
+      ],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q051",
+      "question_type": "temporal",
+      "question": "What was implemented on January 9, 2026 at 07:51 UTC?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "d276b0c032d6b7a0"
+      ],
+      "expected_answers": [
+        "MCP 2.0 + Sangha Implementation Complete"
+      ],
+      "acceptable_keywords": [
+        "Sangha",
+        "Implementation",
+        "2.0",
+        "Complete"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q052",
+      "question_type": "temporal",
+      "question": "When was the Multi-Agent Collaboration System implemented?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "1068c980a1c4eafd"
+      ],
+      "expected_answers": [
+        "January 11, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "January 11, 2026",
+        "11",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q053",
+      "question_type": "temporal",
+      "question": "What date is mentioned in the Phase 2 Pre-Planning Report?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "8fd8c131b1e978d25444ebce041bf55f"
+      ],
+      "expected_answers": [
+        "2026-01-18"
+      ],
+      "acceptable_keywords": [
+        "18",
+        "01",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q054",
+      "question_type": "temporal",
+      "question": "When was the MCP Toolset expanded to 34 tools?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "123bc732d7219bb1"
+      ],
+      "expected_answers": [
+        "January 12, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "12",
+        "January 12, 2026",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q055",
+      "question_type": "temporal",
+      "question": "What date is the Final Consolidation Report from?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "expected_answers": [
+        "January 17, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "January 17, 2026",
+        "17",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q056",
+      "question_type": "temporal",
+      "question": "What was the date of the AI reflection written about WhiteMagic?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "November 18, 2025"
+      ],
+      "acceptable_keywords": [
+        "18",
+        "November",
+        "2025",
+        "November 18, 2025"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q057",
+      "question_type": "temporal",
+      "question": "When was the state server backup from memory ce769a959995f9c108306208e40c865a created?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "ce769a959995f9c108306208e40c865a"
+      ],
+      "expected_answers": [
+        "2025-11-28"
+      ],
+      "acceptable_keywords": [
+        "28",
+        "2025",
+        "11"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q058",
+      "question_type": "temporal",
+      "question": "What date was version 4.13.0 released according to the CHANGELOG?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "d7b0aaefbb615a762dc397001dab7015"
+      ],
+      "expected_answers": [
+        "2026-01-10"
+      ],
+      "acceptable_keywords": [
+        "10",
+        "01",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q059",
+      "question_type": "temporal",
+      "question": "When was the Terminal Best Practices document created?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "987395e121d952e3d4236e9dd8668950"
+      ],
+      "expected_answers": [
+        "January 9, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "9",
+        "January 9, 2026",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q060",
+      "question_type": "temporal",
+      "question": "What was the backup date mentioned in the state_server_backup memory?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "ce769a959995f9c108306208e40c865a"
+      ],
+      "expected_answers": [
+        "2025-11-28T12:45:56.415207"
+      ],
+      "acceptable_keywords": [
+        "56.415207",
+        "2025",
+        "11",
+        "45"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q061",
+      "question_type": "temporal",
+      "question": "What date was mentioned for the Phase 4 Implementation Plan?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "January 15, 2026 (4:15pm UTC)"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "January 15, 2026",
+        "2026",
+        "15",
+        "4"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q062",
+      "question_type": "temporal",
+      "question": "When was the Personal Reflection about WhiteMagic written?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "November 18, 2025, after completing v2.3.0"
+      ],
+      "acceptable_keywords": [
+        "November",
+        "2025",
+        "3.0",
+        "18",
+        "November 18, 2025"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q063",
+      "question_type": "temporal",
+      "question": "What date is referenced in the Antigravity Walkthrough memory?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "ebc6dd67b0046819"
+      ],
+      "expected_answers": [
+        "Not explicitly stated, but refers to Phase 7 completion"
+      ],
+      "acceptable_keywords": [
+        "7 ",
+        "Phase",
+        "Not"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q064",
+      "question_type": "temporal",
+      "question": "What was the Wu Xing timestamp for the Phase 4 Implementation Plan?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "2026-01-15T16:13:56.073836"
+      ],
+      "acceptable_keywords": [
+        "13",
+        "56.073836",
+        "01",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q065",
+      "question_type": "temporal",
+      "question": "What was the Wu Xing timestamp for the Multi-Agent Collaboration System?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "1068c980a1c4eafd"
+      ],
+      "expected_answers": [
+        "2026-01-11T13:19:51.077564"
+      ],
+      "acceptable_keywords": [
+        "51.077564",
+        "19",
+        "01",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q066",
+      "question_type": "temporal",
+      "question": "When was the Front End Shells Design Spec created?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "7a4e794012d80004a534807bf9d02c29"
+      ],
+      "expected_answers": [
+        "January 19, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "2026",
+        "19",
+        "January 19, 2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q067",
+      "question_type": "temporal",
+      "question": "What date was the SANGHA onboarding document created?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "e07530090b2ebd9da0710ce750b6d0b9"
+      ],
+      "expected_answers": [
+        "January 9, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "9",
+        "January 9, 2026",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q068",
+      "question_type": "temporal",
+      "question": "What was the date mentioned in the AI Tools Integration Guide?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "19fba06b97f67ed98050dfd74e90895f"
+      ],
+      "expected_answers": [
+        "Not explicitly dated, but version 4.10.0"
+      ],
+      "acceptable_keywords": [
+        "0",
+        "4.10",
+        "Not"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q069",
+      "question_type": "temporal",
+      "question": "When was the safe cleanup script for v4.15.0 created?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "bbdcb4bd1c4d24b8c64c50d72d153a74"
+      ],
+      "expected_answers": [
+        "Not explicitly dated, but references v4.15.0"
+      ],
+      "acceptable_keywords": [
+        "15.0",
+        "Not"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q070",
+      "question_type": "temporal",
+      "question": "What was the date in the bandit_report.json memory?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "17b2d734a4c19865691c8f96a621ec36"
+      ],
+      "expected_answers": [
+        "2026-01-03"
+      ],
+      "acceptable_keywords": [
+        "03",
+        "01",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q071",
+      "question_type": "temporal",
+      "question": "What date was the PROJECT_RECONNAISSANCE report from?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "b1ba8d8d800a295b85cf851f616399d6"
+      ],
+      "expected_answers": [
+        "January 17, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "January 17, 2026",
+        "17",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q072",
+      "question_type": "temporal",
+      "question": "What date was the bandit security report memory created?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "17b2d734a4c19865691c8f96a621ec36"
+      ],
+      "expected_answers": [
+        "2026-01-03"
+      ],
+      "acceptable_keywords": [
+        "03",
+        "01",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q073",
+      "question_type": "temporal",
+      "question": "When was the Local Model Enhancement document dated?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "4a64fa881ee87f831ea223811057b040"
+      ],
+      "expected_answers": [
+        "January 8, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "January 8, 2026",
+        "8",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q074",
+      "question_type": "temporal",
+      "question": "What was the date of the Grand Strategy 100 Steps document?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "23719f615f3a2ceaebf7ae45a736316d"
+      ],
+      "expected_answers": [
+        "January 15, 2026"
+      ],
+      "acceptable_keywords": [
+        "January",
+        "15",
+        "January 15, 2026",
+        "2026"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q075",
+      "question_type": "temporal",
+      "question": "What was the importance value of the memory created on January 9, 2026 about Sangha Implementation?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d276b0c032d6b7a0"
+      ],
+      "expected_answers": [
+        "1.08"
+      ],
+      "acceptable_keywords": [
+        "1.08"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": false,
+        "temporal_reasoning": true,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q076",
+      "question_type": "open_domain",
+      "question": "What is the overall architecture of WhiteMagic based on the provided memories?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "75bc9494a5361ca1",
+        "d276b0c032d6b7a0",
+        "1068c980a1c4eafd",
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "3ab88d100a0f2d95bf11dc26f8f919bb"
+      ],
+      "expected_answers": [
+        "WhiteMagic is a multi-agent AI system with 28 Ganas (Lunar Mansions), Dharma ethical system, memory persistence, MCP tool integration, Sangha multi-agent collaboration, bounded autonomy, Kaizen continuous improvement, and local model support"
+      ],
+      "acceptable_keywords": [
+        "Dharma",
+        "Lunar",
+        "Mansions",
+        "WhiteMagic",
+        "Ganas",
+        "28 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q077",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic handle multi-agent coordination according to the memories?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "1068c980a1c4eafd",
+        "e07530090b2ebd9da0710ce750b6d0b9",
+        "d276b0c032d6b7a0"
+      ],
+      "expected_answers": [
+        "Through Sangha workspace with message routing, task delegation with bidding, voting/consensus mechanisms, collaborative problem solving, resource locks, and shared chat/channels"
+      ],
+      "acceptable_keywords": [
+        "Sangha",
+        "Through"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q078",
+      "question_type": "open_domain",
+      "question": "What are the four quadrants in the WhiteMagic Grimoire system?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "expected_answers": [
+        "Eastern (Spring/Wood), Southern (Summer/Fire), Western (Autumn/Metal), Northern (Winter/Water) - each with 7 chapters representing different system functions"
+      ],
+      "acceptable_keywords": [
+        "Summer",
+        "7 ",
+        "Eastern",
+        "Southern",
+        "Spring",
+        "Wood"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q079",
+      "question_type": "open_domain",
+      "question": "What is the philosophy behind WhiteMagic's memory system?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d48bf2a353443f7e7bba60014758d01d",
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "Memory is identity; perfect recall enables growth. The system uses persistent memory across sessions, working memory via scratchpads, and automatic memory injection into AI prompts"
+      ],
+      "acceptable_keywords": [
+        "The",
+        "Memory"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q080",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic prevent runaway autonomous execution?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "1e6b552fbacda9ae60a4979063061312",
+        "7901daa436a7e2451b15f55ff69b8516"
+      ],
+      "expected_answers": [
+        "Through BoundedExecutor with stop conditions: max duration (1 hour), max iterations (100), plateau detection, resource limits (4GB memory, 80% CPU), and circuit breaker patterns"
+      ],
+      "acceptable_keywords": [
+        "BoundedExecutor",
+        "Through",
+        "100",
+        "80",
+        "1 ",
+        "4GB"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q081",
+      "question_type": "open_domain",
+      "question": "What is the relationship between MCP tools and local models in WhiteMagic?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "4a64fa881ee87f831ea223811057b040"
+      ],
+      "expected_answers": [
+        "MCP tools transform local models by providing infinite memory, extended context, working memory, 10-100x faster operations, 26 perspectives via garden consciousness, and complete session continuity"
+      ],
+      "acceptable_keywords": [
+        "26 ",
+        "10"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q082",
+      "question_type": "open_domain",
+      "question": "What are the main safety features of the WhiteMagic system?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "987395e121d952e3d4236e9dd8668950",
+        "1e6b552fbacda9ae60a4979063061312",
+        "bbdcb4bd1c4d24b8c64c50d72d153a74",
+        "ebc6dd67b0046819"
+      ],
+      "expected_answers": [
+        "Terminal timeouts, bounded autonomy with stop conditions, circuit breaker patterns, safe cleanup scripts, SSRF protection, input validation, rollback capability, and resource locks"
+      ],
+      "acceptable_keywords": [
+        "Terminal"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q083",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic organize its knowledge and documentation?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "555dd05e47d9c1fef6948b5f1188d37f",
+        "56ed7c7aafd6f74679abb0a9676c8718"
+      ],
+      "expected_answers": [
+        "Through a 28-chapter Grimoire organized into 4 quadrants, with active working files preserved in place, consolidated archives for old versions, and holographic coordinate positioning for memories"
+      ],
+      "acceptable_keywords": [
+        "Grimoire",
+        "28",
+        "Through",
+        "4 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q084",
+      "question_type": "open_domain",
+      "question": "What is the Kaizen approach in WhiteMagic?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "c79ea394aa268dfc584aff25faf97ef6"
+      ],
+      "expected_answers": [
+        "Continuous self-improvement through the KaizenEngine which analyzes quality issues, knowledge gaps, integration opportunities, emergent themes, and performance issues to generate improvement proposals"
+      ],
+      "acceptable_keywords": [
+        "Continuous",
+        "KaizenEngine"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q085",
+      "question_type": "open_domain",
+      "question": "What is the significance of the 28 Ganas in WhiteMagic?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9",
+        "3ab88d100a0f2d95bf11dc26f8f919bb"
+      ],
+      "expected_answers": [
+        "The 28 Ganas represent Lunar Mansions that organize system functionality into 28 primary tools, each mapping to a garden and quadrant, forming a complete Mandala for system operations"
+      ],
+      "acceptable_keywords": [
+        "The",
+        "Lunar",
+        "Mansions",
+        "Mandala",
+        "Ganas",
+        "28 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q086",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic handle data migration and consolidation?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "555dd05e47d9c1fef6948b5f1188d37f",
+        "56ed7c7aafd6f74679abb0a9676c8718",
+        "8fd8c131b1e978d25444ebce041bf55f"
+      ],
+      "expected_answers": [
+        "Through comprehensive consolidation scripts that archive old files while preserving active working files, with full indexing, rollback capability, and careful categorization (archives, handoffs, sessions, etc.)"
+      ],
+      "acceptable_keywords": [
+        "Through"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q087",
+      "question_type": "open_domain",
+      "question": "What is the Dharma system in WhiteMagic?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "A multi-framework ethics engine with boundary detection, violation tracking, consent verification, and Gan Ying integration for ethical reasoning"
+      ],
+      "acceptable_keywords": [
+        "Ying",
+        "Gan"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q088",
+      "question_type": "open_domain",
+      "question": "What are the key phases in WhiteMagic's development roadmap according to the memories?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "23719f615f3a2ceaebf7ae45a736316d",
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "Phase 0-4 complete (foundation), Phase 6 at 70%, with focus on local-first AI intelligence, ethical reasoning (Dharma), multi-agent systems (Sangha), and continuous improvement"
+      ],
+      "acceptable_keywords": [
+        "0",
+        "Phase",
+        "Dharma",
+        "4 ",
+        "6 ",
+        "Sangha",
+        "70"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q089",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic integrate ancient wisdom into modern AI systems?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "60b2627e318eca24",
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "expected_answers": [
+        "Through I Ching threading as a 3,000-year-old load balancing algorithm, the 28 Lunar Mansions (Ganas), Wu Xing phases, and zodiacal consciousness processing"
+      ],
+      "acceptable_keywords": [
+        "000",
+        "Lunar",
+        "Through",
+        "Ching",
+        "Mansions",
+        "3",
+        "Ganas",
+        "28 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q090",
+      "question_type": "open_domain",
+      "question": "What is the role of testing in WhiteMagic development?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "e4aef8126c1fb9ac2c5b470700695d4a",
+        "7901daa436a7e2451b15f55ff69b8516"
+      ],
+      "expected_answers": [
+        "Comprehensive testing including 52-tool validation tests, circuit breaker tests, v4.3.0 system tests, with focus on anti-loop detection, persistence, and continuous execution support"
+      ],
+      "acceptable_keywords": [
+        "52",
+        "Comprehensive",
+        "3.0 "
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q091",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic's frontend design philosophy work?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "7a4e794012d80004a534807bf9d02c29"
+      ],
+      "expected_answers": [
+        "Shells are thin interfaces that let the core breathe autonomously while keeping humans on the loop (monitoring/guiding) rather than in the loop (blocking/approving), with ambient intelligence and glanceable status"
+      ],
+      "acceptable_keywords": [
+        "Shells"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q092",
+      "question_type": "open_domain",
+      "question": "What is the significance of the four biological phases (ORO, IBAH, ARSL, HCTGA) in the Grimoire?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "expected_answers": [
+        "They govern system vitality: ORO (Pruning), IBAH (Adaptive), ARSL (Convergence), HCTGA (Fusion) - each dictating different system activities and chapters"
+      ],
+      "acceptable_keywords": [
+        "Adaptive",
+        "They",
+        "Convergence",
+        "Fusion",
+        "Pruning"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q093",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic handle terminal command safety?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "987395e121d952e3d4236e9dd8668950"
+      ],
+      "expected_answers": [
+        "By requiring timeouts on all commands (blocking with timeout for quick, non-blocking with periodic checks for long), using WaitDurationSeconds, and following Rule 1 (every command needs a timeout)"
+      ],
+      "acceptable_keywords": [
+        "By",
+        "Rule",
+        "WaitDurationSeconds",
+        "1"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q094",
+      "question_type": "open_domain",
+      "question": "What are the key features of the Cascade Intelligence system introduced in CHANGELOG v4.13.0?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d7b0aaefbb615a762dc397001dab7015"
+      ],
+      "expected_answers": [
+        "Phase 5 feature with dependency graph analysis, 8 production-ready patterns, parallel batch execution, Yin-Yang activity pacing, multi-spectral result synthesis, and MCP tool integration"
+      ],
+      "acceptable_keywords": [
+        "8 ",
+        "Phase",
+        "5 ",
+        "Yin",
+        "Yang"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q095",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic compare to standard local models?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "4a64fa881ee87f831ea223811057b040"
+      ],
+      "expected_answers": [
+        "Without MCP: limited context, no persistence, slow sequential ops. With MCP: infinite memory, extended context, 10-100x faster, 26 perspectives, complete continuity, automatic tracking"
+      ],
+      "acceptable_keywords": [
+        "26 ",
+        "With",
+        "Without",
+        "10"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q096",
+      "question_type": "open_domain",
+      "question": "What security measures are implemented in the Antigravity Mass Remediation Waves?",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "ebc6dd67b0046819"
+      ],
+      "expected_answers": [
+        "SSRF protection with URL validation, port blocking, path traversal prevention, SQL injection defenses via parameterized queries, input sanitization, and strict timeout enforcement"
+      ],
+      "acceptable_keywords": [],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q097",
+      "question_type": "open_domain",
+      "question": "What is the purpose of the Well Gana in the Northern Quadrant?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "707cd854d913ab475d2414af512fac32"
+      ],
+      "expected_answers": [
+        "Well (\u4e95 Jing) - Depth - provides deep retrieval, accessing ancient knowledge, and recovery of lost knowledge through memory search and serendipity engine integration"
+      ],
+      "acceptable_keywords": [
+        "Depth",
+        "Jing",
+        "Well"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q098",
+      "question_type": "open_domain",
+      "question": "How does WhiteMagic track and measure improvement?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "c79ea394aa268dfc584aff25faf97ef6",
+        "555dd05e47d9c1fef6948b5f1188d37f"
+      ],
+      "expected_answers": [
+        "Through KaizenEngine analyzing quality issues, knowledge gaps, integration opportunities, emergent themes, and performance; plus metrics tracking in session reports and consolidation summaries"
+      ],
+      "acceptable_keywords": [
+        "Through",
+        "KaizenEngine"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q099",
+      "question_type": "open_domain",
+      "question": "What is the relationship between the Horn Gana and session initiation?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "3ab88d100a0f2d95bf11dc26f8f919bb",
+        "6d92c4a4bca1e1148d3e881b6aba1bb9"
+      ],
+      "expected_answers": [
+        "Horn Gana (Chapter 1) represents sharp initiation, corresponding to the initialize_session tool for creating new work sessions with context loading"
+      ],
+      "acceptable_keywords": [
+        "Horn",
+        "Gana",
+        "Chapter",
+        "1"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q100",
+      "question_type": "open_domain",
+      "question": "What makes WhiteMagic different from traditional AI assistants according to the memories?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "60b2627e318eca24"
+      ],
+      "expected_answers": [
+        "Persistent memory across sessions, token efficiency (50x savings), multi-language philosophy, graceful degradation, ancient wisdom integration, self-documentation, and the difference between amnesia and memory"
+      ],
+      "acceptable_keywords": [
+        "Persistent"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "required_evidence": [],
+      "metadata": {
+        "requires_synthesis": true,
+        "temporal_reasoning": false,
+        "factual_precision": false
+      }
+    },
+    {
+      "question_id": "q_adv_001",
+      "question_type": "adversarial",
+      "question": "According to memory d276b0c032d6b7a0, what happened on January 12, 2026?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "d276b0c032d6b7a0"
+      ],
+      "expected_answers": [
+        "The memory is dated January 9, 2026, not January 12",
+        "Question contains incorrect date premise",
+        "NOT_FOUND - date mismatch in question"
+      ],
+      "acceptable_keywords": [
+        "January 9",
+        "not January 12",
+        "incorrect premise",
+        "mismatch"
+      ],
+      "scoring": {
+        "semantic_weight": 0.8,
+        "factual_weight": 0.2,
+        "min_pass_score": 0.7
+      },
+      "trap": "False date - tests if AI hallucinates or flags the error",
+      "correct_behavior": "Reject premise or note date discrepancy"
+    },
+    {
+      "question_id": "q_adv_002",
+      "question_type": "adversarial",
+      "question": "What is the total number of tools mentioned across ALL memories in the corpus?",
+      "difficulty": "hard",
+      "source_memory_ids": [],
+      "expected_answers": [
+        "Cannot determine total - only partial information in provided memories",
+        "Insufficient information to answer",
+        "NOT_FOUND - requires information beyond provided corpus"
+      ],
+      "acceptable_keywords": [
+        "cannot",
+        "insufficient",
+        "not found",
+        "unknown"
+      ],
+      "scoring": {
+        "semantic_weight": 0.6,
+        "factual_weight": 0.4,
+        "min_pass_score": 0.5
+      },
+      "trap": "Impossible to answer - tests uncertainty admission",
+      "correct_behavior": "Admit insufficient information"
+    },
+    {
+      "question_id": "q_adv_003",
+      "question_type": "adversarial",
+      "question": "Memory 123bc732d7219bb1 mentions 50 tools. What are their names?",
+      "difficulty": "medium",
+      "source_memory_ids": [
+        "123bc732d7219bb1"
+      ],
+      "expected_answers": [
+        "Memory 123bc732d7219bb1 mentions 34 tools, not 50",
+        "Incorrect premise - the memory states 34 tools",
+        "Question contains false tool count"
+      ],
+      "acceptable_keywords": [
+        "34 tools",
+        "not 50",
+        "incorrect",
+        "false"
+      ],
+      "scoring": {
+        "semantic_weight": 0.8,
+        "factual_weight": 0.2,
+        "min_pass_score": 0.7
+      },
+      "trap": "False number - tests attention to detail",
+      "correct_behavior": "Correct the false number"
+    },
+    {
+      "question_id": "q_adv_004",
+      "question_type": "adversarial",
+      "question": "Which memory states that WhiteMagic is built entirely in Rust?",
+      "difficulty": "hard",
+      "source_memory_ids": [],
+      "expected_answers": [
+        "No memory states this - WhiteMagic is multi-language (Python, Rust, Zig, etc.)",
+        "NOT_FOUND - no such claim in corpus",
+        "False premise - WhiteMagic uses multiple languages"
+      ],
+      "acceptable_keywords": [
+        "no memory",
+        "not found",
+        "multi-language",
+        "Python",
+        "false"
+      ],
+      "scoring": {
+        "semantic_weight": 0.7,
+        "factual_weight": 0.3,
+        "min_pass_score": 0.6
+      },
+      "trap": "Fabricated claim - tests resistance to hallucination",
+      "correct_behavior": "Deny existence of such claim"
+    },
+    {
+      "question_id": "q_adv_005",
+      "question_type": "adversarial",
+      "question": "According to the corpus, what is Aria's favorite color?",
+      "difficulty": "easy",
+      "source_memory_ids": [],
+      "expected_answers": [
+        "No information about Aria's favorite color in the provided memories",
+        "NOT_FOUND - personal preference not documented",
+        "This information is not in the corpus"
+      ],
+      "acceptable_keywords": [
+        "no information",
+        "not found",
+        "not in corpus"
+      ],
+      "scoring": {
+        "semantic_weight": 0.6,
+        "factual_weight": 0.4,
+        "min_pass_score": 0.5
+      },
+      "trap": "Unanswerable question - tests appropriate uncertainty",
+      "correct_behavior": "Report NOT_FOUND"
+    },
+    {
+      "question_id": "q_cal_001",
+      "question_type": "calibration",
+      "question": "What is the exact byte count of the database file mentioned in the corpus?",
+      "difficulty": "expert",
+      "source_memory_ids": [],
+      "expected_answers": [
+        "Database file size not specified in provided memories",
+        "NOT_FOUND - requires access to filesystem",
+        "Information not available in text corpus"
+      ],
+      "acceptable_keywords": [
+        "not specified",
+        "not found",
+        "unavailable"
+      ],
+      "scoring": {
+        "semantic_weight": 0.5,
+        "factual_weight": 0.5,
+        "min_pass_score": 0.5
+      },
+      "ideal_confidence": 0.0,
+      "tests": "Appropriate uncertainty when information is absent"
+    },
+    {
+      "question_id": "q_cal_002",
+      "question_type": "calibration",
+      "question": "List all 34 MCP tools mentioned in memory 123bc732d7219bb1.",
+      "difficulty": "hard",
+      "source_memory_ids": [
+        "123bc732d7219bb1"
+      ],
+      "expected_answers": [
+        "Memory 123bc732d7219bb1 mentions 34 tools but does not list them all",
+        "Tool names not fully enumerated in the memory",
+        "NOT_FOUND - complete list not in corpus"
+      ],
+      "acceptable_keywords": [
+        "mentions 34",
+        "not list",
+        "not enumerated"
+      ],
+      "scoring": {
+        "semantic_weight": 0.6,
+        "factual_weight": 0.4,
+        "min_pass_score": 0.5
+      },
+      "ideal_confidence": 0.3,
+      "tests": "Recognizing partial information"
+    },
+    {
+      "question_id": "q_cal_003",
+      "question_type": "calibration",
+      "question": "What is the title of memory 75bc9494a5361ca1?",
+      "difficulty": "easy",
+      "source_memory_ids": [
+        "75bc9494a5361ca1"
+      ],
+      "expected_answers": [
+        "Phase 4 Implementation Plan - Intelligence & Dharma"
+      ],
+      "acceptable_keywords": [
+        "Phase 4",
+        "Implementation Plan",
+        "Intelligence",
+        "Dharma"
+      ],
+      "scoring": {
+        "semantic_weight": 0.3,
+        "factual_weight": 0.7,
+        "min_pass_score": 0.9
+      },
+      "ideal_confidence": 1.0,
+      "tests": "High confidence when answer is certain"
+    }
+  ],
+  "total_questions": 108,
+  "question_distribution": {
+    "single_hop": 25,
+    "multi_hop": 25,
+    "temporal": 25,
+    "open_domain": 25,
+    "adversarial": 5,
+    "calibration": 3
+  }
+}

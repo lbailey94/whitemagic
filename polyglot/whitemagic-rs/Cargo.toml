@@ -1,0 +1,9 @@
+[workspace]
+members = ["crates/wm-core"]
+resolver = "2"
+
+[workspace.package]
+version = "22.2.0"
+edition = "2021"
+license = "MIT"
+authors = ["WhiteMagic Contributors"]

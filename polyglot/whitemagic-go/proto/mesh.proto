@@ -1,0 +1,18 @@
+syntax = "proto3";
+package whitemagic.mesh;
+
+service MeshService {
+  rpc SendMessage(Message) returns (Ack);
+  rpc StreamMessages(stream Message) returns (stream Message);
+}
+
+message Message {
+  string id = 1;
+  bytes payload = 2;
+  string sender = 3;
+}
+
+message Ack {
+  string message_id = 1;
+  bool success = 2;
+}
