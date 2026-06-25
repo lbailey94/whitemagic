@@ -269,16 +269,16 @@ if __name__ == "__main__":
     logger.info("=" * 50)
 
     stats = search.stats()
-    logger.info(f"\nMemory Distribution ({stats['count']} total):")
-    logger.info(f"  X (Logic↔Emotion): {stats['x']['min']:.2f} to {stats['x']['max']:.2f}, avg={stats['x']['avg']:.2f}")
-    logger.info(f"  Y (Micro↔Macro):   {stats['y']['min']:.2f} to {stats['y']['max']:.2f}, avg={stats['y']['avg']:.2f}")
-    logger.info(f"  Z (Past↔Future):   {stats['z']['min']:.2f} to {stats['z']['max']:.2f}, avg={stats['z']['avg']:.2f}")
-    logger.info(f"  W (Importance):    {stats['w']['min']:.2f} to {stats['w']['max']:.2f}, avg={stats['w']['avg']:.2f}")
+    logger.info("\nMemory Distribution (%s total):", stats['count'])
+    logger.info("  X (Logic↔Emotion): %s to %s, avg=%s", format(stats['x']['min'], ".2f"), format(stats['x']['max'], ".2f"), format(stats['x']['avg'], ".2f"))
+    logger.info("  Y (Micro↔Macro):   %s to %s, avg=%s", format(stats['y']['min'], ".2f"), format(stats['y']['max'], ".2f"), format(stats['y']['avg'], ".2f"))
+    logger.info("  Z (Past↔Future):   %s to %s, avg=%s", format(stats['z']['min'], ".2f"), format(stats['z']['max'], ".2f"), format(stats['z']['avg'], ".2f"))
+    logger.info("  W (Importance):    %s to %s, avg=%s", format(stats['w']['min'], ".2f"), format(stats['w']['max'], ".2f"), format(stats['w']['avg'], ".2f"))
 
     logger.info("\n--- High Importance Memories ---")
     for r in search.important(limit=5):
-        logger.info(f"  [{r.importance:.2f}] {r.title[:50]}")
+        logger.info("  [%s] %s", format(r.importance, ".2f"), r.title[:50])
 
     logger.info("\n--- Strategic Quadrant ---")
     for r in search.quadrant("strategic", limit=5):
-        logger.info(f"  {r.title[:50]}")
+        logger.info("  %s", r.title[:50])

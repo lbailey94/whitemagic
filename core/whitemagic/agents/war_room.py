@@ -298,9 +298,9 @@ class WarRoom:
             self._campaigns = self._campaigns[-self._max_campaigns:]
 
         logger.info(
-            f"Campaign {campaign_id} planned: '{objective}' "
-            f"(tactic={tactic_name}, phase={wu_xing_phase}, clones={total_clones})"
-        )
+            "Campaign %s planned: '%s' "
+            "(tactic=%s, phase=%s, clones=%s)"
+        , campaign_id, objective, tactic_name, wu_xing_phase, total_clones)
 
         return campaign
 
@@ -628,6 +628,85 @@ class WarRoom:
             "strategy": "chain_of_thought",
             "backend": "python_async",
             "status": "ready_for_execution",
+        }
+
+    # ------------------------------------------------------------------
+    # Swarm-Integrated Campaign Deployment
+    # ------------------------------------------------------------------
+
+    def deploy_campaign(
+        self,
+        objective: str,
+        emperor_intent: str = "",
+        engagement_token_id: str | None = None,
+        hints: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Plan and deploy a campaign using Swarm decomposition + routing.
+
+        Unified pipeline: Campaign planning → Swarm decomposition → Task routing.
+        This integrates the War Room's strategic planning with the Agent Swarm's
+        tactical execution layer.
+
+        Args:
+            objective: What needs to be accomplished.
+            emperor_intent: High-level intent from the user.
+            engagement_token_id: Optional engagement token for scoped authorization.
+            hints: Optional subtask hints for decomposition.
+
+        Returns:
+            Dict with campaign record, swarm plan, and task assignments.
+        """
+        # Phase 1: Plan the campaign
+        campaign = self.plan_campaign(objective, emperor_intent=emperor_intent)
+
+        # Phase 2: Swarm decomposition
+        swarm_plan = None
+        assignments = None
+        try:
+            from whitemagic.agents.swarm import get_swarm
+            swarm = get_swarm()
+            swarm_plan = swarm.decompose(objective, hints=hints)
+
+            # Phase 3: Route tasks to agents
+            assignments = swarm.route(swarm_plan.id, engagement_token_id=engagement_token_id)
+
+            # Update campaign status
+            campaign.status = CampaignStatus.ENGAGEMENT
+            campaign.phases_completed.append({
+                "name": "Swarm Deployment",
+                "plan_id": swarm_plan.id,
+                "subtasks": len(swarm_plan.subtasks),
+                "assignments": len(assignments.get("assignments", [])),
+            })
+        except Exception as e:
+            logger.debug("Swarm deployment failed for campaign %s: %s", campaign.campaign_id, e)
+            campaign.phases_completed.append({
+                "name": "Swarm Deployment",
+                "error": str(e),
+            })
+
+        # Emit Gan Ying event for campaign deployment
+        try:
+            from whitemagic.core.resonance._consolidated import EventType, get_bus, ResonanceEvent
+            get_bus().emit(ResonanceEvent(
+                source="war_room",
+                event_type=EventType.TASK_CREATED,
+                data={
+                    "campaign_id": campaign.campaign_id,
+                    "objective": objective,
+                    "tactic": campaign.tactic_used,
+                    "wu_xing_phase": campaign.wu_xing_phase,
+                    "swarm_plan_id": swarm_plan.id if swarm_plan else None,
+                    "engagement_token": engagement_token_id,
+                },
+            ), async_dispatch=True)
+        except Exception:
+            pass
+
+        return {
+            "campaign": campaign.to_dict(),
+            "swarm_plan": swarm_plan.to_dict() if swarm_plan else None,
+            "assignments": assignments,
         }
 
     # ------------------------------------------------------------------

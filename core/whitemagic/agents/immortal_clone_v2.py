@@ -27,7 +27,6 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -142,7 +141,7 @@ class CampaignVictoryTracker:
         """
         with self.lock:
             if vc_id not in self.vcs:
-                logger.warning(f"Unknown VC: {vc_id}")
+                logger.warning("Unknown VC: %s", vc_id)
                 return False
 
             if not self.vcs[vc_id]['met']:
@@ -151,7 +150,7 @@ class CampaignVictoryTracker:
                 self.vcs[vc_id]['timestamp'] = time.time()
 
                 elapsed = time.time() - self.start_time
-                logger.info(f"🎉 VC {vc_id} MET by clone {clone_id} at {elapsed:.1f}s!")
+                logger.info("🎉 VC %s MET by clone %s at %ss!", vc_id, clone_id, elapsed)
                 return True
 
             return False
@@ -329,12 +328,12 @@ class ImmortalClone:
 
     def execute_persistent_loop(self) -> ActionResult:
         """Persistent execution loop with VC tracking and early termination."""
-        logger.info(f"🥷 Immortal Clone {self.clone_id} starting: {self.task.id}")
+        logger.info("🥷 Immortal Clone %s starting: %s", self.clone_id, self.task.id)
 
         for self.iteration in range(self.max_iterations):
             # Check if campaign is already complete (early termination)
             if self.victory_tracker.all_vcs_met():
-                logger.info(f"🏁 Clone {self.clone_id} stopping: campaign complete")
+                logger.info("🏁 Clone %s stopping: campaign complete", self.clone_id)
                 return ActionResult(
                     success=True,
                     data={'early_stop': True, 'reason': 'campaign_complete'}
@@ -370,7 +369,7 @@ class ImmortalClone:
 
                     # If I've met all my VCs, I'm done
                     if len(vcs_met) == len(self.task.victory_conditions):
-                        logger.info(f"✅ Clone {self.clone_id} achieved all VCs at iteration {self.iteration}")
+                        logger.info("✅ Clone %s achieved all VCs at iteration %s", self.clone_id, self.iteration)
                         return ActionResult(
                             success=True,
                             data={'vcs_met': vcs_met, 'iterations': self.iteration + 1}
@@ -378,7 +377,7 @@ class ImmortalClone:
 
                 # 5. If failed, context now includes error for next iteration
                 if not result.success:
-                    logger.debug(f"🔄 Clone {self.clone_id} iteration {self.iteration} failed, feeding error back")
+                    logger.debug("🔄 Clone %s iteration %s failed, feeding error back", self.clone_id, self.iteration)
 
             except Exception as e:
                 logger.error("❌ Clone %s exception at iteration %s: %s", self.clone_id, self.iteration, e, exc_info=True)
@@ -396,8 +395,125 @@ class ImmortalClone:
         )
 
     def generate_action(self) -> Action:
-        """Generate next action based on current context."""
-        # Simple heuristic: cycle through task types
+        """Generate next action based on current context.
+
+        Uses LLM to decide next action when Ollama is available.
+        Falls back to heuristic cycling when LLM is not running.
+        """
+        # Try LLM-driven action selection
+        action_type = self._llm_choose_action()
+        if action_type is not None:
+            # If the LLM chose EDIT, ask it to generate the actual edit
+            if action_type == ActionType.EDIT:
+                changes = self._llm_generate_edit()
+                if changes:
+                    return Action(
+                        type=action_type,
+                        target=self.task.target,
+                        changes=changes,
+                    )
+            return Action(type=action_type, target=self.task.target)
+
+        # Heuristic fallback: cycle through task types
+        return self._heuristic_action()
+
+    def _llm_choose_action(self) -> ActionType | None:
+        """Ask LLM which action to take next based on context. Returns None if unavailable."""
+        try:
+            from whitemagic.inference.local_llm import LocalLLM
+            llm = LocalLLM()
+            if not llm.is_available:
+                return None
+
+            # Summarize recent context (last 5 iterations)
+            recent = self.context[-5:]
+            context_lines = []
+            for c in recent:
+                action_type = c.get('action', None)
+                if action_type and hasattr(action_type, 'type'):
+                    action_type = action_type.type.value
+                else:
+                    action_type = str(action_type)
+                success = c.get('success', False)
+                error = c.get('error', '')
+                context_lines.append(f"  iter={c.get('iteration', '?')}: action={action_type}, success={success}, error={error}")
+            context_summary = "\n".join(context_lines) if context_lines else "  (no previous actions)"
+
+            valid_actions = ', '.join(a.value for a in ActionType)
+            prompt = (
+                f"You are an immortal clone working on task: {self.task.id}\n"
+                f"Target: {self.task.target}\n"
+                f"Victory conditions: {self.task.victory_conditions}\n\n"
+                f"Previous actions and results:\n{context_summary}\n\n"
+                f"Choose your next action from: {valid_actions}\n"
+                f"Respond with ONLY the action name, nothing else."
+            )
+            response = llm.complete(prompt).strip().lower()
+
+            # Match response to ActionType enum
+            for at in ActionType:
+                if at.value in response:
+                    return at
+            logger.debug("LLM response '%s' did not match any ActionType", response)
+            return None
+        except Exception as e:
+            logger.debug("LLM action selection unavailable: %s", e)
+            return None
+
+    def _llm_generate_edit(self) -> dict | None:
+        """Ask LLM to generate specific edit instructions for the target file.
+
+        Returns a changes dict with 'edits' list, or None if LLM unavailable.
+        """
+        try:
+            from whitemagic.inference.local_llm import LocalLLM
+            llm = LocalLLM()
+            if not llm.is_available:
+                return None
+
+            target = Path(self.task.target)
+            if not target.exists():
+                return None
+            source = target.read_text(encoding="utf-8")
+
+            vcs = ', '.join(self.task.victory_conditions) if self.task.victory_conditions else "(none)"
+            prompt = (
+                f"You are editing: {self.task.target}\n"
+                f"Victory conditions: {vcs}\n\n"
+                f"Current file content:\n```\n{source[:2000]}\n```\n\n"
+                f"Generate ONE edit to satisfy the victory conditions. "
+                f"Format: OLD:<old text>\\nNEW:<new text>\\n---\\n"
+                f"Use exact text from the file for OLD. Keep edits minimal."
+            )
+            response = llm.complete(prompt, max_tokens=512, temperature=0.3)
+            if not response or not response.strip():
+                return None
+
+            edits = []
+            for block in response.split("---"):
+                block = block.strip()
+                if not block:
+                    continue
+                old_text = None
+                new_text = None
+                for line in block.splitlines():
+                    if line.startswith("OLD:"):
+                        old_text = line[4:].strip()
+                    elif line.startswith("NEW:"):
+                        new_text = line[4:].strip()
+                if old_text and new_text and old_text in source:
+                    edits.append({"action": "replace", "old": old_text, "new": new_text})
+
+            if edits:
+                logger.debug("LLM generated %d edits for %s", len(edits), self.task.target)
+                return {"edits": edits}
+            return None
+        except Exception as e:
+            logger.debug("LLM edit generation unavailable: %s", e)
+            return None
+
+    def _heuristic_action(self) -> Action:
+        """Heuristic action cycling fallback."""
         if self.iteration == 0:
             return Action(type=ActionType.ANALYZE, target=self.task.target)
         elif self.iteration < 3:
@@ -655,11 +771,18 @@ class ImmortalClone:
     def check_victory_conditions(self) -> list[str]:
         """Check which task victory conditions are met.
 
+        Uses LLM to evaluate VCs when Ollama is available.
+        Falls back to heuristic (compile+test passed) when not.
+
         Returns:
             List of VC IDs that are now met
         """
-        # In full implementation, would check actual VCs
-        # For now, simple heuristic: success if we've compiled and tested
+        # Try LLM-driven VC evaluation
+        llm_met = self._llm_check_victory_conditions()
+        if llm_met is not None:
+            return llm_met
+
+        # Heuristic fallback: success if we've compiled and tested
         has_compile = any(
             c.get('action') and hasattr(c['action'], 'type') and
             c['action'].type == ActionType.COMPILE and c.get('success')
@@ -673,10 +796,54 @@ class ImmortalClone:
 
         met = []
         if has_compile and has_test:
-            # Mark all task VCs as met (simplified)
             met = self.task.victory_conditions
 
         return met
+
+    def _llm_check_victory_conditions(self) -> list[str] | None:
+        """Ask LLM to evaluate victory conditions. Returns None if unavailable."""
+        try:
+            from whitemagic.inference.local_llm import LocalLLM
+            llm = LocalLLM()
+            if not llm.is_available:
+                return None
+
+            recent = self.context[-5:]
+            context_lines = []
+            for c in recent:
+                action_type = c.get('action', None)
+                if action_type and hasattr(action_type, 'type'):
+                    action_type = action_type.type.value
+                else:
+                    action_type = str(action_type)
+                success = c.get('success', False)
+                context_lines.append(f"  action={action_type}, success={success}")
+            context_summary = "\n".join(context_lines) if context_lines else "  (no actions taken)"
+
+            vcs = ', '.join(self.task.victory_conditions) if self.task.victory_conditions else "(none)"
+            prompt = (
+                f"You are evaluating victory conditions for task: {self.task.id}\n"
+                f"Target: {self.task.target}\n"
+                f"Victory conditions: {vcs}\n\n"
+                f"Recent actions:\n{context_summary}\n\n"
+                f"Which victory conditions have been met? "
+                f"Respond with ONLY the condition names, comma-separated, or 'none'."
+            )
+            response = llm.complete(prompt).strip().lower()
+
+            if response == 'none' or not response:
+                return []
+
+            # Match response to actual VC IDs
+            met = []
+            response_lower = response.lower()
+            for vc_id in self.task.victory_conditions:
+                if str(vc_id).lower() in response_lower:
+                    met.append(vc_id)
+            return met
+        except Exception as e:
+            logger.debug("LLM VC check unavailable: %s", e)
+            return None
 
 
 # ============================================================================
@@ -774,7 +941,7 @@ class GasTownOrchestrator:
         self.work_queue = self.decompose_to_meow()
         results = []
 
-        logger.info(f"🏭 Gas Town deploying {len(self.work_queue)} MEOW units with {self.max_workers} workers")
+        logger.info("🏭 Gas Town deploying %s MEOW units with %s workers", len(self.work_queue), self.max_workers)
 
         # Setup live display
         if self.dashboard_enabled and RICH_AVAILABLE:
@@ -787,11 +954,11 @@ class GasTownOrchestrator:
         else:
             results = self._execute_deployment(None)
 
-        logger.info(f"🏁 Gas Town completed {len(results)} MEOW units")
+        logger.info("🏁 Gas Town completed %s MEOW units", len(results))
 
         # Log final status
         status = self.victory_tracker.get_status()
-        logger.info(f"Final status: {status['vcs_met']}/{status['total_vcs']} VCs met ({status['percentage']:.1f}%)")
+        logger.info("Final status: %s/%s VCs met (%s%%)", status['vcs_met'], status['total_vcs'], status['percentage'])
 
         return results
 
@@ -800,7 +967,8 @@ class GasTownOrchestrator:
         results = []
 
         try:
-            with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
+            from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 futures: dict[Any, tuple[ImmortalClone, MEOW]] = {}
                 clone_id = 0
 
@@ -813,57 +981,69 @@ class GasTownOrchestrator:
                             future.cancel()
                         break
 
-                # Deploy new clones for available work
-                while len(futures) < self.max_workers and self.work_queue:
-                    meow = self.work_queue.pop(0)
+                    # Deploy new clones for available work
+                    skipped = 0
+                    while len(futures) < self.max_workers and self.work_queue and skipped < len(self.work_queue):
+                        meow = self.work_queue.pop(0)
 
-                    # Check dependencies
-                    if not self._dependencies_met(meow):
-                        self.work_queue.append(meow)  # Re-queue for later
-                        continue
+                        # Check dependencies
+                        if not self._dependencies_met(meow):
+                            self.work_queue.append(meow)  # Re-queue for later
+                            skipped += 1
+                            continue
 
-                    # Create Immortal clone for this MEOW
-                    task = Task(
-                        id=f"{meow.type}:{meow.target}",
-                        type=meow.type,
-                        target=meow.target,
-                        victory_conditions=[],
-                        dependencies=meow.dependencies
-                    )
+                        # Create Immortal clone for this MEOW
+                        task = Task(
+                            id=f"{meow.type}:{meow.target}",
+                            type=meow.type,
+                            target=meow.target,
+                            victory_conditions=[],
+                            dependencies=meow.dependencies
+                        )
 
-                    clone = ImmortalClone(
-                        clone_id=clone_id,
-                        task=task,
-                        victory_tracker=self.victory_tracker,
-                        max_iterations=self.max_iterations,
-                        progress_callback=self.dashboard.update_clone_progress
-                    )
+                        clone = ImmortalClone(
+                            clone_id=clone_id,
+                            task=task,
+                            victory_tracker=self.victory_tracker,
+                            max_iterations=self.max_iterations,
+                            progress_callback=self.dashboard.update_clone_progress
+                        )
 
-                    # Deploy clone
-                    future = executor.submit(clone.execute_persistent_loop)
-                    futures[future] = (clone, meow)
-                    clone_id += 1
+                        # Deploy clone
+                        future = executor.submit(clone.execute_persistent_loop)
+                        futures[future] = (clone, meow)
+                        clone_id += 1
 
-                # Collect completed work
-                if futures:
-                    done, pending = wait(futures.keys(), timeout=0.5, return_when=FIRST_COMPLETED)
-                    for future in done:
-                        clone, meow = futures.pop(future)
-                        try:
-                            result = future.result()
-                            self.completed_work.append((meow, result))
-                            results.append(result)
-                            logger.debug("✅ MEOW %s:%s completed by clone %s", meow.type, meow.target, clone.clone_id, exc_info=True)
-                        except Exception as e:
-                            logger.error("❌ Clone %s failed: %s", clone.clone_id, e, exc_info=True)
-                            results.append(ActionResult(success=False, error=str(e)))
+                    # Collect completed work
+                    if futures:
+                        done, pending = wait(futures.keys(), timeout=0.5, return_when=FIRST_COMPLETED)
+                        for future in done:
+                            clone, meow = futures.pop(future)
+                            try:
+                                result = future.result()
+                                self.completed_work.append((meow, result))
+                                results.append(result)
+                                logger.debug("✅ MEOW %s:%s completed by clone %s", meow.type, meow.target, clone.clone_id, exc_info=True)
+                            except Exception as e:
+                                logger.error("❌ Clone %s failed: %s", clone.clone_id, e, exc_info=True)
+                                results.append(ActionResult(success=False, error=str(e)))
 
-                    # Update dashboard
-                    if live:
-                        try:
-                            live.update(self.dashboard.generate_table())
-                        except Exception as e:
-                            logger.debug("Dashboard update failed: %s", e, exc_info=True)
+                        # Update dashboard
+                        if live:
+                            try:
+                                live.update(self.dashboard.generate_table())
+                            except Exception as e:
+                                logger.debug("Dashboard update failed: %s", e, exc_info=True)
+                    elif not futures and self.work_queue:
+                        # Deadlock: no futures running, all remaining MEOWs blocked
+                        # Try retrying failed MEOWs with more iterations
+                        failed_meows = self._retry_failed_meows()
+                        if failed_meows:
+                            logger.info("🔄 Retrying %d failed MEOWs with escalated iterations", len(failed_meows))
+                            self.work_queue.extend(failed_meows)
+                            continue
+                        logger.warning("⚠️ Deployment deadlock: %d MEOWs blocked by unmet dependencies", len(self.work_queue))
+                        break
 
         except KeyboardInterrupt:
             logger.warning("⚠️ Deployment interrupted by user")
@@ -875,12 +1055,30 @@ class GasTownOrchestrator:
         return results
 
     def _dependencies_met(self, meow: MEOW) -> bool:
-        """Check if MEOW dependencies are satisfied."""
+        """Check if MEOW dependencies are satisfied.
+
+        A dependency is met if the upstream MEOW has been *attempted* (even if it
+        failed). This enables partial success propagation — a failed analysis
+        still provides information for the implement phase to work with.
+        """
         if not meow.dependencies:
             return True
 
-        completed_ids = {f"{m.type}:{m.target}" for m, r in self.completed_work if r.success}
-        return all(dep in completed_ids for dep in meow.dependencies)
+        attempted_ids = {f"{m.type}:{m.target}" for m, _ in self.completed_work}
+        return all(dep in attempted_ids for dep in meow.dependencies)
+
+    def _retry_failed_meows(self) -> list[MEOW]:
+        """Collect failed MEOWs for retry with escalated iteration count.
+
+        Returns a list of MEOWs to re-queue. Each retried MEOW gets
+        max_iterations * 2 to give it more room to succeed.
+        """
+        retryable = []
+        for meow, result in self.completed_work:
+            if not result.success and not getattr(meow, '_retried', False):
+                meow._retried = True
+                retryable.append(meow)
+        return retryable
 
 
 # ============================================================================

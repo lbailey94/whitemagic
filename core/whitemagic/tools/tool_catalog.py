@@ -29,12 +29,12 @@ GANA_SHORT_DESC: dict[str, str] = {
     "gana_heart": "Session context — scratchpad (create/update/finalize/analyze), handoff, context pack/status",
     "gana_tail": "Performance & acceleration — SIMD ops (cosine/batch), cascade execution",
     "gana_winnowing_basket": "Wisdom & search — search, vector search, hybrid recall, graph walk, JIT research, batch read",
-    "gana_ghost": "Introspection & web research — gnosis, telemetry, capabilities, graph topology, surprise stats, web search/fetch, browser automation, watchers, self-model forecast",
+    "gana_ghost": "Introspection & self-model — gnosis, telemetry, capabilities, graph topology, surprise stats, watchers, self-model forecast, narrative compression",
     "gana_willow": "Resilience — rate limiter, grimoire spells/suggest/cast/walkthrough, oracle",
     "gana_star": "Governance — governor validate/set-goal/drift/budget/dharma, forge status/reload/validate",
     "gana_extended_net": "Pattern connectivity — pattern search, cluster stats, learning, coherence boost, resonance trace",
     "gana_wings": "Deployment & export — export memories, audit export, mesh broadcast/status",
-    "gana_chariot": "Archaeology & knowledge graph — archaeology (search/stats/digest), KG extract/query/top, marketplace, Windsurf conversations",
+    "gana_chariot": "Codebase navigation & external research — archaeology, KG extract/query, STRATA, codegenome, Windsurf conversations, browser automation, web search/fetch, Fragment",
     "gana_abundance": "Regeneration — dream cycle (start/stop/now/status), lifecycle, serendipity, entity resolve, narrative compress, ILP payments, gratitude",
     "gana_straddling_legs": "Ethics & balance — ethics eval, boundaries, consent, harmony vector, wu xing balance, verification",
     "gana_mound": "Metrics & caching — hologram view, metric tracking, yin-yang balance, green score",
@@ -49,7 +49,7 @@ GANA_SHORT_DESC: dict[str, str] = {
     "gana_void": "Stillness & galaxies — galactic dashboard, gardens, galaxy CRUD/transfer/merge/sync/lineage/taxonomy, OMS export/import/inspect",
     "gana_roof": "Shelter — ollama models/generate/chat/agent, model signing/verify, sovereign sandbox (shelter create/execute/inspect/destroy)",
     "gana_encampment": "Community — sangha chat, broker publish/history/status, gan ying emit/history/listeners",
-    "gana_wall": "Boundaries — vote create/cast/analyze/list/record_outcome, engagement tokens (issue/validate/revoke/list/status)",
+    "gana_wall": "Boundaries & marketplace — vote create/cast/analyze/list/record_outcome, engagement tokens (issue/validate/revoke/list/status), marketplace (publish/discover/negotiate/complete)",
 }
 
 _COMMON_PROPS: dict[str, Any] = {

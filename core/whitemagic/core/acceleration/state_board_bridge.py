@@ -149,7 +149,7 @@ class StateBoardBridge:
             self._mmap = mmap.mmap(self._mmap_file.fileno(), _BOARD_SIZE)
             return self._mmap
         except Exception as e:
-            logger.warning(f"StateBoard mmap fallback failed: {e}")
+            logger.warning("StateBoard mmap fallback failed: %s", e)
             return None
 
     @staticmethod
@@ -355,6 +355,32 @@ class StateBoardBridge:
         off = _OFF_BREAKERS + tool_slot * _BREAKER_SLOT
         struct.pack_into("<2Q", mm, off, int(state), failures)
 
+    def reset_all_breakers(self) -> int:
+        """Reset all circuit breaker slots to CLOSED. Returns count of slots reset."""
+        # Fast path: Rust PyO3 board_reset (resets entire board in one call)
+        if self._rust_available:
+            try:
+                import whitemagic_rs
+                whitemagic_rs.board_reset()
+                logger.info("StateBoard: reset all breakers via Rust PyO3 (board_reset)")
+                return 64  # All slots reset
+            except Exception:
+                pass
+
+        # Fallback: per-slot reset via mmap
+        count = 0
+        for slot in range(64):
+            try:
+                state, _failures = self.read_breaker(slot)
+                if state != BreakerState.CLOSED:
+                    self.write_breaker(slot, BreakerState.CLOSED, 0)
+                    count += 1
+            except Exception:
+                pass
+        if count:
+            logger.info("StateBoard: reset %d breaker slot(s) to CLOSED", count)
+        return count
+
     def close(self) -> None:
         """Close mmap resources."""
         if self._mmap is not None:
@@ -374,4 +400,8 @@ def get_state_board() -> StateBoardBridge:
     global _board
     if _board is None:
         _board = StateBoardBridge()
+        # R&D mode: reset all breaker slots in StateBoard mmap on startup
+        import os
+        if os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
+            _board.reset_all_breakers()
     return _board

@@ -122,7 +122,7 @@ class UnifiedOrchestrator:
         to communicate and harmonize.
         """
         if self.state != SystemState.DORMANT:
-            logger.warning(f"Cannot awaken from state: {self.state}")
+            logger.warning("Cannot awaken from state: %s", self.state)
             return self.state
 
         self.state = SystemState.AWAKENING
@@ -191,7 +191,7 @@ class UnifiedOrchestrator:
 
             self._nervous_system.add_global_handler(orchestrator_handler)
 
-            logger.info(f"     ✓ Nervous system online: {len(self._nervous_system._subsystems)} subsystems")
+            logger.info("     ✓ Nervous system online: %s subsystems", len(self._nervous_system._subsystems))
 
         except ImportError as e:
             logger.warning("     ⚠ Nervous system not available: %s", e, exc_info=True)
@@ -220,7 +220,7 @@ class UnifiedOrchestrator:
                     if hasattr(garden, 'connect_to_gan_ying'):
                         garden.connect_to_gan_ying()
 
-                    logger.info(f"     ✓ {name.capitalize()} Garden online")
+                    logger.info("     ✓ %s Garden online", name.capitalize())
 
             except Exception as e:
                 logger.debug("     ⚠ Garden %s not available: %s", name, e, exc_info=True)
@@ -233,7 +233,7 @@ class UnifiedOrchestrator:
         except ImportError:
             pass
 
-        logger.info(f"     📊 {len(self._gardens)} gardens initialized")
+        logger.info("     📊 %s gardens initialized", len(self._gardens))
 
     async def _bootstrap_identity_system(self) -> None:
         """Wire identity continuity: self-naming + phylogenetics."""
@@ -379,7 +379,7 @@ class UnifiedOrchestrator:
         coherence = event.payload.get("coherence", 0.0)
 
         # Log the coherence level for debugging
-        logger.debug(f"Coherence critical event: {coherence:.2f}")
+        logger.debug("Coherence critical event: %s", coherence)
 
         # Trigger wonder to spark renewal
         if "wonder" in self._gardens:
@@ -470,7 +470,7 @@ class UnifiedOrchestrator:
         try:
             from whitemagic.gardens.garden_resonance import trigger_garden_cascade
             cascaded = trigger_garden_cascade("connection", "Community gathering resonance", resonance_energy=0.85)
-            logger.info(f"   🌊 Garden cascade: {' → '.join(cascaded)}")
+            logger.info("   🌊 Garden cascade: %s", ' → '.join(cascaded))
         except ImportError:
             pass
 
@@ -591,7 +591,7 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
         logger.info("  🎵 Bootstrapping harmony monitoring...")
 
         # Start periodic coherence checks
-        asyncio.create_task(self._harmony_monitoring_loop())
+        self._harmony_task = asyncio.create_task(self._harmony_monitoring_loop())
         logger.info("     ✓ Harmony monitoring active")
 
     async def _harmony_monitoring_loop(self) -> None:

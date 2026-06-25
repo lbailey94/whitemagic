@@ -94,6 +94,21 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
         scratchpad_id = pad.name
 
     manager.write_to(scratchpad_id, content, tag=section)
+
+    # v23.1: Bridge scratchpad writes into WorkingMemory
+    try:
+        from whitemagic.core.intelligence.working_memory import get_working_memory
+        wm = get_working_memory()
+        wm.attend(
+            memory_id=f"scratchpad:{scratchpad_id}:{section}",
+            content=content,
+            title=f"Scratchpad {scratchpad_id} / {section}",
+            importance=0.6,
+            tags=["scratchpad", section or "notes"],
+        )
+    except Exception:
+        pass  # WorkingMemory unavailable — scratchpad still works
+
     _emit("WORKING_MEMORY_UPDATED", {"action": "update", "scratchpad_id": scratchpad_id, "section": section})
     return {"status": "success", "scratchpad_id": scratchpad_id, "section": section}
 
@@ -220,4 +235,24 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     result = {"status": "success", "scratchpad_id": scratchpad_id, "memory_path": str(memory_path), "analyzed": auto_analyze}
     if analysis_result:
         result["analysis"] = analysis_result
+
+    # Wire finalized scratchpad insights into working memory (v23.2)
+    try:
+        from whitemagic.core.intelligence.working_memory import get_working_memory
+        wm = get_working_memory()
+        # Attend to the finalized memory with importance based on analysis confidence
+        importance = 0.5
+        if analysis_result and "confidence" in analysis_result:
+            importance = min(0.9, max(0.3, analysis_result["confidence"]))
+        wm.attend(
+            memory_id=f"scratchpad:{scratchpad_id}",
+            content=content[:500],
+            title=f"Scratchpad: {pad.name}",
+            importance=importance,
+            tags=tags,
+        )
+        result["working_memory_attended"] = True
+    except Exception:
+        result["working_memory_attended"] = False
+
     return result

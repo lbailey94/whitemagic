@@ -201,7 +201,7 @@ class FoolGuard:
         ralph = random.choice(RALPH_WISDOM)
         pu = random.choice(PU_WISDOM)
         combined = f"Ralph says: '{ralph}' | The Tao says: '{pu}'"
-        logger.info(f"FOOL'S GUARD ACTIVATED: {combined}")
+        logger.info("FOOL'S GUARD ACTIVATED: %s", combined)
 
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (

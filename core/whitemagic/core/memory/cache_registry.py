@@ -36,7 +36,7 @@ class CacheRegistry:
     def register(self, name: str, flush_func: Callable[[], None]):
         """Register a cache flush function."""
         self._caches[name] = flush_func
-        logger.info(f"💾 Cache registered: {name}")
+        logger.info("💾 Cache registered: %s", name)
 
     def flush_all(self):
         """Invoke all registered flush functions."""
@@ -44,7 +44,7 @@ class CacheRegistry:
         for name, flush in self._caches.items():
             try:
                 flush()
-                logger.debug(f"  Flushed: {name}")
+                logger.debug("  Flushed: %s", name)
             except Exception as e:
                 logger.error("  Failed to flush %s: %s", name, e, exc_info=True)
 

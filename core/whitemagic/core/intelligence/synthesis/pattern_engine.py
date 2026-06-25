@@ -133,6 +133,67 @@ class PatternEngine:
 
         return stats
 
+    # ------------------------------------------------------------------
+    # Enhanced Pattern Engine facade (fused from EnhancedPatternEngine)
+    # ------------------------------------------------------------------
+
+    _enhanced_pattern_engine_instance: Any = None
+    _sub_clustering_engine_instance: Any = None
+
+    def _get_enhanced_pattern_engine(self):
+        """Lazy accessor for the EnhancedPatternEngine."""
+        if self._enhanced_pattern_engine_instance is None:
+            from whitemagic.core.patterns.pattern_consciousness.pattern_engine_enhanced import EnhancedPatternEngine
+            self._enhanced_pattern_engine_instance = EnhancedPatternEngine()
+        return self._enhanced_pattern_engine_instance
+
+    def enhanced_extract_patterns(self, content: str) -> list[dict[str, Any]]:
+        """Extract patterns from content using ML/Rust-enhanced engine."""
+        return self._get_enhanced_pattern_engine().extract_patterns(content)
+
+    def enhanced_scan_continuously(self) -> None:
+        """Start continuous background pattern scanning."""
+        self._get_enhanced_pattern_engine().scan_continuously()
+
+    def enhanced_emit_to_gan_ying(self, pattern: dict[str, Any]) -> None:
+        """Emit a discovered pattern to the Gan Ying Bus."""
+        self._get_enhanced_pattern_engine().emit_to_gan_ying(pattern)
+
+    def enhanced_synthesize_creative(self, patterns: list[dict[str, Any]]) -> str:
+        """Creative synthesis of multiple patterns."""
+        return self._get_enhanced_pattern_engine().synthesize_creative(patterns)
+
+    def enhanced_similarity(self, text1: str, text2: str) -> float:
+        """Calculate similarity between two texts using PolyglotRouter."""
+        return self._get_enhanced_pattern_engine().similarity(text1, text2)
+
+    # ------------------------------------------------------------------
+    # Sub-Clustering facade (fused from SubClusteringEngine)
+    # ------------------------------------------------------------------
+
+    def _get_sub_clustering_engine(self):
+        """Lazy accessor for the SubClusteringEngine."""
+        if self._sub_clustering_engine_instance is None:
+            from whitemagic.core.intelligence.synthesis.sub_clustering import get_sub_clustering_engine
+            self._sub_clustering_engine_instance = get_sub_clustering_engine()
+        return self._sub_clustering_engine_instance
+
+    def sub_find_large_clusters(self, threshold: int = 20) -> list[tuple[str, int]]:
+        """Find clusters larger than threshold."""
+        return self._get_sub_clustering_engine().find_large_clusters(threshold)
+
+    def sub_subdivide_cluster(self, cluster_id: str) -> list[Any]:
+        """Subdivide a single cluster into quadrants."""
+        return self._get_sub_clustering_engine().subdivide_cluster(cluster_id)
+
+    def sub_subdivide_large_clusters(self, threshold: int = 20, dry_run: bool = False) -> dict[str, list[Any]]:
+        """Subdivide all large clusters."""
+        return self._get_sub_clustering_engine().subdivide_large_clusters(threshold, dry_run)
+
+    def sub_get_cluster_stats(self) -> dict[str, Any]:
+        """Get statistics about current clustering."""
+        return self._get_sub_clustering_engine().get_cluster_stats()
+
 
 # Singleton
 _pattern_engine: PatternEngine | None = None

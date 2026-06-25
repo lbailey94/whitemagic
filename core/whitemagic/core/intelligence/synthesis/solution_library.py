@@ -127,7 +127,7 @@ class SolutionLibrary:
         """
         sol = self.get_solution(solution_id)
         if not sol:
-            logger.error(f"Cannot apply non-existent solution: {solution_id}")
+            logger.error("Cannot apply non-existent solution: %s", solution_id)
             return False
 
         print(f"  [SolutionLibrary] Applying: {sol.title} ({sol.id})...")
@@ -139,7 +139,7 @@ class SolutionLibrary:
             )
             contract = AIContract(capabilities=[sol.pattern_type, f"solution_{sol.id}"])
             if not contract.validate_action(f"apply_{sol.id}"):
-                logger.warning(f"Solution apply blocked by AI Contract: {sol.id}")
+                logger.warning("Solution apply blocked by AI Contract: %s", sol.id)
                 # For Phase 27, we might log and proceed if in 'bypass' mode,
                 # but standard is to return False.
                 return False

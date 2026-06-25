@@ -81,9 +81,9 @@ class SessionHandoff:
         if self.current_session_file.exists():
             prev_state = self._load_session_state(self.current_session_file)
             if prev_state and not prev_state.ended_at:
-                logger.info(f"🔄 Resuming from previous session: {prev_state.session_id}")
-                logger.info(f"   Active tasks: {len(prev_state.active_tasks)}")
-                logger.info(f"   Next steps: {', '.join(prev_state.next_steps[:3])}")
+                logger.info("🔄 Resuming from previous session: %s", prev_state.session_id)
+                logger.info("   Active tasks: %s", len(prev_state.active_tasks))
+                logger.info("   Next steps: %s", ', '.join(prev_state.next_steps[:3]))
                 return prev_state
 
         # Create new session
@@ -102,7 +102,7 @@ class SessionHandoff:
         )
 
         self._save_session_state(state)
-        logger.info(f"🆕 New session started: {session_id}")
+        logger.info("🆕 New session started: %s", session_id)
         return state
 
     def update_session(
@@ -146,7 +146,7 @@ class SessionHandoff:
             state.completed_tasks.append(task)
 
         self._save_session_state(state)
-        logger.info(f"✅ Task completed: {task}")
+        logger.info("✅ Task completed: %s", task)
 
     def add_next_step(self, session_id: str, step: str) -> None:
         """Add step for next session.
@@ -195,10 +195,10 @@ class SessionHandoff:
         handoff_file = self.sessions_dir / "HANDOFF.md"
         self._create_handoff_doc(state, handoff_file)
 
-        logger.info(f"🏁 Session ended: {session_id}")
-        logger.info(f"   Duration: {(state.ended_at - state.started_at).total_seconds() / 60:.1f} minutes")
-        logger.info(f"   Tasks completed: {len(state.completed_tasks)}")
-        logger.info(f"   Next steps: {len(state.next_steps)}")
+        logger.info("🏁 Session ended: %s", session_id)
+        logger.info("   Duration: %s minutes", format((state.ended_at - state.started_at).total_seconds() / 60, ".1f"))
+        logger.info("   Tasks completed: %s", len(state.completed_tasks))
+        logger.info("   Next steps: %s", len(state.next_steps))
 
     def _load_current_session(self) -> SessionState | None:
         """Load current session state."""
@@ -342,9 +342,9 @@ class SessionHandoff:
 
         self._save_session_state(state)
 
-        logger.info(f"🔄 Continuous session started: {session_id}")
-        logger.info(f"   Completion: '{completion_criteria}'")
-        logger.info(f"   Max iterations: {max_iterations}")
+        logger.info("🔄 Continuous session started: %s", session_id)
+        logger.info("   Completion: '%s'", completion_criteria)
+        logger.info("   Max iterations: %s", max_iterations)
 
         return state
 
@@ -404,9 +404,9 @@ class SessionHandoff:
         handoff_file = self.sessions_dir / "HANDOFF.md"
         self._create_handoff_doc(state, handoff_file)
 
-        logger.info(f"✅ Continuous session complete: {reason}")
-        logger.info(f"   Iterations: {state.iteration_count}")
-        logger.info(f"   Files modified: {len(state.files_modified)}")
+        logger.info("✅ Continuous session complete: %s", reason)
+        logger.info("   Iterations: %s", state.iteration_count)
+        logger.info("   Files modified: %s", len(state.files_modified))
 
         return {
             "continue": False,

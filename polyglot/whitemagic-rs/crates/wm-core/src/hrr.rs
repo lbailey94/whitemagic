@@ -5,7 +5,7 @@
 //! high-dimensional (e.g., 256–1024 dims) with elements sampled from
 //! N(0, 1/dim) for unit expected magnitude.
 
-use std::f64;
+use rustfft::{FftPlanner, num_complex::Complex as RustComplex};
 
 /// An HRR vector — a high-dimensional symbolic representation.
 #[derive(Debug, Clone, PartialEq)]
@@ -63,14 +63,15 @@ impl HRR {
 
     /// Circular convolution: a ⊗ b = DFT⁻¹(DFT(a) · DFT(b))
     /// This is the *binding* operation in HRR.
+    /// Uses rustfft for O(N log N) computation.
     pub fn bind(&self, other: &Self) -> Self {
         let n = self.dim();
         assert_eq!(n, other.dim());
 
-        let a_fft = real_fft(&self.vec);
-        let b_fft = real_fft(&other.vec);
-        let c_fft: Vec<Complex> = a_fft.iter().zip(b_fft.iter()).map(|(a, b)| a.mul(b)).collect();
-        let c = real_ifft(&c_fft);
+        let a_fft = fft_real(&self.vec);
+        let b_fft = fft_real(&other.vec);
+        let c_fft: Vec<RustComplex<f64>> = a_fft.iter().zip(b_fft.iter()).map(|(a, b)| a * b).collect();
+        let c = ifft_real(&c_fft);
 
         Self { vec: c }
     }
@@ -122,65 +123,30 @@ impl HRR {
     }
 }
 
-// ---- Simple DFT/IDFT for real sequences ----
+// ---- FFT/IFFT using rustfft (O(N log N)) ----
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct Complex {
-    re: f64,
-    im: f64,
-}
-
-impl Complex {
-    fn new(re: f64, im: f64) -> Self {
-        Self { re, im }
-    }
-    fn mul(&self, other: &Self) -> Self {
-        Self::new(
-            self.re * other.re - self.im * other.im,
-            self.re * other.im + self.im * other.re,
-        )
-    }
-}
-
-fn real_fft(signal: &[f64]) -> Vec<Complex> {
+fn fft_real(signal: &[f64]) -> Vec<RustComplex<f64>> {
     let n = signal.len();
     if n == 0 {
         return vec![];
     }
-    if n == 1 {
-        return vec![Complex::new(signal[0], 0.0)];
-    }
-    let mut result = vec![Complex::new(0.0, 0.0); n];
-    for k in 0..n {
-        let mut re = 0.0;
-        let mut im = 0.0;
-        for t in 0..n {
-            let angle = -2.0 * std::f64::consts::PI * (t as f64) * (k as f64) / (n as f64);
-            re += signal[t] * angle.cos();
-            im += signal[t] * angle.sin();
-        }
-        result[k] = Complex::new(re, im);
-    }
-    result
+    let mut planner = FftPlanner::<f64>::new();
+    let fft = planner.plan_fft_forward(n);
+    let mut buffer: Vec<RustComplex<f64>> = signal.iter().map(|&v| RustComplex::new(v, 0.0)).collect();
+    fft.process(&mut buffer);
+    buffer
 }
 
-fn real_ifft(spectrum: &[Complex]) -> Vec<f64> {
+fn ifft_real(spectrum: &[RustComplex<f64>]) -> Vec<f64> {
     let n = spectrum.len();
     if n == 0 {
         return vec![];
     }
-    let mut result = vec![0.0; n];
-    for t in 0..n {
-        let mut re = 0.0;
-        let mut im = 0.0;
-        for k in 0..n {
-            let angle = 2.0 * std::f64::consts::PI * (t as f64) * (k as f64) / (n as f64);
-            re += spectrum[k].re * angle.cos() - spectrum[k].im * angle.sin();
-            im += spectrum[k].re * angle.sin() + spectrum[k].im * angle.cos();
-        }
-        result[t] = re / (n as f64);
-    }
-    result
+    let mut planner = FftPlanner::<f64>::new();
+    let ifft = planner.plan_fft_inverse(n);
+    let mut buffer = spectrum.to_vec();
+    ifft.process(&mut buffer);
+    buffer.iter().map(|c| c.re / n as f64).collect()
 }
 
 fn lcg_next_f64(seed: &mut u64) -> f64 {
@@ -208,11 +174,10 @@ mod tests {
         // c ⊗ inv(a) ≈ b
         let recovered = c.unbind(&a);
         let sim = recovered.similarity(&b);
-        // HRR binding is approximate; naive DFT has precision limits.
-        // Production would use rustfft or FFTW for exact circular convolution.
+        // HRR binding is approximate; rustfft provides exact circular convolution.
         assert!(
-            sim > -0.5,
-            "Expected similarity > -0.5 (approximate recovery), got {}",
+            sim > 0.5,
+            "Expected similarity > 0.5 (good recovery with rustfft), got {}",
             sim
         );
     }

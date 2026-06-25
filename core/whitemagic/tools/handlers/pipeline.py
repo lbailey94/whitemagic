@@ -42,7 +42,7 @@ def _emit(event_type_name: str, data: dict[str, Any]) -> None:
         from whitemagic.core.resonance import emit_event
         emit_event(event_type_name, data, source="pipeline")
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced pipeline emit error: {e}", exc_info=True)
+        logger.debug("Silenced pipeline emit error: %s", e, exc_info=True)
 
 
 def _pipelines_dir() -> Path:

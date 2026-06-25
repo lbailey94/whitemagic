@@ -78,7 +78,7 @@ class StreamableToolResponse:
         # Stream data in chunks
         for i in range(0, total, chunk_size):
             if self.cancelled:
-                logger.info(f"Stream cancelled for {self.tool_name}")
+                logger.info("Stream cancelled for %s", self.tool_name)
                 break
 
             chunk_data = results[i:i + chunk_size]

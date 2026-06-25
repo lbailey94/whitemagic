@@ -126,7 +126,7 @@ class WillowHealthChecker:
         self._health_cache = status
         self._last_check = current_time  # type: ignore[assignment]
 
-        logger.info(f"🌿 Willow health check complete: {'✅' if is_healthy else '❌'}")
+        logger.info("🌿 Willow health check complete: %s", '✅' if is_healthy else '❌')
         if issues:
             logger.warning("🌿 Issues found: %s", issues, exc_info=True)
 
@@ -260,10 +260,10 @@ async def willow_pre_check(tool_name: str) -> bool:
         # Attempt auto-recovery
         recovered = await checker.attempt_recovery()
         if recovered:
-            logger.info(f"🌿 Auto-recovered before {tool_name}")
+            logger.info("🌿 Auto-recovered before %s", tool_name)
             return True
         else:
-            logger.warning(f"🌿 Willow unhealthy, blocking {tool_name}")
+            logger.warning("🌿 Willow unhealthy, blocking %s", tool_name)
             return False
 
     return True

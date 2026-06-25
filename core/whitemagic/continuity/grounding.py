@@ -124,12 +124,12 @@ class GroundingSystem:
 
         logger.info("\n⚓ CONTINUITY GROUNDING ANCHOR ⚓")
         logger.info("================================")
-        logger.info(f"📅 Current Time: {t['human_readable']}")
-        logger.info(f"🌍 UTC:          {t['utc']}")
-        logger.info(f"🖥️  System:       {h['name']} ({h['platform']})")
-        logger.info(f"📊 Resources:    CPU: {h['resources']['cpu']} | RAM: {h['resources']['ram']} | Disk: {h['resources']['disk']}")
-        logger.info(f"👤 User:         {anchor['environment']['user']}")
-        logger.info(f"📂 CWD:          {anchor['environment']['cwd']}")
+        logger.info("📅 Current Time: %s", t['human_readable'])
+        logger.info("🌍 UTC:          %s", t['utc'])
+        logger.info("🖥️  System:       %s (%s)", h['name'], h['platform'])
+        logger.info("📊 Resources:    CPU: %s | RAM: %s | Disk: %s", h['resources']['cpu'], h['resources']['ram'], h['resources']['disk'])
+        logger.info("👤 User:         %s", anchor['environment']['user'])
+        logger.info("📂 CWD:          %s", anchor['environment']['cwd'])
         logger.info("================================\n")
 
 if __name__ == "__main__":

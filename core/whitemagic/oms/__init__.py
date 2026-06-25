@@ -15,10 +15,10 @@ Usage:
     from whitemagic.oms import get_oms_manager
     mgr = get_oms_manager()
 
-    mgr.export_galaxy("research", "~/exports/research.mem", price_xrp=50.0)
-    info = mgr.inspect("~/downloads/research.mem")
-    mgr.verify("~/downloads/research.mem")
-    mgr.import_mem("~/downloads/research.mem", galaxy="imported_research")
+    mgr.export_galaxy("research", "<exports>/research.mem", price_xrp=50.0)
+    info = mgr.inspect("<downloads>/research.mem")
+    mgr.verify("<downloads>/research.mem")
+    mgr.import_mem("<downloads>/research.mem", galaxy="imported_research")
 """
 
 from whitemagic.oms.manager import OMSManager, get_oms_manager

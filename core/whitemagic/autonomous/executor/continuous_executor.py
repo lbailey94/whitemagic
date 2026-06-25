@@ -826,9 +826,9 @@ class ContinuousExecutor:
         logger.info("\n" + "=" * 60)
         logger.info("🤖 Autonomous Execution Summary")
         logger.info("=" * 60)
-        logger.info(f"Completed: {len(self.completed)}")
-        logger.info(f"Failed: {len(self.failed)}")
-        logger.info(f"Pending: {len(self.objectives)}")
+        logger.info("Completed: %s", len(self.completed))
+        logger.info("Failed: %s", len(self.failed))
+        logger.info("Pending: %s", len(self.objectives))
         logger.info("\nResources:")
         for key, value in self.limits.get_status().items():
             logger.info("  %s: %s", key, value, exc_info=True)

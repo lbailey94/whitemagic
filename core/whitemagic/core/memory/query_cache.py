@@ -192,11 +192,11 @@ def cache_memory_query(func: Any) -> Any:
         # Try cache first
         result = cache.get(cache_key)
         if result is not None:
-            logger.debug(f"Cache HIT: {func.__name__}")
+            logger.debug("Cache HIT: %s", func.__name__)
             return result
 
         # Cache miss - execute function
-        logger.debug(f"Cache MISS: {func.__name__}")
+        logger.debug("Cache MISS: %s", func.__name__)
         result = func(*args, **kwargs)
 
         # Cache the result (only if not None)

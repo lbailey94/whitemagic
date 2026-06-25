@@ -35,12 +35,12 @@ class LocalEmbedder:
         """Try to load FastEmbed model."""
         try:
             from fastembed import TextEmbedding
-            logger.info(f"Loading local embedding model: {self.model_name}")
+            logger.info("Loading local embedding model: %s", self.model_name)
             start = time.time()
             self._model = TextEmbedding(model_name=self.model_name, max_length=self.max_length)
             self._available = True
             elapsed = time.time() - start
-            logger.info(f"Local embedding model loaded in {elapsed:.2f}s")
+            logger.info("Local embedding model loaded in %ss", elapsed)
         except ImportError:
             logger.warning("fastembed not installed. Install with: pip install fastembed")
             self._available = False

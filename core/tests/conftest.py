@@ -195,3 +195,64 @@ def mcp_test_env(tmp_path_factory):
 # conftest.py is auto-loaded by pytest but not importable as
 # `from tests.conftest import ...`. Any code that needs the
 # envelope helpers should import them from _envelope directly.
+
+
+# ---------------------------------------------------------------------------
+# Granular progress bar (--progress flag)
+# Uses ProgressBar with background timer thread for real-time elapsed updates.
+# Shows: [████████░░░░░░░░] 50.00% | 750/1500 | 8.2s | ETA 8.2s | ✓749 ✗1 | test_name
+# ---------------------------------------------------------------------------
+
+def pytest_addoption(parser):
+    group = parser.getgroup("progress")
+    group.addoption(
+        "--progress",
+        action="store_true",
+        default=False,
+        dest="progress",
+        help="Show granular progress bar during test runs.",
+    )
+
+
+_progress_bar = None
+
+
+def pytest_collection_finish(session):
+    global _progress_bar
+    if session.config.getoption("progress", False):
+        from whitemagic.utils.progress_bar import ProgressBar
+        _progress_bar = ProgressBar(
+            total=len(session.items),
+            label="Tests",
+            counters={"pass": 0, "fail": 0, "skip": 0, "err": 0},
+        )
+        _progress_bar.start()
+
+
+def pytest_runtest_logreport(report):
+    global _progress_bar
+    if _progress_bar is None:
+        return
+    if report.when == "call":
+        name = report.nodeid.replace("::()::", "::")
+        if "[" in name:
+            name = name.split("[")[0] + "]"
+        if len(name) > 45:
+            name = "..." + name[-42:]
+        if report.outcome == "passed":
+            _progress_bar.advance(**{"pass": 1})
+        elif report.outcome == "failed":
+            _progress_bar.advance(fail=1)
+        elif report.outcome == "skipped":
+            _progress_bar.advance(skip=1)
+        _progress_bar.set_label(name)
+    elif report.when == "setup" and report.outcome == "error":
+        _progress_bar.advance(err=1)
+        _progress_bar.set_label(report.nodeid)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    global _progress_bar
+    if _progress_bar is not None:
+        _progress_bar.finish()
+        _progress_bar = None

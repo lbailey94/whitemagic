@@ -5,7 +5,7 @@ Defines the abstract interface that all embedding providers must implement.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 
 class EmbeddingProvider(ABC):

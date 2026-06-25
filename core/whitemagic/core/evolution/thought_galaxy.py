@@ -49,3 +49,20 @@ class ThoughtGalaxy:
 
         results.sort(key=lambda x: x[0], reverse=True)
         return [r[1] for r in results[:top_k]]
+
+    def mine_patterns(self) -> list[dict]:
+        """Mine emergent patterns from stored episodes.
+
+        Analyzes episodes for recurring tag clusters and frequency patterns.
+        """
+        if not self.episodes:
+            return []
+        tag_counts: dict[str, int] = {}
+        for ep in self.episodes:
+            for tag in ep.tags:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        results = [
+            {"tag": t, "frequency": c, "dominance": c / len(self.episodes)}
+            for t, c in sorted(tag_counts.items(), key=lambda x: -x[1])
+        ]
+        return results

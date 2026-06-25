@@ -271,9 +271,9 @@ if __name__ == "__main__":
     # Learn rules
     new_rules = learner.learn()
 
-    logger.info(f"Learned {len(new_rules)} new rules:")
+    logger.info("Learned %s new rules:", len(new_rules))
     for rule in new_rules:
-        logger.info(f"  - Pattern: {rule.pattern}")
-        logger.info(f"    Response: {rule.response[:50]}...")
+        logger.info("  - Pattern: %s", rule.pattern)
+        logger.info("    Response: %s...", rule.response[:50])
 
-    logger.info(f"\nStats: {learner.stats()}")
+    logger.info("\nStats: %s", learner.stats())

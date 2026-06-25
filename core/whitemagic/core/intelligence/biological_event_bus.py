@@ -74,7 +74,7 @@ class BiologicalEventBus:
             logger.info("🐍 Using Python event dispatcher (Rust unavailable)")
 
         # Start event processing loop
-        asyncio.create_task(self._process_events())
+        self._event_task = asyncio.create_task(self._process_events())
         logger.info("🧠 Biological Event Bus started")
 
     async def stop(self) -> None:

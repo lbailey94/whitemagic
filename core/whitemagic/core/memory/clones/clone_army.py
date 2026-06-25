@@ -174,7 +174,7 @@ class CloneArmy:
                     1000, # limit
                 )
 
-                logger.info(f"🦀 Rust Clone Army deployed: {len(rust_results)} matches found")
+                logger.info("🦀 Rust Clone Army deployed: %s matches found", len(rust_results))
 
                 # Convert back to SearchResult objects
                 results = []
@@ -337,7 +337,7 @@ class CloneArmy:
                     ),
                 )
 
-                logger.info(f"🦀⚡ Async Rust Clone Army: {len(rust_results)} matches")
+                logger.info("🦀⚡ Async Rust Clone Army: %s matches", len(rust_results))
 
                 # Convert to SearchResult objects
                 results = []
@@ -396,7 +396,7 @@ class CloneArmy:
             if isinstance(result, list):
                 all_results.extend(result)
 
-        logger.info(f"⚡ Async Python Clone Army: {len(all_results)} matches")
+        logger.info("⚡ Async Python Clone Army: %s matches", len(all_results))
         self._results = all_results
         return all_results
 
@@ -417,6 +417,47 @@ class CloneArmy:
             "consensus_results": len(self._consensus),
             "results_by_clone_type": dict(clone_type_counts),
         }
+
+    # ------------------------------------------------------------------
+    # Local Reasoning facade (fused from LocalReasoningEngine)
+    # ------------------------------------------------------------------
+
+    _local_reasoning_instance: Any = None
+    _cpu_inference_instance: Any = None
+
+    def _get_local_reasoning(self):
+        """Lazy accessor for the LocalReasoningEngine."""
+        if self._local_reasoning_instance is None:
+            from whitemagic.core.intelligence.agentic.local_reasoning import get_local_reasoning
+            self._local_reasoning_instance = get_local_reasoning()
+        return self._local_reasoning_instance
+
+    def reason_locally(self, query: str, max_results: int = 10) -> Any:
+        """Attempt to answer query using local resources (rules, patterns, clone search, embeddings)."""
+        return self._get_local_reasoning().reason_locally(query, max_results)
+
+    def add_reasoning_rule(self, rule: Any) -> None:
+        """Add a local reasoning rule."""
+        self._get_local_reasoning().add_rule(rule)
+
+    def add_reasoning_pattern(self, name: str, pattern: str) -> None:
+        """Add a pattern for local matching."""
+        self._get_local_reasoning().add_pattern(name, pattern)
+
+    # ------------------------------------------------------------------
+    # CPU Inference facade (fused from CPUInferenceEngine)
+    # ------------------------------------------------------------------
+
+    def _get_cpu_inference(self):
+        """Lazy accessor for the CPUInferenceEngine."""
+        if self._cpu_inference_instance is None:
+            from whitemagic.core.intelligence.agentic.cpu_inference import get_cpu_inference
+            self._cpu_inference_instance = get_cpu_inference()
+        return self._cpu_inference_instance
+
+    def cpu_infer(self, query: str) -> Any:
+        """Run CPU-only inference on a query."""
+        return self._get_cpu_inference().infer(query)
 
 
 # === CONVENIENCE FUNCTIONS ===

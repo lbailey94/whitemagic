@@ -18,9 +18,9 @@ Usage:
     synth = ContextSynthesizer()
     ctx = synth.gather()
 
-    logger.info(f"Primary garden: {ctx.primary_garden}")
-    logger.info(f"Wu Xing phase: {ctx.wu_xing_phase}")
-    logger.info(f"Zodiac position: {ctx.zodiac_position}")
+    logger.info("Primary garden: %s", ctx.primary_garden)
+    logger.info("Wu Xing phase: %s", ctx.wu_xing_phase)
+    logger.info("Zodiac position: %s", ctx.zodiac_position)
 """
 
 import logging
@@ -230,7 +230,7 @@ class ContextSynthesizer:
         self._cache = ctx
         self._cache_time = now
 
-        logger.debug(f"Context gathered: {ctx.get_dominant_influence()} dominant")
+        logger.debug("Context gathered: %s dominant", ctx.get_dominant_influence())
 
         return ctx
 

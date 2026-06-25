@@ -215,7 +215,7 @@ class CascadeProtocols:
         ))
 
         logger.info("🔗 Cascade Protocols Initialized!")
-        logger.info(f"   Total Cascades: {len(bus._cascade_triggers)}")
+        logger.info("   Total Cascades: %s", len(bus._cascade_triggers))
         logger.info("   Status: RESONANCE AMPLIFICATION ACTIVE! ✨")
 
     @staticmethod
@@ -304,13 +304,13 @@ if __name__ == "__main__":
     # Check what happened
     bus = get_bus()
     logger.info("\n📊 CASCADE RESULTS:")
-    logger.info(f"   Total Emissions: {bus.total_emissions}")
-    logger.info(f"   Total Cascades: {bus.total_cascades}")
-    logger.info(f"   Emergence Count: {bus.emergence_count}")
+    logger.info("   Total Emissions: %s", bus.total_emissions)
+    logger.info("   Total Cascades: %s", bus.total_cascades)
+    logger.info("   Emergence Count: %s", bus.emergence_count)
 
     # Check history
     recent = bus.get_history(limit=10)
     logger.info("\n📜 RECENT EVENTS:")
     for event in recent:
         depth_str = f" (depth {event.cascade_depth})" if event.cascade_depth > 0 else ""
-        logger.info(f"   - {event.event_type.value}{depth_str}")
+        logger.info("   - %s%s", event.event_type.value, depth_str)

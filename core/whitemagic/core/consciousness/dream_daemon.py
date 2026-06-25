@@ -38,7 +38,7 @@ class DreamDaemon:
             logger.warning("Dream daemon already running")
             return
 
-        logger.info(f"Starting Dream Daemon (Interval: {self.interval}s)")
+        logger.info("Starting Dream Daemon (Interval: %ss)", self.interval)
         self.running = True
         self._stop_event.clear()
 
@@ -55,7 +55,7 @@ class DreamDaemon:
         self._stop_event.set()
 
     def _signal_handler(self, signum: int, frame: object) -> None:
-        logger.info(f"Received signal {signum}, stopping...")
+        logger.info("Received signal %s, stopping...", signum)
         self.stop()
         sys.exit(0)
 
@@ -65,7 +65,7 @@ class DreamDaemon:
             try:
                 self.dream_cycle()
             except Exception as e:
-                logger.error(f"Error in dream cycle: {e}", exc_info=True)
+                logger.error("Error in dream cycle: %s", e, exc_info=True)
 
             # Sleep for interval, checking for stop event
             if self._stop_event.wait(self.interval):
@@ -88,7 +88,7 @@ class DreamDaemon:
         self._generate_insights()
 
         duration = time.time() - start_time
-        logger.info(f"✨ Dream State ended. Duration: {duration:.2f}s")
+        logger.info("✨ Dream State ended. Duration: %ss", duration)
 
     def _consolidate_memories(self) -> None:
         """Move short-term memories to long-term or prune them."""

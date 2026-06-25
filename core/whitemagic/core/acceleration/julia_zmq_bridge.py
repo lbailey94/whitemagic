@@ -38,7 +38,7 @@ class JuliaZMQClient:
             # Test with health check
             response = self._send_request({"method": "health"})
             if response.get("status") == "success":
-                logger.info(f"🚀 Connected to Julia server v{response.get('version', 'unknown')}")
+                logger.info("🚀 Connected to Julia server v%s", response.get('version', 'unknown'))
                 return True
 
         except Exception as e:
@@ -93,7 +93,7 @@ class JuliaZMQClient:
 
             response = self._send_request({"method": "health"})
             if response.get("status") == "success":
-                logger.info(f"🚀 Started Julia server v{response.get('version', 'unknown')}")
+                logger.info("🚀 Started Julia server v%s", response.get('version', 'unknown'))
                 return True
             else:
                 logger.error("Julia server health check failed: %s", response, exc_info=True)

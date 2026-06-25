@@ -343,11 +343,11 @@ class RetentionEngine:
 
         self._total_sweeps += 1
         logger.info(
-            f"🌌 Retention sweep #{self._total_sweeps}: "
-            f"{report.total_evaluated} evaluated, "
-            f"{report.retained} kept, {report.decayed} decayed, "
-            f"{report.archived} rotated to edge, {report.protected} protected",
-        )
+            "🌌 Retention sweep #%s: "
+            "%s evaluated, "
+            "%s kept, %s decayed, "
+            "%s rotated to edge, %s protected",
+         self._total_sweeps, report.total_evaluated, report.retained, report.decayed, report.archived, report.protected)
         return report
 
     # ------------------------------------------------------------------
@@ -385,6 +385,113 @@ class RetentionEngine:
             "retain_threshold": self._retain_threshold,
             "archive_threshold": self._archive_threshold,
             "evaluator_count": len(self._evaluators),
+            **self._neuro_score_stats(),
+        }
+
+    # ------------------------------------------------------------------
+    # Neuro Score management (fused from NeuroScoreEngine)
+    # ------------------------------------------------------------------
+
+    def _neuro_score_stats(self) -> dict[str, Any]:
+        """Get neuro_score-specific stats."""
+        return {
+            "neuro_score_decay_interval_hours": getattr(self, "_decay_interval_hours", 24.0),
+            "neuro_score_last_decay": getattr(self, "_last_decay_run", None),
+        }
+
+    def calculate_score(self, memory: Any, detailed: bool = False) -> Any:
+        """Calculate neuro_score for a NeuralMemory.
+
+        Delegates to the neuro_score calculation functions.
+        """
+        from whitemagic.core.memory.neural.neuro_score import calculate_neuro_score
+        return calculate_neuro_score(memory, detailed)
+
+    def update_score(self, memory: Any) -> Any:
+        """Update a NeuralMemory's neuro_score based on current state."""
+        from whitemagic.core.memory.neural.neuro_score import calculate_neuro_score
+        score = calculate_neuro_score(memory)
+        if isinstance(score, float):
+            memory.neuro_score = score
+        else:
+            memory.neuro_score = score.final_score
+        return memory
+
+    def on_recall(self, memory: Any) -> Any:
+        """Called when a NeuralMemory is recalled/accessed. Boosts strength."""
+        memory.recall()
+        return self.update_score(memory)
+
+    def on_create(self, memory: Any) -> Any:
+        """Called when a NeuralMemory is created. Applies auto-protection and scoring."""
+        try:
+            from whitemagic.core.memory.neural.identity_anchors import auto_protect_memory
+            memory = auto_protect_memory(memory)
+        except ImportError:
+            pass
+        return self.update_score(memory)
+
+    def process_decay(self, memories: list[Any]) -> list[Any]:
+        """Process decay for a batch of NeuralMemories.
+
+        Returns list of memories that should be archived.
+        """
+        from whitemagic.core.memory.neural.neuro_score import calculate_neuro_score
+        to_archive = []
+
+        for memory in memories:
+            memory.decay()
+            score = calculate_neuro_score(memory)
+            if isinstance(score, float):
+                memory.neuro_score = score
+            else:
+                memory.neuro_score = score.final_score
+
+            if memory.should_archive():
+                to_archive.append(memory)
+
+        self._last_decay_run = datetime.now()
+        return to_archive
+
+    def should_run_decay(self) -> bool:
+        """Check if it's time to run decay processing."""
+        if not hasattr(self, "_last_decay_run") or self._last_decay_run is None:
+            return True
+        hours_since = (datetime.now() - self._last_decay_run).total_seconds() / 3600
+        return hours_since >= getattr(self, "_decay_interval_hours", 24.0)
+
+    def get_weak_memories(self, memories: list[Any]) -> list[Any]:
+        """Get memories that are fading or weak (candidates for review)."""
+        try:
+            from whitemagic.core.memory.neural.neural_memory import MemoryState
+            return [m for m in memories if m.state in (MemoryState.FADING, MemoryState.WEAK)]
+        except ImportError:
+            return []
+
+    def get_neuro_stats(self, memories: list[Any]) -> dict[str, Any]:
+        """Get statistics about memory health (NeuroScoreEngine compatible)."""
+        if not memories:
+            return {"total": 0, "by_state": {}, "average_score": 0, "protected_count": 0}
+
+        try:
+            from whitemagic.core.memory.neural.neural_memory import MemoryState
+            by_state = {}
+            for state in MemoryState:
+                count = len([m for m in memories if m.state == state])
+                if count > 0:
+                    by_state[state.value] = count
+        except ImportError:
+            by_state = {}
+
+        avg_score = sum(m.neuro_score for m in memories) / len(memories)
+        protected = len([m for m in memories if m.is_protected])
+
+        return {
+            "total": len(memories),
+            "by_state": by_state,
+            "average_score": round(avg_score, 3),
+            "protected_count": protected,
+            "archive_candidates": len([m for m in memories if m.should_archive()]),
         }
 
 

@@ -210,8 +210,8 @@ class VoiceAuditScanner:
 
         if report.quarantine_triggered:
             logger.warning(
-                f"VoiceAudit: {len(report.hallucinated_claims)} hallucinated claims detected"
-            )
+                "VoiceAudit: %s hallucinated claims detected"
+            , len(report.hallucinated_claims))
 
         return report
 

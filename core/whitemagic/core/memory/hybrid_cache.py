@@ -109,10 +109,10 @@ class HybridRecallCache:
         self.strategy_cache = LRUCache(strategy_cache_size, ttl_seconds)
 
         logger.info(
-            f"HybridRecallCache initialized: "
-            f"query={query_cache_size}, embedding={embedding_cache_size}, "
-            f"strategy={strategy_cache_size}, ttl={ttl_seconds}s"
-        )
+            "HybridRecallCache initialized: "
+            "query=%s, embedding=%s, "
+            "strategy=%s, ttl=%ss"
+        , query_cache_size, embedding_cache_size, strategy_cache_size, ttl_seconds)
 
     @staticmethod
     def _hash_query(query: str, **kwargs: Any) -> str:

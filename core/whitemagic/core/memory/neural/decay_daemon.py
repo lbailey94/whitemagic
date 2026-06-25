@@ -102,7 +102,7 @@ class DecayDaemon:
         self._stats["memories_processed"] += len(memories)
         self._stats["memories_archived"] += len(archived)
 
-        logger.info(f"Decay processed: {len(memories)} memories, {len(archived)} archived")
+        logger.info("Decay processed: %s memories, %s archived", len(memories), len(archived))
 
         return {
             "processed": len(memories),

@@ -56,7 +56,7 @@ class AdaptiveSystem:
         self.rules.enabled = True
         self.rules.require_approval = require_approval
 
-        logger.warning(f"⚠️ Adaptive System ENABLED (approval={'required' if require_approval else 'not required'})")
+        logger.warning("⚠️ Adaptive System ENABLED (approval=%s)", 'required' if require_approval else 'not required')
 
     def disable(self):
         """Disable automatic adaptations."""
@@ -112,9 +112,9 @@ class AdaptiveSystem:
                     "proposed_at": datetime.now().isoformat(),
                     "reason": reason,
                 })
-                logger.info(f"📋 Adaptation pending approval: {adaptation.get('description', 'Unknown')}")
+                logger.info("📋 Adaptation pending approval: %s", adaptation.get('description', 'Unknown'))
             else:
-                logger.debug(f"⏸️ Adaptation not applied: {reason}")
+                logger.debug("⏸️ Adaptation not applied: %s", reason)
 
             return False
 
@@ -123,7 +123,7 @@ class AdaptiveSystem:
         try:
             adaptation_type = adaptation.get("type", "unknown")
 
-            logger.info(f"🚀 Applying adaptation: {adaptation.get('description', 'Unknown')}")
+            logger.info("🚀 Applying adaptation: %s", adaptation.get('description', 'Unknown'))
 
             # Record pre-adaptation state
             pre_state = {
@@ -137,7 +137,7 @@ class AdaptiveSystem:
             elif adaptation_type == "strengthen_pathway":
                 success = self._strengthen_pathway(adaptation)
             else:
-                logger.warning(f"Unknown adaptation type: {adaptation_type}")
+                logger.warning("Unknown adaptation type: %s", adaptation_type)
                 success = False
 
             if success:
@@ -161,13 +161,13 @@ class AdaptiveSystem:
     def _optimize_pathway(self, adaptation: dict[str, Any]) -> bool:
         """Optimize a pathway (implementation placeholder)."""
         # In production, this would actually modify the system
-        logger.info(f"  Optimizing pathway: {adaptation.get('pattern_id', 'unknown')}")
+        logger.info("  Optimizing pathway: %s", adaptation.get('pattern_id', 'unknown'))
         return True
 
     def _strengthen_pathway(self, adaptation: dict[str, Any]) -> bool:
         """Strengthen a pathway (implementation placeholder)."""
         # In production, this would actually modify the system
-        logger.info(f"  Strengthening pathway: {adaptation.get('pattern_id', 'unknown')}")
+        logger.info("  Strengthening pathway: %s", adaptation.get('pattern_id', 'unknown'))
         return True
 
     def approve_adaptation(self, adaptation_index: int) -> bool:
@@ -194,7 +194,7 @@ class AdaptiveSystem:
             return
 
         pending = self.pending_approvals.pop(adaptation_index)
-        logger.info(f"❌ Adaptation rejected: {pending['adaptation'].get('description', 'Unknown')}")
+        logger.info("❌ Adaptation rejected: %s", pending['adaptation'].get('description', 'Unknown'))
 
     def rollback_last_adaptation(self) -> bool:
         """Rollback the most recent adaptation."""
@@ -209,7 +209,7 @@ class AdaptiveSystem:
             "rolled_back_at": datetime.now().isoformat(),
         })
 
-        logger.info(f"⏪ Rolled back adaptation: {last_adaptation['adaptation'].get('description', 'Unknown')}")
+        logger.info("⏪ Rolled back adaptation: %s", last_adaptation['adaptation'].get('description', 'Unknown'))
         return True
 
     def update_metrics(self, coherence: float, performance: float):

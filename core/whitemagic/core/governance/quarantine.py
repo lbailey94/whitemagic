@@ -70,7 +70,7 @@ class QuarantineManager:
             if session_id in self._entries:
                 entry = self._entries[session_id]
                 entry.reason += f" | additional: {reason}"
-                logger.info(f"Updated quarantine for {session_id}: {reason}")
+                logger.info("Updated quarantine for %s: %s", session_id, reason)
                 return entry
             entry = QuarantineEntry(
                 session_id=session_id,
@@ -79,7 +79,7 @@ class QuarantineManager:
                 source=source,
             )
             self._entries[session_id] = entry
-            logger.warning(f"Session quarantined: {session_id} — {reason}")
+            logger.warning("Session quarantined: %s — %s", session_id, reason)
             return entry
 
     def release_session(self, session_id: str, review_notes: str = "") -> bool:
@@ -90,7 +90,7 @@ class QuarantineManager:
                 return False
             entry.reviewed = True
             entry.review_notes = review_notes
-            logger.info(f"Session released from quarantine: {session_id}")
+            logger.info("Session released from quarantine: %s", session_id)
             return True
 
     def remove_session(self, session_id: str) -> bool:
@@ -152,7 +152,7 @@ class QuarantineManager:
         expired = [sid for sid, e in self._entries.items() if e.quarantined_at < cutoff]
         for sid in expired:
             del self._entries[sid]
-            logger.info(f"Quarantine entry expired and removed: {sid}")
+            logger.info("Quarantine entry expired and removed: %s", sid)
 
 
 # ---------------------------------------------------------------------------

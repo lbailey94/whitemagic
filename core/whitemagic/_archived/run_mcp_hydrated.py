@@ -267,14 +267,14 @@ def register_tools() -> None:
         from whitemagic.tools.schema_adapter import adapt_schema
         from whitemagic.tools.unified_api import call_tool
     except ImportError as e:
-        logger.error(f"Failed to import registry or unified_api: {e}")
+        logger.error("Failed to import registry or unified_api: %s", e)
         return
 
     prat_mode = os.environ.get("WM_MCP_PRAT", "").strip().lower() in ("1", "true", "yes")
     lite_mode = os.environ.get("WM_MCP_LITE", "").strip().lower() in ("1", "true", "yes")
     mcp_client = os.environ.get("WM_MCP_CLIENT", "")
     if mcp_client:
-        logger.info(f"🔧 Schema adaptation active for client: {mcp_client}")
+        logger.info("🔧 Schema adaptation active for client: %s", mcp_client)
 
     runtime_status = get_runtime_status()
 
@@ -345,7 +345,7 @@ def register_tools() -> None:
             count += 1
 
         except Exception as e:
-            logger.error(f"Failed to register {name}: {e}")
+            logger.error("Failed to register %s: %s", name, e)
 
     status_suffix = " [DEGRADED]" if runtime_status.get("degraded_mode") else ""
     msg = f"✨ Hydrated WhiteMagic MCP Server with {count} tools{status_suffix}"

@@ -68,12 +68,12 @@ c_transition_hexagram hexPtr posPtr numPos = do
     poke newHexPtr newHex
     return newHexPtr
 
--- | Convert hexagram to number (1-64)
+-- | Convert hexagram to King Wen number (1-64)
 foreign export ccall c_hexagram_to_number :: Ptr Hexagram -> IO CInt
 c_hexagram_to_number :: Ptr Hexagram -> IO CInt
 c_hexagram_to_number hexPtr = do
     hex <- peek hexPtr
-    return $ fromIntegral $ toNumber hex
+    return $ fromIntegral $ toKingWenNumber hex
 
 -- | Check if hexagram is balanced
 foreign export ccall c_is_balanced_hexagram :: Ptr Hexagram -> IO CInt
@@ -143,7 +143,7 @@ c_hexagrams_to_numbers_batch hexPtrs n outNums = do
         getNum i = do
             hexPtr <- peekElemOff hexPtrs i
             hex <- peek hexPtr
-            pokeElemOff outNums i (fromIntegral $ toNumber hex)
+            pokeElemOff outNums i (fromIntegral $ toKingWenNumber hex)
     mapM_ getNum [0..numHex-1]
 
 -- | Batch free hexagrams from N hexagram pointers.

@@ -132,7 +132,7 @@ class WorkingMemory:
         if memory_id in self._chunks:
             chunk = self._chunks[memory_id]
             chunk.rehearse()
-            logger.debug(f"Rehearsed chunk {memory_id}: activation={chunk.effective_activation:.3f}")
+            logger.debug("Rehearsed chunk %s: activation=%s", memory_id, chunk.effective_activation)
             return chunk
 
         # Apply decay and evict dead chunks first
@@ -152,7 +152,7 @@ class WorkingMemory:
             tags=tags or [],
         )
         self._chunks[memory_id] = chunk
-        logger.debug(f"Attended to {memory_id}: {len(self._chunks)}/{self.capacity} slots used")
+        logger.debug("Attended to %s: %s/%s slots used", memory_id, len(self._chunks), self.capacity)
         return chunk
 
     def group(self, chunk_ids: list[str], group_id: str, group_title: str = "") -> WorkingChunk | None:
@@ -195,7 +195,7 @@ class WorkingMemory:
             grouped_ids=all_ids,
         )
         self._chunks[group_id] = chunk
-        logger.info(f"Grouped {len(valid_chunks)} chunks into {group_id}: freed {len(valid_chunks) - 1} slots")
+        logger.info("Grouped %s chunks into %s: freed %s slots", len(valid_chunks), group_id, len(valid_chunks) - 1)
         return chunk
 
     def forget(self, memory_id: str) -> bool:
@@ -261,7 +261,7 @@ class WorkingMemory:
         lowest_id = min(self._chunks, key=lambda k: self._chunks[k].effective_activation)
         evicted = self._chunks.pop(lowest_id)
         self._eviction_count += 1
-        logger.debug(f"Evicted {lowest_id} (activation={evicted.effective_activation:.3f})")
+        logger.debug("Evicted %s (activation=%s)", lowest_id, evicted.effective_activation)
 
     def get_status(self) -> dict[str, Any]:
         """Get working memory status."""

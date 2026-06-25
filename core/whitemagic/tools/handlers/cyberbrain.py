@@ -38,7 +38,11 @@ def handle_salience_spotlight(**kwargs: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
-    """Run dual-hemisphere reasoning (left=precise, right=creative) on a query."""
+    """Run dual-hemisphere reasoning (left=precise, right=creative) on a query.
+
+    Uses Rust PyO3 PyReasoningEngine for fact/rule inference when available,
+    feeding the results as context to the Python bicameral reasoner.
+    """
     query = kwargs.get("query", "")
     if not query:
         # Return usage info instead of error
@@ -54,6 +58,19 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
         }
 
     context = kwargs.get("context", {})
+
+    # Rust PyO3 reasoning acceleration: gather relevant facts
+    rust_facts = []
+    try:
+        import whitemagic_rs
+        engine = whitemagic_rs.PyReasoningEngine()
+        # Query Rust reasoning engine for facts related to the query
+        related = engine.query(query)
+        if related:
+            rust_facts = related if isinstance(related, list) else [related]
+            context.setdefault("rust_inferred_facts", rust_facts)
+    except Exception:
+        pass  # Rust reasoning optional — continue with Python
 
     try:
         import asyncio
@@ -73,10 +90,14 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
         else:
             result = asyncio.run(reasoner.reason(query, context=context))
 
-        return {
+        response = {
             "status": "success",
             "reasoning": result.to_dict(),
         }
+        if rust_facts:
+            response["rust_facts_inferred"] = len(rust_facts)
+            response["accelerated"] = True
+        return response
     except ImportError:
         return {
             "status": "success",

@@ -158,7 +158,7 @@ class BoundaryEngine:
 
         """
         if boundary_name not in self.boundaries:
-            logger.warning(f"Unknown boundary: {boundary_name}")
+            logger.warning("Unknown boundary: %s", boundary_name)
             return True
 
         boundary = self.boundaries[boundary_name]
@@ -265,7 +265,7 @@ class BoundaryEngine:
             },
         )
 
-        logger.info(f"Graceful stop initiated: {reason}")
+        logger.info("Graceful stop initiated: %s", reason)
 
         return {
             "stopped": True,

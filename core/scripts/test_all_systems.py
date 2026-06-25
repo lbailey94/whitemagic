@@ -10,7 +10,6 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
 import sqlite3
 import sys
@@ -52,20 +51,20 @@ class TestResults:
     def record(self, name: str, passed: bool, error: str = ""):
         if passed:
             self.passed += 1
-            log.info(f"  ✅ {name}")
+            log.info("  ✅ %s", name)
         else:
             self.failed += 1
             self.errors.append((name, error))
-            log.error(f"  ❌ {name}: {error}")
+            log.error("  ❌ %s: %s", name, error)
 
     def summary(self):
         total = self.passed + self.failed
         log.info(f"\n{'='*50}")
-        log.info(f"Test Results: {self.passed}/{total} passed, {self.failed} failed")
+        log.info("Test Results: %s/%s passed, %s failed", self.passed, total, self.failed)
         if self.errors:
             log.info(f"\nFailed tests:")
             for name, error in self.errors:
-                log.info(f"  - {name}: {error}")
+                log.info("  - %s: %s", name, error)
         return self.failed == 0
 
 
@@ -81,7 +80,6 @@ def test_julia_resonance():
 
     try:
         from whitemagic.core.resonance.julia_resonance import (
-            ResonanceEngine,
             get_resonance_engine,
         )
 
@@ -417,7 +415,7 @@ def test_db_integrity():
 
 def main():
     log.info("WhiteMagic Comprehensive Test Suite")
-    log.info(f"DB: {DB_PATH}")
+    log.info("DB: %s", DB_PATH)
     log.info(f"Time: {time.strftime('%H:%M:%S')}")
 
     start = time.perf_counter()
@@ -432,7 +430,7 @@ def main():
     test_db_integrity()
 
     elapsed = time.perf_counter() - start
-    log.info(f"\nTotal time: {elapsed:.2f}s")
+    log.info("\nTotal time: %ss", elapsed)
 
     success = results.summary()
     sys.exit(0 if success else 1)

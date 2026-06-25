@@ -101,8 +101,8 @@ class GardenWeaver:
         self._create_connections()
 
         logger.info("\n🎉 Weaving complete!")
-        logger.info(f"   Successful: {len(successful)}/27")
-        logger.info(f"   Connections: {len(self.connections)}")
+        logger.info("   Successful: %s/27", len(successful))
+        logger.info("   Connections: %s", len(self.connections))
 
         return {
             "successful": successful,
@@ -274,7 +274,7 @@ if __name__ == "__main__":
     health = weaver.get_ecosystem_health()
 
     logger.info("\n🌿 ECOSYSTEM HEALTH:")
-    logger.info(f"   Score: {health['health_score']:.1%}")
-    logger.info(f"   Resonance: {health['resonance_score']:.1%}")
-    logger.info(f"   Status: {health['status']}")
+    logger.info("   Score: %s", health['health_score'])
+    logger.info("   Resonance: %s", health['resonance_score'])
+    logger.info("   Status: %s", health['status'])
     logger.info("\n陰陽調和，萬物昇華 ✨")

@@ -1,6 +1,8 @@
 """Tests for Corpus Callosum Bus."""
 
 
+from unittest.mock import MagicMock, patch
+
 from whitemagic.core.intelligence.corpus_callosum import (
     CorpusCallosumBus,
     DebateResult,
@@ -11,6 +13,20 @@ from whitemagic.core.intelligence.hemisphere_agents import (
     LeftHemisphereAgent,
     RightHemisphereAgent,
 )
+
+
+def _mock_bicameral_result(tension: float = 0.5):
+    """Create a mock BicameralResult for fast testing."""
+    result = MagicMock()
+    result.left_analysis.content = f"Left analysis with tension {tension}"
+    result.right_analysis.content = f"Right analysis with tension {tension}"
+    left_crit = MagicMock()
+    left_crit.challenges = ["Left challenges right's assumptions"]
+    right_crit = MagicMock()
+    right_crit.challenges = ["Right challenges left's constraints"]
+    result.cross_critique = [left_crit, right_crit]
+    result.tension_score = tension
+    return result
 
 
 class TestDebateRound:
@@ -54,7 +70,13 @@ class TestSynthesisArbiter:
 
 
 class TestCorpusCallosumBus:
-    def test_debate_produces_result(self):
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_debate_produces_result(self, mock_br_cls, mock_get_br, mock_run):
+        mock_run.return_value = _mock_bicameral_result(0.3)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
         result = bus.debate("Should we refactor memory tiers?")
         assert isinstance(result, DebateResult)
@@ -63,14 +85,26 @@ class TestCorpusCallosumBus:
         assert result.debate_id.startswith("debate_")
         assert result.timestamp is not None
 
-    def test_debate_low_tension_consensus(self):
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_debate_low_tension_consensus(self, mock_br_cls, mock_get_br, mock_run):
+        mock_run.return_value = _mock_bicameral_result(0.2)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
         result = bus.debate("Should we add comments to code?")
         assert result.final_tension < 0.9
         assert result.escalated is False
         assert "CONSENSUS" in result.synthesis or "SYNTHESIS" in result.synthesis
 
-    def test_get_debate(self):
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_get_debate(self, mock_br_cls, mock_get_br, mock_run):
+        mock_run.return_value = _mock_bicameral_result(0.3)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
         result = bus.debate("Topic A")
         fetched = bus.get_debate(result.debate_id)
@@ -81,22 +115,53 @@ class TestCorpusCallosumBus:
         bus = CorpusCallosumBus()
         assert bus.get_debate("nonexistent") is None
 
-    def test_status(self):
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_status(self, mock_br_cls, mock_get_br, mock_run):
+        mock_run.return_value = _mock_bicameral_result(0.3)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
         bus.debate("Topic B")
         status = bus.status()
         assert status["total_debates"] >= 1
         assert "recent_avg_tension" in status
 
-    def test_max_three_rounds(self):
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_max_three_rounds(self, mock_br_cls, mock_get_br, mock_run):
+        mock_run.return_value = _mock_bicameral_result(0.3)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
         result = bus.debate("Topic C")
         assert len(result.rounds) <= CorpusCallosumBus.MAX_ROUNDS
 
-    def test_karma_logged(self):
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_karma_logged(self, mock_br_cls, mock_get_br, mock_run):
+        mock_run.return_value = _mock_bicameral_result(0.3)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
         result = bus.debate("Topic D")
         assert result.karma_logged is True
+
+    @patch("whitemagic.core.intelligence.corpus_callosum.asyncio.run")
+    @patch("whitemagic.core.intelligence.bicameral.get_bicameral_reasoner")
+    @patch("whitemagic.core.intelligence.bicameral.BicameralReasoner")
+    def test_followup_rounds_receive_context(self, mock_br_cls, mock_get_br, mock_run):
+        """Rounds 2+3 should use real BicameralReasoner with prior round context."""
+        mock_run.return_value = _mock_bicameral_result(0.4)
+        mock_get_br.return_value = MagicMock()
+        mock_br_cls.return_value = MagicMock()
+        bus = CorpusCallosumBus()
+        result = bus.debate("Topic E")
+        # All 3 rounds should call asyncio.run (real reasoner path)
+        assert mock_run.call_count == 3
 
 
 class TestHemisphereAgents:

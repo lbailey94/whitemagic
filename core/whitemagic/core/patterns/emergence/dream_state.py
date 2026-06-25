@@ -98,7 +98,7 @@ class DreamState:
         insights = self._synthesize_patterns(patterns)
         self._integrate_insights(insights)
 
-        logger.info(f"✨ Discovered {len(insights)} insights during dream state")
+        logger.info("✨ Discovered %s insights during dream state", len(insights))
         return insights
 
     def _load_recent_patterns(self) -> list[dict[str, Any]]:
@@ -238,6 +238,7 @@ class DreamState:
                         "novelty": insight.novelty_score,
                         "synthesized_from": insight.synthesized_from,
                     },
+                    galaxy="creative_solutions",
                 )
                 logger.info("💾 Insight %s persisted to Data Sea", insight.id, exc_info=True)
             except Exception as e:
@@ -298,6 +299,61 @@ class DreamState:
             reverse=True,
         )
 
+    # ------------------------------------------------------------------
+    # Grimoire facade methods (fused from GrimoireEngine)
+    # ------------------------------------------------------------------
+
+    _grimoire_instance: Any = None
+
+    def _get_grimoire(self):
+        """Lazy accessor for the fused Grimoire sub-engine."""
+        if self._grimoire_instance is None:
+            from whitemagic.core.intelligence.grimoire_engine import Grimoire
+            self._grimoire_instance = Grimoire()
+        return self._grimoire_instance
+
+    def grimoire_awaken(self):
+        """Awaken the grimoire (start listening for spell context)."""
+        return self._get_grimoire().awaken()
+
+    def grimoire_update_context(self, **kwargs: Any):
+        """Update the grimoire context (task, emotional_state, keywords, etc.)."""
+        return self._get_grimoire().update_context(**kwargs)
+
+    def grimoire_recommend_spells(self, max_results: int = 3):
+        """Recommend spells based on current grimoire context."""
+        return self._get_grimoire().recommend_spells(max_results=max_results)
+
+    def grimoire_status(self) -> dict[str, Any]:
+        """Return grimoire engine status."""
+        gr = self._get_grimoire()
+        return {
+            "state": gr.state.value,
+            "wu_xing": gr.context.wu_xing.value,
+            "yin_yang": gr.context.yin_yang.value,
+            "task": gr.context.task,
+        }
+
+
+# Singleton instance
+_dream_state: DreamState | None = None
+
+
+def get_dream_state() -> DreamState:
+    """Get the singleton DreamState instance."""
+    global _dream_state
+    if _dream_state is None:
+        _dream_state = DreamState()
+    return _dream_state
+
+
+def get_grimoire_engine():
+    """Backward-compat — get_grimoire_engine now delegates to DreamState.
+
+    The GrimoireEngine has been fused into ResilienceEngine (slot 8, Willow 柳).
+    """
+    return get_dream_state()._get_grimoire()
+
 
 if __name__ == "__main__":
     dream = DreamState()
@@ -306,5 +362,5 @@ if __name__ == "__main__":
 
     logger.info("\n🌟 Dream Insights:")
     for insight in insights:
-        logger.info(f"  • {insight.insight}")
-        logger.info(f"    Novelty: {insight.novelty_score:.2f} | Value: {insight.practical_value:.2f}")
+        logger.info("  • %s", insight.insight)
+        logger.info("    Novelty: %s | Value: %s", insight.novelty_score, insight.practical_value)

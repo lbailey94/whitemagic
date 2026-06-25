@@ -136,7 +136,7 @@ class EdgeInference:
         except Exception as e:
             # Fallback to Python if Rust fails
             import logging
-            logging.getLogger(__name__).debug(f"PatternEngine failed: {e}")
+            logging.getLogger(__name__).debug("PatternEngine failed: %s", e)
             return None
 
         return None

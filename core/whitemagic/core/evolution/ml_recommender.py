@@ -200,7 +200,7 @@ class ToolRecommender:
                 for tool in sequence:
                     self.record_tool_call(tool)
 
-        logger.info(f"📚 Trained on {len(patterns)} patterns")
+        logger.info("📚 Trained on %s patterns", len(patterns))
 
     def export_model(self, filepath: str):
         """Export the learned model to JSON."""
@@ -221,7 +221,7 @@ class ToolRecommender:
         with open(filepath, 'w') as f:
             json.dump(model_data, f, indent=2)
 
-        logger.info(f"💾 Model exported to {filepath}")
+        logger.info("💾 Model exported to %s", filepath)
 
     def import_model(self, filepath: str):
         """Import a learned model from JSON."""
@@ -245,7 +245,7 @@ class ToolRecommender:
 
         self.sequences_seen = model_data.get("sequences_seen", 0)
 
-        logger.info(f"📥 Model imported from {filepath}")
+        logger.info("📥 Model imported from %s", filepath)
 
 
 class AutocastEnhancer:

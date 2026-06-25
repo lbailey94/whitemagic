@@ -71,9 +71,9 @@ class EmergenceDetector:
 
     def _log_emergence(self, behavior: NovelBehavior) -> None:
         """Log the emergent behavior."""
-        logger.info(f" EMERGENCE DETECTED: {behavior.name}")
-        logger.info(f"   Confidence: {behavior.confidence:.0%}")
-        logger.info(f"   Trigger: {behavior.trigger}")
+        logger.info(" EMERGENCE DETECTED: %s", behavior.name)
+        logger.info("   Confidence: %s", behavior.confidence)
+        logger.info("   Trigger: %s", behavior.trigger)
 
     def get_recent_emergences(self, count: int = 5) -> list[dict[str, Any]]:
         """Get recent emergent behaviors (for pattern discovery)."""

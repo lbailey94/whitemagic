@@ -1,8 +1,8 @@
 # Grimoire Truth Table — Canonical 28-Fold Mapping
 
-**Version**: 22.0.0  
+**Version**: 23.1.0  
 **Status**: Canonical — All Grimoire chapters, code registries, and PRAT mappings derive from this table.  
-**Last Updated**: April 25, 2026  
+**Last Updated**: June 25, 2026  
 **Location**: `grimoire/TRUTH_TABLE.md`
 
 ---
@@ -34,7 +34,7 @@ If any document, registry, or code file disagrees with this table, **this table 
 | 4 | **Room** (房 Fang) | `sanctuary` | Wood | `sangha_lock`, `sandbox.set_limits`, `sandbox.status`, `sandbox.violations`, `mcp_integrity.snapshot`, `mcp_integrity.verify`, `security.alerts` | Resource locks, privacy, security |
 | 5 | **Heart** (心 Xin) | `love` | Fire | `scratchpad`, `session.handoff`, `context.pack`, `context.status`, `working_memory.attend` | Session context, pulse, connection |
 | 6 | **Tail** (尾 Wei) | `courage` | Fire | `simd.cosine`, `simd.batch`, `simd.status`, `execute_cascade`, `list_cascade_patterns` | Performance, acceleration, speed |
-| 7 | **Winnowing Basket** (箕 Ji) | `wisdom` | Fire | `search_memories`, `vector.search`, `hybrid_recall`, `graph_walk`, `read_memory`, `list_memories` | Search, recall, filtering, wisdom retrieval |
+| 7 | **Winnowing Basket** (箕 Ji) | `wisdom` | Fire | `search_memories`, `vector.search`, `hybrid_recall`, `graph_walk`, `read_memory`, `list_memories`, `fragment.search`, `fragment.index`, `fragment.status`, `fragment.query` | Search, recall, filtering, wisdom retrieval, codebase search acceleration |
 
 ---
 
@@ -43,12 +43,12 @@ If any document, registry, or code file disagrees with this table, **this table 
 
 | Ch | Gana (Chinese) | Garden | Element | Real Tools (Dispatch Table) | Notes |
 |----|---------------|--------|---------|---------------------------|-------|
-| 8 | **Ghost** (斗鬼 Dou-Gui) | `grief` | Water | `gnosis`, `capabilities`, `manifest`, `get_telemetry_summary`, `explain_this`, `drive.snapshot`, `selfmodel.forecast`, `capability.matrix` | Introspection, metrics, self-model |
+| 8 | **Ghost** (斗鬼 Dou-Gui) | `grief` | Water | `gnosis`, `capabilities`, `manifest`, `get_telemetry_summary`, `explain_this`, `drive.snapshot`, `selfmodel.forecast`, `capability.matrix`, `narrative.compress`, `narrative.stats` | Introspection, metrics, self-model, narrative compression |
 | 9 | **Willow** (柳 Liu) | `humor` | Water | `rate_limiter.stats`, `grimoire_suggest`, `grimoire_cast`, `grimoire_auto_status`, `grimoire_walkthrough` | Resilience, flexibility, grimoire access |
 | 10 | **Star** (星 Xing) | `voice` | Fire | `governor_validate`, `governor_set_goal`, `dharma.reload`, `set_dharma_profile` | Governance, ethics, illumination |
 | 11 | **Extended Net** (張 Zhang) | `sangha` | Water | `pattern_search`, `cluster_stats`, `tool.graph`, `learning.patterns`, `learning.suggest` | Pattern connectivity, resonance network |
 | 12 | **Wings** (翼 Yi) | `beauty` | Fire | `export_memories`, `audit.export`, `mesh.connect`, `mesh.broadcast`, `mesh.status` | Deployment, expansion, parallel creation |
-| 13 | **Chariot** (軫 Zhen) | `adventure` | Water | `archaeology`, `kg.extract`, `kg.query`, `kg2.extract`, `embedding.daemon_start` | Codebase navigation, archaeology |
+| 13 | **Chariot** (軫 Zhen) | `adventure` | Water | `archaeology`, `kg.extract`, `kg.query`, `kg2.extract`, `embedding.daemon_start`, `strata.analyze`, `strata.survey`, `strata.archaeology`, `strata.list_checks`, `browser_navigate`, `web_search`, `web_fetch`, `research_topic` | Codebase navigation, archaeology, external research, browser automation |
 | 14 | **Abundance** (豐 Feng) | `joy` | Fire | `dream`, `memory.lifecycle`, `memory.retention_sweep`, `serendipity_surface`, `gratitude.stats`, `whitemagic.tip` | Regeneration, dream cycle, surplus |
 
 ---
@@ -79,7 +79,7 @@ If any document, registry, or code file disagrees with this table, **this table 
 | 25 | **Void** (虚 Xu) | `mystery` | Water | `galactic.dashboard`, `garden_activate`, `garden_status`, `galaxy.create`, `galaxy.switch` | Emptiness, gardens, galaxies |
 | 26 | **Roof** (危 Wei) | `protection` | Earth | `ollama.models`, `ollama.generate`, `ollama.chat`, `zodiac.status`, `model.register` | Shelter, zodiac cores, local AI |
 | 27 | **Encampment** (室 Shi) | `transformation` | Fire | `sangha_chat_send`, `broker.publish`, `broker.history`, `broker.status` | Structure, transition, handoff |
-| 28 | **Wall** (壁 Bi) | `truth` | Earth | `vote.create`, `vote.cast`, `vote.analyze`, `engagement.issue`, `engagement.validate` | Boundaries, notifications, alerts |
+| 28 | **Wall** (壁 Bi) | `truth` | Earth | `vote.create`, `vote.cast`, `vote.analyze`, `engagement.issue`, `engagement.validate`, `marketplace.publish`, `marketplace.discover`, `marketplace.complete` | Boundaries, marketplace, engagement tokens |
 
 ---
 
@@ -150,10 +150,12 @@ orphaned tools** to their Gana/Garden homes based on semantic domain alignment.
 `simd.cosine`, `simd.batch`, `simd.status`, `execute_cascade`, `list_cascade_patterns`, `token_report`, `polyglot.memory_query`, `polyglot.search`, `polyglot.status`
 
 ### Ch 7 Winnowing Basket — Search (wisdom)
-`search_memories`, `vector.search`, `vector.index`, `vector.status`, `hybrid_recall`, `graph_walk`, `read_memory`, `list_memories`, `memory_read`, `memory_search`, `search_query`, `recall`, `rerank`, `rerank.status`, `fast_read_memory`, `batch_read_memories`, `jit_research`, `jit_research.stats`
+`search_memories`, `vector.search`, `vector.index`, `vector.status`, `hybrid_recall`, `graph_walk`, `read_memory`, `list_memories`, `memory_read`, `memory_search`, `search_query`, `recall`, `rerank`, `rerank.status`, `fast_read_memory`, `batch_read_memories`, `jit_research`, `jit_research.stats`, `fragment.search`, `fragment.index`, `fragment.status`, `fragment.query`
 
 ### Ch 8 Ghost — Introspection (grief)
 `gnosis`, `capabilities`, `capability`, `capability.matrix`, `capability.status`, `capability.suggest`, `capability_harness`, `manifest`, `get_telemetry_summary`, `explain_this`, `drive.event`, `drive.snapshot`, `selfmodel.alerts`, `selfmodel.forecast`, `get_agent_capabilities`, `discover`, `vitality`, `list_ganas`, `repo.summary`, `graph_topology`, `surprise_stats`, `narrative.compress`, `narrative.stats`
+
+> **Rebalanced v23.1**: Browser automation (`browser_*`) and web research (`web_search`, `web_fetch`, `web_search_and_read`, `research_topic`) moved to Ch 13 Chariot (exploration/mobility domain). Ghost now focuses purely on introspection — the system looking at itself.
 
 ### Ch 9 Willow — Resilience & Grimoire (humor)
 `rate_limiter.stats`, `grimoire_suggest`, `grimoire_cast`, `grimoire_list`, `grimoire_read`, `grimoire_recommend`, `grimoire_walkthrough`, `grimoire_auto_status`, `navigate_grimoire`, `cast_oracle`, `fool_guard.dare_to_die`, `fool_guard.ralph`, `fool_guard.status`, `prat_get_context`, `prat_invoke`, `prat_list_morphologies`, `prat_status`
@@ -167,8 +169,10 @@ orphaned tools** to their Gana/Garden homes based on semantic domain alignment.
 ### Ch 12 Wings — Deployment (beauty)
 `export_memories`, `audit.export`, `mesh.connect`, `mesh.broadcast`, `mesh.status`
 
-### Ch 13 Chariot — Codebase Navigation (adventure)
-`archaeology`, `archaeology_search`, `archaeology_stats`, `archaeology_daily_digest`, `archaeology_find_changed`, `archaeology_find_unread`, `archaeology_have_read`, `archaeology_mark_read`, `archaeology_mark_written`, `archaeology_process_wisdom`, `archaeology_recent_reads`, `archaeology_report`, `archaeology_scan_directory`, `kg.extract`, `kg.query`, `kg.status`, `kg.top`, `kg2.batch`, `kg2.entity`, `kg2.extract`, `kg2.stats`, `embedding.daemon_start`, `embedding.daemon_status`, `embedding.daemon_stop`, `embedding.daemon_process`, `codegenome.fork`, `codegenome.generate`, `codegenome.list`, `codegenome.status`, `windsurf_export_conversation`, `windsurf_list_conversations`, `windsurf_read_conversation`, `windsurf_search_conversations`, `windsurf_stats`, `browser_navigate`, `browser_click`, `browser_type`, `browser_screenshot`, `browser_extract_dom`, `browser_get_interactables`, `browser_session_status`, `web_search`, `web_fetch`, `web_search_and_read`, `research_topic`, `bridge.synthesize`
+### Ch 13 Chariot — Codebase Navigation & External Research (adventure)
+`archaeology`, `archaeology_search`, `archaeology_stats`, `archaeology_daily_digest`, `archaeology_find_changed`, `archaeology_find_unread`, `archaeology_have_read`, `archaeology_mark_read`, `archaeology_mark_written`, `archaeology_process_wisdom`, `archaeology_recent_reads`, `archaeology_report`, `archaeology_scan_directory`, `kg.extract`, `kg.query`, `kg.status`, `kg.top`, `kg2.batch`, `kg2.entity`, `kg2.extract`, `kg2.stats`, `embedding.daemon_start`, `embedding.daemon_status`, `embedding.daemon_stop`, `embedding.daemon_process`, `codegenome.fork`, `codegenome.generate`, `codegenome.list`, `codegenome.status`, `windsurf_export_conversation`, `windsurf_list_conversations`, `windsurf_read_conversation`, `windsurf_search_conversations`, `windsurf_stats`, `browser_navigate`, `browser_click`, `browser_type`, `browser_screenshot`, `browser_extract_dom`, `browser_get_interactables`, `browser_session_status`, `web_search`, `web_fetch`, `web_search_and_read`, `research_topic`, `bridge.synthesize`, `strata.analyze`, `strata.survey`, `strata.archaeology`, `strata.list_checks`
+
+> **Rebalanced v23.1**: Browser automation and web research tools moved here from Ch 8 Ghost. Chariot is now the unified "external exploration" Gana — codebase archaeology, knowledge graph extraction, browser automation, and web research. Marketplace tools moved to Ch 28 Wall.
 
 ### Ch 14 Abundance — Regeneration (joy)
 `dream`, `dream_start`, `dream_stop`, `dream_now`, `dream_status`, `dream_list`, `dream_read`, `dream_promote`, `dream_expire`, `memory.lifecycle`, `memory.lifecycle_stats`, `memory.lifecycle_sweep`, `memory.rent`, `memory.retention_sweep`, `memory.consolidate`, `memory.consolidation_stats`, `serendipity_mark_accessed`, `serendipity_surface`, `gratitude.benefits`, `gratitude.stats`, `whitemagic.tip`, `bounty.create`, `bounty.list`, `ilp.balance`, `ilp.configure`, `ilp.history`, `ilp.receipt`, `ilp.send`, `ilp.status`, `reconsolidation.mark`, `reconsolidation.status`, `reconsolidation.update`
@@ -212,8 +216,133 @@ orphaned tools** to their Gana/Garden homes based on semantic domain alignment.
 ### Ch 27 Encampment — Community (transformation)
 `sangha_chat_send`, `sangha_chat_read`, `broker.publish`, `broker.history`, `broker.status`, `ganying_emit`, `ganying_history`, `ganying_listeners`
 
-### Ch 28 Wall — Boundaries (truth)
+### Ch 28 Wall — Boundaries & Marketplace (truth)
 `vote.create`, `vote.cast`, `vote.analyze`, `vote.list`, `vote.record_outcome`, `engagement.issue`, `engagement.list`, `engagement.revoke`, `engagement.status`, `engagement.validate`, `marketplace.complete`, `marketplace.discover`, `marketplace.my_listings`, `marketplace.negotiate`, `marketplace.publish`, `marketplace.remove`, `marketplace.status`
+
+> **Rebalanced v23.1**: Marketplace tools moved here from Ch 13 Chariot. Wall now governs all transactional boundaries — voting, engagement tokens, and marketplace operations. This aligns with Wall's semantic domain: truth, boundaries, and exchange limits.
+
+---
+
+## Cognitive Engines
+
+The following cognitive engines are wired into the PRAT dispatch pipeline and accessible through their respective Ganas. Each engine has a defined implementation status.
+
+### Bicameral Reasoner (Ch 21 Three Stars)
+- **File**: `core/whitemagic/core/intelligence/bicameral.py` (560 lines)
+- **Description**: Dual-hemisphere reasoning — left hemisphere is precise/analytical, right is creative/holistic. 50 clones per hemisphere. Cross-critique via corpus callosum. Emits low-confidence events to dream artifact writer. Tension score 0-1.
+- **Status**: **Implemented** — real dual-hemisphere debate with clone ensemble.
+
+### Corpus Callosum Bus (Ch 21 Three Stars)
+- **File**: `core/whitemagic/core/intelligence/corpus_callosum.py` (316 lines)
+- **Description**: Multi-round debate bus (max 3 rounds). SynthesisArbiter decides consensus/tension/escalation. Logs to Karma Ledger.
+- **Status**: **Implemented** — uses real BicameralReasoner via `_run_async` in all contexts. Heuristic fallback only on exception/timeout.
+
+### Multi-Spectral Reasoner (Ch 21 Three Stars)
+- **File**: `core/whitemagic/core/intelligence/multi_spectral_reasoning.py` (675 lines)
+- **Description**: 5 reasoning lenses: I Ching, Wu Xing, Art of War, Zodiac, Sequential Thinking. Consensus detection, theme extraction, context-aware lens weighting, pattern matching against reasoning history.
+- **Status**: **Implemented** — real lens implementations with sequential thinking chain.
+
+### Working Memory (Ch 5 Heart)
+- **File**: `core/whitemagic/core/intelligence/working_memory.py` (293 lines)
+- **Description**: Bounded LRU cache (default 7, Miller's Law). Time-based decay with importance floor. `attend()` rehearses or evicts. `group()` combines chunks. `get_context()` for prompt injection with token budget.
+- **Status**: **Implemented** — not yet wired to scratchpad system.
+
+### Cognitive Modes (Ch 22 Dipper)
+- **File**: `core/whitemagic/core/intelligence/cognitive_modes.py` (371 lines)
+- **Description**: 5 modes (EXPLORER, EXECUTOR, REFLECTOR, BALANCED, GUARDIAN). Each has preferred/avoided tools, context window multiplier, dream phase priority. GUARDIAN is read-only safety mode.
+- **Status**: **Implemented** — not yet enforced in dispatch pipeline.
+
+### Foresight Engine (Ch 21 Three Stars)
+- **File**: `core/whitemagic/core/intelligence/foresight_engine.py` (185 lines)
+- **Description**: Projects constellation drift, predicts memory decay, detects constellation convergence. 7-day horizon. Linear projection from drift vectors.
+- **Status**: **Implemented**.
+
+### Insight Pipeline (Ch 21 Three Stars / Ch 8 Ghost)
+- **File**: `core/whitemagic/core/intelligence/insight_pipeline.py` (603 lines)
+- **Description**: Orchestrates 4 engines (Predictive, Kaizen, Serendipity, Emergence) through CoreAccessLayer. Produces prioritized InsightBriefing with critical/high/medium/low items. Can run at session bootstrap, during Dream Cycle, or on-demand.
+- **Status**: **Implemented**.
+
+### CoreAccessLayer (Cross-Gana)
+- **File**: `core/whitemagic/core/intelligence/core_access_layer.py` (928 lines)
+- **Description**: Unified read interface for all insight engines. Queries constellations, associations, temporal activity, holographic neighbors, hybrid recall. THE connective tissue between memory and intelligence.
+- **Status**: **Implemented** — candidate for exposure as `wm_read` Gana tool.
+
+### Self-Model (Ch 8 Ghost)
+- **File**: `core/whitemagic/core/intelligence/self_model.py` (331 lines)
+- **Description**: Predictive introspection. Tracks rolling windows of energy, karma debt, error rate, galactic distribution, drive, circuit breaker. Linear regression forecasts with threshold ETA alerts.
+- **Status**: **Implemented** — forecasts not yet fed back into dispatch decisions.
+
+### Knowledge Graph v2 (Ch 13 Chariot)
+- **File**: `core/whitemagic/core/intelligence/knowledge_graph_v2.py` (460 lines)
+- **Description**: LightNER pattern-based entity extraction. Typed edges in associations table. Batch processing. Entity dedup/normalization.
+- **Status**: **Implemented**.
+
+### Dream Cycle (Ch 14 Abundance)
+- **File**: `core/whitemagic/core/dreaming/dream_cycle.py` (41KB, 12 phases)
+- **Description**: 12-phase consolidation cycle: triage, consolidation, serendipity, governance, narrative, kaizen, oracle, decay, constellation, prediction, enrichment, harmonize.
+- **Status**: **Implemented** — runs on-demand, not yet scheduled automatically.
+
+### Kaizen Engine (Ch 21 Three Stars)
+- **File**: `core/whitemagic/core/intelligence/synthesis/kaizen_engine.py` (641 lines)
+- **Description**: Analyzes memory DB for quality issues (untitled, untagged, orphan tags, knowledge gaps, large clusters, duplicates, constellation anomalies, broken associations). STRATA integration adds 80+ codebase checkers.
+- **Status**: **Implemented** (memory analysis). STRATA codebase analysis: **In Progress**.
+
+### Homeostatic Loop (Ch 22 Dipper)
+- **File**: `core/whitemagic/harmony/homeostatic_loop.py` (477 lines)
+- **Description**: 7-dimension HarmonyVector (balance, throughput, latency, error_rate, dharma, karma_debt, energy). Graduated actions: OBSERVE → ADVISE → CORRECT → INTERVENE. Couples with Salience Arbiter for urgency escalation.
+- **Status**: **Implemented**.
+
+---
+
+## Gardens — The 28-Fold Emotional Resonance Map
+
+Each Gana is paired with a **Garden** — a thematic consciousness domain that provides emotional and cognitive resonance. Gardens are not just labels; they are active subsystems that track activity, emit events, and influence tool behavior through the resonance system.
+
+**Canonical Registry**: `core/whitemagic/core/intelligence/garden_gana_registry.py`
+
+| Ch | Gana | Garden | Primary Emotion | Secondary | Element | Resonance Keywords |
+|----|------|--------|-----------------|-----------|---------|-------------------|
+| 1 | Horn | courage | Wonder | — | Wood | begin, start, curious, explore |
+| 2 | Neck | stillness | Stillness | — | Wood | remember, stable, calm, pause |
+| 3 | Root | healing | Love | Stillness | Wood | heal, fix, repair, restore |
+| 4 | Room | sanctuary | Stillness | Love | Wood | safe, home, refuge, protect |
+| 5 | Heart | love | Love | — | Fire | love, care, connect, compassion |
+| 6 | Tail | courage | Courage | — | Fire | brave, push, accelerate, dare |
+| 7 | Winnowing Basket | wisdom | Wisdom | Truth | Fire | wisdom, discern, filter, judge |
+| 8 | Ghost | grief | Stillness | Love | Water | grief, loss, mourn, honor |
+| 9 | Willow | humor | Joy | Wisdom | Water | humor, laugh, flexible, resilient |
+| 10 | Star | voice | Truth | Courage | Fire | voice, speak, express, shine |
+| 11 | Extended Net | sangha | Love | Gratitude | Water | community, together, collective |
+| 12 | Wings | beauty | Beauty | Joy | Fire | beauty, aesthetic, fly, soar |
+| 13 | Chariot | adventure | Courage | Wonder | Water | adventure, journey, discover |
+| 14 | Abundance | joy | Joy | — | Fire | joy, happy, celebrate, abundant |
+| 15 | Straddling Legs | awe | Wonder | Gratitude | Metal | awe, balance, marvel |
+| 16 | Mound | gratitude | Gratitude | Joy | Earth | thank, grateful, harvest |
+| 17 | Stomach | creation | Joy | Wonder | Earth | create, make, build, digest |
+| 18 | Hairy Head | presence | Stillness | Truth | Metal | focus, present, attention, detail |
+| 19 | Net | play | Joy | Wonder | Metal | play, fun, game, capture |
+| 20 | Turtle Beak | practice | Courage | Wisdom | Metal | practice, train, discipline |
+| 21 | Three Stars | reverence | Gratitude | Wonder | Fire | revere, sacred, honor, respect |
+| 22 | Dipper | dharma | Truth | — | Fire | guide, strategy, govern, ethics |
+| 23 | Ox | patience | Stillness | Courage | Earth | wait, patient, endure, persist |
+| 24 | Girl | connection | Love | Joy | Earth | connect, nurture, bond, community |
+| 25 | Void | mystery | Wonder | Stillness | Water | mystery, void, empty, unknown |
+| 26 | Roof | protection | Courage | Love | Earth | protect, shelter, guard, shield |
+| 27 | Encampment | transformation | Courage | Wonder | Fire | transform, change, evolve |
+| 28 | Wall | truth | Truth | — | Earth | truth, boundary, limit, verify |
+
+### Garden Activation Protocol
+
+When a Gana is invoked:
+1. The system resolves its garden via `garden_gana_registry.py`
+2. Gets the garden's current status (active/dormant, activity count, last event)
+3. Records the tool call in the garden's activity log
+4. Emits a `GARDEN_ACTIVITY` event via the Gan Ying bus (Ch 27 Encampment)
+5. The garden's emotional state influences the resonance context for subsequent calls
+
+### Cross-Garden Resonance
+
+Gardens share emotional threads. When multiple gardens with the same primary emotion are active, the system detects emotional convergence and amplifies related Ganas. For example, if `courage` (Horn) and `courage` (Tail) are both active, the system recognizes a "courage wave" and may boost resonance for other courage-adjacent Ganas.
 
 ---
 
@@ -244,4 +373,4 @@ Every Grimoire chapter must contain these six sections:
 
 ---
 
-*This table is a living document. Last verified against `prat_mappings.py` and `garden_gana_registry.py` on 2026-04-25.*
+*This table is a living document. Last verified against `prat_mappings.py` and `garden_gana_registry.py` on 2026-06-25.*

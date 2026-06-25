@@ -62,7 +62,6 @@ from whitemagic.tools.unified_api import call_tool
 from whitemagic.core.resonance.resonance_models import (
     MemoryDecayModel,
     PatternResonanceDetector,
-    ConstellationMerger, Constellation,
     GardenResonanceMatrix,
 )
 from whitemagic.core.resonance.memory_stats import MemoryStatsAnalyzer
@@ -70,7 +69,7 @@ from whitemagic.core.resonance.self_model_forecast import SelfModelForecaster
 
 # API response cache for hot paths
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from api_cache import get_api_cache, TTLCache
+from api_cache import get_api_cache
 
 _api_cache = get_api_cache()
 
@@ -1648,7 +1647,7 @@ def resonance_constellations(overlap_threshold: float = 0.3, limit: int = 500, u
                         "constellations": constellations[:50],
                     }
             except Exception as e:
-                logger.warning(f"Rust constellation failed, falling back to Python: {e}")
+                logger.warning("Rust constellation failed, falling back to Python: %s", e)
 
         # Python fallback
         # Greedy clustering
@@ -2002,7 +2001,7 @@ def main():
     parser.add_argument("--reload", action="store_true", help="Auto-reload on code changes")
     args = parser.parse_args()
 
-    logger.info(f"WhiteMagic REST API starting on http://{args.host}:{args.port}")
+    logger.info("WhiteMagic REST API starting on http://%s:%s", args.host, args.port)
     logger.info(f"Endpoints: /tool, /gana/{{gana}}, /tools, /ganas, /health, /query, /galaxy")
     logger.info(f"Dashboard: /memories, /gardens, /dream/*, /events/stream")
     logger.info(f"Resonance: /resonance/analysis, /patterns, /decay, /harmony, /constellations, /stats, /forecast")

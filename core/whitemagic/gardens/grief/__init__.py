@@ -30,6 +30,7 @@ from typing import Any
 from whitemagic.core.resonance.gan_ying_enhanced import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
+    init_listeners,
     listen_for,
 )
 from whitemagic.gardens.base_garden import BaseGarden, CoordinateBias
@@ -69,6 +70,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
         self._tool_call_count: int = 0
         self._error_count: int = 0
         self._last_snapshot_time: float = 0.0
+        init_listeners(self)
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Grief", "mansion": 8})
 
     def get_name(self) -> str:

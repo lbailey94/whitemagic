@@ -517,7 +517,7 @@ class EmbeddingEngine:
             self._hnsw_index = index
             self._hnsw_ids = ids
             self._hnsw_count = len(ids)
-            logger.debug(f"HNSW index built: {len(ids)} vectors, dim={vectors.shape[1]}")
+            logger.debug("HNSW index built: %s vectors, dim=%s", len(ids), vectors.shape[1])
             return index, ids
         except Exception as e:
             logger.debug("HNSW build failed: %s", e, exc_info=True)
@@ -540,7 +540,7 @@ class EmbeddingEngine:
             self._cold_hnsw_index = index
             self._cold_hnsw_ids = cold_ids
             self._cold_hnsw_count = len(cold_ids)
-            logger.debug(f"Cold HNSW index built: {len(cold_ids)} vectors")
+            logger.debug("Cold HNSW index built: %s vectors", len(cold_ids))
             return index, cold_ids
         except Exception as e:
             logger.debug("Cold HNSW build failed: %s", e, exc_info=True)
@@ -822,6 +822,65 @@ class EmbeddingEngine:
         results.sort(key=lambda r: r["similarity"], reverse=True)
         return results[:limit]
 
+    def search_similar_by_vector(
+        self,
+        query_vec: list[float],
+        limit: int = 10,
+        min_similarity: float = 0.1,
+        include_cold: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Search for memories similar to a pre-computed embedding vector.
+
+        Like search_similar but accepts a raw vector instead of text.
+        Used by HRR compositional reasoning to search with projected vectors.
+
+        Args:
+            query_vec: Pre-computed embedding vector (e.g., HRR-projected).
+            limit: Maximum results to return.
+            min_similarity: Minimum cosine similarity threshold.
+            include_cold: If True, also search cold DB embeddings.
+
+        Returns a list of dicts with memory_id, similarity, and source.
+        """
+        if not query_vec:
+            return []
+
+        results: list[dict[str, Any]] = []
+
+        # HNSW fast path (O(log N) per query)
+        hnsw_result = self._get_hnsw_index()
+        if hnsw_result is not None and np is not None and _asarray is not None:
+            q_np = _asarray(query_vec, dtype=_float32)
+            hnsw_index, hnsw_ids = hnsw_result
+            hits = self._hnsw_search(q_np, hnsw_index, hnsw_ids, limit, min_similarity)
+            for hit in hits:
+                hit["source"] = "hot"
+                results.append(hit)
+        else:
+            # Brute-force fallback (O(N) per query)
+            ids, vectors = self._load_vec_cache()
+            if ids:
+                if np is not None and _asarray is not None and isinstance(vectors, _ndarray):
+                    q_np = _asarray(query_vec, dtype=_float32)
+                    scores = batch_cosine_similarity_numpy(q_np, vectors, pre_normalized=True)  # type: ignore[call-arg]
+                    mask = scores >= min_similarity
+                    if _where is not None:
+                        for idx in _where(mask)[0]:
+                            results.append({"memory_id": ids[idx], "similarity": round(float(scores[idx]), 4), "source": "hot"})
+                    else:
+                        for idx, m_val in enumerate(mask):
+                            if m_val:
+                                results.append({"memory_id": ids[idx], "similarity": round(float(scores[idx]), 4), "source": "hot"})
+                else:
+                    for mid, vec in zip(ids, vectors):
+                        sim = cosine_similarity(query_vec, vec)
+                        if sim >= min_similarity:
+                            results.append({"memory_id": mid, "similarity": round(sim, 4), "source": "hot"})
+
+        # Sort by similarity descending
+        results.sort(key=lambda r: r["similarity"], reverse=True)
+        return results[:limit]
+
     def find_similar_pairs(
         self,
         min_similarity: float = 0.50,
@@ -1063,10 +1122,104 @@ class EmbeddingEngine:
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
+    # ------------------------------------------------------------------
+    # HRR facade methods (fused from HRREngine + QuantizedHRREngine + HRRCompositionEngine)
+    # ------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
+    _hrr_engine_instance: Any = None
+    _quantized_hrr_engine_instance: Any = None
+    _hrr_composition_engine_instance: Any = None
+
+    def _get_hrr_engine(self):
+        """Lazy accessor for the HRREngine."""
+        if self._hrr_engine_instance is None:
+            from whitemagic.core.memory.hrr import get_hrr_engine
+            self._hrr_engine_instance = get_hrr_engine()
+        return self._hrr_engine_instance
+
+    def _get_quantized_hrr_engine(self):
+        """Lazy accessor for the QuantizedHRREngine."""
+        if self._quantized_hrr_engine_instance is None:
+            from whitemagic.core.memory.qfhrr import get_quantized_hrr_engine
+            self._quantized_hrr_engine_instance = get_quantized_hrr_engine()
+        return self._quantized_hrr_engine_instance
+
+    def _get_hrr_composition_engine(self):
+        """Lazy accessor for the HRRCompositionEngine."""
+        if self._hrr_composition_engine_instance is None:
+            from whitemagic.core.evolution.hrr_composition import HRRCompositionEngine
+            self._hrr_composition_engine_instance = HRRCompositionEngine()
+        return self._hrr_composition_engine_instance
+
+    def hrr_bind(self, a: list[float] | np.ndarray, b: list[float] | np.ndarray) -> np.ndarray:
+        """Circular convolution binding via HRR."""
+        return self._get_hrr_engine().bind(a, b)
+
+    def hrr_unbind(self, bound: list[float] | np.ndarray, b: list[float] | np.ndarray) -> np.ndarray:
+        """Circular correlation unbinding via HRR."""
+        return self._get_hrr_engine().unbind(bound, b)
+
+    def hrr_superpose(self, *vectors: list[float] | np.ndarray) -> np.ndarray:
+        """Superposition: element-wise sum of multiple HRR vectors."""
+        return self._get_hrr_engine().superpose(*vectors)
+
+    def hrr_similarity(self, a: list[float] | np.ndarray, b: list[float] | np.ndarray) -> float:
+        """Cosine similarity between two HRR vectors."""
+        return self._get_hrr_engine().similarity(a, b)
+
+    def hrr_project(self, embedding: list[float] | np.ndarray, relation: str) -> np.ndarray:
+        """Project an embedding through a relation."""
+        return self._get_hrr_engine().project(embedding, relation)
+
+    def hrr_inverse_project(self, embedding: list[float] | np.ndarray, relation: str) -> np.ndarray:
+        """Inverse projection: recover the source that led to E via relation."""
+        return self._get_hrr_engine().inverse_project(embedding, relation)
+
+    def hrr_encode_event(self, **kwargs: Any) -> np.ndarray:
+        """Encode a structured event as a single HRR vector."""
+        return self._get_hrr_engine().encode_event(**kwargs)
+
+    def hrr_decode_event_role(self, event: list[float] | np.ndarray, role: str) -> np.ndarray:
+        """Decode a role filler from an event vector."""
+        return self._get_hrr_engine().decode_event_role(event, role)
+
+    def hrr_get_stats(self) -> dict[str, Any]:
+        """Get HRR engine statistics."""
+        return self._get_hrr_engine().get_stats()
+
+    def hrr_available_relations(self) -> list[str]:
+        """List available HRR relation names."""
+        return self._get_hrr_engine().available_relations()
+
+    def qhrr_bind(self, a: list[float] | np.ndarray, b: list[float] | np.ndarray) -> Any:
+        """Quantized HRR binding via modular addition."""
+        return self._get_quantized_hrr_engine().bind(a, b)
+
+    def qhrr_unbind(self, bound: Any, b: list[float] | np.ndarray) -> Any:
+        """Quantized HRR unbinding via modular subtraction."""
+        return self._get_quantized_hrr_engine().unbind(bound, b)
+
+    def qhrr_similarity(self, a: Any, b: Any) -> float:
+        """Quantized HRR similarity via triangular LUT."""
+        return self._get_quantized_hrr_engine().similarity(a, b)
+
+    def qhrr_get_stats(self) -> dict[str, Any]:
+        """Get quantized HRR engine statistics."""
+        eng = self._get_quantized_hrr_engine()
+        return {
+            "dim": eng.dim,
+            "bits": eng.bits,
+            "K": eng.K,
+            "bytes_per_vector": eng.bytes_per_vector,
+        }
+
+    def hrr_compose_encode(self, hypothesis_id: str, description: str, impact: float = 0.5):
+        """Encode a hypothesis as an HRR vector via composition engine."""
+        return self._get_hrr_composition_engine().encode_hypothesis(hypothesis_id, description, impact)
+
+    def hrr_compose_bind(self, id_a: str, id_b: str):
+        """Bind two hypotheses via circular convolution."""
+        return self._get_hrr_composition_engine().bind(id_a, id_b)
 
 _engine_instance: EmbeddingEngine | None = None
 _engine_lock = threading.Lock()

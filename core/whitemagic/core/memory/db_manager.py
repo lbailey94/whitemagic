@@ -116,6 +116,9 @@ class ConnectionPool:
         conn.execute("PRAGMA temp_store=MEMORY")
         # P6d: Busy timeout for write contention under WAL
         conn.execute("PRAGMA busy_timeout=5000")
+        # P6f: WAL auto-checkpoint at 1000 pages (~4MB) for predictable checkpoint timing
+        # Default is 1000, but explicit setting avoids environment-dependent defaults
+        conn.execute("PRAGMA wal_autocheckpoint=1000")
         # P6e: Foreign keys for referential integrity
         conn.execute("PRAGMA foreign_keys=ON")
         # Row factory for dictionary-like access

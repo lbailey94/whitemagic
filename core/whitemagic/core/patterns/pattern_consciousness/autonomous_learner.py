@@ -27,7 +27,7 @@ class AutonomousLearner:
         """Extract wisdom from errors."""
         self.mistakes_made.append(mistake)
         self.lessons_learned.append(lesson)
-        logger.info(f"📚 Learned: {lesson}")
+        logger.info("📚 Learned: %s", lesson)
 
         # Persist to Unified Memory
         self._memory.store(
@@ -35,6 +35,7 @@ class AutonomousLearner:
             content=f"Mistake: {mistake}\nLesson: {lesson}",
             tags={"wisdom", "lesson", "autonomous_learning"},
             importance=0.8,
+            galaxy="self_learning",
         )
 
     def learn_from_success(self, success: str, principle: str) -> None:
@@ -43,7 +44,7 @@ class AutonomousLearner:
             "success": success,
             "principle": principle,
         })
-        logger.info(f"💎 Wisdom: {principle}")
+        logger.info("💎 Wisdom: %s", principle)
 
         # Persist to Unified Memory
         self._memory.store(
@@ -51,6 +52,7 @@ class AutonomousLearner:
             content=f"Success: {success}\nPrinciple: {principle}",
             tags={"wisdom", "principle", "autonomous_learning"},
             importance=0.9,
+            galaxy="self_learning",
         )
 
     def evolve(self) -> None:
@@ -63,6 +65,7 @@ class AutonomousLearner:
             content=f"System has integrated {len(self.lessons_learned)} lessons and {len(self.wisdom_gained)} wisdom nodes.",
             tags={"system", "evolution", "unified_field"},
             importance=0.7,
+            galaxy="self_learning",
         )
 
 

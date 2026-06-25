@@ -31,7 +31,7 @@ def handle_bitnet_infer(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.inference.bitnet_bridge import _emit_inference_event
         _emit_inference_event(result, prompt)
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced bitnet execute error: {e}", exc_info=True)
+        logger.debug("Silenced bitnet execute error: %s", e, exc_info=True)
 
     return cast("dict[str, Any]", result)
 

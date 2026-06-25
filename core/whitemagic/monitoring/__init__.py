@@ -286,7 +286,8 @@ def trace(name: str, **tags) -> Generator[Span, None, None]:
     finally:
         span.finish()
         logger.info(
-            f"Trace: {name}",
+            "Trace: %s",
+            name,
             duration_ms=span.duration_ms,
             **tags
         )
@@ -527,7 +528,7 @@ class AlertManager:
             AlertSeverity.CRITICAL: LogLevel.CRITICAL,
         }[severity]
 
-        logger.log(log_level, f"[{title}] {message}", **tags)
+        logger.log(log_level, "[%s] %s", title, message, **tags)
 
         # Call handlers
         for handler in self.handlers:

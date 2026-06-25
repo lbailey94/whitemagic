@@ -50,13 +50,37 @@ class PatternFederation:
         self._connect_to_gan_ying()
 
     def _connect_to_gan_ying(self) -> None:
-        """Connect to Gan Ying Bus."""
+        """Connect to Gan Ying Bus and register auto-federation listener."""
         try:
-            from whitemagic.core.resonance.gan_ying import get_bus
+            from whitemagic.core.resonance._consolidated import get_bus, EventType
             self.bus = get_bus()
-            logger.info("🎵 Pattern Federation connected to Gan Ying Bus")
+            # Auto-federate: listen for PATTERN_DETECTED events and contribute them
+            self.bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
+            logger.info("Pattern Federation connected to Gan Ying Bus with auto-federation")
         except ImportError:
             pass
+
+    def _on_pattern_detected(self, event: Any) -> None:
+        """Auto-federate patterns detected by the Gan Ying Bus.
+
+        When a PATTERN_DETECTED event is emitted, automatically contribute it
+        to the federation library if it has a name and solution.
+        """
+        try:
+            data = event.data if hasattr(event, 'data') else {}
+            name = data.get("name", "")
+            if not name or data.get("federated"):
+                return  # Skip unnamed or already-federated patterns
+            self.contribute_pattern(
+                session_id=data.get("source", event.source if hasattr(event, 'source') else "gan_ying"),
+                name=name,
+                problem=data.get("problem", ""),
+                solution=data.get("solution", data.get("description", "")),
+                confidence=data.get("confidence", 0.8),
+                tags=data.get("tags", []),
+            )
+        except Exception as e:
+            logger.debug("Auto-federation failed: %s", e)
 
     def contribute_pattern(
         self,
@@ -103,7 +127,7 @@ class PatternFederation:
         # Emit to Gan Ying
         if self.bus:
             try:
-                from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent
+                from whitemagic.core.resonance._consolidated import EventType, ResonanceEvent
                 self.bus.emit(ResonanceEvent(
                     source="pattern_federation",
                     event_type=EventType.PATTERN_DETECTED,
@@ -114,7 +138,7 @@ class PatternFederation:
                         "federated": True,
                     },
                     confidence=confidence,
-                ))
+                ), async_dispatch=True)
             except (ImportError, AttributeError):
                 pass
 

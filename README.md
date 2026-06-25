@@ -3,7 +3,7 @@
 [![CI](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml/badge.svg)](https://github.com/whitemagic-ai/whitemagic/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-22.2.0-purple.svg)](core/VERSION)
+[![Version](https://img.shields.io/badge/version-23.0.0-purple.svg)](core/VERSION)
 
 A locally runnable, MIT-licensed research/lab artifact and source library for agentic AI governance, metacognition, memory substrate experiments, and distributed orchestration.
 

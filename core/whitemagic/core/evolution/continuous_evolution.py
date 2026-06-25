@@ -58,7 +58,7 @@ class ContinuousEvolutionEngine:
             with open(self.state_file) as f:
                 state = json.load(f)
                 self.cycle_count = state.get('cycle_count', 0)
-                logger.info(f"Loaded evolution state: {self.cycle_count} cycles completed")
+                logger.info("Loaded evolution state: %s cycles completed", self.cycle_count)
 
     def _save_state(self):
         """Save evolution state to disk"""
@@ -75,7 +75,7 @@ class ContinuousEvolutionEngine:
         cycle_start = time.time()
         self.cycle_count += 1
 
-        logger.info(f"Starting evolution cycle {self.cycle_count}")
+        logger.info("Starting evolution cycle %s", self.cycle_count)
 
         results: dict[str, Any] = {
             'cycle': self.cycle_count,
@@ -113,9 +113,27 @@ class ContinuousEvolutionEngine:
                 'avg_confidence': sum(p['confidence'] for p in top_patterns) / len(top_patterns) if top_patterns else 0
             }
         else:
-            logger.warning("No cross-validation results found")
-            top_patterns = []
-            results['phases']['patterns_loaded'] = {'error': 'No patterns available'}
+            logger.warning("No cross-validation results found, falling back to autodidactic patterns")
+            # Fallback: use top patterns from AutodidacticLoop
+            try:
+                top_from_db = self.autodidactic.get_top_patterns(limit=self.max_patterns_per_cycle)
+                top_patterns = []
+                for pat in top_from_db:
+                    top_patterns.append({
+                        "tag": pat.get("pattern_id", "unknown"),
+                        "confidence": pat.get("current_confidence", 0.5),
+                        "sources": ["autodidactic"],
+                    })
+                results['phases']['patterns_loaded'] = {
+                    'source': 'autodidactic_fallback',
+                    'total_available': len(top_patterns),
+                    'selected': len(top_patterns),
+                    'avg_confidence': sum(p['confidence'] for p in top_patterns) / len(top_patterns) if top_patterns else 0
+                }
+            except Exception as e:
+                logger.debug("Autodidactic fallback failed: %s", e)
+                top_patterns = []
+                results['phases']['patterns_loaded'] = {'error': 'No patterns available'}
 
         # Phase 3: Apply patterns (simulated for now)
         logger.info("Phase 3: Applying patterns")
@@ -201,7 +219,7 @@ class ContinuousEvolutionEngine:
         cycle_time = time.time() - cycle_start
         results['cycle_time_seconds'] = cycle_time
 
-        logger.info(f"Cycle {self.cycle_count} complete in {cycle_time:.1f}s")
+        logger.info("Cycle %s complete in %ss", self.cycle_count, cycle_time)
 
         return results
 
@@ -210,7 +228,7 @@ class ContinuousEvolutionEngine:
         self.running = True
         cycles_run = 0
 
-        logger.info(f"Starting continuous evolution (interval: {self.cycle_interval}s)")
+        logger.info("Starting continuous evolution (interval: %ss)", self.cycle_interval)
 
         try:
             while self.running:
@@ -218,20 +236,23 @@ class ContinuousEvolutionEngine:
                 results = self.run_single_cycle()
 
                 # Log results
-                logger.info(f"Cycle {results['cycle']}: "
-                          f"{results['learning']['success_rate']:.1%} success, "
-                          f"{results['learning']['avg_performance_gain']:.1f}x avg gain")
+                logger.info("Cycle %s: "
+                          "%.1f%% success, "
+                          "%.1fx avg gain",
+                          results['cycle'],
+                          results['learning']['success_rate'] * 100,
+                          results['learning']['avg_performance_gain'])
 
                 cycles_run += 1
 
                 # Check if we should stop
                 if max_cycles and cycles_run >= max_cycles:
-                    logger.info(f"Reached max cycles ({max_cycles})")
+                    logger.info("Reached max cycles (%s)", max_cycles)
                     break
 
                 # Wait for next cycle
                 if self.running:
-                    logger.info(f"Waiting {self.cycle_interval}s until next cycle...")
+                    logger.info("Waiting %ss until next cycle...", self.cycle_interval)
                     time.sleep(self.cycle_interval)
 
         except KeyboardInterrupt:

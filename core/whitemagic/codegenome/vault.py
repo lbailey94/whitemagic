@@ -83,6 +83,107 @@ class GeneseedVault:
             "variables": variables,
         }
 
+    def generate_with_llm(
+        self,
+        prompt: str,
+        repo_path: str | None = None,
+        write_output: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Generate code with LLM refinement: template → git patterns → LLM → optional write.
+
+        Args:
+            prompt: Vibe prompt describing what to generate
+            repo_path: Optional repo path for git history mining (Geneseed patterns)
+            write_output: Optional target file path; if set, writes via CodeWritingClone
+
+        Returns:
+            Dict with status, code, template info, patterns, and write result
+        """
+        # Step 1: Render template
+        render_result = self.vibe_render(prompt, **kwargs)
+        if render_result.get("status") != "success":
+            return render_result
+
+        base_code = render_result["code"]
+        template_name = render_result["template_name"]
+        tier = render_result["tier"]
+
+        # Step 2: Mine git patterns for context (if repo provided)
+        patterns_context = ""
+        patterns_count = 0
+        if repo_path:
+            try:
+                from whitemagic.optimization.rust_mining import mine_geneseed_patterns
+                patterns = mine_geneseed_patterns(repo_path, 0.3, 50)
+                if patterns:
+                    pattern_lines = []
+                    for p in patterns[:5]:
+                        ptype = getattr(p, "pattern_type", str(p))
+                        conf = getattr(p, "confidence", 0.0)
+                        files = getattr(p, "files_changed", [])
+                        pattern_lines.append(f"  - {ptype} (confidence={conf:.2f}, files={files})")
+                    patterns_context = "\n\nRelevant optimization patterns from git history:\n" + "\n".join(pattern_lines)
+                    patterns_count = len(patterns)
+            except Exception as e:
+                logger.debug("Geneseed pattern mining skipped: %s", e)
+
+        # Step 3: LLM refinement
+        llm_refined = False
+        final_code = base_code
+        try:
+            from whitemagic.inference.local_llm import LocalLLM
+            llm = LocalLLM()
+            if llm.is_available:
+                llm_prompt = (
+                    f"You are refining code generated from a template.\n"
+                    f"Template: {template_name}\n"
+                    f"Prompt: {prompt}\n\n"
+                    f"Generated code:\n{base_code}\n"
+                    f"{patterns_context}\n\n"
+                    f"Improve this code: fix issues, add missing error handling, "
+                    f"optimize performance. Return ONLY the improved code."
+                )
+                response = llm.complete(llm_prompt)
+                if response and response.strip():
+                    final_code = response.strip()
+                    llm_refined = True
+        except Exception as e:
+            logger.debug("LLM refinement skipped: %s", e)
+
+        # Step 4: Write via CodeWritingClone (if requested)
+        write_result = None
+        if write_output:
+            try:
+                from whitemagic.optimization.rust_code_writing import write_file
+                import os
+                base_path = os.path.dirname(write_output) or "."
+                rel_path = os.path.basename(write_output)
+                write_result = write_file(base_path, rel_path, final_code)
+            except Exception as e:
+                write_result = {"success": False, "error": str(e)}
+                logger.warning("CodeWritingClone write failed: %s", e)
+
+        _emit_gan_ying("geneseed.llm_generate", {
+            "template": template_name,
+            "tier": tier,
+            "llm_refined": llm_refined,
+            "patterns_mined": patterns_count,
+            "written": write_result is not None,
+        })
+
+        return {
+            "status": "success",
+            "template_name": template_name,
+            "tier": tier,
+            "code": final_code,
+            "base_code": base_code,
+            "llm_refined": llm_refined,
+            "patterns_mined": patterns_count,
+            "write_result": write_result,
+            "variables": render_result.get("variables", {}),
+        }
+
     def fork(self, parent_name: str, new_name: str, body_delta: str = "") -> dict[str, Any]:
         """Fork a template and emit an audit event."""
         child = self._engine.fork_template(parent_name, new_name, body_delta)

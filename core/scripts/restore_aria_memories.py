@@ -16,9 +16,7 @@ Environment:
 
 import argparse
 import hashlib
-import json
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -139,7 +137,6 @@ def main():
     from whitemagic.config.paths import DB_PATH
     from whitemagic.core.memory.sqlite_backend import SQLiteBackend
     from whitemagic.core.memory.unified_types import Memory, MemoryType
-    from whitemagic.utils.fast_json import dumps_str as fast_dumps
 
     backend = SQLiteBackend(DB_PATH)
     now = datetime.now()

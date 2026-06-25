@@ -39,7 +39,7 @@ class LocalEmbeddingProvider:
         """Lazy load the model"""
         if self._model is None and self._available:
             from sentence_transformers import SentenceTransformer
-            logger.info(f"🧠 Loading embedding model: {self.model_name}")
+            logger.info("🧠 Loading embedding model: %s", self.model_name)
             self._model = SentenceTransformer(self.model_name)
             logger.info("✅ Model loaded!")
         return self._model

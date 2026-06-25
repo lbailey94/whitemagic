@@ -15,9 +15,7 @@ Usage:
 
 import argparse
 import ast
-import re
 from pathlib import Path
-from typing import Any
 
 
 class ExceptionBlockFixer(ast.NodeTransformer):

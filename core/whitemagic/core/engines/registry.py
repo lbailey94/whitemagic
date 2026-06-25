@@ -52,6 +52,7 @@ class EngineEntry:
     grimoire_chapter: int      # Grimoire chapter number (0-indexed)
     description: str           # One-line description
     status: EngineStatus = EngineStatus.EXISTS
+    absorbs: tuple[str, ...] = ()  # Sub-engine class names fused into this slot
 
     @property
     def handler_id(self) -> int:
@@ -89,7 +90,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/orchestration/session_startup.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="courage",
         grimoire_chapter=1,
-        description="Session initialization, sharp beginnings",
+        description="Session initialization, sharp beginnings — establishes Wu Xing flow and Zodiacal phase",
+        absorbs=("CycleEngine", "WuXingEngine"),
     ),
     EngineEntry(
         slot=1, mansion_name="Neck", mansion_chinese="亢", mansion_pinyin="Kàng",
@@ -97,7 +99,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/consolidation.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="practice",
         grimoire_chapter=2,
-        description="Memory consolidation, consistent execution",
+        description="Memory consolidation and reconsolidation — batch Dream Cycle + real-time recall updates",
+        absorbs=("ReconsolidationEngine",),
     ),
     EngineEntry(
         slot=2, mansion_name="Root", mansion_chinese="氐", mansion_pinyin="Dǐ",
@@ -121,7 +124,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/nurturing/nurturing_engine.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="love",
         grimoire_chapter=5,
-        description="User preference learning, personalization, warmth",
+        description="Emotional personalization — preference learning through Heart emotional state biasing",
+        absorbs=("HeartEngine",),
     ),
     EngineEntry(
         slot=5, mansion_name="Tail", mansion_chinese="尾", mansion_pinyin="Wěi",
@@ -129,8 +133,9 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/acceleration/__init__.py",
         quadrant=Quadrant.EAST, wu_xing="wood", emotion="metal",
         grimoire_chapter=6,
-        description="Polyglot acceleration: Rust, Zig, Mojo bridges",
+        description="Polyglot acceleration: Rust, Zig, Mojo bridges + quantum-inspired Grover's O(√N) search",
         status=EngineStatus.DISTRIBUTED,
+        absorbs=("QuantumEngine",),
     ),
     EngineEntry(
         slot=6, mansion_name="Winnowing Basket", mansion_chinese="箕", mansion_pinyin="Jī",
@@ -148,7 +153,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="tools/gnosis.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="grief",
         grimoire_chapter=8,
-        description="Introspection, shadow work, system metrics via Gnosis",
+        description="Total self-awareness: software introspection + hardware monitoring + capability discovery",
+        absorbs=("ForecastEngine", "CapabilityDiscoveryEngine"),
     ),
     EngineEntry(
         slot=8, mansion_name="Willow", mansion_chinese="柳", mansion_pinyin="Liǔ",
@@ -156,7 +162,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/patterns/emergence/dream_state.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="play",
         grimoire_chapter=9,
-        description="Dream cycle, resilience through flexibility",
+        description="Dream-Cast: unconscious 12-phase Dream Cycle feeds conscious 12-phase Grimoire spellbook",
+        absorbs=("GrimoireEngine",),
     ),
     EngineEntry(
         slot=9, mansion_name="Star", mansion_chinese="星", mansion_pinyin="Xīng",
@@ -172,7 +179,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/association_miner.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="connection",
         grimoire_chapter=11,
-        description="Pattern connectivity, semantic association mining, temporal traversal tracking",
+        description="Topology Engine: association mining + graph construction (Rust/neural) + centrality/community detection",
+        absorbs=("GraphEngine", "GraphEngineNeural", "GraphEngineCached"),
     ),
     EngineEntry(
         slot=11, mansion_name="Wings", mansion_chinese="翼", mansion_pinyin="Yì",
@@ -180,7 +188,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="tools/handlers/export_import.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="adventure",
         grimoire_chapter=12,
-        description="Export, deploy, expand — memory and state portability",
+        description="Genesis Engine: export memories + generate code templates + generate prompt templates",
+        absorbs=("CodeGenomeEngine", "PromptEngine"),
     ),
     EngineEntry(
         slot=12, mansion_name="Chariot", mansion_chinese="轸", mansion_pinyin="Zhěn",
@@ -196,7 +205,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/resonance/resonance_engine.py",
         quadrant=Quadrant.SOUTH, wu_xing="fire", emotion="joy",
         grimoire_chapter=14,
-        description="Amplify emergent patterns through sympathetic resonance",
+        description="Harmonic Resonance: detect, amplify, transfer across subsystems, and model as damped oscillators",
+        absorbs=("ResonanceTransferEngine", "JuliaResonanceEngine"),
     ),
 
     # ── Western Quadrant (White Tiger, Autumn, Metal) ── Mansions 15-21
@@ -214,7 +224,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/embeddings.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="gratitude",
         grimoire_chapter=16,
-        description="Semantic embedding indexing, vector search, caching",
+        description="Vector Cognition: embeddings + HRR binding/unbinding + quantized edge HRR + hypothesis composition",
+        absorbs=("HRREngine", "QuantizedHRREngine", "HRRCompositionEngine"),
     ),
     EngineEntry(
         slot=16, mansion_name="Stomach", mansion_chinese="胃", mansion_pinyin="Wèi",
@@ -222,7 +233,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/lifecycle.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="healing",
         grimoire_chapter=17,
-        description="Memory lifecycle management, resource/energy management",
+        description="Evolutionary Lifecycle: galactic zone management + 512-bit system DNA tracking",
+        absorbs=("DGAEngine",),
     ),
     EngineEntry(
         slot=17, mansion_name="Hairy Head", mansion_chinese="昴", mansion_pinyin="Mǎo",
@@ -230,7 +242,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/intelligence/synthesis/kaizen_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="presence",
         grimoire_chapter=18,
-        description="Continuous self-improvement via CoreAccessLayer: constellation anomalies, broken associations, cross-constellation gaps",
+        description="Apotheosis: detect issues → evolve → learn about learning → self-monitor → discover capabilities",
+        absorbs=("ContinuousEvolutionEngine", "MetaLearningEngine", "ApotheosisEngine"),
     ),
     EngineEntry(
         slot=18, mansion_name="Net", mansion_chinese="毕", mansion_pinyin="Bì",
@@ -238,7 +251,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/pattern_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="mystery",
         grimoire_chapter=19,
-        description="Pattern capture, filtering, consciousness detection",
+        description="Pattern Consciousness: detect + continuously learn + refine large clusters into quadrants",
+        absorbs=("EnhancedPatternEngine", "SubClusteringEngine"),
     ),
     EngineEntry(
         slot=19, mansion_name="Turtle Beak", mansion_chinese="觜", mansion_pinyin="Zī",
@@ -246,7 +260,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="gardens/voice/narrative_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="voice",
         grimoire_chapter=20,
-        description="Precision validation, narrative generation",
+        description="Story Engine: narrative threads with arcs + stories with chapters for coherent self-expression",
+        absorbs=("NarrativeEngineStory",),
     ),
     EngineEntry(
         slot=20, mansion_name="Three Stars", mansion_chinese="参", mansion_pinyin="Shēn",
@@ -254,7 +269,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="gardens/dharma/ethics_engine.py",
         quadrant=Quadrant.WEST, wu_xing="metal", emotion="dharma",
         grimoire_chapter=21,
-        description="Ethical evaluation, wisdom council, judgment",
+        description="Strategic Ethics: Art of War terrain assessment + developmental maturity gates + ethical evaluation",
+        absorbs=("ArtOfWarEngine", "MaturityEngine"),
     ),
 
     # ── Northern Quadrant (Black Tortoise, Winter, Water) ── Mansions 22-28
@@ -264,7 +280,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/intelligence/synthesis/predictive_engine.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="awe",
         grimoire_chapter=22,
-        description="Future-forward prediction via CoreAccessLayer: constellation drift, association paths, temporal trends",
+        description="Foresight: 10-source opportunity prediction + constellation drift + maintenance failure forecasting",
+        absorbs=("ForesightEngine", "PredictiveMaintenanceEngine"),
     ),
     EngineEntry(
         slot=22, mansion_name="Ox", mansion_chinese="牛", mansion_pinyin="Niú",
@@ -272,7 +289,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/galactic_map.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="reverence",
         grimoire_chapter=23,
-        description="Galactic map, zone scoring, endurance persistence",
+        description="Galactic Federation: intra-galactic zone management + inter-galactic telepathic sync",
+        absorbs=("GalacticTelepathyEngine",),
     ),
     EngineEntry(
         slot=23, mansion_name="Girl", mansion_chinese="女", mansion_pinyin="Nǚ",
@@ -280,7 +298,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/clones/clone_army.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="wonder",
         grimoire_chapter=24,
-        description="Kage no Bunshin: massive parallel search deployment",
+        description="Local Compute: parallel clone search + local reasoning + CPU inference for 90%+ token reduction",
+        absorbs=("LocalReasoningEngine", "CPUInferenceEngine"),
     ),
     EngineEntry(
         slot=24, mansion_name="Void", mansion_chinese="虚", mansion_pinyin="Xū",
@@ -288,7 +307,8 @@ ENGINE_REGISTRY: tuple[EngineEntry, ...] = (
         source_path="core/memory/mindful_forgetting.py",
         quadrant=Quadrant.NORTH, wu_xing="water", emotion="stillness",
         grimoire_chapter=25,
-        description="Mindful forgetting, meditation, defragmentation",
+        description="Mindful Forgetting: multi-signal retention + neuro_score management and decay processing",
+        absorbs=("NeuroScoreEngine",),
     ),
     EngineEntry(
         slot=25, mansion_name="Roof", mansion_chinese="危", mansion_pinyin="Wēi",
@@ -338,6 +358,45 @@ def get_engines_by_quadrant(quadrant: Quadrant) -> list[EngineEntry]:
 def get_engines_by_status(status: EngineStatus) -> list[EngineEntry]:
     """Get all engines with a given status."""
     return [e for e in ENGINE_REGISTRY if e.status == status]
+
+
+# ── Gana → Garden mapping ──
+# Gana names follow the pattern gana_{mansion_name_lowercase}
+_GANA_TO_GARDEN: dict[str, str] = {}
+for _e in ENGINE_REGISTRY:
+    _gana_name = f"gana_{_e.mansion_name.lower().replace(' ', '_')}"
+    _GANA_TO_GARDEN[_gana_name] = _e.garden
+
+
+def get_garden_for_gana(gana_name: str) -> str | None:
+    """Get the garden name associated with a Gana meta-tool.
+
+    Args:
+        gana_name: Gana name (e.g., "gana_horn", "gana_neck")
+
+    Returns:
+        Garden name (e.g., "courage", "stillness") or None if not found.
+    """
+    return _GANA_TO_GARDEN.get(gana_name)
+
+
+def get_garden_for_tool(tool_name: str) -> str | None:
+    """Get the garden name associated with a tool via its Gana mapping.
+
+    Args:
+        tool_name: Tool name (e.g., "session_bootstrap", "create_memory")
+
+    Returns:
+        Garden name or None if the tool has no Gana mapping.
+    """
+    try:
+        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+        gana = TOOL_TO_GANA.get(tool_name)
+        if gana is None:
+            return None
+        return get_garden_for_gana(gana)
+    except Exception:
+        return None
 
 
 def read_engine_board(slot: int) -> dict[str, object] | None:

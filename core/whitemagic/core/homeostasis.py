@@ -76,7 +76,7 @@ class HomeostasisSystem:
         # Instead of override, we calculate a non-coercive bias from the Zodiac Council
         h_bias = self._calculate_harmonic_bias()
         if h_bias:
-            logger.info(f"🌌 Harmonic Gravity detected: {h_bias['mode']} pull ({h_bias['intensity']:.2f})")
+            logger.info("🌌 Harmonic Gravity detected: %s pull (%s)", h_bias['mode'], h_bias['intensity'])
             # Bias shifts equilibrium target slightly
             if h_bias["mode"] == "analytical":
                 # Push toward Yin
@@ -93,7 +93,7 @@ class HomeostasisSystem:
                 # Vacant Space is a form of Yin (contraction/making room)
                 tz_intensity = 1.0 - tz.intensity_cap
                 yin = min(1.0, yin + (tz_intensity * 0.2))
-                logger.info(f"🌌 Tzimtzum Bias Applied: +{tz_intensity * 0.2:.2f} Yin")
+                logger.info("🌌 Tzimtzum Bias Applied: +%s Yin", format(tz_intensity * 0.2, ".2f"))
         except (ImportError, AttributeError):
             pass
 

@@ -31,9 +31,12 @@ import logging
 import math
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
+
+from whitemagic.core.memory.probabilistic import HyperLogLog
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,46 @@ class SurpriseAction(Enum):
     CREATE = "create"               # Normal: store as new memory
     CREATE_BOOSTED = "create_boosted"  # Novel: store with boosted importance
     REINFORCE = "reinforce"         # Redundant: strengthen existing instead
+
+
+@dataclass
+class CardinalityVelocity:
+    """Tracks the rate of new distinct memories over time windows."""
+    window_seconds: float
+    samples: deque  # of (timestamp, cardinality_estimate) tuples
+
+    def record(self, cardinality: int) -> None:
+        """Record a cardinality sample."""
+        now = time.time()
+        self.samples.append((now, cardinality))
+        # Prune old samples
+        cutoff = now - self.window_seconds
+        while self.samples and self.samples[0][0] < cutoff:
+            self.samples.popleft()
+
+    def velocity(self) -> float:
+        """Compute cardinality velocity (new distinct memories per second)."""
+        if len(self.samples) < 2:
+            return 0.0
+        oldest_time, oldest_card = self.samples[0]
+        newest_time, newest_card = self.samples[-1]
+        dt = newest_time - oldest_time
+        if dt <= 0:
+            return 0.0
+        return (newest_card - oldest_card) / dt
+
+    def is_accelerating(self) -> bool:
+        """Whether memory diversity is growing faster than the historical mean."""
+        if len(self.samples) < 4:
+            return False
+        mid = len(self.samples) // 2
+        first_half = list(self.samples)[:mid]
+        second_half = list(self.samples)[mid:]
+        if not first_half or not second_half:
+            return False
+        v1 = (first_half[-1][1] - first_half[0][1]) / max(first_half[-1][0] - first_half[0][0], 0.001)
+        v2 = (second_half[-1][1] - second_half[0][1]) / max(second_half[-1][0] - second_half[0][0], 0.001)
+        return v2 > v1 * 1.5
 
 
 @dataclass
@@ -89,6 +132,8 @@ class SurpriseGate:
         low_threshold: float = 1.0,
         importance_boost: float = 0.15,
         reinforcement_strength: float = 0.05,
+        cardinality_window: float = 300.0,
+        enable_cardinality_velocity: bool = True,
     ) -> None:
         self._high_threshold = high_threshold
         self._low_threshold = low_threshold
@@ -99,6 +144,17 @@ class SurpriseGate:
         self._total_novel = 0
         self._total_redundant = 0
         self._total_normal = 0
+
+        # Cardinality velocity tracking
+        self._enable_cv = enable_cardinality_velocity
+        self._cardinality_hll = HyperLogLog(precision=14) if enable_cardinality_velocity else None
+        self._velocity = CardinalityVelocity(
+            window_seconds=cardinality_window,
+            samples=deque(maxlen=100),
+        ) if enable_cardinality_velocity else None
+        self._last_cardinality_sample = 0.0
+        self._adaptive_high = high_threshold
+        self._adaptive_low = low_threshold
 
     def evaluate(self, content: str, limit: int = 20) -> SurpriseVerdict:
         """Evaluate surprise of incoming content.
@@ -111,6 +167,18 @@ class SurpriseGate:
             SurpriseVerdict with action recommendation.
         """
         start = time.perf_counter()
+
+        # Track cardinality via HLL for velocity computation
+        if self._enable_cv and self._cardinality_hll is not None:
+            import hashlib
+            content_hash = hashlib.sha256(content.encode()).hexdigest()
+            self._cardinality_hll.add(content_hash)
+            now = time.time()
+            if now - self._last_cardinality_sample > 5.0:
+                cardinality = self._cardinality_hll.estimate()
+                self._velocity.record(cardinality)
+                self._last_cardinality_sample = now
+                self._adjust_thresholds()
 
         # Try to get embedding engine
         try:
@@ -183,15 +251,18 @@ class SurpriseGate:
 
         elapsed = (time.perf_counter() - start) * 1000
 
-        # Decision
-        if surprise > self._high_threshold:
+        # Decision (using adaptive thresholds if cardinality velocity is enabled)
+        high_t = self._adaptive_high if self._enable_cv else self._high_threshold
+        low_t = self._adaptive_low if self._enable_cv else self._low_threshold
+
+        if surprise > high_t:
             action = SurpriseAction.CREATE_BOOSTED
-            reason = f"Novel concept (S={surprise:.2f} > {self._high_threshold})"
+            reason = f"Novel concept (S={surprise:.2f} > {high_t:.2f})"
             with self._lock:
                 self._total_novel += 1
-        elif surprise <= self._low_threshold:
+        elif surprise <= low_t:
             action = SurpriseAction.REINFORCE
-            reason = f"Redundant (S={surprise:.2f} ≤ {self._low_threshold}, sim={max_sim:.3f})"
+            reason = f"Redundant (S={surprise:.2f} ≤ {low_t:.2f}, sim={max_sim:.3f})"
             with self._lock:
                 self._total_redundant += 1
         else:
@@ -258,6 +329,37 @@ class SurpriseGate:
         except Exception as e:
             logger.debug("Resonance event emission failed: %s", e, exc_info=True)
 
+    def _adjust_thresholds(self) -> None:
+        """Dynamically adjust surprise thresholds based on cardinality velocity.
+
+        When memory diversity is accelerating (many novel concepts entering),
+        relax the high threshold — accept more as "normal" rather than
+        over-boosting. When diversity plateaus, tighten — be more selective
+        about what counts as novel.
+        """
+        if not self._velocity or len(self._velocity.samples) < 2:
+            return
+
+        vel = self._velocity.velocity()
+        accelerating = self._velocity.is_accelerating()
+
+        if accelerating and vel > 0.5:
+            # High velocity + accelerating: relax thresholds
+            self._adaptive_high = min(self._high_threshold * 1.5, 4.5)
+            self._adaptive_low = min(self._low_threshold * 1.2, 1.5)
+        elif vel < 0.1:
+            # Low velocity: tighten thresholds (be more selective)
+            self._adaptive_high = max(self._high_threshold * 0.8, 2.0)
+            self._adaptive_low = max(self._low_threshold * 0.8, 0.5)
+        else:
+            # Normal velocity: drift back to defaults
+            self._adaptive_high = (
+                self._adaptive_high * 0.95 + self._high_threshold * 0.05
+            )
+            self._adaptive_low = (
+                self._adaptive_low * 0.95 + self._low_threshold * 0.05
+            )
+
     def get_stats(self) -> dict[str, Any]:
         """
         Get the stats.
@@ -266,7 +368,7 @@ class SurpriseGate:
             dict[str, Any]
         """
         with self._lock:
-            return {
+            stats = {
                 "total_evaluations": self._total_evaluations,
                 "total_novel": self._total_novel,
                 "total_redundant": self._total_redundant,
@@ -274,6 +376,16 @@ class SurpriseGate:
                 "high_threshold": self._high_threshold,
                 "low_threshold": self._low_threshold,
             }
+        if self._enable_cv:
+            stats["cardinality_velocity"] = (
+                self._velocity.velocity() if self._velocity else 0.0
+            )
+            stats["adaptive_high_threshold"] = self._adaptive_high
+            stats["adaptive_low_threshold"] = self._adaptive_low
+            stats["distinct_seen"] = (
+                self._cardinality_hll.estimate() if self._cardinality_hll else 0
+            )
+        return stats
 
 
 # ---------------------------------------------------------------------------

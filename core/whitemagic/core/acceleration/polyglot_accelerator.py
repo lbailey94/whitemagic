@@ -68,7 +68,7 @@ class PolyglotAccelerator:
             status = simd_status()
             if status["has_zig_simd"]:
                 self._zig_available = True
-                logger.info(f"⚡ Zig SIMD available (lane_width={status['lane_width']})")
+                logger.info("⚡ Zig SIMD available (lane_width=%s)", status['lane_width'])
         except (ImportError, AttributeError):
             pass
 
@@ -175,7 +175,7 @@ class PolyglotAccelerator:
     # Pattern Operations
     # ========================================================================
 
-    def extract_patterns(self, content: str, limit: int = 10) -> list[dict[str, Any]]:
+    def extract_patterns(self, content: str | list[str], limit: int = 10) -> list[dict[str, Any]]:
         """Extract patterns from content.
 
         Backend priority: Rust > Python
@@ -187,10 +187,23 @@ class PolyglotAccelerator:
             try:
                 import whitemagic_rs
                 if hasattr(whitemagic_rs, 'extract_patterns_from_content'):
-                    result = whitemagic_rs.extract_patterns_from_content(content, limit)  # type: ignore[arg-type]
+                    # Rust function expects Vec<String> and Option<f64>
+                    memories = content if isinstance(content, list) else [content]
+                    min_conf = float(limit) / 100.0  # Convert limit to confidence threshold
+                    result = whitemagic_rs.extract_patterns_from_content(memories, min_conf)
+                    # Rust returns (total, found, solutions, anti, heuristics, opts, duration)
+                    total, found, solutions, anti, heuristics, opts, duration = result
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
-                    return cast(list[dict[str, Any]], result)
+                    return [
+                        {"type": "solution", "description": s} for s in solutions
+                    ] + [
+                        {"type": "anti_pattern", "description": s} for s in anti
+                    ] + [
+                        {"type": "heuristic", "description": s} for s in heuristics
+                    ] + [
+                        {"type": "optimization", "description": s} for s in opts
+                    ]
             except Exception as e:
                 logger.debug("Rust pattern extraction failed: %s", e, exc_info=True)
 
@@ -240,12 +253,15 @@ class PolyglotAccelerator:
         # Try Rust search
         if self._rust_available:
             try:
+                import json as _json
                 import whitemagic_rs
                 if hasattr(whitemagic_rs, 'search_query'):
-                    # Build index and search
+                    # Build index — Rust expects JSON string, returns (doc_count, vocab_size)
                     docs = [{"id": m[0], "content": m[1]} for m in memories]
-                    index = whitemagic_rs.search_build_index(docs)
-                    results = whitemagic_rs.search_query(index, query, limit)
+                    whitemagic_rs.search_build_index(_json.dumps(docs))
+                    # Query — Rust returns JSON string of [{id, score}]
+                    raw_results = whitemagic_rs.search_query(query, limit)
+                    results = _json.loads(raw_results) if isinstance(raw_results, str) else raw_results
                     self.rust_calls += 1
                     self.total_time_ms += (time.time() - start) * 1000
                     return [(r["id"], r["score"]) for r in results]

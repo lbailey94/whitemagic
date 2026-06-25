@@ -159,12 +159,12 @@ if __name__ == "__main__":
     logger.info("\nHarmony Vector:")
     for key, val in result["harmony_vector"].items():
         if key != "timestamp":
-            logger.info(f"  {key}: {val}")
+            logger.info("  %s: %s", key, val)
 
     logger.info("\nResource Availability:")
     for key, val in result["resource_availability"].items():
         if isinstance(val, bool):
             status = "✅" if val else "⛔"
-            logger.info(f"  {status} {key}")
+            logger.info("  %s %s", status, key)
         else:
-            logger.info(f"  → {val}")
+            logger.info("  → %s", val)

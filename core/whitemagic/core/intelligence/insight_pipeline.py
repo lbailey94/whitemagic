@@ -316,9 +316,9 @@ class InsightPipeline:
         )
 
         logger.info(
-            f"📋 InsightBriefing generated: {len(items)} items in {duration:.0f}ms "
-            f"({summary.get('by_priority', {})})"
-        )
+            "📋 InsightBriefing generated: %s items in %.0fms "
+            "(%s)"
+        , len(items), duration, summary.get('by_priority', {}))
 
         # Persist briefing as memory for calibration tracking
         if self._persist_briefings:
@@ -398,28 +398,46 @@ class InsightPipeline:
             return []
 
     def _run_serendipity(self, count: int = 5) -> list[BriefingItem]:
-        """Run SerendipityEngine and normalize output."""
+        """Run SerendipityEngine and normalize output.
+
+        v23.3: Also runs in quantum mode to surface non-obvious connections
+        via quantum-inspired superposition walks.
+        """
         try:
             from whitemagic.core.intelligence.synthesis.serendipity_engine import (
                 get_serendipity_engine,
             )
             engine = get_serendipity_engine()
+
+            # Standard balanced serendipity
             surfaced = engine.surface(count=count, mode="balanced")
+
+            # Quantum serendipity — non-obvious connections via superposition walks
+            try:
+                quantum_surfaced = engine.surface(
+                    count=max(3, count // 2), mode="quantum",
+                    context="system improvement and pattern recognition",
+                )
+                surfaced.extend(quantum_surfaced)
+            except Exception as e:
+                logger.debug("Quantum serendipity failed: %s", e, exc_info=True)
 
             items = []
             for mem in surfaced:
+                is_quantum = "Quantum" in mem.reason
                 items.append(BriefingItem(
                     id=f"serendipity_{mem.id[:16]}",
                     category="discovery",
                     title=f"Rediscover: {mem.title}",
                     description=f"{mem.reason}. Preview: {mem.content_preview[:100]}",
-                    priority="low",
+                    priority="medium" if is_quantum else "low",
                     confidence=mem.relevance_score,
                     source_engine="serendipity",
                     metadata={
                         "memory_id": mem.id,
                         "gravity": mem.gravity,
                         "access_count": mem.access_count,
+                        "quantum": is_quantum,
                     },
                 ))
             return items
@@ -558,6 +576,7 @@ class InsightPipeline:
                     "by_priority": briefing.summary.get("by_priority", {}),
                     "velocity": briefing.velocity_metrics,
                 },
+                galaxy="insight",
             )
             logger.debug("Persisted briefing #%s as memory", self._briefing_count, exc_info=True)
         except Exception as e:

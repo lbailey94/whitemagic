@@ -50,7 +50,7 @@ class Lieutenant:
         """Assign a campaign to this lieutenant."""
         self.campaigns_assigned.append(campaign_code)
         self.clone_budget += clone_count
-        logger.info(f"Lieutenant {self.name} assigned {campaign_code} ({clone_count:,} clones)")
+        logger.info("Lieutenant %s assigned %s (%s clones)", self.name, campaign_code, clone_count)
 
     def record_deployment(self, clones: int, findings: int = 0, victory: bool = False) -> None:
         """Record deployment results."""
@@ -162,7 +162,7 @@ class LieutenantCorps:
             ]
         )
 
-        logger.info(f"Lieutenant Corps initialized: {len(self.lieutenants)} lieutenants")
+        logger.info("Lieutenant Corps initialized: %s lieutenants", len(self.lieutenants))
 
     def assign_campaign(self, campaign_code: str, campaign_type: str, clone_count: int) -> Lieutenant | None:
         """Assign a campaign to the appropriate lieutenant based on type."""
@@ -196,7 +196,7 @@ class LieutenantCorps:
             domain = prefix_map.get(prefix)
 
         if not domain:
-            logger.warning(f"No lieutenant found for campaign {campaign_code} (type: {campaign_type})")
+            logger.warning("No lieutenant found for campaign %s (type: %s)", campaign_code, campaign_type)
             return None
 
         lieutenant = self.lieutenants.get(domain)

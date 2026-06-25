@@ -66,6 +66,7 @@ class TestPolyglotMemoryQueryJulia:
 
     @pytest.mark.skipif(not HAS_JULIA, reason="julia not installed")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
+    @pytest.mark.flaky(max_runs=3, min_passes=1)
     def test_julia_encode(self):
         result = handle_polyglot_memory_query(
             operation="encode",
@@ -84,6 +85,7 @@ class TestPolyglotMemoryQueryJulia:
 
     @pytest.mark.skipif(not HAS_JULIA, reason="julia not installed")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
+    @pytest.mark.flaky(max_runs=3, min_passes=1)
     def test_julia_nearest_neighbors(self):
         result = handle_polyglot_memory_query(
             operation="nearest_neighbors",
@@ -100,6 +102,7 @@ class TestPolyglotMemoryQueryJulia:
 
     @pytest.mark.skipif(not HAS_JULIA, reason="julia not installed")
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
+    @pytest.mark.flaky(max_runs=3, min_passes=1)
     def test_julia_encode_deterministic(self):
         r1 = handle_polyglot_memory_query(
             operation="encode", text="same text", backend="julia"

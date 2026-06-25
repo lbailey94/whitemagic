@@ -54,7 +54,6 @@ def step_db_stats():
     print(f"  Memories: {stats.get('total_memories', '?'):,}")
     print(f"  DB size: {stats.get('db_size_kb', 0) / 1024:.1f} MB")
 
-    import sqlite3
     with um.backend.pool.connection() as conn:
         assoc_count = conn.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
         typed_count = conn.execute("SELECT COUNT(*) FROM associations WHERE relation_type != 'associated_with'").fetchone()[0]
@@ -378,7 +377,6 @@ def step_graph_walker_test():
     try:
         from whitemagic.core.memory.graph import get_graph_walker
         from whitemagic.core.memory.unified import get_unified_memory
-        import sqlite3
 
         walker = get_graph_walker()
         um = get_unified_memory()

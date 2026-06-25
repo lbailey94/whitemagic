@@ -380,9 +380,9 @@ class CodeExecutor:
         self.execution_history.append(result)
 
         logger.info(
-            f"Code execution: success={result.success}, "
-            f"time={result.execution_time_ms:.2f}ms",
-        )
+            "Code execution: success=%s, "
+            "time=%.2fms",
+         result.success, result.execution_time_ms)
 
         return result
 

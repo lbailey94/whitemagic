@@ -172,8 +172,8 @@ class MemoryLifecycleManager:
         }
         if total > 0:
             logger.info(
-                f"🔗 Association decay: {decayed} decayed, {pruned} pruned out of {total} evaluated",
-            )
+                "🔗 Association decay: %s decayed, %s pruned out of %s evaluated",
+             decayed, pruned, total)
         return result
 
     def prune_associations(self, min_strength: float = 0.3) -> dict[str, Any]:

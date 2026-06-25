@@ -25,7 +25,7 @@ wm recall "hello" --limit 5
 # MCP server — PRAT mode (recommended: 28 Gana meta-tools)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
-# MCP server — classic mode (462 dispatch tools)
+# MCP server — classic mode (488 dispatch tools)
 python -m whitemagic.run_mcp
 
 # MCP server — lean mode (28 Gana meta-tools, recommended for new clients)
@@ -685,7 +685,7 @@ Canonical `grimoire/TRUTH_TABLE.md` established as the single source of truth fo
 - LRU cache for read-only Ganas (64 entries)
 
 ### Updated Counts
-- **490 callable tools** across **462 dispatch entries** + **28 Gana meta-tools**
+- **516 callable tools** across **488 dispatch entries** + **28 Gana meta-tools**
 - **Current local audit baseline:** 1,470 tests passing, 0 failures, 2 skipped (as of 2026-06-18)
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped
 - **28 active cross-system fusions** (matching the 28 Ganas)

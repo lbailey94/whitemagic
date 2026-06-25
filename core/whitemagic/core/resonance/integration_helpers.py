@@ -54,7 +54,8 @@ def init_listeners(instance):
         DeprecationWarning,
         stacklevel=2,
     )
-    # No-op: GanYingMixin.__init__ already wires the bus
+    # Wire the bus onto the instance so self.emit() works
+    instance._gan_ying_bus = get_bus()
 
 
 def listen_for(event_type):

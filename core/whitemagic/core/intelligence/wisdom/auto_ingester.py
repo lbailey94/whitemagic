@@ -58,7 +58,7 @@ async def ingest_all_async() -> dict[str, int]:
     async with aiohttp.ClientSession() as session:
         for text in TEXTS:
             if not validate_wisdom_url(text.base_url):
-                logger.warning(f"Blocked invalid wisdom URL: {text.base_url}")
+                logger.warning("Blocked invalid wisdom URL: %s", text.base_url)
                 stats["failed"] += 1
                 continue
             try:
@@ -73,7 +73,7 @@ async def ingest_all_async() -> dict[str, int]:
                             tags=text.tags + ["wisdom", "3.0.0"],
                         )
                         stats["success"] += 1
-                        logger.info(f"✓ {text.name}")
+                        logger.info("✓ %s", text.name)
                     else:
                         stats["failed"] += 1
             except Exception as e:
@@ -91,7 +91,7 @@ def ingest_all_sync() -> dict[str, int]:
 
     for text in TEXTS:
         if not validate_wisdom_url(text.base_url):
-            logger.warning(f"Blocked invalid wisdom URL: {text.base_url}")
+            logger.warning("Blocked invalid wisdom URL: %s", text.base_url)
             stats["failed"] += 1
             continue
         try:
@@ -106,7 +106,7 @@ def ingest_all_sync() -> dict[str, int]:
                         tags=text.tags + ["wisdom", "3.0.0"],
                     )
                     stats["success"] += 1
-                    logger.info(f"✓ {text.name}")
+                    logger.info("✓ %s", text.name)
                 else:
                     stats["failed"] += 1
         except Exception as e:
@@ -129,4 +129,4 @@ if __name__ == "__main__":
         stats = asyncio.run(ingest_all())
     else:
         stats = ingest_all_sync()
-    logger.info(f"\nIngested: {stats['success']}/9 texts")
+    logger.info("\nIngested: %s/9 texts", stats['success'])

@@ -65,8 +65,24 @@ class ThoughtGalaxy:
         self._patterns = []
 
     def mine_patterns(self) -> list[dict[str, Any]]:
-        """Mine emergent patterns from stored thoughts."""
-        raise NotImplementedError("ThoughtGalaxy pattern mining is not yet implemented.")
+        """Mine emergent patterns from stored thoughts.
+
+        Analyzes the internal pattern list for recurring themes,
+        frequency clusters, and meta-patterns.
+        """
+        if not self._patterns:
+            return []
+        # Group patterns by type and count frequency
+        type_counts: dict[str, int] = {}
+        for p in self._patterns:
+            ptype = p.get("type", "unknown") if isinstance(p, dict) else "unknown"
+            type_counts[ptype] = type_counts.get(ptype, 0) + 1
+        # Return patterns sorted by frequency
+        results = [
+            {"type": t, "frequency": c, "dominance": c / len(self._patterns)}
+            for t, c in sorted(type_counts.items(), key=lambda x: -x[1])
+        ]
+        return results
 
 # --- SINGLETONS ---
 _adaptive: AdaptiveSystem | None = None

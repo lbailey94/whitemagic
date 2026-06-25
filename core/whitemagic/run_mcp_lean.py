@@ -987,7 +987,7 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     from whitemagic.runtime_status import get_runtime_status
 
     runtime_status = get_runtime_status()
-    logger.warning(f"WhiteMagic MCP HTTP server starting on http://{host}:{port}/mcp")
+    logger.warning("WhiteMagic MCP HTTP server starting on http://%s:%s/mcp", host, port)
     suffix = " [DEGRADED]" if runtime_status.get("degraded_mode") else ""
     print(f"\n  WhiteMagic MCP Server v{_VERSION}{suffix}", file=sys.stderr)
     print(f"  HTTP endpoint: http://{host}:{port}/mcp", file=sys.stderr)

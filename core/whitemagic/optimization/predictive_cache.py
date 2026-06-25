@@ -124,7 +124,7 @@ class PredictiveCache:
         if len(self.cache) > self.max_size:
             evicted_key, _ = self.cache.popitem(last=False)  # Remove oldest
             self.stats.evictions += 1
-            logger.debug(f"Evicted key from cache: {evicted_key}")
+            logger.debug("Evicted key from cache: %s", evicted_key)
 
     def _record_access(self, key: str) -> None:
         """Record access for pattern learning."""
@@ -221,9 +221,9 @@ class PredictiveCache:
                 for next_k, prob in transitions.items():
                     self.access_patterns[k][next_k] = prob
             logger.info(
-                f"Restored cache state: {len(self.access_history)} history entries, "
-                f"{len(self.access_patterns)} transition keys",
-            )
+                "Restored cache state: %s history entries, "
+                "%s transition keys",
+             len(self.access_history), len(self.access_patterns))
         except Exception as e:
             logger.warning("Failed to load cache state: %s", e, exc_info=True)
 

@@ -177,19 +177,13 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
         except Exception as e:
             logger.debug("Unexpected error loading local inference commands: %s", e, exc_info=True)
 
+    from whitemagic.cli.registry import register_optional
+
     # 4. Hardware
-    try:
-        from whitemagic.cli.hardware_commands import hardware
-        main_group.add_command(hardware)
-    except (ImportError, ModuleNotFoundError):
-        pass
+    register_optional(main_group, "hardware", "whitemagic.cli.hardware_commands", "hardware")
 
     # 5. Sangha
-    try:
-        from whitemagic.cli.cli_sangha import sangha_cli
-        main_group.add_command(sangha_cli, name="sangha")
-    except (ImportError, ModuleNotFoundError):
-        pass
+    register_optional(main_group, "sangha", "whitemagic.cli.cli_sangha", "sangha_cli", cli_name="sangha")
 
     # 6. Archaeology
     try:
@@ -200,18 +194,10 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
         pass
 
     # 7. Watcher
-    try:
-        from whitemagic.cli.cli_watcher import watch
-        main_group.add_command(watch)
-    except (ImportError, ModuleNotFoundError):
-        pass
+    register_optional(main_group, "watcher", "whitemagic.cli.cli_watcher", "watch")
 
     # 8. Autonomous execution
-    try:
-        from whitemagic.cli.cli_autonomous_execution import autonomous
-        main_group.add_command(autonomous)
-    except ImportError:
-        pass
+    register_optional(main_group, "autonomous", "whitemagic.cli.cli_autonomous_execution", "autonomous")
 
     # 9. Local model
     @main_group.group(cls=LazyGroup, name="local")
@@ -226,25 +212,13 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
         return loader()
 
     # 10. Cache
-    try:
-        from whitemagic.cli.cli_cache import cache_cli
-        main_group.add_command(cache_cli, name="cache")
-    except ImportError:
-        pass
+    register_optional(main_group, "cache", "whitemagic.cli.cli_cache", "cache_cli", cli_name="cache")
 
     # 11. Zodiac
-    try:
-        from whitemagic.cli.cli_zodiac import zodiac_cli
-        main_group.add_command(zodiac_cli, name="zodiac")
-    except ImportError:
-        pass
+    register_optional(main_group, "zodiac", "whitemagic.cli.cli_zodiac", "zodiac_cli", cli_name="zodiac")
 
-    # 12. Scratchpad
-    try:
-        from whitemagic.cli.cli_scratchpad import scratch
-        main_group.add_command(scratch)
-    except ImportError:
-        pass
+    # 12. Scratchpad (cli_scratchpad)
+    register_optional(main_group, "scratch", "whitemagic.cli.cli_scratchpad", "scratch")
 
     # 13. Infrastructure (Optimization phase)
     try:
@@ -260,32 +234,16 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
         pass
 
     # 14. PRAT
-    try:
-        from whitemagic.cli.cli_prat import prat
-        main_group.add_command(prat, name="prat")
-    except ImportError:
-        pass
+    register_optional(main_group, "prat", "whitemagic.cli.cli_prat", "prat", cli_name="prat")
 
     # 15. Hologram
-    try:
-        from whitemagic.cli.holo_commands import holo_cli
-        main_group.add_command(holo_cli, name="holo")
-    except (ImportError, ModuleNotFoundError):
-        pass
+    register_optional(main_group, "holo", "whitemagic.cli.holo_commands", "holo_cli", cli_name="holo")
 
     # 16. Init
-    try:
-        from whitemagic.cli.init_command import init_command
-        main_group.add_command(init_command)
-    except ImportError:
-        pass
+    register_optional(main_group, "init", "whitemagic.cli.init_command", "init_command")
 
     # 16b. Dream Cycle
-    try:
-        from whitemagic.cli.commands.dream_commands import dream_group
-        main_group.add_command(dream_group, name="dream")
-    except ImportError:
-        pass
+    register_optional(main_group, "dream", "whitemagic.cli.commands.dream_commands", "dream_group", cli_name="dream")
 
     # 17. Rust bridge
     @main_group.group(cls=LazyGroup, name="rust")
@@ -307,3 +265,27 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     except (ImportError, ModuleNotFoundError) as e:
         if not os.getenv("WM_SILENT_INIT"):
             _warn_load("plugins", e)
+
+    # 19. Self-improvement
+    register_optional(main_group, "self-improve", "whitemagic.cli.commands.self_improve_commands", "self_improve", cli_name="self-improve", warn_on_fail=True)
+
+    # 20. Interactive commands (repl, stream, pipeline)
+    try:
+        from whitemagic.cli.commands.interactive_commands import register_interactive_commands
+        register_interactive_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass
+
+    # 21. Discoverability commands (manifest, capabilities, tools search/schema)
+    try:
+        from whitemagic.cli.commands.discoverability_commands import register_discoverability_commands
+        register_discoverability_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass
+
+    # 22. Cognitive workflow commands (think, reflect, dream, evolve, ground)
+    try:
+        from whitemagic.cli.commands.cognitive_commands import register_cognitive_commands
+        register_cognitive_commands(main_group)
+    except (ImportError, ModuleNotFoundError):
+        pass

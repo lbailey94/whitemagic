@@ -61,8 +61,39 @@ class EmergenceEngine:
         self._insights: list[EmergenceInsight] = []
 
     def scan(self, context: Any = None) -> list[EmergenceInsight]:
-        """Scan for emergent patterns across the knowledge graph and memory stream."""
-        raise NotImplementedError("Emergence scanning is not yet implemented.")
+        """Scan for emergent patterns across the knowledge graph and memory stream.
+
+        Detects: constellation convergence, novel associations, and thematic
+        clusters that have crossed a density threshold.
+        """
+        insights: list[EmergenceInsight] = []
+        try:
+            from whitemagic.core.intelligence.core_access import get_core_access_layer
+            cal = get_core_access_layer()
+            # Check for constellation convergence
+            constellations = cal.query_constellations(active_only=True)
+            for const in constellations:
+                member_count = const.get("member_count", 0)
+                if member_count >= 5:
+                    insights.append(EmergenceInsight(
+                        pattern_type="constellation_growth",
+                        description=f"Constellation '{const.get('name', 'unknown')}' reached {member_count} members",
+                        confidence=min(1.0, member_count / 20.0),
+                        metadata={"constellation_id": const.get("id"), "member_count": member_count},
+                    ))
+            # Check for novel associations (edges created recently)
+            recent_edges = cal.query_recent_associations(limit=20)
+            if len(recent_edges) >= 3:
+                insights.append(EmergenceInsight(
+                    pattern_type="association_burst",
+                    description=f"{len(recent_edges)} new associations detected — possible knowledge synthesis",
+                    confidence=min(1.0, len(recent_edges) / 10.0),
+                    metadata={"edge_count": len(recent_edges)},
+                ))
+        except Exception:
+            pass
+        self._insights = insights
+        return insights
 
 class ResonanceAmplifier:
     """Amplifies salient patterns through the Gan Ying bus."""

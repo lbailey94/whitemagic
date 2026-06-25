@@ -476,7 +476,7 @@ def generate_signing_keypair(force: bool = False) -> dict[str, Any]:
     # Simplified: use base64url encoding with did:key:z prefix
     did_key = f"did:key:z{pub_b64}"
 
-    logger.info(f"Generated Ed25519 keypair at {key_dir}")
+    logger.info("Generated Ed25519 keypair at %s", key_dir)
     return {
         "status": "success",
         "public_key_b64": pub_b64,

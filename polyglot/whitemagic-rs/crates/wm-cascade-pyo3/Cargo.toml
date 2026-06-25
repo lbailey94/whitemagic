@@ -1,0 +1,15 @@
+[package]
+name = "wm-cascade-pyo3"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "PyO3 bindings for WhiteMagic cascade acceleration"
+
+[lib]
+name = "wm_cascade"
+crate-type = ["cdylib"]
+
+[dependencies]
+wm-core = { path = "../wm-core" }
+pyo3 = { version = "0.22", features = ["extension-module"] }

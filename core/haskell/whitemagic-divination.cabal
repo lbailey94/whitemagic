@@ -28,6 +28,7 @@ library
                   , containers >= 0.6
                   , text       >= 1.2
                   , time       >= 1.9
+                  , array      >= 0.5
   default-language: Haskell2010
   ghc-options:      -Wall -O2
 
@@ -52,6 +53,7 @@ foreign-library whitemagic-divination-flib
                     , containers >= 0.6
                     , text       >= 1.2
                     , time       >= 1.9
+                    , array      >= 0.5
   default-language:   Haskell2010
   ghc-options:        -Wall -O2
 
@@ -65,6 +67,7 @@ executable whitemagic-divination
                   , whitemagic-divination
                   , text       >= 1.2
                   , time       >= 1.9
+                  , array      >= 0.5
   default-language: Haskell2010
   ghc-options:      -Wall -O2
 
@@ -78,5 +81,6 @@ test-suite whitemagic-divination-test
   build-depends:    base                    >= 4.14 && < 5
                   , whitemagic-divination
                   , text       >= 1.2
+                  , array      >= 0.5
   default-language: Haskell2010
   ghc-options:      -Wall

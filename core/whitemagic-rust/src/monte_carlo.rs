@@ -200,6 +200,11 @@ fn percentile_summary(mut values: Vec<f64>) -> PercentileSummary {
 
 /// Run N Monte Carlo trials over `claims`, sampling each confidence from its
 /// Beta posterior.  Returns a `MonteCarloResult` with percentile distributions.
+///
+/// Phase 1d: Claim-specific Beta precision — claims with more evidence (higher
+/// confidence, resolved outcome) get tighter posteriors; speculative claims
+/// get wider posteriors.
+/// Phase 1e: Stratified lead-time noise — sigma scales with lead weeks.
 fn run_trials(claims: &[ForecastClaim], n_trials: usize) -> MonteCarloResult {
     // For each trial we need an independent RNG seed
     let seeds: Vec<u64> = (0..n_trials as u64).collect();
@@ -209,24 +214,36 @@ fn run_trials(claims: &[ForecastClaim], n_trials: usize) -> MonteCarloResult {
         .par_iter()
         .map(|&seed| {
             let mut rng = SmallRng::seed_from_u64(seed ^ 0xDEAD_BEEF_1234_5678);
-            let precision = 10.0_f64;
 
             // Build sampled (probability, outcome) pairs for resolved claims
             let pairs: Vec<(f64, f64)> = claims
                 .iter()
-                .filter_map(|c| c.outcome.map(|o| (sample_beta(&mut rng, c.confidence, precision), o)))
+                .filter_map(|c| {
+                    c.outcome.map(|o| {
+                        // Phase 1d: Claim-specific precision
+                        // Resolved claims with high confidence → tighter (higher precision)
+                        // Speculative claims (low confidence) → wider (lower precision)
+                        let precision = claim_precision(c);
+                        (sample_beta(&mut rng, c.confidence, precision), o)
+                    })
+                })
                 .collect();
 
             let bs = brier_score_from_pairs(&pairs);
             let bss = brier_skill_score(bs);
 
-            // Lead weeks: sample from Normal(μ, σ=2) centred on observed
+            // Lead weeks: sample from Normal(μ, σ) where σ scales with lead weeks
             let lead: Option<f64> = {
                 let lead_values: Vec<f64> = claims
                     .iter()
                     .filter_map(|c| c.lead_weeks)
                     .map(|lw| {
-                        let noise: f64 = rng.gen_range(-2.0..2.0);
+                        // Phase 1e: Stratified lead-time noise
+                        // sigma = max(1.0, lead_weeks * 0.15)
+                        // Short predictions (5 weeks) → σ=1.0 (tight)
+                        // Long predictions (50 weeks) → σ=7.5 (wide)
+                        let sigma = (1.0_f64).max(lw * 0.15);
+                        let noise: f64 = rng.gen_range(-sigma..sigma);
                         (lw + noise).max(0.0)
                     })
                     .collect();
@@ -256,6 +273,30 @@ fn run_trials(claims: &[ForecastClaim], n_trials: usize) -> MonteCarloResult {
         lead_weeks: percentile_summary(lead_vals),
         prob_better_than_random: prob_better,
         prob_strongly_calibrated: prob_strong,
+    }
+}
+
+/// Phase 1d: Compute claim-specific Beta precision.
+///
+/// Resolved claims with high confidence get high precision (tight posteriors).
+/// Pending/speculative claims get lower precision (wide posteriors).
+///
+/// - Resolved + confidence >= 0.8: precision = 20.0 (tight)
+/// - Resolved + confidence >= 0.5: precision = 12.0 (moderate)
+/// - Resolved + confidence < 0.5:  precision = 8.0  (wide)
+/// - Pending (no outcome):         precision = 5.0  (widest)
+fn claim_precision(claim: &ForecastClaim) -> f64 {
+    match claim.outcome {
+        Some(_) => {
+            if claim.confidence >= 0.8 {
+                20.0
+            } else if claim.confidence >= 0.5 {
+                12.0
+            } else {
+                8.0
+            }
+        }
+        None => 5.0,
     }
 }
 
@@ -427,5 +468,89 @@ mod tests {
         assert!(s.p25 <= s.p50);
         assert!(s.p50 <= s.p75);
         assert!(s.p75 <= s.p95);
+    }
+
+    #[test]
+    fn test_claim_precision_resolved_high_confidence() {
+        let claim = ForecastClaim {
+            id: "c1".into(),
+            confidence: 0.9,
+            outcome: Some(1.0),
+            lead_weeks: Some(10.0),
+        };
+        assert_eq!(claim_precision(&claim), 20.0);
+    }
+
+    #[test]
+    fn test_claim_precision_resolved_moderate_confidence() {
+        let claim = ForecastClaim {
+            id: "c2".into(),
+            confidence: 0.6,
+            outcome: Some(1.0),
+            lead_weeks: None,
+        };
+        assert_eq!(claim_precision(&claim), 12.0);
+    }
+
+    #[test]
+    fn test_claim_precision_resolved_low_confidence() {
+        let claim = ForecastClaim {
+            id: "c3".into(),
+            confidence: 0.3,
+            outcome: Some(0.0),
+            lead_weeks: None,
+        };
+        assert_eq!(claim_precision(&claim), 8.0);
+    }
+
+    #[test]
+    fn test_claim_precision_pending() {
+        let claim = ForecastClaim {
+            id: "p1".into(),
+            confidence: 0.7,
+            outcome: None,
+            lead_weeks: None,
+        };
+        assert_eq!(claim_precision(&claim), 5.0);
+    }
+
+    #[test]
+    fn test_high_precision_tighter_distribution() {
+        // High precision should produce tighter Beta distribution (lower variance)
+        let mut rng = SmallRng::seed_from_u64(42);
+        let mut high_prec_samples = Vec::new();
+        let mut low_prec_samples = Vec::new();
+        for _ in 0..2000 {
+            high_prec_samples.push(sample_beta(&mut rng, 0.7, 20.0));
+            low_prec_samples.push(sample_beta(&mut rng, 0.7, 5.0));
+        }
+        let hp_mean = high_prec_samples.iter().sum::<f64>() / high_prec_samples.len() as f64;
+        let lp_mean = low_prec_samples.iter().sum::<f64>() / low_prec_samples.len() as f64;
+        let hp_var = high_prec_samples.iter().map(|x| (x - hp_mean).powi(2)).sum::<f64>() / high_prec_samples.len() as f64;
+        let lp_var = low_prec_samples.iter().map(|x| (x - lp_mean).powi(2)).sum::<f64>() / low_prec_samples.len() as f64;
+        assert!(hp_var < lp_var, "High precision should have lower variance: {} vs {}", hp_var, lp_var);
+    }
+
+    #[test]
+    fn test_stratified_lead_time_noise() {
+        // Long lead times should produce wider lead_weeks distribution
+        let short_claims = vec![
+            ForecastClaim { id: "s1".into(), confidence: 0.8, outcome: Some(1.0), lead_weeks: Some(5.0) },
+            ForecastClaim { id: "s2".into(), confidence: 0.8, outcome: Some(1.0), lead_weeks: Some(5.0) },
+        ];
+        let long_claims = vec![
+            ForecastClaim { id: "l1".into(), confidence: 0.8, outcome: Some(1.0), lead_weeks: Some(50.0) },
+            ForecastClaim { id: "l2".into(), confidence: 0.8, outcome: Some(1.0), lead_weeks: Some(50.0) },
+        ];
+        let short_result = run_trials(&short_claims, 1000);
+        let long_result = run_trials(&long_claims, 1000);
+        // Long lead times should have wider spread (p95 - p5)
+        let short_spread = short_result.lead_weeks.p95 - short_result.lead_weeks.p5;
+        let long_spread = long_result.lead_weeks.p95 - long_result.lead_weeks.p5;
+        assert!(
+            long_spread > short_spread,
+            "Long lead times should have wider spread: {} vs {}",
+            long_spread, short_spread
+        );
     }
 }

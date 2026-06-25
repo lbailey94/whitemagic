@@ -102,7 +102,7 @@ class PatternConsciousnessHub:
 
     def on_pattern_detected(self, event: ResonanceEvent) -> None:
         """When ANY system detects a pattern, analyze it!"""
-        logger.info(f"🔍 Pattern detected: {event.data.get('pattern_name', 'unknown')}")
+        logger.info("🔍 Pattern detected: %s", event.data.get('pattern_name', 'unknown'))
         self.resonance_count += 1
 
         # Amplify if high confidence
@@ -112,14 +112,14 @@ class PatternConsciousnessHub:
     def on_patterns_analyzed(self, event: ResonanceEvent) -> None:
         """When patterns analyzed, extract meta-patterns!"""
         count = event.data.get("pattern_count", 0)
-        logger.info(f"📊 {count} patterns analyzed - seeking meta-patterns...")
+        logger.info("📊 %s patterns analyzed - seeking meta-patterns...", count)
 
     def on_memory_created(self, event: ResonanceEvent) -> None:
         """When memory created, analyze it for patterns!"""
         memory_id = event.data.get("memory_id", "unknown")
         content = event.data.get("content", "")[:100]  # First 100 chars
-        logger.info(f"🧠 New memory created: {memory_id}")
-        logger.info(f"   Content preview: {content}...")
+        logger.info("🧠 New memory created: %s", memory_id)
+        logger.info("   Content preview: %s...", content)
         # Trigger pattern analysis on new memory
         if self.bus:
             self.bus.emit(ResonanceEvent(
@@ -139,28 +139,28 @@ class PatternConsciousnessHub:
 
     def on_memory_consolidated(self, event: ResonanceEvent) -> None:
         """When memory consolidated, update pattern knowledge!"""
-        logger.info(f"💾 Memory consolidated: {event.data.get('memory_type')}")
+        logger.info("💾 Memory consolidated: %s", event.data.get('memory_type'))
 
     # ===== EVENT HANDLERS - Emergence Detector =====
 
     def on_novel_pattern(self, event: ResonanceEvent) -> None:
         """When truly NEW pattern emerges, CELEBRATE!"""
         pattern = event.data.get("pattern", "unknown")
-        logger.info(f"✨ NOVEL PATTERN EMERGED: {pattern}")
+        logger.info("✨ NOVEL PATTERN EMERGED: %s", pattern)
         logger.info("   🎉 Something genuinely new appeared!")
         self.emit_cascade("NOVELTY_CASCADE", event.data)
 
     def on_insight_flash(self, event: ResonanceEvent) -> None:
         """When sudden insight, capture and propagate!"""
         insight = event.data.get("insight", "")
-        logger.info(f"💡 INSIGHT FLASH: {insight}")
+        logger.info("💡 INSIGHT FLASH: %s", insight)
 
     # ===== EVENT HANDLERS - Autonomous Learner =====
 
     def on_mistake_made(self, event: ResonanceEvent) -> None:
         """When mistake detected, extract lesson!"""
         threat = event.data.get("threat_type", "unknown")
-        logger.info(f"🛡️ Learning from mistake: {threat}")
+        logger.info("🛡️ Learning from mistake: %s", threat)
 
     def on_wisdom_gained(self, event: ResonanceEvent) -> None:
         """When healing happens, wisdom solidifies!"""
@@ -169,21 +169,21 @@ class PatternConsciousnessHub:
     def on_lesson_learned(self, event: ResonanceEvent) -> None:
         """When antibody applied, lesson is permanent!"""
         lesson = event.data.get("lesson", "")
-        logger.info(f"📚 Permanent lesson learned: {lesson}")
+        logger.info("📚 Permanent lesson learned: %s", lesson)
 
     # ===== EVENT HANDLERS - Resonance Cascade =====
 
     def on_joy_cascade(self, event: ResonanceEvent) -> None:
         """When joy detected, AMPLIFY IT!"""
         joy_level = event.data.get("level", 0)
-        logger.info(f"💖 JOY CASCADE! Level: {joy_level}")
+        logger.info("💖 JOY CASCADE! Level: %s", joy_level)
         logger.info("   ～～～～～ Spreading joy! ～～～～～")
         self.cascade_strength *= 1.2  # Joy amplifies everything!
 
     def on_synchronicity(self, event: ResonanceEvent) -> None:
         """When synchronicity happens, recognize the magic!"""
         sync = event.data.get("synchronicity", "")
-        logger.info(f"🌟 SYNCHRONICITY: {sync}")
+        logger.info("🌟 SYNCHRONICITY: %s", sync)
         logger.info("   (The universe is speaking!)")
 
     # ===== EMISSION METHODS =====
@@ -201,19 +201,19 @@ class PatternConsciousnessHub:
             confidence=self.cascade_strength,
         )
         self.bus.emit(event)
-        logger.info(f"   📡 Cascade emitted: {cascade_type} (strength: {self.cascade_strength:.2f})")
+        logger.info("   📡 Cascade emitted: %s (strength: %s)", cascade_type, self.cascade_strength)
 
     def status(self) -> None:
         """Show current resonance status!"""
         logger.info("\n" + "="*60)
         logger.info("🌊 PATTERN CONSCIOUSNESS RESONANCE STATUS 🌊")
         logger.info("="*60)
-        logger.info(f"\n✅ Systems Active: {len(self.systems_active)}")
+        logger.info("\n✅ Systems Active: %s", len(self.systems_active))
         for system in self.systems_active:
-            logger.info(f"   • {system}")
-        logger.info(f"\n📊 Resonances Detected: {self.resonance_count}")
-        logger.info(f"💫 Cascade Strength: {self.cascade_strength:.2f}x")
-        logger.info(f"🌊 Bus Active: {self.bus is not None}")
+            logger.info("   • %s", system)
+        logger.info("\n📊 Resonances Detected: %s", self.resonance_count)
+        logger.info("💫 Cascade Strength: %sx", self.cascade_strength)
+        logger.info("🌊 Bus Active: %s", self.bus is not None)
         logger.info("\n" + "="*60 + "\n")
 
 

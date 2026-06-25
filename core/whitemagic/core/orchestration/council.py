@@ -36,7 +36,7 @@ class Council:
         Returns:
             bool
         """
-        logger.info(f"♎ LIBRA COUNCIL: Deliberating on '{action_description}'")
+        logger.info("♎ LIBRA COUNCIL: Deliberating on '%s'", action_description)
 
         votes = []
 
@@ -56,14 +56,14 @@ class Council:
         # Tally
         score: float = 0
         for v in votes:
-            logger.info(f"  - {v.agent}: {v.decision} ({v.reason})")
+            logger.info("  - %s: %s (%s)", v.agent, v.decision, v.reason)
             if v.decision == "APPROVE":
                 score += v.weight
             elif v.decision == "BLOCK":
                 score -= v.weight
 
         decision = score > 0
-        logger.info(f"⚖️  Verdict: {'GRANTED' if decision else 'DENIED'} (Score: {score})")
+        logger.info("⚖️  Verdict: %s (Score: %s)", 'GRANTED' if decision else 'DENIED', score)
         return decision
 
 if __name__ == "__main__":

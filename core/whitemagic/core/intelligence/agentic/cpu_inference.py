@@ -427,8 +427,8 @@ if __name__ == "__main__":
 
     for q in queries:
         result = engine.infer(q)
-        logger.info(f"\nQ: {q}")
-        logger.info(f"A: {result.answer}")
-        logger.info(f"Confidence: {result.confidence:.0%}")
-        logger.info(f"Method: {result.method}")
-        logger.info(f"Tokens equivalent: {result.tokens_equivalent}")
+        logger.info("\nQ: %s", q)
+        logger.info("A: %s", result.answer)
+        logger.info("Confidence: %s", result.confidence)
+        logger.info("Method: %s", result.method)
+        logger.info("Tokens equivalent: %s", result.tokens_equivalent)

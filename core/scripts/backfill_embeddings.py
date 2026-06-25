@@ -60,7 +60,7 @@ def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = Non
     """Backfill embeddings in batches."""
     memories = get_memories_without_embeddings(db_path, limit)
     total = len(memories)
-    logger.info(f"Found {total} memories without embeddings")
+    logger.info("Found %s memories without embeddings", total)
 
     if total == 0:
         return 0
@@ -71,7 +71,7 @@ def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = Non
         engine = EmbeddingEngine()
         logger.info("Embedding engine loaded successfully")
     except ImportError as e:
-        logger.error(f"Failed to import embedding engine: {e}")
+        logger.error("Failed to import embedding engine: %s", e)
         logger.info("Embedding backfill requires embeddings tier dependencies")
         return 0
 
@@ -95,9 +95,9 @@ def batch_backfill(db_path: Path, batch_size: int = 100, limit: int | None = Non
                     conn.close()
                     processed += 1
             except Exception as e:
-                logger.warning(f"Failed to embed memory {memory_id}: {e}")
+                logger.warning("Failed to embed memory %s: %s", memory_id, e)
 
-    logger.info(f"Backfill complete: {processed}/{total} memories processed")
+    logger.info("Backfill complete: %s/%s memories processed", processed, total)
     return processed
 
 
@@ -111,14 +111,14 @@ def main():
     db_path = Path(args.db_path) if args.db_path else get_db_path()
 
     if not db_path.exists():
-        logger.error(f"Database not found: {db_path}")
+        logger.error("Database not found: %s", db_path)
         sys.exit(1)
 
-    logger.info(f"Using database: {db_path}")
+    logger.info("Using database: %s", db_path)
     processed = batch_backfill(db_path, args.batch_size, args.limit)
 
     if processed > 0:
-        logger.info(f"Successfully backfilled {processed} embeddings")
+        logger.info("Successfully backfilled %s embeddings", processed)
     else:
         logger.warning("No embeddings were backfilled")
 

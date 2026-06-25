@@ -59,7 +59,7 @@ class ZodiacCouncil:
             description=description,
             proposer_id=proposer_id,
         )
-        logger.info(f"📜 Proposal created: [{prop_id}] {title}")
+        logger.info("📜 Proposal created: [%s] %s", prop_id, title)
         return prop_id
 
     def cast_vote(self, proposal_id: str, agent_id: str, spectrum: VoteSpectrum) -> Any:
@@ -77,7 +77,7 @@ class ZodiacCouncil:
             "time": spectrum.time,
             "importance": spectrum.importance,
         }
-        logger.info(f"🗳️ Vote cast for {proposal_id} by {agent_id}")
+        logger.info("🗳️ Vote cast for %s by %s", proposal_id, agent_id)
 
     def calculate_consensus(self, proposal_id: str) -> dict[str, Any]:
         """Calculate the resonance-weighted center of mass for a proposal.

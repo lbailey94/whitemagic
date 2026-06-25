@@ -302,11 +302,12 @@ class ConstellationDetector:
         self.persist_memberships()
 
         logger.info(
-            f"✨ Constellation detection ({report.algorithm}): "
-            f"{report.constellations_found} constellations "
-            f"found in {report.memories_scanned} memories ({report.duration_ms:.0f}ms). "
-            f"Largest: {report.largest_constellation} members",
-        )
+            "✨ Constellation detection (%s): "
+            "%s constellations "
+            "found in %s memories (%.0fms). "
+            "Largest: %s members",
+         report.algorithm, report.constellations_found,
+         report.memories_scanned, report.duration_ms, report.largest_constellation)
         return report
 
     # ------------------------------------------------------------------
@@ -456,8 +457,8 @@ class ConstellationDetector:
 
             if entities_created:
                 logger.info(
-                    f"KG enrichment: {entities_created} constellation entities registered",
-                )
+                    "KG enrichment: %s constellation entities registered",
+                 entities_created)
         except Exception as e:
             logger.debug("KG enrichment from constellations skipped: %s", e, exc_info=True)
 
@@ -753,9 +754,9 @@ class ConstellationDetector:
 
         if merge_log:
             logger.info(
-                f"✨ Constellation auto-merge: {len(merge_log)} merges, "
-                f"{len(constellations)} → {len(surviving)} constellations",
-            )
+                "✨ Constellation auto-merge: %s merges, "
+                "%s → %s constellations",
+             len(merge_log), len(constellations), len(surviving))
         return result
 
     # ------------------------------------------------------------------
@@ -916,9 +917,9 @@ class ConstellationDetector:
                 )
                 if novel or forgotten:
                     logger.info(
-                        f"Drift tracking: {len(matched)} matched, "
-                        f"{len(novel)} novel, {len(forgotten)} forgotten",
-                    )
+                        "Drift tracking: %s matched, "
+                        "%s novel, %s forgotten",
+                     len(matched), len(novel), len(forgotten))
                 return matched, novel, forgotten
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
@@ -948,9 +949,9 @@ class ConstellationDetector:
 
         if novel or forgotten:
             logger.info(
-                f"Drift tracking: {len(matched_dict)} matched, "
-                f"{len(novel)} novel, {len(forgotten)} forgotten",
-            )
+                "Drift tracking: %s matched, "
+                "%s novel, %s forgotten",
+             len(matched_dict), len(novel), len(forgotten))
         return matched_dict, novel, forgotten
 
     @staticmethod

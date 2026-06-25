@@ -135,7 +135,7 @@ class WalletGovernor:
                     for key in ("allowed_actions", "blocked_actions", "currency"):
                         if key in overrides:
                             self._rules[key] = overrides[key]
-                    logger.info(f"Financial governance: loaded YAML overrides from {yaml_path}")
+                    logger.info("Financial governance: loaded YAML overrides from %s", yaml_path)
         except Exception as e:
             logger.debug("Financial governance YAML load: %s", e, exc_info=True)
 

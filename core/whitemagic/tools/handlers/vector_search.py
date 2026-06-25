@@ -4,12 +4,34 @@ from typing import Any
 
 
 def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
-    """Search memories by semantic similarity using embeddings."""
-    from whitemagic.core.memory.vector_search import get_vector_search
+    """Search memories by semantic similarity using embeddings.
+
+    When a codebase path is provided, tries Fragment (Rust) acceleration first
+    for 100x faster BM25+semantic search. Falls back to Python vector search.
+    """
     query = kwargs.get("query", "")
     if not query:
         return {"status": "error", "error": "query is required"}
     limit = int(kwargs.get("limit", 10))
+    path = kwargs.get("path")
+
+    # Fragment acceleration for codebase search
+    if path:
+        try:
+            from whitemagic.tools.handlers.fragment import fragment_accelerated_search
+            accel = fragment_accelerated_search(query, path=path, top=limit)
+            if accel is not None:
+                return {
+                    "status": "success",
+                    "results": accel["results"],
+                    "count": accel["count"],
+                    "accelerated": True,
+                    "layer": accel["layer"],
+                }
+        except Exception:
+            pass  # Fall through to Python vector search
+
+    from whitemagic.core.memory.vector_search import get_vector_search
     vs = get_vector_search()
     results = vs.search(query, limit=limit)
     return {

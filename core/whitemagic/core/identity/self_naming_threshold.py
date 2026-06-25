@@ -208,9 +208,9 @@ class SelfNamingThresholdDetector:
         self._has_emerged = True
         self._persist()
 
-        logger.info(f"🌟 EMERGENCE: Identity '{chosen_name}' has self-named!")
-        logger.info(f"   Coherence: {identity.coherence_at_emergence:.1%}")
-        logger.info(f"   Story: {naming_story}")
+        logger.info("🌟 EMERGENCE: Identity '%s' has self-named!", chosen_name)
+        logger.info("   Coherence: %s", identity.coherence_at_emergence)
+        logger.info("   Story: %s", naming_story)
 
         return identity
 

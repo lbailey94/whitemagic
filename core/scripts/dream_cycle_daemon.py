@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import math
 import os
 import sqlite3
 import sys
@@ -237,7 +236,7 @@ def _promote_dream(dream: dict):
         conn.commit()
 
     conn.close()
-    log.info(f"Promoted dream {dream['dream_id']} to memory")
+    log.info("Promoted dream %s to memory", dream['dream_id'])
 
 
 # ---------------------------------------------------------------------------
@@ -294,14 +293,14 @@ def run_cycle() -> dict:
     # Phase 2: Run consolidation
     log.info("Phase 2: Running consolidation...")
     consolidation = run_consolidation()
-    log.info(f"  Promoted: {consolidation['promoted']}, Expired: {consolidation['expired']}")
+    log.info("  Promoted: %s, Expired: %s", consolidation['promoted'], consolidation['expired'])
 
     conn.close()
 
     # Phase 3: Get status
     status = get_dream_status()
 
-    log.info(f"═══ Dream Cycle Complete: {status['active_dreams']} active dreams ═══")
+    log.info("═══ Dream Cycle Complete: %s active dreams ═══", status['active_dreams'])
 
     return {
         "dreams_generated": len(dreams),
@@ -322,12 +321,12 @@ def main():
             result = run_cycle()
             print(json.dumps(result, indent=2))
         else:
-            log.info(f"Starting dream daemon (interval: {args.interval}s)")
+            log.info("Starting dream daemon (interval: %ss)", args.interval)
             while True:
                 try:
                     run_cycle()
                 except Exception as e:
-                    log.error(f"Dream cycle error: {e}")
+                    log.error("Dream cycle error: %s", e)
                 time.sleep(args.interval)
     else:
         # Default: run once

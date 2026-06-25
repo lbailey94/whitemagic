@@ -91,4 +91,105 @@ TOOLS: list[ToolDefinition] = [
         },
         gana="Void", garden="stillness", quadrant="northern", element="water",
     ),
+    # ── v23.1: 6D Holographic Galaxy Router ──────────────────────────
+    ToolDefinition(
+        name="galaxy.route",
+        description=(
+            "Determine which cognitive galaxy a memory belongs to based on the "
+            "source subsystem. Returns the galaxy name for routing."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "subsystem": {"type": "string", "description": "Name of the cognitive subsystem (e.g. 'dream_cycle', 'emergence_engine')"},
+                "metadata": {"type": "object", "description": "Optional metadata with explicit galaxy override"},
+            },
+            "required": ["subsystem"],
+        },
+        gana="Void", garden="stillness", quadrant="northern", element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.stats",
+        description=(
+            "Get statistics for a specific cognitive galaxy — memory count, "
+            "average importance, average galactic distance, zone distribution."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "galaxy": {"type": "string", "description": "Galaxy name (e.g. 'universal', 'self_learning', 'oracle')", "default": "universal"},
+            },
+        },
+        gana="Void", garden="stillness", quadrant="northern", element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.migrate",
+        description=(
+            "Migrate a memory from one cognitive galaxy to another. "
+            "Useful when a memory's cognitive role shifts over time."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "memory_id": {"type": "string", "description": "ID of the memory to migrate"},
+                "target_galaxy": {"type": "string", "description": "Destination galaxy name"},
+            },
+            "required": ["memory_id", "target_galaxy"],
+        },
+        gana="Void", garden="stillness", quadrant="northern", element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.list_types",
+        description=(
+            "List all registered cognitive galaxy types with descriptions, "
+            "colors, and decay multipliers."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+        gana="Void", garden="stillness", quadrant="northern", element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.export",
+        description=(
+            "Export memories from a galaxy as Arrow IPC bytes for cross-instance sharing. "
+            "Uses zero-copy columnar format (32x faster than JSON). "
+            "Filters by galaxy and optionally by memory type."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "galaxy": {"type": "string", "description": "Galaxy to export (default: universal)"},
+                "memory_type": {"type": "string", "description": "Filter by memory type (optional)"},
+                "limit": {"type": "integer", "description": "Max memories to export (default: 10000)"},
+            },
+        },
+        gana="Void", garden="stillness", quadrant="northern", element="water",
+    ),
+    ToolDefinition(
+        name="galaxy.import",
+        description=(
+            "Import memories from Arrow IPC bytes into the local memory system. "
+            "Memories are stored via the normal ingestion pipeline with dedup, "
+            "surprise gate, and holographic indexing. Galaxy metadata is preserved."
+        ),
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.WRITE,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "ipc_bytes_b64": {"type": "string", "description": "Base64-encoded Arrow IPC bytes"},
+            },
+            "required": ["ipc_bytes_b64"],
+        },
+        gana="Void", garden="stillness", quadrant="northern", element="water",
+    ),
 ]

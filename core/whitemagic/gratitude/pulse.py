@@ -39,7 +39,7 @@ class GratitudePulse:
             return
 
         self.running = True
-        logger.info(f"💓 Gratitude Pulse started. Scanning {self.wallet.public_address} every {self.interval}s")
+        logger.info("💓 Gratitude Pulse started. Scanning %s every %ss", self.wallet.public_address, self.interval)
 
         while self.running:
             try:

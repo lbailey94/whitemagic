@@ -76,7 +76,7 @@ class BiologicalEventBus:
             None
         """
         self.is_active = True
-        asyncio.create_task(self._process_events())
+        self._event_task = asyncio.create_task(self._process_events())
         logger.info("🧠 Biological Event Bus started")
 
     async def stop(self) -> None:

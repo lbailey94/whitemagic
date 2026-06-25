@@ -2,7 +2,7 @@
 
 The pattern in many files is:
     except Exception as e:
-        logger.error(f"Failed to foo: {e}")
+        logger.error("Failed to foo: %s", e)
 
 The fix: change to:
     except Exception as e:
@@ -16,7 +16,7 @@ The new form:
   except)
 
 The script targets the most common patterns:
-- logger.error(f"...{e}")  -> logger.error("...%s", e, exc_info=True)
+- logger.error("...%s", e)  -> logger.error("...%s", e, exc_info=True)
 - logger.exception(...)    -> unchanged (already includes traceback)
 
 Only modifies calls that are *inside* an except block (heuristic:

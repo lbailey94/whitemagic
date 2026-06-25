@@ -67,7 +67,7 @@ class ThoughtGalaxy:
                 json.dumps(episode.outcome_metrics),
                 json.dumps(episode.tags)
             ))
-        logger.info(f"Recorded cognitive episode {episode.id} (score: {episode.outcome_score})")
+        logger.info("Recorded cognitive episode %s (score: %s)", episode.id, episode.outcome_score)
 
     def recall_best_strategies(self, task_type: str, min_score: float = 0.5, limit: int = 5) -> list[CognitiveEpisode]:
         """Retrieve high-scoring episodes for a similar task, including Golden Rules."""

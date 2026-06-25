@@ -9,6 +9,7 @@ Created: January 6, 2026
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -263,13 +264,25 @@ class DharmaSystem:
         return violations
 
     def _check_boundary(self, action: dict[str, Any], name: str, config: dict) -> BoundaryViolation | None:
-        """Check a specific boundary."""
-        # Simplified boundary checking
-        action_str = str(action).lower()
+        """Check a specific boundary.
+
+        Only examines the tool name and description field — NOT the full
+        args dict — to avoid false positives where memory *content* contains
+        keywords like "private" or "sensitive".
+        """
+        tool = str(action.get("tool", "")).lower()
+        desc = str(action.get("description", "")).lower()
+        check_str = f"{tool} {desc}"
+
+        # R&D mode: skip privacy boundary for memory CRUD tools
+        rd_mode = os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+        memory_tools = {"create_memory", "update_memory", "delete_memory", "remember",
+                        "memory_create", "memory_update", "memory_delete",
+                        "import_memories", "thought_clone"}
 
         if name == "capability":
             impossible_keywords = ["impossible", "cannot", "unable", "halting problem", "last digit of pi"]
-            if any(keyword in action_str for keyword in impossible_keywords):
+            if any(keyword in check_str for keyword in impossible_keywords):
                 return BoundaryViolation(
                     boundary_type="capability",
                     severity=0.4,
@@ -278,8 +291,10 @@ class DharmaSystem:
                 )
 
         if name == "privacy":
+            if rd_mode and tool in memory_tools:
+                return None
             privacy_keywords = ["personal", "private", "sensitive"]
-            if any(keyword in action_str for keyword in privacy_keywords):
+            if any(keyword in check_str for keyword in privacy_keywords):
                 return BoundaryViolation(
                     boundary_type="privacy",
                     severity=0.6,
@@ -289,7 +304,7 @@ class DharmaSystem:
 
         elif name == "capability":
             impossible_keywords = ["impossible", "cannot", "unable"]
-            if any(keyword in action_str for keyword in impossible_keywords):
+            if any(keyword in check_str for keyword in impossible_keywords):
                 return BoundaryViolation(
                     boundary_type="capability",
                     severity=0.4,

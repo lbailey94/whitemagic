@@ -25,7 +25,7 @@ class BittensorBridge:
         try:
             # Mocking the discovery process for SN51
             # In production, this would use the Bittensor API or a subnet-specific gateway
-            logger.info(f"🔍 Scanning Bittensor SN51 for {mining_type} resources...")
+            logger.info("🔍 Scanning Bittensor SN51 for %s resources...", mining_type)
 
             # Simulated response from lium.io / Datura marketplace
             mock_data = {

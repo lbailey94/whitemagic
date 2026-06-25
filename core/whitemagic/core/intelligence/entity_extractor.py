@@ -345,8 +345,8 @@ class EntityExtractor:
                 conn.commit()
 
             logger.info(
-                f"Stored {len(result.relations)} extracted relations for {memory_id[:8]}",
-            )
+                "Stored %s extracted relations for %s",
+             len(result.relations), memory_id[:8])
         except Exception as e:
             logger.debug("Failed to store extracted relations: %s", e, exc_info=True)
 

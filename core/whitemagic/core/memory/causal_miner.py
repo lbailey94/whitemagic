@@ -387,10 +387,10 @@ class CausalMiner:
             self._total_edges_created += report.edges_created
 
         logger.info(
-            f"⚡ Causal mining: {report.memories_sampled} sampled, "
-            f"{report.pairs_evaluated} pairs, {report.edges_proposed} proposed, "
-            f"{report.edges_created} created ({elapsed:.0f}ms)",
-        )
+            "⚡ Causal mining: %s sampled, "
+            "%s pairs, %s proposed, "
+            "%s created (%.0fms)",
+         report.memories_sampled, report.pairs_evaluated, report.edges_proposed)
         return report
 
     # ------------------------------------------------------------------
@@ -455,9 +455,9 @@ class CausalMiner:
                         })
 
             logger.info(
-                f"Causal mining: temporal fallback generated {len(pairs)} pairs "
-                f"from {len(parsed)} memories",
-            )
+                "Causal mining: temporal fallback generated %s pairs "
+                "from %s memories",
+             len(pairs), len(parsed))
         except Exception as e:
             logger.debug("Temporal fallback failed: %s", e, exc_info=True)
 

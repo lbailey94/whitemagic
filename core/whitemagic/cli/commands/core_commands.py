@@ -195,10 +195,10 @@ def init_command(ctx, galaxy: str, skip_seed: bool, skip_ollama: bool) -> None:
 @click.command(name="rules")
 def rules_command() -> None:
     """☸️  Show active Dharma rules (alias for `wm dharma principles`)"""
-    from whitemagic.tools.dispatch_table import dispatch
+    from whitemagic.tools.unified_api import call_tool
     try:
-        result = dispatch("dharma_rules") or {}
-        rules = result.get("rules", result.get("principles", []))
+        result = call_tool("dharma_rules")
+        rules = result.get("details", {}).get("rules", result.get("rules", result.get("principles", [])))
         if isinstance(rules, list):
             for r in rules[:
                 20]:

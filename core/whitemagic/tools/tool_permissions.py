@@ -236,7 +236,7 @@ def check_tool_permission(
 
 
 def _blocked(tool_name: str, roles: list[str], reason: str) -> dict[str, Any]:
-    logger.info(f"Permission denied: tool={tool_name} roles={roles} reason={reason}")
+    logger.info("Permission denied: tool=%s roles=%s reason=%s", tool_name, roles, reason)
     return {
         "status": "error",
         "error": f"Permission denied: {reason}",

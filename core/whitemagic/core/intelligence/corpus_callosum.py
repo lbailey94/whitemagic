@@ -13,11 +13,14 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import threading
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from difflib import SequenceMatcher
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -108,21 +111,41 @@ class SynthesisArbiter:
         return tension >= cls.TENSION_THRESHOLD
 
     @classmethod
+    def _semantic_similarity(cls, a: str, b: str) -> float:
+        """Compute a lightweight semantic similarity ratio between two strings.
+
+        Uses SequenceMatcher on lowercased, whitespace-normalized text.
+        Returns 0.0–1.0 where 1.0 means identical content.
+        """
+        a_norm = " ".join(a.lower().split())
+        b_norm = " ".join(b.lower().split())
+        return SequenceMatcher(None, a_norm, b_norm).ratio()
+
+    @classmethod
     def synthesize(cls, topic: str, rounds: list[DebateRound]) -> tuple[str, float, str]:
-        """Produce final synthesis text, tension, and dominant side."""
+        """Produce final synthesis text, tension, and dominant side.
+
+        Uses semantic similarity between left/right positions to adjust
+        the effective tension — when hemispheres converge on similar
+        language, tension is reduced even if the raw score is moderate.
+        """
         if not rounds:
             return f"No debate occurred on: {topic}", 0.0, "balanced"
 
         last = rounds[-1]
         avg_tension = sum(r.tension for r in rounds) / len(rounds)
 
-        if avg_tension < 0.3:
+        # Semantic convergence check: if positions are similar, reduce tension
+        similarity = cls._semantic_similarity(last.left_position, last.right_position)
+        adjusted_tension = avg_tension * (1.0 - similarity * 0.3)
+
+        if adjusted_tension < 0.3:
             dominant = "balanced"
             synthesis = (
                 f"[CONSENSUS] Both hemispheres agree on '{topic}'. "
                 f"Recommended action: proceed with caution and monitor."
             )
-        elif avg_tension < 0.6:
+        elif adjusted_tension < 0.6:
             dominant = "left"
             synthesis = (
                 f"[SYNTHESIS] '{topic}' — Left hemisphere's precision prevails, "
@@ -143,15 +166,56 @@ class SynthesisArbiter:
         return synthesis, last.tension, dominant
 
 
+def _run_async(coro: Any, timeout: float = 30.0) -> Any:
+    """Run a coroutine from sync context, handling nested event loops.
+
+    If no event loop is running, uses asyncio.run() directly.
+    If an event loop IS running (e.g., MCP server, async tests), runs the
+    coroutine in a separate thread with its own loop.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop is None:
+        return asyncio.run(coro)
+
+    # A loop is already running — use a thread to avoid conflicts
+    result_container: list[Any] = []
+    error_container: list[BaseException] = []
+
+    def _run_in_thread() -> None:
+        try:
+            new_loop = asyncio.new_event_loop()
+            try:
+                result_container.append(new_loop.run_until_complete(coro))
+            finally:
+                new_loop.close()
+        except BaseException as exc:
+            error_container.append(exc)
+
+    t = threading.Thread(target=_run_in_thread, daemon=True)
+    t.start()
+    t.join(timeout=timeout)
+    if t.is_alive():
+        raise TimeoutError(f"Async call did not complete within {timeout}s")
+    if error_container:
+        raise error_container[0]
+    return result_container[0] if result_container else None
+
+
 class CorpusCallosumBus:
     """Manages a multi-round debate between left and right hemispheres."""
 
     MAX_ROUNDS = 3
-    TIMEOUT_PER_ROUND = 30.0  # seconds (enforced at caller level)
+    TIMEOUT_PER_ROUND = 5.0  # seconds per round before heuristic fallback
 
     def __init__(self) -> None:
         self._debates: dict[str, DebateResult] = {}
         self._total_debates = 0
+        # Lightweight reasoner for follow-up rounds (fewer clones = faster)
+        self._followup_clones = 10
 
     def debate(self, topic: str) -> DebateResult:
         """Run a full corpus callosum debate on a topic."""
@@ -235,41 +299,68 @@ class CorpusCallosumBus:
         previous: DebateRound | None = None,
         final: bool = False,
     ) -> DebateRound:
-        """Generate a debate round. Uses bicameral reasoner for round 1, heuristics for follow-ups."""
+        """Generate a debate round using the real BicameralReasoner.
+
+        v23.2: All rounds now use the real bicameral reasoner with
+        accumulated context from prior rounds. Falls back to heuristic
+        only when async execution or reasoner is unavailable.
+        """
         start = time.perf_counter()
 
-        if round_number == 1:
-            # Use the existing bicameral reasoner
-            try:
+        try:
+            from whitemagic.core.intelligence.bicameral import (
+                get_bicameral_reasoner,
+            )
+            if round_number == 1:
+                reasoner = get_bicameral_reasoner()
+            else:
                 from whitemagic.core.intelligence.bicameral import (
-                    get_bicameral_reasoner,
+                    BicameralReasoner,
                 )
-                get_bicameral_reasoner()
-                # Note: reasoner.reason is async, but we call it synchronously here
-                # because the handler wrapper will manage async if needed.
-                # For deterministic testing, we use heuristic fallback.
-                raise RuntimeError("Force heuristic fallback for sync context")
-            except (ImportError, RuntimeError):
-                # Heuristic fallback (deterministic, no external deps)
+                reasoner = BicameralReasoner(
+                    left_clones=self._followup_clones,
+                    right_clones=self._followup_clones,
+                )
+
+            # Build context from previous rounds for the reasoner
+            ctx: dict[str, Any] = {"round": round_number, "final": final}
+            if previous is not None:
+                ctx["previous_left"] = previous.left_position
+                ctx["previous_right"] = previous.right_position
+                ctx["previous_left_critique"] = previous.left_critique
+                ctx["previous_right_critique"] = previous.right_critique
+                ctx["previous_tension"] = previous.tension
+
+            result = _run_async(reasoner.reason(topic, context=ctx), timeout=self.TIMEOUT_PER_ROUND)
+
+            left_pos = f"Left: {result.left_analysis.content[:200]}"
+            right_pos = f"Right: {result.right_analysis.content[:200]}"
+            left_crit = f"Left→Right: {result.cross_critique[0].challenges[0][:120]}" if result.cross_critique and result.cross_critique[0].challenges else "Left→Right: (no critique)"
+            right_crit = f"Right→Left: {result.cross_critique[1].challenges[0][:120]}" if len(result.cross_critique) > 1 and result.cross_critique[1].challenges else "Right→Left: (no critique)"
+            tension = result.tension_score
+
+        except (Exception, TimeoutError):
+            # Heuristic fallback (deterministic, no external deps)
+            if round_number == 1:
                 left_pos = f"Left: '{topic}' requires systematic analysis, risk assessment, and deterministic safeguards."
                 right_pos = f"Right: '{topic}' is an opportunity for creative transformation and novel patterns."
                 left_crit = "Left→Right: Creative proposals must be grounded in concrete evidence."
                 right_crit = "Right→Left: Over-caution may miss emergent possibilities."
                 tension = 0.55
-        elif final:
-            left_pos = f"Left (final): Accepting synthesis for '{topic}' with mandatory safeguards."
-            right_pos = f"Right (final): Accepting synthesis for '{topic}' with experimental clauses."
-            left_crit = "Left→Right: Ensure rollback plan exists."
-            right_crit = "Right→Left: Ensure feedback loops are in place."
-            tension = max(0.0, (previous.tension if previous else 0.5) - 0.15)
-        else:
-            prev_left = previous.left_position if previous else ""
-            prev_right = previous.right_position if previous else ""
-            left_pos = f"Left (rebuttal): Reaffirming precision concerns about '{topic}'."
-            right_pos = f"Right (rebuttal): Expanding on creative potential of '{topic}'."
-            left_crit = f"Left→Right: '{prev_right[:60]}...' lacks sufficient validation."
-            right_crit = f"Right→Left: '{prev_left[:60]}...' is overly constrained."
-            tension = min(1.0, (previous.tension if previous else 0.5) + 0.05)
+            elif final:
+                left_pos = f"Left (final): Accepting synthesis for '{topic}' with mandatory safeguards."
+                right_pos = f"Right (final): Accepting synthesis for '{topic}' with experimental clauses."
+                left_crit = "Left→Right: Ensure rollback plan exists."
+                right_crit = "Right→Left: Ensure feedback loops are in place."
+                tension = max(0.0, (previous.tension if previous else 0.5) - 0.15)
+            else:
+                prev_left = previous.left_position if previous else ""
+                prev_right = previous.right_position if previous else ""
+                left_pos = f"Left (rebuttal): Reaffirming precision concerns about '{topic}'."
+                right_pos = f"Right (rebuttal): Expanding on creative potential of '{topic}'."
+                left_crit = f"Left→Right: '{prev_right[:60]}...' lacks sufficient validation."
+                right_crit = f"Right→Left: '{prev_left[:60]}...' is overly constrained."
+                tension = min(1.0, (previous.tension if previous else 0.5) + 0.05)
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         return DebateRound(

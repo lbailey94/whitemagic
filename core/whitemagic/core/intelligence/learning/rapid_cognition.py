@@ -43,7 +43,7 @@ class RapidCognition:
         self.running = True
         self.thread = threading.Thread(target=self._learning_loop, daemon=True)
         self.thread.start()
-        logger.info(f"🧠 Rapid cognition started (every {self.learn_interval}s)")
+        logger.info("🧠 Rapid cognition started (every %ss)", self.learn_interval)
 
     def _learning_loop(self) -> Any:
         while self.running:

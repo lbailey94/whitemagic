@@ -56,9 +56,30 @@ def conduct_reasoning(question: str, context: dict[str, Any] | None = None) -> d
     Returns:
         dict[str, Any]
     """
-    from whitemagic.core.intelligence.reasoning import get_reasoner
-    res = get_reasoner().reason(question, context or {})  # type: ignore[arg-type]
-    return {"question": question, "synthesis": res.get("synthesis", ""), "confidence": res.get("confidence", 0.0)}
+    from whitemagic.core.intelligence.multi_spectral_reasoning import (
+        ReasoningContext,
+        get_reasoner,
+    )
+    ctx = ReasoningContext(question=question)
+    if context:
+        ctx = ReasoningContext(
+            question=question,
+            task_type=context.get("task_type", "analysis"),
+            urgency=context.get("urgency", "normal"),
+            complexity=context.get("complexity", "medium"),
+            stakes=context.get("stakes", "medium"),
+        )
+    res = get_reasoner().reason(question, context=ctx)
+    return {
+        "question": question,
+        "synthesis": res.synthesis,
+        "recommendation": res.recommendation,
+        "confidence": res.confidence,
+        "perspectives": [
+            {"lens": p.lens.value, "guidance": p.guidance, "confidence": p.confidence}
+            for p in res.perspectives
+        ],
+    }
 
 # --- WISDOM (I Ching) ---
 

@@ -399,9 +399,9 @@ class EditorAgent:
             merged.append(primary)
 
         logger.info(
-            f"Merged {len(memories)} -> {len(merged)} memories "
-            f"({len(memories) - len(merged)} duplicates removed)"
-        )
+            "Merged %s -> %s memories "
+            "(%s duplicates removed)"
+        , len(memories), len(merged), len(memories) - len(merged))
         return merged
 
 

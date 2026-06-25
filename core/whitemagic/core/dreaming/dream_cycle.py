@@ -254,9 +254,9 @@ class DreamCycle:
         logger.info(
             "💤 Dream phase %s: %s (%.0fms)",
             phase.value,
-            "ok" if report.success else f"error: {report.error}",
+            "ok" if report.success else "error: %s",
             report.duration_ms,
-        )
+         report.error)
 
     # ------------------------------------------------------------------
     # Dream phases
@@ -446,6 +446,12 @@ class DreamCycle:
             result["triage_error"] = str(e)
             logger.debug("Dream triage error: %s", e, exc_info=True)
 
+        # 8. Seed germination scan — find dormant polyglot seeds
+        try:
+            result["seed_scan"] = self._seed_scan_dormant()
+        except Exception as e:
+            result["seed_scan"] = {"skipped": True, "reason": str(e)}
+
         return result
 
     def _dream_consolidation(self) -> dict[str, Any]:
@@ -552,6 +558,21 @@ class DreamCycle:
             except Exception as e:
                 logger.debug("Operation failed: %s", e)
                 pass
+
+        # v23.2: Cross-domain collision detection
+        # Find memory pairs with high behavioral but low semantic similarity
+        try:
+            from whitemagic.core.intelligence.synthesis.cross_domain_detector import (
+                get_cross_domain_detector,
+            )
+            detector = get_cross_domain_detector()
+            collisions = detector.detect(sample_limit=500, top_n=5)
+            if collisions:
+                result["cross_domain_collisions"] = len(collisions)
+                result["top_collisions"] = [c.to_dict() for c in collisions[:3]]
+                result["collision_detector_stats"] = detector.get_stats()
+        except Exception as e:
+            logger.debug("Cross-domain collision detection failed: %s", e)
 
         return result
 
@@ -733,16 +754,62 @@ class DreamCycle:
                 "emergence_count": len(emergence_insights),
                 "dream_insights_persisted": persisted_count,
                 "constellation_merges": merge_result.get("merges", 0),
+                **self._run_recursive_improvement(),
             }
         except Exception as e:
             return {"skipped": True, "reason": str(e), "emergence_insights": emergence_insights,
                     "dream_insights_persisted": persisted_count,
                     "constellation_merges": merge_result.get("merges", 0)}
 
+    def _run_recursive_improvement(self) -> dict[str, Any]:
+        """Trigger a RecursiveImprovementLoop cycle from the dream state.
+
+        This connects the dream cycle's kaizen phase to the recursive
+        improvement loop, so dream discoveries become actionable hypotheses
+        that get simulated, predicted, and tracked.
+        """
+        try:
+            from whitemagic.core.evolution.recursive_loop import get_improvement_loop
+            loop = get_improvement_loop()
+            cycle = loop.run_cycle(max_hypotheses=10)
+            return {
+                "improvement_cycle_id": cycle.cycle_id,
+                "improvement_hypotheses": len(cycle.hypotheses),
+                "improvement_recommendations": len(cycle.top_recommendations),
+                "improvement_duration_ms": round(cycle.duration_ms, 1),
+            }
+        except Exception as e:
+            logger.debug("Recursive improvement loop failed in dream: %s", e, exc_info=True)
+            return {}
+
     def _dream_oracle(self) -> dict[str, Any]:
-        """Phase 4: Consult Grimoire for contextual recommendations."""
+        """Phase 4: Consult Grimoire for contextual recommendations.
+
+        v23.3: Now incorporates Bayesian calibration from TemporalForecastDB.
+        Oracle spell confidence is adjusted based on historical forecasting
+        accuracy — overconfident systems get dampened, underconfident boosted.
+        """
         try:
             from whitemagic.grimoire.auto_cast import AutoCaster, CastContext, CastMode
+
+            # Fetch Bayesian calibration data
+            calibration = {}
+            try:
+                from whitemagic.forecasting.temporal_db import TemporalForecastDB
+                db = TemporalForecastDB()
+                summary = db.summary()
+                calibration = {
+                    "brier_score": summary.get("brier_score", 0.0),
+                    "calibration_gap": summary.get("calibration_gap", 0.0),
+                    "brier_skill_score": summary.get("brier_skill_score", 0.0),
+                }
+            except Exception as e:
+                logger.debug("Calibration data unavailable for oracle: %s", e)
+
+            # Calculate Bayesian adjustment factor
+            # Negative calibration_gap = overconfident → dampen
+            # Positive calibration_gap = underconfident → boost
+            bayesian_adjustment = calibration.get("calibration_gap", 0.0) * 0.3
 
             caster = AutoCaster(mode=CastMode.SUGGEST_ONLY)
             caster.activate()
@@ -765,9 +832,13 @@ class DreamCycle:
                 results = caster.process_context(ctx)
                 for r in results:
                     if r.spell and r.confidence > 0.3:
+                        # Apply Bayesian calibration adjustment
+                        adjusted_conf = max(0.01, min(0.99, r.confidence + bayesian_adjustment))
                         suggestions.append({
                             "spell": r.spell.name,
-                            "confidence": round(r.confidence, 3),
+                            "confidence": round(adjusted_conf, 3),
+                            "raw_confidence": round(r.confidence, 3),
+                            "bayesian_adjustment": round(bayesian_adjustment, 3),
                             "for": prompt,
                         })
 
@@ -775,6 +846,7 @@ class DreamCycle:
             return {
                 "suggestions": suggestions[:5],
                 "suggestion_count": len(suggestions),
+                "calibration": calibration,
             }
         except Exception as e:
             return {"skipped": True, "reason": str(e)}
@@ -829,57 +901,326 @@ class DreamCycle:
     def _dream_prediction(self) -> dict[str, Any]:
         """Phase 9 (v17.0): Predictive drift detection.
 
-        Analyzes holographic coordinate trajectories to predict
-        which memories will drift before they actually do.
+        Queries memories with high importance but low recent access
+        to predict which are at risk of drifting outward in the galactic
+        zone system before they actually do.
         """
         result: dict[str, Any] = {"predictions": [], "at_risk_count": 0}
         try:
-            # v17: Background process for predictive drift
-            # Queries memories with high importance but low recent access
-            result["at_risk_count"] = 0
-            result["prediction_model"] = "coordinate_velocity_v1"
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+
+            with um.backend.pool.connection() as conn:
+                conn.row_factory = __import__("sqlite3").Row
+                # Find high-importance memories that haven't been accessed recently
+                # and are already drifting outward (galactic_distance > 0.3)
+                at_risk = conn.execute("""
+                    SELECT id, title, importance, galactic_distance,
+                           access_count, last_accessed, created_at
+                    FROM memories
+                    WHERE importance > 0.5
+                      AND COALESCE(access_count, 0) < 3
+                      AND galactic_distance > 0.3
+                      AND is_protected = 0
+                    ORDER BY importance DESC, galactic_distance DESC
+                    LIMIT 20
+                """).fetchall()
+
+                predictions = []
+                for row in at_risk:
+                    drift_risk = min(1.0, row["galactic_distance"] * (1.0 - row["access_count"] * 0.1))
+                    predictions.append({
+                        "memory_id": row["id"],
+                        "title": (row["title"] or "")[:60],
+                        "importance": round(row["importance"], 3),
+                        "current_distance": round(row["galactic_distance"], 3),
+                        "access_count": row["access_count"] or 0,
+                        "drift_risk": round(drift_risk, 3),
+                        "recommendation": "access" if drift_risk > 0.6 else "monitor",
+                    })
+
+                result["predictions"] = predictions
+                result["at_risk_count"] = len(predictions)
+                result["prediction_model"] = "coordinate_velocity_v1"
+                result["high_risk"] = sum(1 for p in predictions if p["drift_risk"] > 0.6)
             return result
-        except (ImportError, ModuleNotFoundError) as e:
+        except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
             return {"skipped": True, "reason": str(e)}
 
     def _dream_enrichment(self) -> dict[str, Any]:
         """Phase 10 (v17.0): Entity extraction & semantic enrichment.
 
-        Runs entity extraction on memories without entities,
-        creating typed associations automatically.
+        Scans memories for entity-like patterns (code symbols, file paths,
+        version numbers, tool names) and auto-tags them, creating
+        typed associations for future recall. Also benchmarks polyglot
+        seeds and updates their fitness scores.
         """
         result: dict[str, Any] = {"enriched": 0, "entities_extracted": 0}
         try:
-            # v17: Background batch entity extraction
-            # Processes memories without existing entity tags
-            result["enriched"] = 0
-            result["entities_extracted"] = 0
-            result["batch_status"] = "queued"
-            return result
+            from whitemagic.core.memory.unified import get_unified_memory
+            import re
+
+            um = get_unified_memory()
+
+            # Entity patterns to detect
+            entity_patterns = {
+                "file_path": re.compile(r'[\w/]+\.\w{1,5}'),
+                "version": re.compile(r'v?\d+\.\d+(?:\.\d+)?'),
+                "tool_name": re.compile(r'\b(?:fragment|strata|ollama|cargo|maturin|pytest)\b', re.I),
+                "python_module": re.compile(r'\bwhitemagic\.[a-z_.]+\b'),
+                "rust_crate": re.compile(r'\bwhitemagic_rs\b|\bfragment\b'),
+            }
+
+            with um.backend.pool.connection() as conn:
+                conn.row_factory = __import__("sqlite3").Row
+                # Find memories with no tags
+                untagged = conn.execute("""
+                    SELECT m.id, m.title, SUBSTR(m.content, 1, 1000) as snippet
+                    FROM memories m
+                    LEFT JOIN tags t ON m.id = t.memory_id
+                    WHERE t.tag IS NULL
+                    LIMIT 50
+                """).fetchall()
+
+                enriched = 0
+                entities_found = 0
+
+                for row in untagged:
+                    text = f"{row['title'] or ''} {row['snippet'] or ''}"
+                    auto_tags = set()
+
+                    for entity_type, pattern in entity_patterns.items():
+                        matches = pattern.findall(text)
+                        if matches:
+                            entities_found += len(matches)
+                            # Add entity type as tag
+                            auto_tags.add(f"entity:{entity_type}")
+
+                    # Add general auto_tagged label
+                    if auto_tags:
+                        auto_tags.add("dream_enriched")
+                        try:
+                            conn.executemany(
+                                "INSERT OR IGNORE INTO tags (memory_id, tag) VALUES (?, ?)",
+                                [(row["id"], tag) for tag in auto_tags],
+                            )
+                            enriched += 1
+                        except sqlite3.Error:
+                            pass
+
+                if enriched > 0:
+                    conn.commit()
+
+                result["enriched"] = enriched
+                result["entities_extracted"] = entities_found
+                result["batch_status"] = "completed"
+                result["untagged_scanned"] = len(untagged)
+        except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
+            result["enrichment_error"] = str(e)
+
+        # Seed fitness benchmark — update polyglot seed fitness scores
+        try:
+            result["seed_benchmark"] = self._seed_benchmark_fitness()
+        except Exception as e:
+            result["seed_benchmark"] = {"skipped": True, "reason": str(e)}
+
+        return result
+
+    def _seed_scan_dormant(self) -> dict[str, Any]:
+        """Scan for dormant polyglot seeds with available toolchains but no build artifact."""
+        try:
+            import json
+            import shutil
+            from pathlib import Path
+
+            seeds_path = Path(__file__).parent.parent.parent.parent / "polyglot" / "seeds" / "seeds.json"
+            if not seeds_path.exists():
+                return {"skipped": True, "reason": "seeds.json not found"}
+            with open(seeds_path) as f:
+                seeds_data = json.load(f)
+
+            dormant = []
+            for seed in seeds_data.get("seeds", []):
+                check_cmd = seed.get("toolchain_check", "").split()[0]
+                if not shutil.which(check_cmd):
+                    continue
+                source_dir = seeds_path.parent / seed.get("source_dir", "")
+                if not source_dir.exists():
+                    continue
+                # Check artifact presence (simplified)
+                name = seed["name"]
+                if name == "rust":
+                    has_artifact = bool(list(source_dir.glob("*.so"))) or (source_dir / "target" / "release").exists()
+                elif name == "zig":
+                    has_artifact = (source_dir / "zig-out" / "lib" / "libwhitemagic.so").exists()
+                elif name == "go":
+                    has_artifact = (source_dir / "whitemagic-go-mesh").exists()
+                elif name == "elixir":
+                    build_dir = source_dir / "_build"
+                    has_artifact = build_dir.exists() and any(build_dir.rglob("*.beam"))
+                else:
+                    has_artifact = False
+                if not has_artifact:
+                    dormant.append(name)
+
+            if dormant:
+                self._emit_event("SEED_DORMANT_FOUND", {"dormant": dormant})
+                logger.info("🌱 Seed scan: %d dormant seed(s) found: %s", len(dormant), dormant)
+
+            return {"dormant": dormant, "count": len(dormant)}
+        except Exception as e:
+            return {"skipped": True, "reason": str(e)}
+
+    def _seed_benchmark_fitness(self) -> dict[str, Any]:
+        """Benchmark wired polyglot seeds and update fitness scores in wired.json."""
+        try:
+            import json
+            import math
+            import time as _time
+
+            from whitemagic.config.paths import WM_ROOT
+            state_path = WM_ROOT / "seeds" / "wired.json"
+            if not state_path.exists():
+                return {"skipped": True, "reason": "wired.json not found"}
+
+            with open(state_path) as f:
+                state = json.load(f)
+
+            # Simple cosine similarity benchmark
+            import random
+            random.seed(42)
+            dim = 256
+            vec_a = [random.gauss(0, 1) for _ in range(dim)]
+            vec_b = [random.gauss(0, 1) for _ in range(dim)]
+            iterations = 50
+
+            # Python baseline
+            start = _time.time()
+            for _ in range(iterations):
+                dot = sum(a * b for a, b in zip(vec_a, vec_b))
+                norm_a = math.sqrt(sum(a * a for a in vec_a))
+                norm_b = math.sqrt(sum(b * b for b in vec_b))
+                _ = dot / (norm_a * norm_b) if norm_a > 0 and norm_b > 0 else 0.0
+            py_time = _time.time() - start
+
+            benchmarked = 0
+            for s in state.get("seeds", []):
+                name = s.get("name", "")
+                if s.get("status") not in ("verified", "wired"):
+                    continue
+
+                native_time = None
+                if name == "rust":
+                    try:
+                        import whitemagic_rs
+                        if hasattr(whitemagic_rs, "simd_cosine_similarity"):
+                            start = _time.time()
+                            for _ in range(iterations):
+                                _ = float(whitemagic_rs.simd_cosine_similarity(vec_a, vec_b))
+                            native_time = _time.time() - start
+                    except Exception:
+                        pass
+
+                if native_time is not None and native_time > 0:
+                    speedup = round(py_time / native_time, 2)
+                    fitness = s.get("fitness", {})
+                    fitness["benchmark_speedup"] = speedup
+                    fitness["last_benchmark_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                    # Recompute score
+                    zone = s.get("zone", "mid_band")
+                    zone_dist = {"core": 0.05, "inner_rim": 0.25, "mid_band": 0.50, "outer_rim": 0.75, "far_edge": 0.95}.get(zone, 1.0)
+                    zone_score = (1.0 - zone_dist) * 0.4
+                    successes = fitness.get("build_successes", 0)
+                    failures = fitness.get("build_failures", 0)
+                    total = successes + failures
+                    build_score = (successes / total) * 0.3 if total > 0 else 0.0
+                    verify_score = 0.15 if s.get("status") == "verified" else 0.0
+                    bench_score = min(float(speedup) / 100.0, 1.0) * 0.15
+                    fitness["score"] = round(zone_score + build_score + verify_score + bench_score, 4)
+                    s["fitness"] = fitness
+                    benchmarked += 1
+                    logger.info("🌱 Seed benchmark: %s = %sx speedup (fitness=%.3f)", name, speedup, fitness["score"])
+
+            if benchmarked > 0:
+                with open(state_path, "w") as f:
+                    json.dump(state, f, indent=2)
+                self._emit_event("SEED_BENCHMARKED", {"benchmarked": benchmarked})
+
+            return {"benchmarked": benchmarked, "python_baseline_ms": round(py_time * 1000, 2)}
         except Exception as e:
             return {"skipped": True, "reason": str(e)}
 
     def _dream_harmonize(self) -> dict[str, Any]:
         """Phase 11 (v17.0): Wu Xing balance & harmony tuning.
 
-        Adjusts holographic coordinates to maintain
-        elemental balance across the memory ecosystem.
+        Measures the distribution of memories across galactic zones
+        (core, inner rim, mid rim, outer rim, fringe) and computes
+        a Wu Xing balance score. Imbalanced distributions trigger
+        gentle adjustments via the lifecycle manager.
         """
         result: dict[str, Any] = {"harmony_score": 0.0, "adjustments": 0}
         try:
-            from whitemagic.harmony.vector import get_harmony_vector
+            from whitemagic.core.memory.unified import get_unified_memory
 
-            hv = get_harmony_vector()
-            current_balance = hv.get_balance() if hasattr(hv, 'get_balance') else 0.5
+            um = get_unified_memory()
 
-            result["harmony_score"] = current_balance
-            result["element_balance"] = {
-                "water": 0.2, "wood": 0.2, "fire": 0.2,
-                "earth": 0.2, "metal": 0.2
-            }
-            result["adjustments"] = 0
+            with um.backend.pool.connection() as conn:
+                # Count memories in each galactic zone
+                zone_counts = {}
+                for zone_name, lo, hi in [
+                    ("core", 0.0, 0.1),
+                    ("inner_rim", 0.1, 0.3),
+                    ("mid_rim", 0.3, 0.6),
+                    ("outer_rim", 0.6, 0.85),
+                    ("fringe", 0.85, 1.01),
+                ]:
+                    count = conn.execute(
+                        """SELECT COUNT(*) FROM memories
+                           WHERE galactic_distance >= ? AND galactic_distance < ?""",
+                        (lo, hi),
+                    ).fetchone()[0]
+                    zone_counts[zone_name] = count
+
+                total = sum(zone_counts.values())
+                if total == 0:
+                    result["harmony_score"] = 1.0
+                    result["element_balance"] = {z: 0.2 for z in zone_counts}
+                    result["zone_counts"] = zone_counts
+                    result["adjustments"] = 0
+                    return result
+
+                # Map galactic zones to Wu Xing elements
+                # core=earth(stability), inner_rim=metal(structure),
+                # mid_rim=water(flow), outer_rim=wood(growth), fringe=fire(transformation)
+                wu_xing_map = {
+                    "core": "earth",
+                    "inner_rim": "metal",
+                    "mid_rim": "water",
+                    "outer_rim": "wood",
+                    "fringe": "fire",
+                }
+
+                element_balance = {}
+                for zone, count in zone_counts.items():
+                    element = wu_xing_map[zone]
+                    element_balance[element] = round(count / total, 3)
+
+                # Compute harmony: how close to equal distribution (0.2 each)
+                ideal = 0.2
+                deviations = [abs(v - ideal) for v in element_balance.values()]
+                harmony = 1.0 - (sum(deviations) / (len(deviations) * ideal))
+                harmony = max(0.0, min(1.0, harmony))
+
+                # Count adjustments needed (zones that are over/under-represented)
+                adjustments = sum(1 for v in element_balance.values() if abs(v - ideal) > 0.1)
+
+                result["harmony_score"] = round(harmony, 3)
+                result["element_balance"] = element_balance
+                result["zone_counts"] = zone_counts
+                result["adjustments"] = adjustments
+                result["total_memories"] = total
             return result
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError, sqlite3.Error) as e:
             return {"skipped": True, "reason": str(e)}
 
     # ------------------------------------------------------------------
@@ -925,6 +1266,7 @@ class DreamCycle:
                             "confidence": insight.confidence,
                             "source": insight.source,
                         },
+                        galaxy="creative_solutions",
                     )
                     persisted += 1
                 except Exception as e:

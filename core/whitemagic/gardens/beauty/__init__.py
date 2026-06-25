@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from whitemagic.core.resonance.gan_ying_enhanced import EventType
-from whitemagic.core.resonance.integration_helpers import GanYingMixin
+from whitemagic.core.resonance.integration_helpers import GanYingMixin, init_listeners
 from whitemagic.gardens.base_garden import BaseGarden, CoordinateBias
 
 
@@ -30,6 +30,7 @@ class BeautyGarden(BaseGarden, GanYingMixin):
         self.beauty_memories: list[dict[str, Any]] = []
         self.aesthetic_patterns: list[dict[str, Any]] = []
         self.sublime_moments: list[dict[str, Any]] = []
+        init_listeners(self)
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Beauty"})
 
     def get_name(self) -> str:

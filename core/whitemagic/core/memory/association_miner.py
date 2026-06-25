@@ -211,7 +211,7 @@ class AssociationMiner:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
         except Exception as e:
-            logger.error(f"Association mining: could not get memory system: {e}")
+            logger.error("Association mining: could not get memory system: %s", e)
             return report
 
         # Sample diverse memories: mix of zones
@@ -253,7 +253,7 @@ class AssociationMiner:
 
             all_mems = core_mems + inner_mems + mid_mems + outer_mems
         except Exception as e:
-            logger.warning(f"Association mining: sampling failed, using recent: {e}")
+            logger.warning("Association mining: sampling failed, using recent: %s", e)
             all_mems = um.backend.list_recent(limit=sample_size)
 
         if len(all_mems) < 2:
@@ -302,7 +302,7 @@ class AssociationMiner:
                 used_rust = True
                 logger.debug("Association mining used Rust accelerator")
         except Exception as e:
-            logger.debug(f"Rust association mining unavailable, using Python: {e}")
+            logger.debug("Rust association mining unavailable, using Python: %s", e)
 
         # Python fallback path (with batch Rust keyword extraction)
         if not used_rust:
@@ -388,7 +388,7 @@ class AssociationMiner:
                             except Exception:
                                 pass
             except Exception as e:
-                logger.error(f"Association mining: persistence failed: {e}")
+                logger.error("Association mining: persistence failed: %s", e)
 
         # Gap A3 synthesis: Feed strong associations into the Knowledge Graph
         self._feed_knowledge_graph(proposals)
@@ -401,10 +401,11 @@ class AssociationMiner:
             self._total_links_created += report.links_created
 
         logger.info(
-            f"🔗 Association mining: {report.memories_sampled} sampled, "
-            f"{report.pairs_evaluated} pairs, {report.links_proposed} proposed, "
-            f"{report.links_created} created ({elapsed:.0f}ms)",
-        )
+            "🔗 Association mining: %s sampled, "
+            "%s pairs, %s proposed, "
+            "%s created (%.0fms)",
+         report.memories_sampled, report.pairs_evaluated, report.links_proposed,
+         report.links_created, elapsed)
         return report
 
     # ------------------------------------------------------------------
@@ -443,9 +444,9 @@ class AssociationMiner:
                 edges_created += 1
 
             if edges_created:
-                logger.info(f"KG enrichment: {edges_created} association edges created")
+                logger.info("KG enrichment: %s association edges created", edges_created)
         except Exception as e:
-            logger.debug(f"KG enrichment skipped: {e}")
+            logger.debug("KG enrichment skipped: %s", e)
 
     # ------------------------------------------------------------------
     # Semantic mining (Leap 1a — replaces keyword Jaccard)
@@ -480,7 +481,7 @@ class AssociationMiner:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
         except Exception as e:
-            logger.error(f"Semantic mining: embedding engine unavailable: {e}")
+            logger.error("Semantic mining: embedding engine unavailable: %s", e)
             return report
 
         if not engine.available():
@@ -496,7 +497,7 @@ class AssociationMiner:
         if not pairs:
             elapsed = (time.perf_counter() - start) * 1000
             report.duration_ms = elapsed
-            logger.info(f"Semantic mining: no pairs above {min_similarity} threshold ({elapsed:.0f}ms)")
+            logger.info("Semantic mining: no pairs above %s threshold (%sms)", min_similarity, elapsed)
             return report
 
         report.pairs_evaluated = len(pairs)
@@ -525,7 +526,7 @@ class AssociationMiner:
                         existing_assoc.add((row[0], row[1]))
                         existing_assoc.add((row[1], row[0]))
         except Exception as e:
-            logger.debug(f"Semantic mining: could not load existing associations: {e}")
+            logger.debug("Semantic mining: could not load existing associations: %s", e)
 
         # Build proposals
         proposals: list[ProposedLink] = []
@@ -593,7 +594,7 @@ class AssociationMiner:
                             except Exception:
                                 pass
             except Exception as e:
-                logger.error(f"Semantic mining: persistence failed: {e}")
+                logger.error("Semantic mining: persistence failed: %s", e)
 
         # Feed strong links to Knowledge Graph
         strong_proposals = [p for p in proposals if p.overlap_score >= strong_threshold]
@@ -607,11 +608,12 @@ class AssociationMiner:
             self._total_links_created += report.links_created
 
         logger.info(
-            f"\U0001f9e0 Semantic mining: {report.memories_sampled} memories, "
-            f"{report.pairs_evaluated} pairs evaluated, "
-            f"{report.links_proposed} proposed ({len(strong_proposals)} strong), "
-            f"{report.links_created} created ({elapsed:.0f}ms)",
-        )
+            "\U0001f9e0 Semantic mining: %s memories, "
+            "%s pairs evaluated, "
+            "%s proposed (%s strong), "
+            "%s created (%.0fms)",
+         report.memories_sampled, report.pairs_evaluated, report.links_proposed, len(strong_proposals),
+         report.links_created, elapsed)
         return report
 
     def get_stats(self) -> dict[str, Any]:
@@ -622,6 +624,84 @@ class AssociationMiner:
             "max_proposals_per_run": self._max_proposals,
             "persist": self._persist,
         }
+
+    # ------------------------------------------------------------------
+    # Graph facade methods (fused from GraphEngine + GraphEngineNeural)
+    # ------------------------------------------------------------------
+
+    _graph_engine_instance: Any = None
+    _neural_graph_engine_instance: Any = None
+
+    def _get_graph_engine(self):
+        """Lazy accessor for the networkx-based GraphEngine."""
+        if self._graph_engine_instance is None:
+            from whitemagic.core.memory.graph_engine import get_graph_engine
+            self._graph_engine_instance = get_graph_engine()
+        return self._graph_engine_instance
+
+    def _get_neural_graph_engine(self):
+        """Lazy accessor for the Rust-based neural GraphEngine."""
+        if self._neural_graph_engine_instance is None:
+            try:
+                from whitemagic.core.memory.neural.graph_engine import get_graph_engine as get_neural
+                self._neural_graph_engine_instance = get_neural()
+            except Exception:
+                return None
+        return self._neural_graph_engine_instance
+
+    def graph_rebuild(self, sample_limit: int = 50000, quality_filter: bool = True) -> dict[str, Any]:
+        """Rebuild the association graph from the database."""
+        return self._get_graph_engine().rebuild(sample_limit=sample_limit, quality_filter=quality_filter)
+
+    def graph_centrality_snapshot(self):
+        """Compute and store a full centrality snapshot."""
+        return self._get_graph_engine().centrality_snapshot()
+
+    def graph_eigenvector_centrality(self, max_iter: int = 100) -> dict[str, float]:
+        """Compute eigenvector centrality for echo chamber detection."""
+        return self._get_graph_engine().eigenvector_centrality(max_iter=max_iter)
+
+    def graph_betweenness_centrality(self, k: int | None = 500) -> dict[str, float]:
+        """Compute betweenness centrality (approximate for large graphs)."""
+        return self._get_graph_engine().betweenness_centrality(k=k)
+
+    def graph_pagerank(self, alpha: float = 0.85) -> dict[str, float]:
+        """Compute PageRank for walker gravity."""
+        return self._get_graph_engine().pagerank(alpha=alpha)
+
+    def graph_find_bridge_nodes(self, top_n: int = 10) -> list[dict[str, Any]]:
+        """Find top bridge nodes by bridging centrality."""
+        return self._get_graph_engine().find_bridge_nodes(top_n=top_n)
+
+    def graph_detect_communities(self, resolution: float = 1.0) -> list:
+        """Detect communities using greedy modularity."""
+        return self._get_graph_engine().detect_communities(resolution=resolution)
+
+    def graph_detect_echo_chambers(self, sigma_threshold: float = 2.0) -> list:
+        """Detect echo chambers by comparing centrality snapshots."""
+        return self._get_graph_engine().detect_echo_chambers(sigma_threshold=sigma_threshold)
+
+    def graph_get_stats(self) -> dict[str, Any]:
+        """Get graph engine stats."""
+        return self._get_graph_engine().get_stats()
+
+    def graph_summary(self) -> dict[str, Any]:
+        """Rich summary for Gnosis portal."""
+        return self._get_graph_engine().summary()
+
+    def neural_build_graph(self, memories: list, force: bool = False) -> dict:
+        """Build memory graph using Rust neural acceleration."""
+        eng = self._get_neural_graph_engine()
+        if eng is None:
+            return {}
+        return eng.build_graph(memories, force=force)
+
+    def neural_get_cluster(self, start_id: str, memories: list, max_depth: int = 3) -> set:
+        """Get a cluster of related memories using Rust neural traversal."""
+        eng = self._get_neural_graph_engine()
+        if eng is None:
+            return set()
+        return eng.get_cluster(start_id, memories, max_depth=max_depth)
 
 
 # ---------------------------------------------------------------------------

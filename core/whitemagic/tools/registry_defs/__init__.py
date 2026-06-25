@@ -42,7 +42,7 @@ def collect() -> list[ToolDefinition]:
             tools = getattr(mod, "TOOLS", None)
             if tools and isinstance(tools, list):
                 all_tools.extend(tools)
-                logger.debug(f"registry_defs/{module_name}: {len(tools)} tools")
+                logger.debug("registry_defs/%s: %s tools", module_name, len(tools))
         except (ImportError, ModuleNotFoundError) as e:
             logger.warning("registry_defs/%s failed to load: %s", module_name, e, exc_info=True)
 

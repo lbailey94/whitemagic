@@ -111,7 +111,7 @@ class ZodiacalRound:
             },
         )
 
-        logger.info(f"Zodiacal Round cycle {self.state.cycle_count} started")
+        logger.info("Zodiacal Round cycle %s started", self.state.cycle_count)
 
     def stop_cycle(self) -> None:
         """Pause the cycle (it never truly ends)"""
@@ -172,7 +172,7 @@ class ZodiacalRound:
         # If we completed Aries, we've cycled
         if self.state.current_phase == CyclePhase.DISSOLUTION:
             self.state.cycle_count += 1
-            logger.info(f"Cycle {self.state.cycle_count} complete. Beginning anew...")
+            logger.info("Cycle %s complete. Beginning anew...", self.state.cycle_count)
 
     # Phase Handlers (each implements a stage of the Zodiacal Round)
 
@@ -308,7 +308,7 @@ class ZodiacalRound:
         self.start_cycle()
 
         for cycle_num in range(num_cycles):
-            logger.info(f"=== Cycle {cycle_num + 1}/{num_cycles} ===")
+            logger.info("=== Cycle %s/%s ===", cycle_num + 1, num_cycles)
 
             # Run through all 12 phases
             for phase_num in range(12):
@@ -316,9 +316,9 @@ class ZodiacalRound:
                 responses.append(response)
 
                 logger.info(
-                    f"Phase {phase_num + 1}/12 ({self.state.current_phase.value}): "
-                    f"{response.wisdom[:60]}...",
-                )
+                    "Phase %s/12 (%s): "
+                    "%s...",
+                 phase_num + 1, self.state.current_phase.value, response.wisdom[:60])
 
                 # Allow resonance to propagate (Wu Wei: non-forcing)
                 await asyncio.sleep(0.1)

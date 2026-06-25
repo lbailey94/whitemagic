@@ -4,19 +4,17 @@ WhiteMagic Recursive Improvement Driver
 Orchestrates synthesis, dharma evaluation, and skill forging.
 """
 
-import os
 import sys
 import json
 import logging
 from pathlib import Path
-from datetime import datetime
 
 # Setup paths
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 # Whitemagic imports
-from whitemagic.core.evolution.autodidactic_loop import AutodidacticLoop, PatternApplication, PatternOutcome
+from whitemagic.core.evolution.autodidactic_loop import AutodidacticLoop
 from whitemagic.core.intelligence.omni.skill_forge import get_skill_forge
 from whitemagic.dharma import evaluate_ethics
 from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep

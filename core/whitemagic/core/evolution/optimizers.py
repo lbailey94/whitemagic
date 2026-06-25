@@ -93,7 +93,7 @@ class MemoryWorkflowOptimizer:
                 self.metrics.calls_optimized += 1
                 elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
                 self.metrics.total_latency_saved_ms += elapsed_ms
-                logger.debug(f"💨 Cache hit for semantic links: {memory_id[:8]}")
+                logger.debug("💨 Cache hit for semantic links: %s", memory_id[:8])
                 return self.link_cache[memory_id]
 
             self.metrics.cache_misses += 1
@@ -113,7 +113,7 @@ class MemoryWorkflowOptimizer:
             self.metrics.calls_optimized += 1
 
             elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
-            logger.debug(f"🔗 Pre-computed {len(similar_ids)} semantic links for {memory_id[:8]} in {elapsed_ms:.2f}ms")
+            logger.debug("🔗 Pre-computed %s semantic links for %s in %sms", len(similar_ids), memory_id[:8], format(elapsed_ms, ".2f"))
 
             return similar_ids
 
@@ -154,7 +154,7 @@ class MemoryWorkflowOptimizer:
             elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
             self.metrics.total_latency_saved_ms += elapsed_ms
 
-            logger.debug(f"🔥 Pre-warmed consolidation for {memory_id[:8]} (importance={importance:.2f})")
+            logger.debug("🔥 Pre-warmed consolidation for %s (importance=%s)", memory_id[:8], format(importance, ".2f"))
             return True
 
         except Exception as e:
@@ -165,7 +165,7 @@ class MemoryWorkflowOptimizer:
         """Get pre-computed consolidation data if available."""
         if memory_id in self.consolidation_cache:
             self.metrics.cache_hits += 1
-            logger.debug(f"💨 Cache hit for consolidation: {memory_id[:8]}")
+            logger.debug("💨 Cache hit for consolidation: %s", memory_id[:8])
             return self.consolidation_cache[memory_id]
 
         self.metrics.cache_misses += 1
@@ -244,7 +244,7 @@ class PatternLearningOptimizer:
             elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
             self.metrics.total_latency_saved_ms += elapsed_ms
 
-            logger.debug(f"🎨 Pre-warmed UI for pattern {pattern_id[:8]}")
+            logger.debug("🎨 Pre-warmed UI for pattern %s", pattern_id[:8])
             return True
 
         except Exception as e:
@@ -283,7 +283,7 @@ class PatternLearningOptimizer:
             # 2. Search for related patterns in batch
             # 3. Return new pattern detections
 
-            logger.info(f"🔄 Batch processed {len(confirmed_patterns)} patterns for related detection")
+            logger.info("🔄 Batch processed %s patterns for related detection", len(confirmed_patterns))
 
             self.pending_confirmations.clear()
             self.metrics.calls_optimized += len(confirmed_patterns)
@@ -298,7 +298,7 @@ class PatternLearningOptimizer:
         """Get pre-warmed UI data if available."""
         if pattern_id in self.ui_cache:
             self.metrics.cache_hits += 1
-            logger.debug(f"💨 Cache hit for UI data: {pattern_id[:8]}")
+            logger.debug("💨 Cache hit for UI data: %s", pattern_id[:8])
             return self.ui_cache[pattern_id]
 
         self.metrics.cache_misses += 1

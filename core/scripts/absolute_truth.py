@@ -1,5 +1,4 @@
 import sqlite3
-import re
 from dataclasses import dataclass
 
 from whitemagic.config.paths import DB_PATH

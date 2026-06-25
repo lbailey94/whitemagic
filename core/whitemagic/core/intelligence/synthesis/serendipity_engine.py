@@ -98,10 +98,10 @@ class SerendipityEngine:
     def _surface_quantum(self, context: str | None, count: int) -> list[SurfacedMemory]:
         """Surface memories using quantum-inspired superposition walks."""
         try:
-            from whitemagic.core.intelligence.quantum_engine import QuantumEngine
+            from whitemagic.core.intelligence.quantum import get_quantum_engine
             from whitemagic.core.memory.unified import get_unified_memory
 
-            engine = QuantumEngine()
+            engine = get_quantum_engine()
             um = get_unified_memory()
 
             # 1. Get seed memories from context or random core

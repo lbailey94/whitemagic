@@ -42,17 +42,17 @@ class NoHidingMemoryController:
             tags=["nohiding", "signature", entity_id],
         )
 
-        logger.info(f"🌌 Signature captured for {entity_id}. Information distributed to environment.")
+        logger.info("🌌 Signature captured for %s. Information distributed to environment.", entity_id)
 
     def reconstruct(self, entity_id: str) -> dict[str, Any] | None:
         """Attempts to reconstruct an entity from the environment's subspace.
         Searches unified memory for 'nohiding' tags and assembles the pattern.
         """
-        logger.info(f"✨ Initiating No-Hiding reconstruction for {entity_id}...")
+        logger.info("✨ Initiating No-Hiding reconstruction for %s...", entity_id)
         results = self.unified.search(query=f"tag:nohiding {entity_id}")
 
         if not results:
-            logger.warning(f"No environmental traces found for {entity_id}.")
+            logger.warning("No environmental traces found for %s.", entity_id)
             return None
 
         # Basic reconstruction logic - merging captured traits

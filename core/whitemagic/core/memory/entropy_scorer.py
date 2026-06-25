@@ -292,11 +292,12 @@ class EntropyScorer:
         report.duration_ms = (time.perf_counter() - start) * 1000
 
         logger.info(
-            f"📊 Entropy sweep: {report.total_scored} scored, "
-            f"avg_entropy={report.avg_entropy:.3f}, "
-            f"avg_abstraction={report.avg_abstraction:.3f}, "
-            f"{report.duration_ms:.0f}ms",
-        )
+            "📊 Entropy sweep: %s scored, "
+            "avg_entropy=%.3f, "
+            "avg_abstraction=%.3f, "
+            "%.0fms",
+         report.total_scored, report.avg_entropy, report.avg_abstraction,
+         report.duration_ms)
         return report
 
     # ------------------------------------------------------------------

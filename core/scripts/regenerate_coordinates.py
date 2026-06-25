@@ -30,7 +30,6 @@ import os
 import sqlite3
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 # Ensure project root is on path
@@ -184,9 +183,9 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
     memories = conn.execute(query).fetchall()
     total = len(memories)
 
-    log.info(f"═══ Coordinate Regeneration: {total} memories ═══")
-    log.info(f"  Batch size: {batch_size}")
-    log.info(f"  Dry run: {dry_run}")
+    log.info("═══ Coordinate Regeneration: %s memories ═══", total)
+    log.info("  Batch size: %s", batch_size)
+    log.info("  Dry run: %s", dry_run)
 
     # Stats tracking
     w_values = []
@@ -344,7 +343,7 @@ def regenerate_coordinates(limit: int = 0, batch_size: int = 500,
         min_v = min(values) if values else 0
         max_v = max(values) if values else 0
         spread = max_v - min_v
-        log.info(f"  {name}: min={min_v:.4f}, max={max_v:.4f}, avg={avg:.4f}, spread={spread:.4f}")
+        log.info("  %s: min=%s, max=%s, avg=%s, spread=%s", name, min_v, max_v, avg, spread)
 
     log.info(f"\n📊 Coordinate Statistics:")
     stats(x_values, "X (Logic↔Emotion)")

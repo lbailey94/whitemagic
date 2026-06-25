@@ -62,22 +62,58 @@ class BenchmarkSuite:
     def __init__(self):
         self.results = {}
         self.start_time = time.perf_counter()
+        self._bench_index = 0
+        self._bench_total = 0
+        self._phase_bar = None
+
+    def set_phase_progress(self, total: int, label: str = "Gauntlet"):
+        """Initialize the overall gauntlet progress bar."""
+        from whitemagic.utils.progress_bar import ProgressBar
+        if self._phase_bar is not None:
+            self._phase_bar.finish()
+        self._phase_bar = ProgressBar(total=total, label=label)
+        self._phase_bar.start()
+
+    def advance_phase(self, label: str = ""):
+        """Advance the gauntlet progress bar by one benchmark."""
+        if self._phase_bar is not None:
+            self._phase_bar.advance()
+            if label:
+                self._phase_bar.set_label(label)
+
+    def finish_phase(self):
+        """Finish the gauntlet progress bar."""
+        if self._phase_bar is not None:
+            self._phase_bar.finish()
+            self._phase_bar = None
 
     def run(self, name: str, fn, iterations: int = 10, warmup: int = 2):
         """Run a benchmark function and collect stats."""
-        log.info(f"  Running {name} ({iterations} iterations)...")
+        log.info("  Running %s (%s iterations)...", name, iterations)
+
+        from whitemagic.utils.progress_bar import ProgressBar
+        bar = ProgressBar(
+            total=iterations + warmup,
+            label=name,
+            counters={"warm": warmup},
+        )
+        bar.start()
 
         # Warmup
         for _ in range(warmup):
             fn()
+            bar.advance(**{"warm": 0})  # just tick completed, don't change counter
 
         # Timed runs
         times = []
-        for _ in range(iterations):
+        for i in range(iterations):
             start = time.perf_counter()
             fn()
             elapsed = time.perf_counter() - start
             times.append(elapsed * 1000)  # Convert to ms
+            bar.advance()
+
+        bar.finish()
 
         stats = {
             "mean_ms": round(statistics.mean(times), 3),
@@ -90,7 +126,7 @@ class BenchmarkSuite:
         }
 
         self.results[name] = stats
-        log.info(f"    Mean: {stats['mean_ms']:.3f}ms, Median: {stats['median_ms']:.3f}ms, P95: {stats['p95_ms']:.3f}ms")
+        log.info("    Mean: %sms, Median: %sms, P95: %sms", stats['mean_ms'], stats['median_ms'], stats['p95_ms'])
 
         return stats
 
@@ -113,14 +149,12 @@ def bench_memory_pipeline(suite: BenchmarkSuite):
 
     # Store benchmark
     def store_memory():
-        conn.execute("""
-            INSERT INTO memories (content, title, memory_type, importance, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, ("benchmark content", "benchmark title", "long_term", 0.5, datetime.now().isoformat()))
-        conn.commit()
-        # Clean up
-        conn.execute("DELETE FROM memories WHERE title = 'benchmark title'")
-        conn.commit()
+        with conn:  # Single transaction — reduces WAL checkpoint variance
+            conn.execute("""
+                INSERT INTO memories (content, title, memory_type, importance, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, ("benchmark content", "benchmark title", "long_term", 0.5, datetime.now().isoformat()))
+            conn.execute("DELETE FROM memories WHERE title = 'benchmark title'")
 
     suite.run("memory_store", store_memory, iterations=20)
 
@@ -207,7 +241,6 @@ def bench_julia_ports(suite: BenchmarkSuite):
     log.info("\n═══ 3. Julia Ports ═══")
 
     from whitemagic.core.resonance.julia_resonance import get_resonance_engine
-    import numpy as np
 
     engine = get_resonance_engine()
 
@@ -483,6 +516,215 @@ def bench_polyglot_comparison(suite: BenchmarkSuite):
 
 
 # ---------------------------------------------------------------------------
+# Fragment (Rust) Benchmarks
+# ---------------------------------------------------------------------------
+
+def bench_fragment(suite: BenchmarkSuite):
+    """Benchmark Fragment codebase search — PyO3, HTTP, subprocess layers."""
+    log.info("Fragment (Rust) Benchmarks:")
+
+    repo_path = str(PROJECT_ROOT.parent)
+
+    # Fragment status (layer detection)
+    try:
+        from whitemagic.tools.handlers.fragment import handle_fragment_status
+        suite.run("fragment_status", lambda: handle_fragment_status(path=repo_path), iterations=20)
+    except Exception:
+        log.info("  Fragment status not available, skipping")
+
+    # Fragment search via PyO3 (cold cache — includes index load)
+    try:
+        from whitemagic.tools.handlers.fragment import handle_fragment_search
+        suite.run("fragment_search_cold", lambda: handle_fragment_search(
+            query="how does homeostasis work", path=repo_path, top=5
+        ), iterations=10)
+    except Exception:
+        log.info("  Fragment search not available, skipping")
+
+    # Fragment search — warm cache (prime once, measure steady-state)
+    try:
+        from whitemagic.tools.handlers.fragment import handle_fragment_search
+        # Prime the index cache
+        handle_fragment_search(query="priming query", path=repo_path, top=1)
+        suite.run("fragment_search_warm", lambda: handle_fragment_search(
+            query="how does homeostasis work", path=repo_path, top=5
+        ), iterations=20)
+    except Exception:
+        log.info("  Fragment warm-cache search not available, skipping")
+
+    # Fragment search — warm cache, larger top
+    try:
+        from whitemagic.tools.handlers.fragment import handle_fragment_search
+        suite.run("fragment_search_warm_top20", lambda: handle_fragment_search(
+            query="kaizen engine analysis", path=repo_path, top=20
+        ), iterations=20)
+    except Exception:
+        log.info("  Fragment warm-cache top20 not available, skipping")
+
+    # Python vector search comparison
+    try:
+        from whitemagic.core.memory.vector_search import get_vector_search
+        vs = get_vector_search()
+        suite.run("python_vector_search", lambda: vs.search("how does homeostasis work", limit=5), iterations=10)
+    except Exception:
+        log.info("  Python vector search not available, skipping")
+
+
+# ---------------------------------------------------------------------------
+# STRATA Benchmarks
+# ---------------------------------------------------------------------------
+
+def bench_strata(suite: BenchmarkSuite):
+    """Benchmark STRATA codebase static analysis."""
+    log.info("STRATA Benchmarks:")
+
+    repo_path = str(PROJECT_ROOT.parent)
+
+    # STRATA list_checks
+    try:
+        from whitemagic.tools.handlers.strata import handle_strata_list_checks
+        suite.run("strata_list_checks", lambda: handle_strata_list_checks(), iterations=20)
+    except Exception:
+        log.info("  STRATA list_checks not available, skipping")
+
+    # STRATA analyze (incremental, sequential — parallel is slower due to GIL)
+    try:
+        from whitemagic.tools.handlers.strata import handle_strata_analyze
+        suite.run("strata_analyze_sequential", lambda: handle_strata_analyze(
+            path=repo_path, incremental=True, parallel=False
+        ), iterations=3, warmup=1)
+    except Exception:
+        log.info("  STRATA analyze not available, skipping")
+
+    # STRATA survey
+    try:
+        from whitemagic.tools.handlers.strata import handle_strata_survey
+        suite.run("strata_survey", lambda: handle_strata_survey(path=repo_path), iterations=5, warmup=1)
+    except Exception:
+        log.info("  STRATA survey not available, skipping")
+
+
+# ---------------------------------------------------------------------------
+# Physical Metrics Benchmarks
+# ---------------------------------------------------------------------------
+
+def bench_physical_metrics(suite: BenchmarkSuite):
+    """Benchmark physical metrics fetching and Prometheus export."""
+    log.info("Physical Metrics Benchmarks:")
+
+    # Physical metrics fetch (graceful degradation when laptop-optimizer absent)
+    try:
+        from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+        source = get_physical_metrics_source()
+        suite.run("physical_metrics_fetch", lambda: source.get_metrics(), iterations=50)
+    except Exception:
+        log.info("  Physical metrics not available, skipping")
+
+    # Adaptive targets computation
+    try:
+        from whitemagic.harmony.physical_metrics import AdaptiveTargets, PowerContext, TimeContext, LoadContext
+        targets = AdaptiveTargets()
+        suite.run("adaptive_targets_compute", lambda: targets.adapt(
+            PowerContext.AC, TimeContext.DAY, LoadContext.IDLE
+        ), iterations=100)
+    except Exception:
+        log.info("  Adaptive targets not available, skipping")
+
+    # Thermal anomaly detection
+    try:
+        from whitemagic.harmony.physical_metrics import ThermalAnomalyDetector
+        detector = ThermalAnomalyDetector()
+        suite.run("thermal_anomaly_check", lambda: detector.check(55.0), iterations=100)
+    except Exception:
+        log.info("  Thermal anomaly detector not available, skipping")
+
+    # Prometheus export
+    try:
+        from whitemagic.harmony.metrics_exporter import get_metrics_exporter
+        exporter = get_metrics_exporter()
+        suite.run("prometheus_export", lambda: exporter.export(), iterations=20)
+    except Exception:
+        log.info("  Prometheus exporter not available, skipping")
+
+    # Homeostatic loop check (includes physical)
+    try:
+        from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+        loop = get_homeostatic_loop()
+        suite.run("homeostatic_check_with_physical", lambda: loop.check(), iterations=10)
+    except Exception:
+        log.info("  Homeostatic loop not available, skipping")
+
+
+# ---------------------------------------------------------------------------
+# DNA & Zodiac Benchmarks
+# ---------------------------------------------------------------------------
+
+def bench_dna_zodiac(suite: BenchmarkSuite):
+    """Benchmark DNA validation and Zodiac activation tools."""
+    log.info("DNA & Zodiac Benchmarks:")
+
+    # DNA principles listing
+    try:
+        from whitemagic.tools.handlers.misc import handle_dna_principles
+        suite.run("dna_principles", lambda: handle_dna_principles(), iterations=100)
+    except Exception:
+        log.info("  DNA principles not available, skipping")
+
+    # DNA validate (safe fix)
+    try:
+        from whitemagic.tools.handlers.misc import handle_dna_validate
+        suite.run("dna_validate_safe", lambda: handle_dna_validate(
+            fix_details={"action": "update version", "file": "docs/README.md"},
+            threat_type="version_drift",
+        ), iterations=100)
+    except Exception:
+        log.info("  DNA validate not available, skipping")
+
+    # DNA validate (critical violation)
+    try:
+        from whitemagic.tools.handlers.misc import handle_dna_validate
+        suite.run("dna_validate_critical", lambda: handle_dna_validate(
+            fix_details={"action": "delete core system", "file": "whitemagic/core/__init__.py"},
+            threat_type="code_anomaly",
+        ), iterations=100)
+    except Exception:
+        log.info("  DNA validate critical not available, skipping")
+
+    # Zodiac activate Aries
+    try:
+        from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_activate
+        suite.run("zodiac_activate_aries", lambda: handle_zodiac_activate(
+            core="aries",
+            context={"operation": "benchmark", "intention": "action", "urgency": "normal"},
+        ), iterations=50)
+    except Exception:
+        log.info("  Zodiac activate not available, skipping")
+
+    # Zodiac council convene
+    try:
+        from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_council
+        suite.run("zodiac_council", lambda: handle_zodiac_council(
+            decision="Should we optimize the memory system?"
+        ), iterations=20)
+    except Exception:
+        log.info("  Zodiac council not available, skipping")
+
+    # Zodiac stats
+    try:
+        from whitemagic.tools.handlers.zodiac_progression import handle_zodiac_stats
+        suite.run("zodiac_stats", lambda: handle_zodiac_stats(), iterations=50)
+    except Exception:
+        log.info("  Zodiac stats not available, skipping")
+
+    # Garden health
+    try:
+        from whitemagic.tools.handlers.garden import handle_garden_health
+        suite.run("garden_health", lambda: handle_garden_health(), iterations=50)
+    except Exception:
+        log.info("  Garden health not available, skipping")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -492,19 +734,33 @@ def main():
     args = parser.parse_args()
 
     log.info("WhiteMagic Benchmark Gauntlet")
-    log.info(f"DB: {DB_PATH}")
+    log.info("DB: %s", DB_PATH)
     log.info(f"Time: {time.strftime('%H:%M:%S')}")
 
     suite = BenchmarkSuite()
 
-    bench_memory_pipeline(suite)
-    bench_resonance_models(suite)
-    bench_julia_ports(suite)
-    bench_memory_stats(suite)
-    bench_self_model_forecast(suite)
-    bench_db_queries(suite)
-    bench_dream_cycle(suite)
-    bench_polyglot_comparison(suite)
+    # Overall gauntlet progress bar (one tick per benchmark function group)
+    gauntlet_phases = [
+        ("Memory Pipeline", bench_memory_pipeline),
+        ("Resonance Models", bench_resonance_models),
+        ("Julia Ports", bench_julia_ports),
+        ("Memory Stats", bench_memory_stats),
+        ("Self-Model Forecast", bench_self_model_forecast),
+        ("Database Queries", bench_db_queries),
+        ("Dream Cycle", bench_dream_cycle),
+        ("Polyglot Comparison", bench_polyglot_comparison),
+        ("Fragment (Rust)", bench_fragment),
+        ("STRATA", bench_strata),
+        ("Physical Metrics", bench_physical_metrics),
+        ("DNA & Zodiac", bench_dna_zodiac),
+    ]
+    suite.set_phase_progress(total=len(gauntlet_phases), label="Gauntlet")
+
+    for phase_name, phase_fn in gauntlet_phases:
+        suite.advance_phase(label=phase_name)
+        phase_fn(suite)
+
+    suite.finish_phase()
 
     summary = suite.summary()
 
@@ -512,7 +768,7 @@ def main():
     log.info(f"\n{'='*60}")
     log.info(f"BENCHMARK SUMMARY")
     log.info(f"{'='*60}")
-    log.info(f"Total time: {summary['total_time_seconds']:.2f}s")
+    log.info("Total time: %ss", summary['total_time_seconds'])
     log.info(f"Benchmarks run: {len(summary['benchmarks'])}")
 
     # Group by category
@@ -525,27 +781,31 @@ def main():
         "Database Queries": ["simple_select_100", "complex_join_100", "aggregation_gardens", "cached_aggregation_gardens", "association_query"],
         "Dream Cycle": ["dream_status", "dream_consolidation"],
         "Polyglot Comparison": ["python_cosine_384d", "rust_cosine_384d", "zig_cosine_384d_numpy", "zig_batch_cosine_100x384d", "rust_galactic_batch_100", "rust_grid_cluster_100", "haskell_hexagram_create"],
+        "Fragment (Rust)": ["fragment_status", "fragment_search_cold", "fragment_search_warm", "fragment_search_warm_top20", "python_vector_search"],
+        "STRATA": ["strata_list_checks", "strata_analyze_sequential", "strata_survey"],
+        "Physical Metrics": ["physical_metrics_fetch", "adaptive_targets_compute", "thermal_anomaly_check", "prometheus_export", "homeostatic_check_with_physical"],
+        "DNA & Zodiac": ["dna_principles", "dna_validate_safe", "dna_validate_critical", "zodiac_activate_aries", "zodiac_council", "zodiac_stats", "garden_health"],
     }
 
     for category, benchmarks in categories.items():
-        log.info(f"\n{category}:")
+        log.info("\n%s:", category)
         for name in benchmarks:
             if name in summary["benchmarks"]:
                 stats = summary["benchmarks"][name]
-                log.info(f"  {name:30s} mean={stats['mean_ms']:8.3f}ms  median={stats['median_ms']:8.3f}ms  p95={stats['p95_ms']:8.3f}ms")
+                log.info("  %s mean=%sms  median=%sms  p95=%sms", name, stats['mean_ms'], stats['median_ms'], stats['p95_ms'])
 
     # Save results
     if args.output:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(summary, indent=2))
-        log.info(f"\nResults saved to {output_path}")
+        log.info("\nResults saved to %s", output_path)
     else:
         # Default location
         default_output = PROJECT_ROOT / "reports" / "benchmark_gauntlet.json"
         default_output.parent.mkdir(parents=True, exist_ok=True)
         default_output.write_text(json.dumps(summary, indent=2))
-        log.info(f"\nResults saved to {default_output}")
+        log.info("\nResults saved to %s", default_output)
 
 
 if __name__ == "__main__":

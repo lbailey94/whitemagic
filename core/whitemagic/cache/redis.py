@@ -101,7 +101,7 @@ class RedisCache:
             # Test connection
             self._client.ping()
             self._connected = True
-            logger.info(f"Connected to Redis at {self.config.host}:{self.config.port}")
+            logger.info("Connected to Redis at %s:%s", self.config.host, self.config.port)
 
         except Exception as e:
             logger.error("Failed to connect to Redis: %s", e, exc_info=True)

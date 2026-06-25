@@ -4,7 +4,6 @@ WhiteMagic Holographic Deep Scan - Extended Chariot Engine
 Recursively scans ALL discovered auxiliary databases for patterns.
 """
 
-import os
 import sys
 import json
 import sqlite3

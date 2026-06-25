@@ -64,13 +64,13 @@ class TitleGenerator:
 
         Note: The legacy v15 LLM bridge (``whitemagic._archived.local_models.llm.llm_bridge``)
         was removed during the cognitive-OS pivot. As of v22.2.0, no LLM
-        bridge is wired into the integration hub, so this function returns
-        ``None`` and ``generate()`` falls through to the deterministic
+        bridge is wired into the integration hub, so this function is a
+        no-op placeholder. ``generate()`` falls through to the deterministic
         strategies below (markdown header → key phrases → first line).
         To re-enable LLM-driven titles, implement an ``LLMBridge`` adapter
         in the integration hub and wire it here.
         """
-        return None
+        return None  # Intentional no-op: LLM bridge not yet re-wired (v22.2.0)
 
     def _extract_header(self, content: str) -> str | None:
         """Extract markdown header."""

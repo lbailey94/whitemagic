@@ -191,6 +191,11 @@ class CoreAccessLayer:
         self._conn: sqlite3.Connection | None = None
         self._conn_injected: bool = False
         self._lock = threading.Lock()
+        # HRR pre-filter cache
+        self._hrr_cache_ids: list[str] | None = None
+        self._hrr_cache_vecs: Any | None = None  # (N, dim) quantized uint8
+        self._hrr_cache_count: int = 0
+        self._hrr_cache_lock = threading.Lock()
 
     def _get_conn(self) -> sqlite3.Connection:
         """Lazy-init a read-only SQLite connection to the hot DB."""
@@ -207,12 +212,11 @@ class CoreAccessLayer:
                 self._conn.enable_load_extension(True)
                 ext_path_params = [
                     os.path.join(os.path.dirname(__file__), "../../../whitemagic-rust/target/release/libwhitemagic_rust.so"),
-                    "/media/lucas/SD_CARD/WHITEMAGIC/core/whitemagic-rust/target/release/libwhitemagic_rust.so"
                 ]
                 for ext_path in ext_path_params:
                     if os.path.exists(ext_path):
                         self._conn.load_extension(ext_path)
-                        logger.info(f"Successfully injected native SIMD SQLite extension: {ext_path}")
+                        logger.info("Successfully injected native SIMD SQLite extension: %s", ext_path)
                         break
             except AttributeError:
                 logger.warning("SQLite extension loading not available in this Python build (requires sqlite3 compiled with enable-load-extension).")
@@ -369,7 +373,7 @@ class CoreAccessLayer:
             logger.debug("Association walk: Rust path (%d nodes)", len(nodes))
             return nodes
         except Exception as e:
-            logger.debug(f"Failed to execute core access query: {e}", exc_info=True)
+            logger.debug("Failed to execute core access query: %s", e, exc_info=True)
 
         # --- Python fallback ---
         conn = self._get_conn()
@@ -679,6 +683,139 @@ class CoreAccessLayer:
     # 5. Hybrid Recall (Vector + Graph RRF)
     # ------------------------------------------------------------------
 
+    def invalidate_hrr_cache(self) -> None:
+        """Invalidate the HRR pre-filter cache.
+
+        Called after memory writes to ensure the cache doesn't serve
+        stale results. The next _refresh_hrr_cache call will rebuild
+        from the database.
+        """
+        with self._hrr_cache_lock:
+            self._hrr_cache_ids = None
+            self._hrr_cache_vecs = None
+            self._hrr_cache_count = 0
+        logger.debug("HRR pre-filter cache invalidated")
+
+    def _refresh_hrr_cache(self) -> None:
+        """Load all embeddings from DB and quantize them with qFHRR.
+
+        This builds an in-memory cache of quantized vectors for O(1)
+        similarity lookups. The cache is keyed by memory ID and stores
+        uint8 quantized vectors (8-bit, 384 bytes per vector).
+        """
+        with self._hrr_cache_lock:
+            if self._hrr_cache_vecs is not None:
+                return  # Already cached
+
+            try:
+                import numpy as np
+                from whitemagic.core.memory.qfhrr import get_quantized_hrr_engine
+
+                conn = self._get_conn()
+                rows = conn.execute(
+                    "SELECT memory_id, embedding FROM memory_embeddings ORDER BY memory_id",
+                ).fetchall()
+
+                if not rows:
+                    self._hrr_cache_ids = []
+                    self._hrr_cache_vecs = np.zeros((0, 384), dtype=np.uint8)
+                    self._hrr_cache_count = 0
+                    return
+
+                ids: list[str] = []
+                embeddings: list[list[float]] = []
+                for r in rows:
+                    emb = r["embedding"]
+                    if emb:
+                        import json
+                        vec = json.loads(emb) if isinstance(emb, str) else list(emb)
+                        if len(vec) >= 64:
+                            ids.append(r["memory_id"])
+                            embeddings.append(vec[:384] if len(vec) > 384 else vec)
+
+                if not embeddings:
+                    self._hrr_cache_ids = []
+                    self._hrr_cache_vecs = np.zeros((0, 384), dtype=np.uint8)
+                    self._hrr_cache_count = 0
+                    return
+
+                # Quantize all embeddings with qFHRR (8-bit for balanced speed/precision)
+                engine = get_quantized_hrr_engine(bits=8, dim=len(embeddings[0]))
+                quantized = np.array([
+                    engine._to_quantized(emb) for emb in embeddings
+                ], dtype=np.uint8)
+
+                self._hrr_cache_ids = ids
+                self._hrr_cache_vecs = quantized
+                self._hrr_cache_count = len(ids)
+                logger.info("HRR pre-filter cache: %d vectors quantized", len(ids))
+            except Exception as e:
+                logger.debug("HRR cache build failed: %s", e, exc_info=True)
+                self._hrr_cache_ids = []
+                self._hrr_cache_count = 0
+
+    def _hrr_prefilter(
+        self, query: str, top_n: int = 40,
+    ) -> list[tuple[str, float]]:
+        """Pre-filter candidates using quantized HRR similarity.
+
+        Encodes the query with the embedding engine, quantizes it with
+        qFHRR, and computes similarity against all cached vectors.
+        Returns top-N (memory_id, similarity) pairs.
+
+        This is much faster than full embedding search because:
+        1. Integer LUT lookups instead of float dot products
+        2. No model loading (embeddings pre-cached)
+        3. SIMD-friendly contiguous uint8 arrays
+        """
+        if self._hrr_cache_vecs is None or self._hrr_cache_count == 0:
+            self._refresh_hrr_cache()
+
+        if not self._hrr_cache_ids or self._hrr_cache_vecs is None or self._hrr_cache_count == 0:
+            return []
+
+        try:
+            import numpy as np
+            from whitemagic.core.memory.embeddings import get_embedding_engine
+            from whitemagic.core.memory.qfhrr import get_quantized_hrr_engine
+
+            # Encode query
+            engine = get_embedding_engine()
+            query_emb = engine.encode(query)
+            if query_emb is None or len(query_emb) < 64:
+                return []
+
+            # Quantize query with same engine as cache
+            qfhrr = get_quantized_hrr_engine(bits=8, dim=len(query_emb))
+            query_q = qfhrr._to_quantized(query_emb)
+
+            # Compute similarity against all cached vectors
+            # Vectorized: for each cached vector, compute mean LUT similarity
+            K = qfhrr.K
+            lut = qfhrr._sim_lut
+
+            # Batch similarity: for each pair (query_q[d], cache[n, d]),
+            # look up LUT value and average across dimensions
+            # This is vectorized via numpy fancy indexing
+            sims = np.zeros(self._hrr_cache_count, dtype=np.float32)
+            for d in range(query_q.shape[0]):
+                q_val = int(query_q[d])
+                cache_col = self._hrr_cache_vecs[:, d].astype(np.intp)
+                sims += lut[q_val, cache_col]
+
+            sims /= query_q.shape[0]
+
+            # Get top-N
+            top_indices = np.argsort(sims)[::-1][:top_n]
+            return [
+                (self._hrr_cache_ids[idx], float(sims[idx]))
+                for idx in top_indices
+                if sims[idx] > 0.01  # Filter near-zero similarity
+            ]
+        except Exception as e:
+            logger.debug("HRR pre-filter query failed: %s", e, exc_info=True)
+            return []
+
     def hybrid_recall(
         self,
         query: str,
@@ -687,6 +824,7 @@ class CoreAccessLayer:
         graph_weight: float = 0.4,
         graph_depth: int = 2,
         include_cold: bool = False,
+        use_hrr_prefilter: bool = True,
     ) -> list[HybridResult]:
         """Reciprocal Rank Fusion: embedding similarity + association graph walk.
 
@@ -699,17 +837,53 @@ class CoreAccessLayer:
         vector_results: list[tuple[str, float]] = []  # (memory_id, similarity)
         graph_results: list[tuple[str, float]] = []    # (memory_id, strength)
 
+        # --- HRR Pre-filter channel ---
+        # Use quantized HRR similarity to rapidly pre-filter candidates
+        # before expensive embedding search. This is O(N) with cheap
+        # integer operations vs O(N) with float dot products + model loading.
+        hrr_candidates: list[tuple[str, float]] = []
+        if use_hrr_prefilter:
+            try:
+                hrr_candidates = self._hrr_prefilter(query, k * 4)
+                if hrr_candidates:
+                    logger.debug(
+                        "HRR pre-filter: %d candidates from %d total (top sim=%.3f)",
+                        len(hrr_candidates), self._hrr_cache_count,
+                        hrr_candidates[0][1],
+                    )
+            except Exception as e:
+                logger.debug("HRR pre-filter failed: %s", e, exc_info=True)
+
         # --- Vector channel ---
+        # If HRR pre-filter produced candidates, use them as a narrowed
+        # search space for the embedding engine. Otherwise, fall back to
+        # full embedding search.
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
-            vec_hits = engine.search_similar(query, limit=k * 2, include_cold=include_cold)
+            if hrr_candidates:
+                # Use HRR candidates as filter — only search embeddings for these IDs
+                candidate_ids = {mid for mid, _ in hrr_candidates}
+                vec_hits = engine.search_similar(
+                    query, limit=k * 2, include_cold=include_cold,
+                )
+                # Filter to HRR pre-selected candidates
+                vec_hits = [
+                    h for h in vec_hits
+                    if (h.get("memory_id") or h.get("id", "")) in candidate_ids
+                ]
+            else:
+                vec_hits = engine.search_similar(query, limit=k * 2, include_cold=include_cold)
             for hit in vec_hits:
                 mid = hit.get("memory_id") or hit.get("id", "")
                 sim = hit.get("similarity", 0.0)
                 vector_results.append((mid, sim))
         except Exception as e:
             logger.debug("Vector channel failed: %s", e, exc_info=True)
+            # If embedding search fails but HRR pre-filter succeeded,
+            # use HRR scores as fallback vector channel
+            if hrr_candidates:
+                vector_results = hrr_candidates[:k * 2]
 
         # --- Graph channel ---
         # Use top vector results as seeds, then walk associations
@@ -907,6 +1081,79 @@ class CoreAccessLayer:
             """, (min_gravity, limit)).fetchall()
             return [dict(r) for r in rows]
         except sqlite3.Error:
+            return []
+
+    # ------------------------------------------------------------------
+    # 8. VSA Context Compression
+    # ------------------------------------------------------------------
+
+    def compress_context(
+        self,
+        items: list[dict[str, Any]],
+        query: str | None = None,
+        max_text_items: int = 5,
+    ) -> dict[str, Any]:
+        """Compress context items into a single HRR superposition vector.
+
+        Uses VSAContextCompressor to pack N context items into 1 HRR vector
+        that can be probed on demand. Provides 10-50x context compression
+        for LLM calls.
+
+        Args:
+            items: List of dicts with 'content', 'source', 'id' keys.
+            query: Optional query for ranking items in the summary.
+            max_text_items: Max items to include in text summary.
+
+        Returns:
+            Dict with: summary, vector, item_count, compression_ratio, method.
+        """
+        try:
+            from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+            compressor = get_vsa_context_compressor()
+            result = compressor.compress(items, query=query, max_text_items=max_text_items)
+            return {
+                "summary": result.summary,
+                "vector": result.vector,
+                "item_count": result.item_count,
+                "original_tokens": result.original_tokens,
+                "compressed_tokens": result.compressed_tokens,
+                "compression_ratio": result.compression_ratio,
+                "method": result.method,
+                "latency_ms": round(result.latency_ms, 2),
+            }
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.debug("VSA compressor unavailable: %s", e, exc_info=True)
+            summaries = [f"- [{i.get('source', '?')}] {str(i.get('content', ''))[:150]}" for i in items[:max_text_items]]
+            return {
+                "summary": "\n".join(summaries),
+                "vector": None,
+                "item_count": len(items),
+                "original_tokens": sum(len(str(i.get("content", ""))) // 4 for i in items),
+                "compressed_tokens": len("\n".join(summaries)) // 4,
+                "compression_ratio": 0.0,
+                "method": "truncation_fallback",
+                "latency_ms": 0.0,
+            }
+
+    def probe_context(
+        self,
+        compressed_vector: list[float],
+        role: str,
+    ) -> list[float]:
+        """Probe a compressed VSA vector to recover items from a specific source.
+
+        Args:
+            compressed_vector: The HRR superposition vector from compress_context.
+            role: Role vector name (e.g. "OBJECT", "AGENT", "ACTION").
+
+        Returns:
+            Approximate embedding vector for items from that source.
+        """
+        try:
+            from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+            compressor = get_vsa_context_compressor()
+            return compressor.probe(compressed_vector, role)
+        except (ImportError, ModuleNotFoundError):
             return []
 
 

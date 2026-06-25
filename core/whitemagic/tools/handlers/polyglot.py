@@ -169,7 +169,7 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
     for name, cls in backends.items():
         try:
             with cls() as backend:
-                ping = backend.call("ping")
+                ping = backend.call("ping", timeout=5.0)
                 results[name] = {
                     "available": True,
                     "ping": ping,

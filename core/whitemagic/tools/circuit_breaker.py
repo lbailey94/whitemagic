@@ -33,6 +33,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -64,7 +65,7 @@ class BreakerConfig:
 
     failure_threshold: int = 5       # failures before opening
     window_seconds: float = 60.0     # time window for counting failures
-    cooldown_seconds: float = 30.0   # how long to stay open before half-open
+    cooldown_seconds: float = 1.0    # how long to stay open before half-open (reduced from 30s for responsiveness)
 
 
 class CircuitBreaker:
@@ -80,8 +81,23 @@ class CircuitBreaker:
         self._total_trips: int = 0
 
     def is_open(self) -> bool:
-        """Check if the breaker is open (should fast-fail)."""
+        """Check if the breaker is open (should fast-fail).
+
+        Syncs from StateBoard (Rust PyO3) when available so that the
+        Python breaker reflects the authoritative native state.
+        Also checks Koka native circuit handler if available.
+        """
         with self._lock:
+            # Sync from StateBoard if Rust PyO3 is available
+            self._sync_from_board()
+
+            # Sync from Koka native circuit handler if available
+            koka = get_koka_circuit_dispatch()
+            if koka is not None:
+                koka_state = koka.check(self.tool_name)
+                if koka_state == "open":
+                    return True
+
             if self._state == BreakerState.CLOSED:
                 return False
             if self._state == BreakerState.OPEN:
@@ -90,9 +106,10 @@ class CircuitBreaker:
                 if elapsed >= self.config.cooldown_seconds:
                     self._state = BreakerState.HALF_OPEN
                     logger.info(
-                        f"Circuit breaker [{self.tool_name}]: OPEN → HALF_OPEN "
-                        f"(cooldown {self.config.cooldown_seconds}s elapsed)",
-                    )
+                        "Circuit breaker [%s]: OPEN → HALF_OPEN "
+                        "(cooldown %ss elapsed)",
+                     self.tool_name, self.config.cooldown_seconds)
+                    self._sync_to_board()
                     return False  # Allow one probe call
                 return True
             # HALF_OPEN: allow one call through
@@ -101,6 +118,13 @@ class CircuitBreaker:
     def record_failure(self) -> None:
         """Record a tool failure."""
         now = time.time()
+        # Sync to Koka native circuit handler if available
+        koka = get_koka_circuit_dispatch()
+        if koka is not None:
+            try:
+                koka.record_failure(self.tool_name)
+            except Exception:
+                pass
         with self._lock:
             # Prune old failures outside the window
             cutoff = now - self.config.window_seconds
@@ -114,29 +138,36 @@ class CircuitBreaker:
                 self._state = BreakerState.OPEN
                 self._opened_at = now
                 logger.warning(
-                    f"Circuit breaker [{self.tool_name}]: HALF_OPEN → OPEN (probe failed)",
-                )
+                    "Circuit breaker [%s]: HALF_OPEN → OPEN (probe failed)",
+                 self.tool_name)
                 self._sync_to_board()
             elif len(self._failure_timestamps) >= self.config.failure_threshold:
                 self._state = BreakerState.OPEN
                 self._opened_at = now
                 self._total_trips += 1
                 logger.warning(
-                    f"Circuit breaker [{self.tool_name}]: CLOSED → OPEN "
-                    f"({len(self._failure_timestamps)} failures in "
-                    f"{self.config.window_seconds}s, trip #{self._total_trips})",
-                )
+                    "Circuit breaker [%s]: CLOSED → OPEN "
+                    "(%s failures in "
+                    "%ss, trip #%s)",
+                 self.tool_name, len(self._failure_timestamps), self.config.window_seconds, self._total_trips)
                 self._sync_to_board()
 
     def record_success(self) -> None:
         """Record a tool success."""
+        # Sync to Koka native circuit handler if available
+        koka = get_koka_circuit_dispatch()
+        if koka is not None:
+            try:
+                koka.record_success(self.tool_name)
+            except Exception:
+                pass
         with self._lock:
             if self._state == BreakerState.HALF_OPEN:
                 self._state = BreakerState.CLOSED
                 self._failure_timestamps.clear()
                 logger.info(
-                    f"Circuit breaker [{self.tool_name}]: HALF_OPEN → CLOSED (probe succeeded)",
-                )
+                    "Circuit breaker [%s]: HALF_OPEN → CLOSED (probe succeeded)",
+                 self.tool_name)
                 self._sync_to_board()
             elif self._state == BreakerState.CLOSED:
                 # Successful calls don't clear the failure window, but that's fine;
@@ -198,6 +229,39 @@ class CircuitBreaker:
                 failures=len(self._failure_timestamps),
             )
         except (ImportError, AttributeError):
+            pass  # StateBoard is optional
+
+    def _sync_from_board(self) -> None:
+        """Pull breaker state FROM StateBoard (Rust PyO3 authoritative source).
+
+        If the StateBoard has a different state than Python, trust the native
+        side. This ensures the Zig dispatch core and Python BreakerRegistry
+        stay in sync.
+        """
+        try:
+            from whitemagic.core.acceleration.state_board_bridge import (
+                BreakerState as BoardBreaker,
+            )
+            from whitemagic.core.acceleration.state_board_bridge import (
+                get_state_board,
+            )
+            slot = _tool_to_engine_slot(self.tool_name)
+            if slot is None:
+                return
+            board = get_state_board()
+            board_state, board_failures = board.read_breaker(slot)
+            # Map StateBoard state back to Python BreakerState
+            state_map = {
+                BoardBreaker.CLOSED: BreakerState.CLOSED,
+                BoardBreaker.OPEN: BreakerState.OPEN,
+                BoardBreaker.HALF_OPEN: BreakerState.HALF_OPEN,
+            }
+            py_state = state_map.get(board_state)
+            if py_state is not None and py_state != self._state:
+                self._state = py_state
+                if py_state == BreakerState.OPEN and not self._opened_at:
+                    self._opened_at = time.time()
+        except (ImportError, AttributeError, KeyError):
             pass  # StateBoard is optional
 
     def status(self) -> dict[str, Any]:
@@ -265,14 +329,14 @@ def _tool_to_engine_slot(tool_name: str) -> int | None:
 # ---------------------------------------------------------------------------
 
 _TOOL_BREAKER_OVERRIDES: dict[str, BreakerConfig] = {
-    # Ollama may restart frequently — fail fast, retry soon
-    "ollama.models":    BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=10.0),
-    "ollama.generate":  BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=10.0),
-    "ollama.chat":      BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=10.0),
+    # Ollama may restart frequently — fail fast, retry quickly
+    "ollama.models":    BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0),
+    "ollama.generate":  BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0),
+    "ollama.chat":      BreakerConfig(failure_threshold=2, window_seconds=30.0, cooldown_seconds=1.0),
     # Redis broker — slightly more tolerant but still fast-fail
-    "broker.publish":   BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=15.0),
-    "broker.history":   BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=15.0),
-    "broker.status":    BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=15.0),
+    "broker.publish":   BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0),
+    "broker.history":   BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0),
+    "broker.status":    BreakerConfig(failure_threshold=3, window_seconds=30.0, cooldown_seconds=1.0),
 }
 
 
@@ -292,6 +356,18 @@ class BreakerRegistry:
                 self._breakers[tool_name] = CircuitBreaker(
                     tool_name, config=config,
                 )
+                # Configure Koka native circuit handler if available
+                koka = get_koka_circuit_dispatch()
+                if koka is not None:
+                    try:
+                        koka.configure(
+                            tool_name,
+                            config.failure_threshold,
+                            int(config.cooldown_seconds * 1000),
+                            1,
+                        )
+                    except Exception:
+                        pass
             return self._breakers[tool_name]
 
     def all_status(self) -> list[dict[str, Any]]:
@@ -306,6 +382,44 @@ class BreakerRegistry:
                 b.status() for b in self._breakers.values()
                 if b._total_trips > 0
             ]
+
+    def reset_all(self) -> int:
+        """Reset all circuit breakers to CLOSED state. Returns count of reset breakers.
+
+        Also resets the StateBoard (Rust PyO3 shared memory) so the Zig dispatch
+        core and Python BreakerRegistry stay in sync.
+        """
+        count = 0
+        with self._lock:
+            # Reset Python breakers
+            for breaker in self._breakers.values():
+                with breaker._lock:
+                    if breaker._state != BreakerState.CLOSED:
+                        breaker._state = BreakerState.CLOSED
+                        breaker._failure_timestamps.clear()
+                        breaker._opened_at = 0.0
+                        count += 1
+
+            # Reset StateBoard via Rust PyO3 (authoritative native state)
+            try:
+                import whitemagic_rs
+                whitemagic_rs.board_reset()
+                logger.info("StateBoard reset via Rust PyO3 (board_reset)")
+            except ImportError:
+                pass  # Rust PyO3 not available — Python-only fallback
+
+            # Reset Koka native circuit handler if available
+            koka = get_koka_circuit_dispatch()
+            if koka is not None:
+                for breaker in self._breakers.values():
+                    try:
+                        koka.reset(breaker.tool_name)
+                    except Exception:
+                        pass
+
+            if count:
+                logger.info("Reset %d circuit breaker(s) to CLOSED", count)
+            return count
 
     def predictive_check(self) -> dict[str, Any]:
         """G4 Synthesis: Query Self-Model forecasts to proactively tighten breakers.
@@ -331,10 +445,10 @@ class BreakerRegistry:
                                     breaker.config.failure_threshold -= 1
                                     tightened.append(breaker.tool_name)
                         logger.info(
-                            f"Predictive breaker tightening: {alert.metric} forecast "
-                            f"to breach in ~{alert.threshold_eta} steps, "
-                            f"tightened {len(tightened)} breakers",
-                        )
+                            "Predictive breaker tightening: %s forecast "
+                            "to breach in ~%s steps, "
+                            "tightened %s breakers",
+                         alert.metric, alert.threshold_eta, len(tightened))
         except Exception as e:
             logger.debug("Predictive check skipped: %s", e, exc_info=True)
 
@@ -359,4 +473,40 @@ def get_breaker_registry() -> BreakerRegistry:
         with _reg_lock:
             if _registry is None:
                 _registry = BreakerRegistry()
+                # R&D mode: reset all breakers on startup for clean development session
+                if os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
+                    _registry.reset_all()
+                    logger.info("WM_RD_MODE=1: circuit breakers reset on startup")
     return _registry
+
+
+# ---------------------------------------------------------------------------
+# Koka native circuit breaker (optional accelerator)
+# ---------------------------------------------------------------------------
+
+_koka_circuit: Any = None
+_koka_lock = threading.Lock()
+
+
+def get_koka_circuit_dispatch():
+    """Get the Koka native circuit dispatcher (singleton).
+
+    Returns None if the Koka binary is not available.
+    """
+    global _koka_circuit
+    if _koka_circuit is None:
+        with _koka_lock:
+            if _koka_circuit is None:
+                try:
+                    from whitemagic.core.acceleration.koka_native_bridge import (
+                        KokaCircuitDispatch,
+                    )
+                    inst = KokaCircuitDispatch()
+                    if inst._ensure_running():
+                        _koka_circuit = inst
+                        logger.info("Koka circuit dispatch available")
+                    else:
+                        _koka_circuit = False  # marks as unavailable
+                except (ImportError, Exception):
+                    _koka_circuit = False
+    return _koka_circuit if _koka_circuit is not False else None

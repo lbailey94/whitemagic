@@ -163,7 +163,7 @@ class BatchedGanYingBus(GanYingBus):
             except Exception as e:
                 # Don't let one listener break the whole batch
                 from logging import getLogger
-                getLogger(__name__).error(f"Listener error in batch: {e}")
+                getLogger(__name__).error("Listener error in batch: %s", e)
                 pass
 
     def flush(self) -> None:

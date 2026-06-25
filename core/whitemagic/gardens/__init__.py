@@ -359,7 +359,7 @@ def get_garden(name: str) -> Any:
 def init_all_gardens() -> dict[str, Any]:
     """Initialize all gardens and wire to Gan Ying."""
     gardens = get_all_gardens()
-    logger.info(f"✅ Initialized {len(gardens)} gardens!")
+    logger.info("✅ Initialized %s gardens!", len(gardens))
     return gardens
 
 # Auto-wire gardens to Gan Ying on import

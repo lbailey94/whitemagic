@@ -21,7 +21,7 @@ import sys
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # Add core to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -142,11 +142,13 @@ def benchmark_tool(
 def benchmark_concurrent(
     tool_name: str,
     args: dict[str, Any],
-    concurrency_levels: list[int] = [1, 5, 10, 20],
+    concurrency_levels: list[int] | None = None,
     requests_per_level: int = 50,
 ) -> dict[int, dict]:
     """Benchmark tool under concurrent load."""
     import concurrent.futures
+    if concurrency_levels is None:
+        concurrency_levels = [1, 5, 10, 20]
     
     results = {}
     

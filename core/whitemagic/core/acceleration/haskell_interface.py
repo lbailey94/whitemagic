@@ -11,6 +11,29 @@ logger = logging.getLogger("haskell_bridge")
 # The FFI bridge lives at haskell/haskell_bridge.py (project root)
 _HASKELL_DIR = Path(__file__).resolve().parents[3] / "haskell"
 
+# Canonical King Wen table: binary index (0-63) → King Wen number (1-64).
+# Binary: bit 0 = bottom line, bit 5 = top line. 1=Yang, 0=Yin.
+# Cross-referenced with Wikibooks "I Ching/The 64 Hexagrams".
+_KING_WEN_TABLE = [
+    2, 24, 7, 19, 15, 36, 46, 11,
+    16, 51, 40, 54, 62, 55, 32, 34,
+    8, 3, 29, 60, 39, 63, 48, 5,
+    45, 17, 47, 58, 31, 49, 28, 43,
+    23, 27, 4, 41, 52, 22, 18, 26,
+    35, 21, 64, 38, 56, 30, 50, 14,
+    20, 42, 59, 61, 53, 37, 57, 9,
+    12, 25, 6, 10, 33, 13, 44, 1,
+]
+
+
+def _binary_to_king_wen(lines: list[int]) -> int:
+    """Convert 6 binary line values (0=Yin, 1=Yang) to King Wen number."""
+    binary = 0
+    for i, line in enumerate(lines):
+        if line:
+            binary |= (1 << i)
+    return _KING_WEN_TABLE[binary]
+
 
 class HaskellBridge:
     """High-level interface to the Haskell divination library."""
@@ -62,7 +85,7 @@ class HaskellBridge:
             return {
                 "status": "SIMULATED",
                 "lines": lines,
-                "king_wen_number": sum(lines) + 1,
+                "king_wen_number": _binary_to_king_wen(lines),
                 "is_balanced": lines.count(0) == lines.count(1),
             }
 

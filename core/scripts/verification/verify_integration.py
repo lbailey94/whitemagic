@@ -2,7 +2,6 @@
 import asyncio
 import logging
 import sys
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

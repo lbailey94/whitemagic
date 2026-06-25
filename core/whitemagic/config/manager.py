@@ -475,10 +475,10 @@ if __name__ == "__main__":
     config = get_config()
 
     # Print configuration
-    logger.info(f"Environment: {config.environment}")
-    logger.info(f"Database URL: {config.database.url}")
-    logger.info(f"API Host:Port: {config.api.host}:{config.api.port}")
-    logger.info(f"Debug: {config.debug}")
+    logger.info("Environment: %s", config.environment)
+    logger.info("Database URL: %s", config.database.url)
+    logger.info("API Host:Port: %s:%s", config.api.host, config.api.port)
+    logger.info("Debug: %s", config.debug)
 
     # Setup environment
     setup_config_environment(config)

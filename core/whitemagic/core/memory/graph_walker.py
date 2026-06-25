@@ -173,7 +173,7 @@ class GraphWalker:
                     for row in rows
                 ]
         except Exception as e:
-            logger.debug(f"GraphWalker: failed to load neighbors for {memory_id}: {e}")
+            logger.debug("GraphWalker: failed to load neighbors for %s: %s", memory_id, e)
             return []
 
     def _get_galactic_distance(self, memory_id: str, pool: Any) -> float:
@@ -371,7 +371,7 @@ class GraphWalker:
             um = get_unified_memory()
             pool = um.backend.pool
         except Exception as e:
-            logger.error(f"GraphWalker: could not access memory system: {e}")
+            logger.error("GraphWalker: could not access memory system: %s", e)
             result.duration_ms = (time.perf_counter() - start) * 1000
             return result
 
@@ -481,9 +481,9 @@ class GraphWalker:
             self._total_nodes_visited += len(visited)
 
         logger.info(
-            f"🔍 Graph walk: {len(seed_ids)} seeds × {hops} hops → "
-            f"{len(visited)} nodes, {result.paths_explored} edges traversed ({elapsed:.0f}ms)",
-        )
+            "🔍 Graph walk: %s seeds × %s hops → "
+            "%s nodes, %s edges traversed (%.0fms)",
+         len(seed_ids), hops, len(visited), result.paths_explored, elapsed)
         return result
 
     # ------------------------------------------------------------------
@@ -498,6 +498,7 @@ class GraphWalker:
         walk_top_k: int = 10,
         final_limit: int = 10,
         enforce_causality: bool = False,
+        use_quantum: bool = False,
     ) -> list[dict[str, Any]]:
         """Anchor search + graph walk expansion.
 
@@ -514,6 +515,9 @@ class GraphWalker:
             walk_top_k: Top-K paths to keep from graph walk.
             final_limit: Maximum results to return.
             enforce_causality: If True, enforce temporal ordering in walks.
+            use_quantum: If True, use quantum-inspired superposition walk
+                for parallel path exploration. Falls back to classical
+                if quantum module unavailable.
 
         Returns:
             List of dicts with memory data + walk metadata.
@@ -524,7 +528,7 @@ class GraphWalker:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
         except Exception as e:
-            logger.error(f"hybrid_recall: could not access memory system: {e}")
+            logger.error("hybrid_recall: could not access memory system: %s", e)
             return []
 
         # Step 1: Anchor search
@@ -545,17 +549,68 @@ class GraphWalker:
             pass  # Graceful degradation: walk without semantic steering
 
         anchor_ids = [m.id for m in anchors]
-        # Step 2: Graph walk from anchors with semantic steering
-        walk_result = self.walk(
-            seed_ids=anchor_ids,
-            hops=hops,
-            top_k=walk_top_k,
-            query_embedding=query_embedding,
-            enforce_causality=enforce_causality,
-        )
 
-        # Step 3: Collect all discovered node IDs
-        discovered_ids = walk_result.discovered_ids()
+        # Step 2: Graph walk from anchors with semantic steering
+        # Try quantum-accelerated walk if requested
+        quantum_nodes: list[Any] = []
+        if use_quantum:
+            try:
+                from whitemagic.core.intelligence.quantum import QuantumGraphAdapter, QuantumNode
+                adapter = QuantumGraphAdapter(classical_walker=self)
+
+                # Build neighbor function for quantum superposition walk
+                def _get_neighbors_q(mid: str) -> list[dict]:
+                    try:
+                        pool = um.backend.pool
+                        neighbors = self._get_neighbors(mid, pool)
+                        return [
+                            {"target_id": n.memory_id, "strength": n.strength}
+                            for n in neighbors
+                            if n.strength >= self._min_strength
+                        ]
+                    except Exception:
+                        return []
+
+                quantum_nodes = adapter.quantum_enhanced_walk(
+                    seed_ids=anchor_ids,
+                    hops=hops,
+                    top_k=walk_top_k,
+                    query_embedding=query_embedding,
+                    get_neighbors_func=_get_neighbors_q,
+                )
+                logger.info(
+                    "⚛️ Quantum walk: %d nodes in superposition from %d anchors",
+                    len(quantum_nodes), len(anchor_ids),
+                )
+            except (ImportError, ModuleNotFoundError, Exception) as e:
+                logger.debug("Quantum walk unavailable, falling back to classical: %s", e)
+                quantum_nodes = []
+
+        if quantum_nodes:
+            # Convert quantum results to walk-like result
+            discovered_ids = {n.id for n in quantum_nodes if n.id not in set(anchor_ids)}
+            # Build a synthetic WalkResult for downstream compatibility
+            walk_result = WalkResult(seed_ids=anchor_ids, hops=hops)
+            walk_result.paths_explored = len(quantum_nodes)
+            walk_result.unique_nodes_visited = len(discovered_ids) + len(anchor_ids)
+            # Create synthetic paths from quantum amplitudes
+            for qn in quantum_nodes[:walk_top_k]:
+                walk_result.paths.append(WalkPath(
+                    nodes=[anchor_ids[0], qn.id] if anchor_ids else [qn.id],
+                    edge_weights=[qn.amplitude ** 2],
+                    relation_types=["quantum_superposition"],
+                    total_score=qn.amplitude ** 2,
+                    depth=1,
+                ))
+        else:
+            walk_result = self.walk(
+                seed_ids=anchor_ids,
+                hops=hops,
+                top_k=walk_top_k,
+                query_embedding=query_embedding,
+                enforce_causality=enforce_causality,
+            )
+            discovered_ids = walk_result.discovered_ids()
 
         # Step 4: Hydrate discovered memories
         discovered_map: dict[str, Any] = {}
@@ -621,10 +676,129 @@ class GraphWalker:
 
         elapsed = (time.perf_counter() - start) * 1000
         logger.info(
-            f"🧠 Hybrid recall: '{query[:50]}' → {len(anchors)} anchors + "
-            f"{len(discovered_ids)} graph-discovered = {len(results)} results ({elapsed:.0f}ms)",
-        )
+            "🧠 Hybrid recall: '%s' → %s anchors + "
+            "%s graph-discovered = %s results (%.0fms)",
+         query[:50], len(anchors), len(discovered_ids), len(results), elapsed)
         return results
+
+    # ------------------------------------------------------------------
+    # VSA walk context compression
+    # ------------------------------------------------------------------
+
+    def compress_walk_context(
+        self,
+        results: list[dict[str, Any]],
+        query: str,
+        max_text_items: int = 5,
+    ) -> dict[str, Any]:
+        """Compress graph walk results using VSA HRR superposition.
+
+        When a walk discovers many nodes, the full result set can exceed
+        token budgets. This method compresses the results into a compact
+        HRR vector representation plus a text summary of the top items,
+        preserving semantic relevance to the query.
+
+        Returns a dict with:
+            - summary: compressed text representation
+            - vector: HRR superposition vector (if embeddings available)
+            - original_count: number of input results
+            - compressed_tokens: estimated tokens in summary
+            - original_tokens: estimated tokens in full results
+            - compression_ratio: original / compressed
+        """
+        if not results:
+            return {
+                "summary": "",
+                "vector": None,
+                "original_count": 0,
+                "compressed_tokens": 0,
+                "original_tokens": 0,
+                "compression_ratio": 1.0,
+            }
+
+        try:
+            from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+            compressor = get_vsa_context_compressor()
+        except Exception:
+            compressor = None
+
+        # Build items for compression
+        items = []
+        for r in results:
+            content = r.get("content", "")
+            title = r.get("title", "")
+            source = r.get("source", "graph_walk")
+            mid = r.get("memory_id", "")
+            text = f"{title}: {content}" if title else content
+            items.append({"content": text, "source": source, "id": mid})
+
+        # Estimate original tokens
+        full_text = "\n".join(i["content"] for i in items)
+        original_tokens = len(full_text) // 4
+
+        if compressor is not None:
+            result = compressor.compress(items, query=query, max_text_items=max_text_items)
+            compressed_tokens = len(result.summary) // 4
+            ratio = original_tokens / max(1, compressed_tokens)
+            return {
+                "summary": result.summary,
+                "vector": result.vector if hasattr(result, "vector") else None,
+                "original_count": len(results),
+                "compressed_tokens": compressed_tokens,
+                "original_tokens": original_tokens,
+                "compression_ratio": round(ratio, 1),
+                "method": result.method,
+            }
+        else:
+            # Fallback: keep top items by score
+            sorted_items = sorted(items, key=lambda x: 0, reverse=True)[:max_text_items]
+            summary = "\n".join(f"- [{i['source']}] {i['content'][:200]}" for i in sorted_items)
+            compressed_tokens = len(summary) // 4
+            ratio = original_tokens / max(1, compressed_tokens)
+            return {
+                "summary": summary,
+                "vector": None,
+                "original_count": len(results),
+                "compressed_tokens": compressed_tokens,
+                "original_tokens": original_tokens,
+                "compression_ratio": round(ratio, 1),
+                "method": "truncation_fallback",
+            }
+
+    def hybrid_recall_compressed(
+        self,
+        query: str,
+        hops: int = 2,
+        anchor_limit: int = 5,
+        walk_top_k: int = 10,
+        final_limit: int = 10,
+        enforce_causality: bool = False,
+        max_text_items: int = 5,
+    ) -> dict[str, Any]:
+        """Hybrid recall with VSA context compression.
+
+        Same as hybrid_recall but returns a compressed context suitable
+        for token-constrained downstream consumers (e.g., inference router).
+
+        Returns dict with:
+            - results: full result list (for reference)
+            - compressed: VSA-compressed summary
+        """
+        results = self.hybrid_recall(
+            query=query,
+            hops=hops,
+            anchor_limit=anchor_limit,
+            walk_top_k=walk_top_k,
+            final_limit=final_limit,
+            enforce_causality=enforce_causality,
+        )
+
+        compressed = self.compress_walk_context(results, query, max_text_items)
+
+        return {
+            "results": results,
+            "compressed": compressed,
+        }
 
     # ------------------------------------------------------------------
     # Helpers

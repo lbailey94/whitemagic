@@ -51,7 +51,7 @@ class ConfigValidator:
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
         if not _silent_init():
-            logger.info(f"ConfigValidator initialized with config_dir: {self.config_dir}")
+            logger.info("ConfigValidator initialized with config_dir: %s", self.config_dir)
 
     def validate_or_create_secrets(self) -> dict[str, str]:
         """Ensure JWT secret exists and is secure.

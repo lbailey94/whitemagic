@@ -236,7 +236,7 @@ def emit_garden_event(garden_name: str, event_data: dict[str, Any]) -> None:
 
     event_type = GARDEN_EVENTS.get(garden_name.lower())
     if not event_type:
-        logger.warning(f"Unknown garden: {garden_name}")
+        logger.warning("Unknown garden: %s", garden_name)
         return
 
     event = ResonanceEvent(
@@ -247,7 +247,7 @@ def emit_garden_event(garden_name: str, event_data: dict[str, Any]) -> None:
     )
 
     bus.emit(event)
-    logger.debug(f"Garden event emitted: {garden_name} -> {event_type.value}")
+    logger.debug("Garden event emitted: %s -> %s", garden_name, event_type.value)
 
 
 def trigger_garden_cascade(starting_garden: str, description: str = "", resonance_energy: float = 1.0) -> list[str]:
@@ -318,7 +318,7 @@ def trigger_garden_cascade(starting_garden: str, description: str = "", resonanc
             seen.add(g)
 
     if len(unique_cascaded) > 1:
-        logger.info(f"✨ Resonant Cascade: {' → '.join(unique_cascaded)} (Final Energy: {resonance_energy:.2f})")
+        logger.info("✨ Resonant Cascade: %s (Final Energy: %s)", ' → '.join(unique_cascaded), format(resonance_energy, ".2f"))
 
     return unique_cascaded
 

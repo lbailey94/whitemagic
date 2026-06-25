@@ -9,7 +9,7 @@ import std/num/float64
 // Circuit Breaker Effect Definition
 // ═══════════════════════════════════════════════════════════════════════════
 
-effect circuit
+pub effect circuit
   // Core circuit operations
   fun check-circuit(name: string): string  // returns state: closed, open, half-open
   fun record-success(name: string): ()
@@ -48,7 +48,7 @@ struct circuit-status
   state: circuit-state
   failure-count: int
   success-count: int
-  last-failure-time: int
+  last-failure-time: int    // monotonic counter for elapsed comparison
   total-calls: int
   rejected-calls: int
 
@@ -56,11 +56,12 @@ struct circuit-status
 // Circuit Breaker Handler
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun handle-circuit-breaker(action: () -> <circuit> a): a
+pub fun handle-circuit-breaker(action: () -> <circuit|e> a): e a
   var circuits : list<(string, circuit-config, circuit-status)> := []
   var bulkheads : list<(string, int, int)> := []  // name, max, current
+  var tick-counter : int := 0
   
-  handle action
+  with
     fun check-circuit(name)
       match circuits.find(fn(c) c.fst == name)
         Just((_, config, status)) ->
@@ -73,7 +74,8 @@ fun handle-circuit-breaker(action: () -> <circuit> a): a
                 "closed"
             Open ->
               // Check recovery timeout
-              val elapsed = ticks() - status.last-failure-time
+              tick-counter := tick-counter + 1
+              val elapsed = tick-counter - status.last-failure-time
               if elapsed > config.recovery-timeout then
                 "half-open"
               else
@@ -87,66 +89,68 @@ fun handle-circuit-breaker(action: () -> <circuit> a): a
     
     fun record-success(name)
       match circuits.find(fn(c) c.fst == name)
-        Just((config, _, status)) ->
+        Just((_, config, status)) ->
           val new-status = match status.state
             Closed ->
-              circuit-status(
+              Circuit-status(
                 Closed, 0, 0, status.last-failure-time,
                 status.total-calls + 1, status.rejected-calls
               )
             HalfOpen ->
-              circuit-status(
+              Circuit-status(
                 HalfOpen, 0, status.success-count + 1, 
                 status.last-failure-time,
                 status.total-calls + 1, status.rejected-calls
               )
             Open -> status
-          circuits := Cons((config, name, new-status), 
+          circuits := Cons((name, config, new-status), 
                             circuits.filter(fn(c) c.fst != name))
         Nothing -> ()
     
     fun record-failure(name)
       match circuits.find(fn(c) c.fst == name)
-        Just((config, _, status)) ->
+        Just((_, config, status)) ->
           val new-status = match status.state
             Closed ->
               val new-failures = status.failure-count + 1
               val new-state = if new-failures >= config.failure-threshold 
                              then Open else Closed
-              circuit-status(
-                new-state, new-failures, 0, ticks(),
+              tick-counter := tick-counter + 1
+              Circuit-status(
+                new-state, new-failures, 0, tick-counter,
                 status.total-calls + 1, status.rejected-calls
               )
             HalfOpen ->
               // Back to open on failure in half-open
-              circuit-status(
-                Open, status.failure-count + 1, 0, ticks(),
+              tick-counter := tick-counter + 1
+              Circuit-status(
+                Open, status.failure-count + 1, 0, tick-counter,
                 status.total-calls + 1, status.rejected-calls
               )
             Open -> status
-          circuits := Cons((config, name, new-status), 
+          circuits := Cons((name, config, new-status), 
                             circuits.filter(fn(c) c.fst != name))
         Nothing -> ()
     
     fun reset-circuit(name)
       match circuits.find(fn(c) c.fst == name)
-        Just((config, _, _)) ->
-          val fresh = circuit-status(Closed, 0, 0, 0, 0, 0)
-          circuits := Cons((config, name, fresh), 
+        Just((_, config, _)) ->
+          val fresh = Circuit-status(Closed, 0, 0, 0, 0, 0)
+          circuits := Cons((name, config, fresh), 
                             circuits.filter(fn(c) c.fst != name))
         Nothing -> ()
     
     fun configure-circuit(name, threshold, timeout, half-max)
-      val config = circuit-config(name, threshold, timeout, half-max)
-      val status = circuit-status(Closed, 0, 0, 0, 0, 0)
+      val config = Circuit-config(name, threshold, timeout, half-max)
+      val status = Circuit-status(Closed, 0, 0, 0, 0, 0)
       circuits := Cons((name, config, status), 
                         circuits.filter(fn(c) c.fst != name))
     
     fun enter-bulkhead(name)
       match bulkheads.find(fn(b) b.fst == name)
-        Just((_, max, current)) ->
-          if current < max then
-            bulkheads := Cons((name, max, current + 1), 
+        Just((_, max-val, current)) ->
+          if current < max-val then
+            bulkheads := Cons((name, max-val, current + 1), 
                              bulkheads.filter(fn(b) b.fst != name))
             True
           else
@@ -158,9 +162,9 @@ fun handle-circuit-breaker(action: () -> <circuit> a): a
     
     fun exit-bulkhead(name)
       match bulkheads.find(fn(b) b.fst == name)
-        Just((_, max, current)) ->
-          val new-current = max(0, current - 1)
-          bulkheads := Cons((name, max, new-current), 
+        Just((_, max-val, current)) ->
+          val new-current = if current - 1 < 0 then 0 else current - 1
+          bulkheads := Cons((name, max-val, new-current), 
                            bulkheads.filter(fn(b) b.fst != name))
         Nothing -> ()
     
@@ -168,6 +172,7 @@ fun handle-circuit-breaker(action: () -> <circuit> a): a
       match bulkheads.find(fn(b) b.fst == name)
         Just((_, _, current)) -> current
         Nothing -> 0
+  action()
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Protected execution with circuit breaker
@@ -179,29 +184,31 @@ fun with-circuit-protection(name: string, action: () -> a): <circuit> maybe<a>
   if state == "open" then
     Nothing  // Circuit open - reject call
   else
-    try
+    try(fn() {
       val result = action()
       record-success(name)
       Just(result)
-    catch
+    }, fn(exn) {
       record-failure(name)
       Nothing
+    })
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Protected execution with bulkhead isolation
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun with-bulkhead-isolation(name: string, action: () -> a): <circuit> maybe<a>
+fun with-bulkhead-isolation(name: string, action: () -> a): <circuit,exn> maybe<a>
   if !enter-bulkhead(name) then
     Nothing  // Bulkhead full - reject
-  
-  try
-    val result = action()
-    exit-bulkhead(name)
-    Just(result)
-  catch
-    exit-bulkhead(name)
-    throw
+  else
+    try(fn() {
+      val result = action()
+      exit-bulkhead(name)
+      Just(result)
+    }, fn(exn) {
+      exit-bulkhead(name)
+      throw(exn.message)
+    })
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Combined circuit + bulkhead protection
@@ -212,30 +219,29 @@ fun with-full-protection(name: string, action: () -> a): <circuit> maybe<a>
   val state = check-circuit(name)
   if state == "open" then
     Nothing
-  
-  // Then check bulkhead
-  if !enter-bulkhead(name) then
+  else if !enter-bulkhead(name) then
     Nothing
-  
-  try
-    val result = action()
-    record-success(name)
-    exit-bulkhead(name)
-    Just(result)
-  catch
-    record-failure(name)
-    exit-bulkhead(name)
-    Nothing
+  else
+    try(fn() {
+      val result = action()
+      record-success(name)
+      exit-bulkhead(name)
+      Just(result)
+    }, fn(exn) {
+      record-failure(name)
+      exit-bulkhead(name)
+      Nothing
+    })
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Standard circuit configurations
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun init-strict-circuit(name: string): <circuit> ()
+pub fun init-strict-circuit(name: string): <circuit> ()
   configure-circuit(name, 3, 30000, 2)  // 3 failures, 30s timeout, 2 test calls
 
-fun init-lenient-circuit(name: string): <circuit> ()
+pub fun init-lenient-circuit(name: string): <circuit> ()
   configure-circuit(name, 10, 60000, 5)  // 10 failures, 60s timeout, 5 test calls
 
-fun init-fast-circuit(name: string): <circuit> ()
+pub fun init-fast-circuit(name: string): <circuit> ()
   configure-circuit(name, 5, 10000, 3)  // 5 failures, 10s timeout, 3 test calls

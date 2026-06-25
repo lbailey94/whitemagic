@@ -93,7 +93,7 @@ def galactic_batch_score(
             parsed: list[dict[str, Any]] = json.loads(result_json)
             return parsed
         except Exception as e:
-            logger.debug(f"Rust galactic scoring failed, using Python: {e}")
+            logger.debug("Rust galactic scoring failed, using Python: %s", e)
 
     # Python fallback
     return _galactic_batch_score_python(memories, quick)
@@ -186,7 +186,7 @@ def association_mine(
             parsed: dict[str, Any] = json.loads(result_json)
             return parsed
         except Exception as e:
-            logger.debug(f"Rust association mining failed, using Python: {e}")
+            logger.debug("Rust association mining failed, using Python: %s", e)
 
     # Python fallback
     return _association_mine_python(texts, max_keywords, min_score, max_results)
@@ -397,7 +397,7 @@ def holographic_encode_batch(
         parsed: list[dict[str, float]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust holographic batch encoding failed: {e}")
+        logger.debug("Rust holographic batch encoding failed: %s", e)
         return None
 
 
@@ -420,7 +420,7 @@ def holographic_encode_single(
         parsed: dict[str, float] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust holographic single encoding failed: {e}")
+        logger.debug("Rust holographic single encoding failed: %s", e)
         return None
 
 
@@ -452,7 +452,7 @@ def holographic_nearest_5d(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust holographic nearest 5D failed: {e}")
+        logger.debug("Rust holographic nearest 5D failed: %s", e)
         return None
 
 
@@ -484,7 +484,7 @@ def minhash_find_duplicates(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust MinHash find_duplicates failed: {e}")
+        logger.debug("Rust MinHash find_duplicates failed: %s", e)
         return None
 
 
@@ -508,7 +508,7 @@ def minhash_signatures(
         parsed: list[list[int]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust MinHash signatures failed: {e}")
+        logger.debug("Rust MinHash signatures failed: %s", e)
         return None
 
 
@@ -538,7 +538,7 @@ def sqlite_batch_update_galactic(
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust SQLite batch update failed: {e}")
+        logger.debug("Rust SQLite batch update failed: %s", e)
         return None
 
 
@@ -560,7 +560,7 @@ def sqlite_decay_drift(
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust SQLite decay drift failed: {e}")
+        logger.debug("Rust SQLite decay drift failed: %s", e)
         return None
 
 
@@ -583,7 +583,7 @@ def sqlite_fts_search(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust SQLite FTS search failed: {e}")
+        logger.debug("Rust SQLite FTS search failed: %s", e)
         return None
 
 
@@ -603,7 +603,7 @@ def sqlite_zone_stats(
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust SQLite zone stats failed: {e}")
+        logger.debug("Rust SQLite zone stats failed: %s", e)
         return None
 
 
@@ -626,7 +626,7 @@ def sqlite_export_for_mining(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust SQLite export for mining failed: {e}")
+        logger.debug("Rust SQLite export for mining failed: %s", e)
         return None
 
 
@@ -650,24 +650,24 @@ def rust_search_available() -> bool:
 
 def search_build_index(
     documents: list[dict[str, str]],
-) -> str | None:
+) -> tuple[int, int] | None:
     """Build a BM25 inverted index from documents.
 
     Args:
         documents: List of dicts with keys: id, title, content.
 
     Returns:
-        JSON string of index handle/stats, or None if Rust unavailable.
+        (doc_count, vocab_size) tuple, or None if Rust unavailable.
 
     """
     if not _RUST_SEARCH:
         return None
     try:
         docs_json = json.dumps(documents)
-        result: str = _rs.search_build_index(docs_json)
+        result: tuple[int, int] = _rs.search_build_index(docs_json)
         return result
     except Exception as e:
-        logger.debug(f"Rust search_build_index failed: {e}")
+        logger.debug("Rust search_build_index failed: %s", e)
         return None
 
 
@@ -689,7 +689,7 @@ def search_query(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust search_query failed: {e}")
+        logger.debug("Rust search_query failed: %s", e)
         return None
 
 
@@ -712,7 +712,7 @@ def search_fuzzy(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust search_fuzzy failed: {e}")
+        logger.debug("Rust search_fuzzy failed: %s", e)
         return None
 
 
@@ -734,7 +734,7 @@ def search_and_query(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust search_and_query failed: {e}")
+        logger.debug("Rust search_and_query failed: %s", e)
         return None
 
 
@@ -753,7 +753,7 @@ def search_stats() -> dict[str, Any] | None:
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust search_stats failed: {e}")
+        logger.debug("Rust search_stats failed: %s", e)
         return None
 
 
@@ -794,7 +794,7 @@ def rate_check(tool_name: str) -> dict[str, Any] | None:
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust rate_check failed: {e}")
+        logger.debug("Rust rate_check failed: %s", e)
         return None
 
 
@@ -811,7 +811,7 @@ def rate_set_override(tool_name: str, rpm: int) -> bool:
         _rs.rate_set_override(tool_name, rpm)
         return True
     except Exception as e:
-        logger.debug(f"Rust rate_set_override failed: {e}")
+        logger.debug("Rust rate_set_override failed: %s", e)
         return False
 
 
@@ -835,7 +835,7 @@ def rate_stats() -> dict[str, Any] | None:
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust rate_stats failed: {e}")
+        logger.debug("Rust rate_stats failed: %s", e)
         return None
 
 
@@ -867,7 +867,7 @@ def rate_check_batch(tool_names: list[str]) -> list[dict[str, Any]] | None:
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust rate_check_batch failed: {e}")
+        logger.debug("Rust rate_check_batch failed: %s", e)
         return None
 
 
@@ -927,7 +927,7 @@ def retrieval_pipeline(
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
     except Exception as e:
-        logger.debug(f"Rust retrieval_pipeline failed: {e}")
+        logger.debug("Rust retrieval_pipeline failed: %s", e)
         return None
 
 
@@ -962,7 +962,7 @@ def keyword_extract(text: str, max_keywords: int = 50) -> set[str] | None:
         result = _rs.keyword_extract(text, max_keywords)
         return cast(set[str], result)
     except Exception as e:
-        logger.debug(f"Rust keyword_extract failed: {e}")
+        logger.debug("Rust keyword_extract failed: %s", e)
         return None
 
 
@@ -977,7 +977,7 @@ def keyword_extract_batch(texts: list[str], max_keywords: int = 50) -> list[set[
         result = _rs.keyword_extract_batch(texts, max_keywords)
         return cast(list[set[str]], result)
     except Exception as e:
-        logger.debug(f"Rust keyword_extract_batch failed: {e}")
+        logger.debug("Rust keyword_extract_batch failed: %s", e)
         return None
 
 
@@ -1011,7 +1011,7 @@ def arrow_encode_memories(memories_json: str) -> bytes | None:
     try:
         return cast(bytes, _rs.arrow_bridge.arrow_encode_memories(memories_json))
     except Exception as e:
-        logger.debug(f"Rust arrow_encode_memories failed: {e}")
+        logger.debug("Rust arrow_encode_memories failed: %s", e)
         return None
 
 
@@ -1025,7 +1025,7 @@ def arrow_decode_memories(ipc_bytes: bytes) -> str | None:
     try:
         return cast(str, _rs.arrow_bridge.arrow_decode_memories(ipc_bytes))
     except Exception as e:
-        logger.debug(f"Rust arrow_decode_memories failed: {e}")
+        logger.debug("Rust arrow_decode_memories failed: %s", e)
         return None
 
 
@@ -1036,7 +1036,7 @@ def arrow_schema_info() -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], json.loads(_rs.arrow_bridge.arrow_schema_info()))
     except Exception as e:
-        logger.debug(f"Rust arrow_schema_info failed: {e}")
+        logger.debug("Rust arrow_schema_info failed: %s", e)
         return None
 
 
@@ -1050,7 +1050,7 @@ def arrow_roundtrip_bench(n: int = 1000) -> tuple[int, int, int] | None:
     try:
         return cast(tuple[int, int, int], _rs.arrow_bridge.arrow_roundtrip_bench(n))
     except Exception as e:
-        logger.debug(f"Rust arrow_roundtrip_bench failed: {e}")
+        logger.debug("Rust arrow_roundtrip_bench failed: %s", e)
         return None
 
 
@@ -1095,7 +1095,7 @@ def tokio_deploy_clones(
         result_json = _rs.tokio_deploy_clones(prompt, num_clones, strategies or [])
         return cast(dict[str, Any], json.loads(result_json))
     except Exception as e:
-        logger.debug(f"Rust tokio_deploy_clones failed: {e}")
+        logger.debug("Rust tokio_deploy_clones failed: %s", e)
         return None
 
 
@@ -1106,7 +1106,7 @@ def tokio_clone_bench(num_clones: int = 1000) -> tuple[float, float] | None:
     try:
         return cast(tuple[float, float], _rs.tokio_clone_bench(num_clones))
     except Exception as e:
-        logger.debug(f"Rust tokio_clone_bench failed: {e}")
+        logger.debug("Rust tokio_clone_bench failed: %s", e)
         return None
 
 
@@ -1117,7 +1117,7 @@ def tokio_clone_stats() -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], json.loads(_rs.tokio_clone_stats()))
     except Exception as e:
-        logger.debug(f"Rust tokio_clone_stats failed: {e}")
+        logger.debug("Rust tokio_clone_stats failed: %s", e)
         return None
 
 
@@ -1146,5 +1146,5 @@ def ipc_status() -> dict[str, Any] | None:
     try:
         return cast(dict[str, Any], json.loads(_rs.ipc_bridge.ipc_status()))
     except Exception as e:
-        logger.debug(f"Rust ipc_bridge_status failed: {e}")
+        logger.debug("Rust ipc_bridge_status failed: %s", e)
         return None

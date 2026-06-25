@@ -52,7 +52,7 @@ TOOLS: list[ToolDefinition] = [
                 },
                 "backend": {
                     "type": "string",
-                    "enum": ["auto", "julia", "elixir", "haskell", "rust"],
+                    "enum": ["auto", "julia", "elixir", "haskell", "rust", "koka"],
                     "default": "auto",
                     "description": "Backend to use (auto = first available)",
                 },
@@ -85,7 +85,7 @@ TOOLS: list[ToolDefinition] = [
                 "k": {"type": "integer", "default": 5, "description": "Number of results"},
                 "backend": {
                     "type": "string",
-                    "enum": ["auto", "julia", "elixir", "haskell", "rust"],
+                    "enum": ["auto", "julia", "elixir", "haskell", "rust", "koka"],
                     "default": "auto",
                     "description": "Backend to use",
                 },

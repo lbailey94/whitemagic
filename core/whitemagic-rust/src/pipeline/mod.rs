@@ -18,7 +18,7 @@ pub mod tokio_clones;
 // pub mod clone_engine;
 // pub mod clone_lifecycle;
 // pub mod clones;
-// pub mod code_writing_clone;
+pub mod code_writing_clone;
 // pub mod compression;
 // pub mod dependency_resolver;
 // pub mod dispatch_table;

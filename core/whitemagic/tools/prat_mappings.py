@@ -59,6 +59,9 @@ TOOL_TO_GANA: dict[str, str] = {
     "simd.cosine":             "gana_tail",
     "simd.batch":              "gana_tail",
     "simd.status":             "gana_tail",
+    "hexagram.simd_execute":   "gana_tail",
+    "hexagram.dispatch":       "gana_tail",
+    "hexagram.boltzmann_select": "gana_tail",
     "execute_cascade":         "gana_tail",
     "list_cascade_patterns":   "gana_tail",
 
@@ -541,14 +544,14 @@ TOOL_TO_GANA: dict[str, str] = {
     "ilp.balance":                 "gana_abundance",
     "ilp.status":                  "gana_abundance",
 
-    # ── v15.2: Marketplace Bridge (Chariot — Mobility & Exchange) ──
-    "marketplace.publish":         "gana_chariot",
-    "marketplace.discover":        "gana_chariot",
-    "marketplace.negotiate":       "gana_chariot",
-    "marketplace.complete":        "gana_chariot",
-    "marketplace.my_listings":     "gana_chariot",
-    "marketplace.remove":          "gana_chariot",
-    "marketplace.status":          "gana_chariot",
+    # ── Rebalanced: Marketplace → Wall (boundaries/transactions) ──
+    "marketplace.publish":         "gana_wall",
+    "marketplace.discover":        "gana_wall",
+    "marketplace.negotiate":       "gana_wall",
+    "marketplace.complete":        "gana_wall",
+    "marketplace.my_listings":     "gana_wall",
+    "marketplace.remove":          "gana_wall",
+    "marketplace.status":          "gana_wall",
 
     # ── v15.6: Cognitive Extensions ──
     # Reranking → Winnowing Basket (search/recall)
@@ -564,18 +567,18 @@ TOOL_TO_GANA: dict[str, str] = {
     "community.status":            "gana_extended_net",
     "community.health":            "gana_extended_net",
 
-    # ── Cross-cutting: Browser & Web Research (route to Ghost) ──
-    "browser_navigate":            "gana_ghost",
-    "browser_screenshot":          "gana_ghost",
-    "browser_click":               "gana_ghost",
-    "browser_type":                "gana_ghost",
-    "browser_extract_dom":         "gana_ghost",
-    "browser_get_interactables":   "gana_ghost",
-    "web_fetch":                   "gana_ghost",
-    "web_search":                  "gana_ghost",
-    "web_search_and_read":         "gana_ghost",
-    "research_topic":              "gana_ghost",
-    "browser_session_status":      "gana_ghost",
+    # ── Rebalanced: Browser & Web Research → Chariot (exploration/mobility) ──
+    "browser_navigate":            "gana_chariot",
+    "browser_screenshot":          "gana_chariot",
+    "browser_click":               "gana_chariot",
+    "browser_type":                "gana_chariot",
+    "browser_extract_dom":         "gana_chariot",
+    "browser_get_interactables":   "gana_chariot",
+    "web_fetch":                   "gana_chariot",
+    "web_search":                  "gana_chariot",
+    "web_search_and_read":         "gana_chariot",
+    "research_topic":              "gana_chariot",
+    "browser_session_status":      "gana_chariot",
 
     # ── v15.9: War Room & Shadow Clone Army (Ox — Endurance & Swarm) ──
     "war_room.status":             "gana_ox",
@@ -631,6 +634,26 @@ TOOL_TO_GANA: dict[str, str] = {
 
     # ── v22: Karma Record (Hairy Head — Detail & Debug) ──
     "karma_record":                "gana_hairy_head",
+
+    # ── v23: Fragment (Rust) — Winnowing Basket (search acceleration) ──
+    "fragment.search":             "gana_winnowing_basket",
+    "fragment.index":              "gana_winnowing_basket",
+    "fragment.status":             "gana_winnowing_basket",
+    "fragment.query":              "gana_winnowing_basket",
+
+    # ── v23: STRATA — Chariot (codebase analysis + archaeology) ──
+    "strata.analyze":              "gana_chariot",
+    "strata.survey":               "gana_chariot",
+    "strata.archaeology":          "gana_chariot",
+    "strata.list_checks":          "gana_chariot",
+
+    # ── v23.1: Unified Read API — Winnowing Basket (unified search/recall) ──
+    "wm_read":                     "gana_winnowing_basket",
+    "wm_read.status":              "gana_winnowing_basket",
+
+    # ── v23.1: Unified Write API — Neck (core memory creation) + Stomach (file/neural) ──
+    "wm_write":                    "gana_neck",
+    "wm_write.status":             "gana_neck",
 }
 
 # Reverse: Gana → list of nested tools

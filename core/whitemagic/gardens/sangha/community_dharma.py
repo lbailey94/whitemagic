@@ -193,7 +193,7 @@ class CommunityDharma:
 
         self._save_consensuses(consensuses)
 
-        logger.info(f"🙏 Assessment contributed to community (votes: {len(consensus.votes)})")
+        logger.info("🙏 Assessment contributed to community (votes: %s)", len(consensus.votes))
 
         # Emit to Gan Ying
         if self.bus and len(consensus.votes) >= 3:

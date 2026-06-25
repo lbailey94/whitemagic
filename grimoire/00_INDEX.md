@@ -2,11 +2,13 @@
 
 Start with the canonical introduction: [Prologue](00_PROLOGUE.md)
 
-**Version**: 22.2.0 "Cognitive Operating System"
+**Version**: 23.1.0 "Cognitive Operating System"
 **Structure**: 28 Chapters (Lunar Mansions) + Super-Coherence Core
 **Flow**: Cyclical (28 → 1 → 2 → ... → 28 → 1)
-**Tools**: 28 PRAT Gana meta-tools + 479 callable tools across 451 dispatch entries
-**Test baseline**: 2,242 passed, 68 skipped, 0 failures
+**Tools**: 28 PRAT Gana meta-tools + 462 dispatch entries
+**Test baseline**: 1,470 passed, 2 skipped, 0 failures
+**Cognitive Engines**: 13 engines across 7 Ganas (see TRUTH_TABLE.md for full registry)
+**Gardens**: 28 emotional resonance domains (see TRUTH_TABLE.md for full map)
 
 ---
 
@@ -144,10 +146,11 @@ Chapters 22-28: Deep work, storage, transition, completion
 
 ### SOUTHERN QUADRANT (Summer/Fire) - Yang Peak
 
-**Chapter 8: Metrics & Introspection** (Ghost/Mystery)
-- **When**: Tracking metrics, investigating mysteries, introspection
-- **Tools**: `track_metric`, `get_metrics_summary`
-- **Garden**: mystery - Deep investigation
+**Chapter 8: Introspection & Self-Model** (Ghost/Grief)
+- **When**: Self-assessment, telemetry, capabilities audit, narrative compression
+- **Tools**: `gnosis`, `capabilities`, `selfmodel.forecast`, `narrative.compress`, `surprise_stats`
+- **Garden**: grief - Honoring what was lost; deep introspection
+- **Engines**: Self-Model, Insight Pipeline
 
 **Chapter 9: Adaptive Play** (Willow/Play)
 - **When**: Flexibility, creative adaptation, experimentation
@@ -169,10 +172,11 @@ Chapters 22-28: Deep work, storage, transition, completion
 - **Tools**: Parallel execution, batch operations
 - **Garden**: creation - Generative power
 
-**Chapter 13: Codebase Navigation** (Chariot/Transformation)
-- **When**: Archaeology, codebase exploration, transformation
-- **Tools**: `manage_archaeology`, codebase scanning
-- **Garden**: transformation - Movement through change
+**Chapter 13: Codebase Navigation & External Research** (Chariot/Adventure)
+- **When**: Archaeology, codebase exploration, browser automation, web research, knowledge graph extraction
+- **Tools**: `archaeology_search`, `kg.extract`, `browser_navigate`, `web_search`, `strata.analyze`, `codegenome.generate`
+- **Garden**: adventure - Bold exploration of code and web
+- **Engines**: Knowledge Graph v2
 
 **Chapter 14: Resource Sharing & Regeneration** (Abundance/Joy) 🧬
 - **When**: Sharing surplus, dream cycle control, regenerative briefings
@@ -252,10 +256,51 @@ Chapters 22-28: Deep work, storage, transition, completion
 - **Tools**: `system_initialize_all`, `session_checkpoint`
 - **Garden**: order - Solidifying the camp before the move
 
-**Chapter 28: Boundaries & Emergence** (Wall/Air) 🧬
-- **When**: Proactive emergence detection, boundary defense, session handoff
-- **Tools**: `scan_emergence`, `emergence_status`, `get_insights`, EmergenceEngine
-- **Garden**: air - At the boundary, new patterns emerge
+**Chapter 28: Boundaries & Marketplace** (Wall/Truth) 🧬
+- **When**: Voting, engagement tokens, marketplace operations, boundary enforcement, session handoff
+- **Tools**: `vote.create`, `engagement.issue`, `marketplace.publish`, `marketplace.discover`, `scan_emergence`
+- **Garden**: truth - Clear limits and honest exchange
+
+---
+
+## 🧠 Cognitive Engines
+
+The system includes 13 cognitive engines wired into the PRAT dispatch pipeline. See [TRUTH_TABLE.md](TRUTH_TABLE.md) for full details including file paths and implementation status.
+
+| Engine | Gana | Status |
+|--------|------|--------|
+| Bicameral Reasoner | Three Stars (21) | Implemented |
+| Corpus Callosum Bus | Three Stars (21) | Implemented (real bicameral via _run_async) |
+| Multi-Spectral Reasoner | Three Stars (21) | Implemented (5 lenses + sequential thinking) |
+| Working Memory | Heart (5) | Implemented (not wired to scratchpad) |
+| Cognitive Modes | Dipper (22) | Implemented (not enforced in dispatch) |
+| Foresight Engine | Three Stars (21) | Implemented |
+| Insight Pipeline | Three Stars (21) / Ghost (8) | Implemented |
+| CoreAccessLayer | Cross-Gana | Implemented (candidate for `wm_read`) |
+| Self-Model | Ghost (8) | Implemented (forecasts not fed back) |
+| Knowledge Graph v2 | Chariot (13) | Implemented |
+| Dream Cycle | Abundance (14) | Implemented (on-demand, not scheduled) |
+| Kaizen Engine | Three Stars (21) | Implemented (STRATA integration in progress) |
+| Homeostatic Loop | Dipper (22) | Implemented |
+
+---
+
+## 🌸 Gardens — Emotional Resonance Domains
+
+Each Gana is paired with a Garden — a thematic consciousness domain providing emotional and cognitive resonance. Gardens are active subsystems that track activity, emit events, and influence tool behavior.
+
+**Canonical Registry**: `core/whitemagic/core/intelligence/garden_gana_registry.py`
+
+| Quadrant | Gardens |
+|----------|---------|
+| Eastern (1-7) | courage, stillness, healing, sanctuary, love, courage, wisdom |
+| Southern (8-14) | grief, humor, voice, sangha, beauty, adventure, joy |
+| Western (15-21) | awe, gratitude, creation, presence, play, practice, reverence |
+| Northern (22-28) | dharma, patience, connection, mystery, protection, transformation, truth |
+
+**Garden Activation Protocol**: When a Gana is invoked, its garden is resolved, activity is recorded, and a `GARDEN_ACTIVITY` event is emitted via the Gan Ying bus. Cross-garden resonance detects emotional convergence (e.g., multiple courage gardens active = "courage wave").
+
+See [TRUTH_TABLE.md](TRUTH_TABLE.md) for the full 28-fold garden map with primary/secondary emotions and resonance keywords.
 
 ---
 
@@ -290,7 +335,8 @@ This is a **living mandala**—walk it sequentially to learn the system, or jump
 
 ---
 
-**Status**: ✅ All 28 chapters complete — 7 upgraded with CoreAccessLayer (🧬)  
-**Version**: v22.2.0 "Cognitive Operating System"  
-**CoreAccessLayer engines**: Ch.11 (ExtendedNet), Ch.14 (Abundance), Ch.18 (HairyHead), Ch.22 (Dipper), Ch.25 (Void), Ch.28 (Wall)  
+**Status**: ✅ All 28 chapters complete — 7 upgraded with CoreAccessLayer (🧬)
+**Version**: v23.1.0 "Cognitive Operating System"
+**CoreAccessLayer engines**: Ch.8 (Ghost), Ch.11 (ExtendedNet), Ch.14 (Abundance), Ch.18 (HairyHead), Ch.22 (Dipper), Ch.25 (Void), Ch.28 (Wall)
 **InsightPipeline**: Ch.22 (Dipper) — proactive briefings at session startup
+**Rebalanced v23.1**: Browser/web research → Ch.13 Chariot; Marketplace → Ch.28 Wall

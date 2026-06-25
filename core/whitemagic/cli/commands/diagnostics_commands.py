@@ -262,7 +262,7 @@ def _doctor_fix() -> None:
 @click.pass_context
 def doctor_command(ctx, fix: bool) -> None:
     """Run consolidated system diagnostics via health_report tool"""
-    from whitemagic.tools.dispatch_table import dispatch
+    from whitemagic.tools.unified_api import call_tool
 
     json_output = (ctx.obj or {}).get("json_output") if isinstance(ctx.obj, dict) else False
 
@@ -270,47 +270,48 @@ def doctor_command(ctx, fix: bool) -> None:
         _doctor_fix()
         return
 
-    result = dispatch("health_report") or {}
+    result = call_tool("health_report")
+    data = result.get("details", result) if isinstance(result, dict) else {}
 
     if json_output:
         click.echo(_json_dumps(result, indent=2, sort_keys=True, default=str))
         return
 
     if HAS_RICH and console:
-        score = result.get("health_score", 0)
-        status = result.get("health_status", "unknown")
+        score = data.get("health_score", 0)
+        status = data.get("health_status", "unknown")
         color = "green" if score >= 0.8 else "yellow" if score >= 0.5 else "red"
 
         lines = [f"[{color}]Health: {status} ({score:.0%})[/{color}]\n"]
 
-        if "version" in result:
-            lines.append(f"[bold]Version:[/bold] {result['version']}")
-        if "tool_count" in result:
-            lines.append(f"[bold]Tools:[/bold] {result['tool_count']}")
-        if "db" in result:
-            db = result["db"]
+        if "version" in data:
+            lines.append(f"[bold]Version:[/bold] {data['version']}")
+        if "tool_count" in data:
+            lines.append(f"[bold]Tools:[/bold] {data['tool_count']}")
+        if "db" in data:
+            db = data["db"]
             lines.append(f"[bold]DB:[/bold] {db.get('memory_count', '?')} memories, {db.get('size_mb', '?')} MB")
 
-        rust_ok = result.get("rust", {}).get("available", False)
-        julia_ok = result.get("julia", {}).get("available", False)
-        haskell_ok = result.get("haskell", {}).get("available", False)
+        rust_ok = data.get("rust", {}).get("available", False)
+        julia_ok = data.get("julia", {}).get("available", False)
+        haskell_ok = data.get("haskell", {}).get("available", False)
         lines.append("\n[bold]Bridges:[/bold]")
         lines.append(f"  {'✅' if rust_ok else '❌'} Rust")
         lines.append(f"  {'✅' if julia_ok else '❌'} Julia")
         lines.append(f"  {'✅' if haskell_ok else '❌'} Haskell")
 
-        if "gardens" in result:
-            garden_count = len(result["gardens"])
+        if "gardens" in data:
+            garden_count = len(data["gardens"])
             lines.append(f"\n[bold]Gardens:[/bold] {garden_count} registered")
 
         panel = Panel("\n".join(lines), title="🏥 WhiteMagic Doctor", border_style=color)
         console.print(panel)
     else:
-        click.echo(f"Health: {result.get('health_status', 'unknown')} ({result.get('health_score', 0):.0%})")
-        if "db" in result:
-            click.echo(f"DB: {result['db'].get('memory_count', '?')} memories")
-        click.echo(f"Rust: {'yes' if result.get('rust', {}).get('available') else 'no'}")
-        click.echo(f"Julia: {'yes' if result.get('julia', {}).get('available') else 'no'}")
+        click.echo(f"Health: {data.get('health_status', 'unknown')} ({data.get('health_score', 0):.0%})")
+        if "db" in data:
+            click.echo(f"DB: {data['db'].get('memory_count', '?')} memories")
+        click.echo(f"Rust: {'yes' if data.get('rust', {}).get('available') else 'no'}")
+        click.echo(f"Julia: {'yes' if data.get('julia', {}).get('available') else 'no'}")
 
 
 def register_diagnostics_commands(main_group: click.Group) -> None:

@@ -60,7 +60,7 @@ class AutonomousArmyManager:
             if process.returncode == 0:
                 logger.info("✅ Census complete.")
             else:
-                logger.error(f"❌ Census failed: {stderr.decode()}")
+                logger.error("❌ Census failed: %s", stderr.decode())
         except Exception as e:
             logger.error("Error running census: %s", e, exc_info=True)
 

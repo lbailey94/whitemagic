@@ -619,9 +619,9 @@ class ProcessorChain:
                 result = proc.extract(path)
                 if result:
                     logger.info(
-                        f"Processed {path.name} via {proc.__class__.__name__} "
-                        f"({len(result.text)} chars)",
-                    )
+                        "Processed %s via %s "
+                        "(%s chars)",
+                     path.name, proc.__class__.__name__, len(result.text))
                     return result
         return None
 

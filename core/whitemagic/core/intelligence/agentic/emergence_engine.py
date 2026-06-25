@@ -40,6 +40,8 @@ class EmergenceEngine:
     - Resonance cascades: bursts of related memories within short time windows
     - Novelty spikes: sudden increases in previously rare or new tags
     - Cross-domain bridges: memories that connect previously separate constellations
+    - Creative tensions: bicameral low-confidence events indicating unresolved
+      cognitive dissonance (v23.3: wired from BicameralReasoner)
     """
 
     def __init__(self, db_path: str | None = None) -> None:
@@ -49,11 +51,41 @@ class EmergenceEngine:
         else:
             self.db_path = db_path
         self._past_insights: list[dict[str, Any]] = []
+        self._creative_tensions: list[dict[str, Any]] = []
+        self._listening = False
+        self._start_listening()
 
     def _get_conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
+
+    def _start_listening(self) -> None:
+        """Register on the Gan Ying bus for bicameral low-confidence events."""
+        if self._listening:
+            return
+        try:
+            from whitemagic.core.resonance import EventType, get_bus
+            get_bus().listen(EventType.CREATIVE_BRIDGE_LOW_CONFIDENCE, self._on_creative_tension)
+            self._listening = True
+            logger.debug("EmergenceEngine listening for bicameral creative tensions")
+        except Exception as e:
+            logger.debug("EmergenceEngine could not register listener: %s", e)
+
+    def _on_creative_tension(self, event: Any) -> None:
+        """Handle bicameral low-confidence events as emergence signals."""
+        data = getattr(event, "data", {})
+        if not data:
+            return
+        self._creative_tensions.append({
+            "query": data.get("query", ""),
+            "tension": data.get("tension", 0.0),
+            "confidence": data.get("confidence", 0.0),
+            "dominant": data.get("dominant", "balanced"),
+            "timestamp": datetime.now().isoformat(),
+        })
+        if len(self._creative_tensions) > 50:
+            self._creative_tensions = self._creative_tensions[-50:]
 
     def scan_for_emergence(self) -> list[EmergenceInsight]:
         """Run full emergence scan across all detection modes."""
@@ -63,6 +95,7 @@ class EmergenceEngine:
         insights.extend(self._detect_resonance_cascades())
         insights.extend(self._detect_novelty_spikes())
         insights.extend(self._detect_cross_domain_bridges())
+        insights.extend(self._detect_creative_tensions())
 
         # Store for later retrieval
         for ins in insights:
@@ -79,7 +112,7 @@ class EmergenceEngine:
         if len(self._past_insights) > 100:
             self._past_insights = self._past_insights[-100:]
 
-        logger.info(f"Emergence scan complete: {len(insights)} patterns detected")
+        logger.info("Emergence scan complete: %s patterns detected", len(insights))
         return insights
 
     def get_insights(self, limit: int = 5) -> list[dict[str, Any]]:
@@ -244,6 +277,56 @@ class EmergenceEngine:
                 confidence=min(0.95, strength),
                 source="cross_domain",
                 metadata={"constellation_1": c1, "constellation_2": c2, "strength": strength},
+            ))
+        return insights
+
+    def _detect_creative_tensions(self) -> list[EmergenceInsight]:
+        """Surface bicameral creative tensions as emergence insights.
+
+        When the BicameralReasoner produces low-confidence results (tension
+        between left/right hemispheres), it indicates the system is
+        grappling with a problem that doesn't have a clear analytical or
+        creative solution — an emergence signal worth surfacing.
+        """
+        if not self._creative_tensions:
+            return []
+
+        insights: list[EmergenceInsight] = []
+        # Group by query prefix to avoid duplicates
+        seen_queries: set[str] = set()
+
+        for ct in self._creative_tensions[-10:]:
+            query = ct.get("query", "")[:80]
+            if query in seen_queries:
+                continue
+            seen_queries.add(query)
+
+            tension = ct.get("tension", 0.0)
+            confidence = ct.get("confidence", 0.0)
+            dominant = ct.get("dominant", "balanced")
+
+            # Only surface if tension is meaningful (>0.4)
+            if tension < 0.4:
+                continue
+
+            insights.append(EmergenceInsight(
+                id=f"creative_tension_{hash(query) % 100000}",
+                title=f"Creative tension: {query[:60]}",
+                description=(
+                    f"Bicameral reasoning produced a creative tension "
+                    f"(tension={tension:.2f}, confidence={confidence:.2f}, "
+                    f"dominant={dominant}). The analytical and creative "
+                    f"hemispheres disagree — this may indicate an emerging "
+                    f"problem space that requires novel approaches."
+                ),
+                confidence=min(0.9, 0.5 + tension * 0.3),
+                source="creative_tension",
+                metadata={
+                    "query": query,
+                    "tension": tension,
+                    "confidence": confidence,
+                    "dominant": dominant,
+                },
             ))
         return insights
 

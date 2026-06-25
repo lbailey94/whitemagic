@@ -91,6 +91,10 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "immune_scan": LazyHandler("misc", "handle_immune_scan"),
     "immune_heal": LazyHandler("misc", "handle_immune_heal"),
 
+    # --- DNA Validation ---
+    "dna_validate": LazyHandler("misc", "handle_dna_validate"),
+    "dna_principles": LazyHandler("misc", "handle_dna_principles"),
+
     # --- Symbolic / Oracle ---
     "cast_oracle": LazyHandler("misc", "handle_cast_oracle"),
     "wu_xing_balance": LazyHandler("misc", "handle_wu_xing_balance"),
@@ -115,6 +119,12 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "archaeology_search": LazyHandler("archaeology", "handle_archaeology_search"),
     "archaeology_process_wisdom": LazyHandler("archaeology", "handle_archaeology_process_wisdom"),
     "archaeology_daily_digest": LazyHandler("archaeology", "handle_archaeology_daily_digest"),
+
+    # --- STRATA (codebase static analysis + archaeology) ---
+    "strata.analyze": LazyHandler("strata", "handle_strata_analyze"),
+    "strata.survey": LazyHandler("strata", "handle_strata_survey"),
+    "strata.archaeology": LazyHandler("strata", "handle_strata_archaeology"),
+    "strata.list_checks": LazyHandler("strata", "handle_strata_list_checks"),
 
     # --- Windsurf ---
     "windsurf_list_conversations": LazyHandler("windsurf_conv", "handle_windsurf_list_conversations"),
@@ -288,6 +298,18 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
     _ensure_router_cached()
     result = None
 
+    # Garden resonance pre-dispatch (v23.3: gardens as active participants)
+    try:
+        from whitemagic.core.engines.registry import get_garden_for_tool
+        garden_name = get_garden_for_tool(ctx.tool_name)
+        if garden_name is not None:
+            from whitemagic.gardens import get_garden
+            garden = get_garden(garden_name)
+            if garden is not None:
+                garden.boost(0.1)
+    except Exception:
+        pass
+
     if ctx.tool_name.startswith("gana_") and _gana_invoke is not None:
         try:
             result = _gana_invoke(tool_name=ctx.tool_name, args=ctx.kwargs)
@@ -322,10 +344,13 @@ def _mw_core_router(ctx: Any, next_fn: Callable[[Any], dict[str, Any] | None]) -
 # ---------------------------------------------------------------------------
 def _build_pipeline() -> Any:
     """Build the standard dispatch pipeline. Called once at import time."""
+    from whitemagic.core.monitoring.token_tracker import mw_token_tracker
     from whitemagic.tools.middleware import (
         DispatchPipeline,
         mw_circuit_breaker,
+        mw_cognitive_mode,
         mw_governor,
+        mw_inference_router,
         mw_input_sanitizer,
         mw_maturity_gate,
         mw_observability,
@@ -339,10 +364,13 @@ def _build_pipeline() -> Any:
     p.use("circuit_breaker", mw_circuit_breaker)
     p.use("rate_limiter",    mw_rate_limiter)
     p.use("security_monitor", mw_security_monitor)
+    p.use("cognitive_mode",  mw_cognitive_mode)
     p.use("tool_permissions", mw_tool_permissions)
     p.use("maturity_gate",   mw_maturity_gate)
     p.use("zodiac_resonance", mw_zodiac_resonance)
     p.use("governor",        mw_governor)
+    p.use("inference_router", mw_inference_router)
+    p.use("token_tracker",   mw_token_tracker)
     p.use("observability",   mw_observability)
     p.use("core_router",     _mw_core_router)
     return p
@@ -362,8 +390,10 @@ def dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
       5. Tool permissions  — per-agent RBAC
       6. Maturity gate     — developmental stage gating
       7. Governor          — ethical validation
-      8. Observability     — Prometheus + OTel metrics
-      9. Core router       — Gana prefix → dispatch table → bridge fallback
+      8. Inference router  — try edge/local resolution before LLM
+      9. Token tracker     — universal token tracking via GreenScore
+     10. Observability     — Prometheus + OTel metrics
+     11. Core router       — Gana prefix → dispatch table → bridge fallback
 
     Returns:
         The handler result, or an error dict if no handler matched.

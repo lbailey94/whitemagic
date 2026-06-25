@@ -110,6 +110,9 @@ class Memory:
     retention_score: float = 0.5    # Composite score from multi-signal retention engine
     last_retention_sweep: datetime | None = None  # When last evaluated by retention engine
 
+    # === Galaxy Field (v23.1 — 6D Holographic Galaxy) ===
+    galaxy: str = "universal"  # Which galaxy this memory belongs to
+
     # Metadata
     source: str = ""
     last_recalled: datetime | None = None
@@ -259,6 +262,7 @@ class Memory:
             "galactic_distance": self.galactic_distance,
             "retention_score": self.retention_score,
             "last_retention_sweep": self.last_retention_sweep.isoformat() if self.last_retention_sweep else None,
+            "galaxy": self.galaxy,
             "metadata": self.metadata,
             "links": {
                 tid: {
@@ -303,6 +307,7 @@ class Memory:
             galactic_distance=data.get("galactic_distance", 0.0),
             retention_score=data.get("retention_score", 0.5),
             last_retention_sweep=parse_datetime(data["last_retention_sweep"]) if data.get("last_retention_sweep") else None,
+            galaxy=data.get("galaxy", "universal"),
             metadata=data.get("metadata", {}),
         )
 

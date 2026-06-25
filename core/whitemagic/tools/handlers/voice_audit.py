@@ -41,7 +41,7 @@ def handle_voice_audit_scan(params: dict[str, Any]) -> dict[str, Any]:
 
         return make_result("voice_audit.scan", result)
     except Exception as exc:
-        logger.error(f"voice_audit.scan error: {exc}", exc_info=True)
+        logger.error("voice_audit.scan error: %s", exc, exc_info=True)
         return make_result("voice_audit.scan", {}, error=str(exc))
 
 
@@ -53,7 +53,7 @@ def handle_voice_audit_status(params: dict[str, Any]) -> dict[str, Any]:
         scanner = get_voice_audit_scanner()
         return make_result("voice_audit.status", scanner.get_stats())
     except Exception as exc:
-        logger.error(f"voice_audit.status error: {exc}", exc_info=True)
+        logger.error("voice_audit.status error: %s", exc, exc_info=True)
         return make_result("voice_audit.status", {}, error=str(exc))
 
 
@@ -74,5 +74,5 @@ def handle_voice_audit_quarantine_list(params: dict[str, Any]) -> dict[str, Any]
             },
         )
     except Exception as exc:
-        logger.error(f"voice_audit.quarantine_list error: {exc}", exc_info=True)
+        logger.error("voice_audit.quarantine_list error: %s", exc, exc_info=True)
         return make_result("voice_audit.quarantine_list", {}, error=str(exc))

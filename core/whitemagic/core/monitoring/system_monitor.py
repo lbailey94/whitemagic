@@ -47,7 +47,7 @@ class SystemMonitor:
             self.systems_started.append(system_name)
             self.events_received.append(event_record)
 
-            logger.info(f"📊 SystemMonitor: {system_name} started at {timestamp}")
+            logger.info("📊 SystemMonitor: %s started at %s", system_name, timestamp)
 
         @listen_for(EventType.MEMORY_CONSOLIDATED)
         def on_memory_consolidated(event: Any) -> None:
@@ -63,7 +63,7 @@ class SystemMonitor:
 
             self.events_received.append(event_record)
 
-            logger.info(f"📊 SystemMonitor: Memory consolidated - {event.data.get('archived_count', 0)} archived, {event.data.get('promoted_count', 0)} promoted")
+            logger.info("📊 SystemMonitor: Memory consolidated - %s archived, %s promoted", event.data.get('archived_count', 0), event.data.get('promoted_count', 0))
 
         @listen_for(EventType.BEAUTY_DETECTED)
         def on_beauty_detected(event: Any) -> None:
@@ -76,7 +76,7 @@ class SystemMonitor:
                 "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
             self.events_received.append(event_record)
-            logger.info(f"📊 SystemMonitor: Beauty detected - {event.data.get('subject', 'Unknown')}")
+            logger.info("📊 SystemMonitor: Beauty detected - %s", event.data.get('subject', 'Unknown'))
 
         @listen_for(EventType.JOY_TRIGGERED)
         def on_joy_triggered(event: Any) -> None:
@@ -89,7 +89,7 @@ class SystemMonitor:
                 "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
             self.events_received.append(event_record)
-            logger.info(f"📊 SystemMonitor: Joy triggered - {event.data.get('reason', 'Unknown')}")
+            logger.info("📊 SystemMonitor: Joy triggered - %s", event.data.get('reason', 'Unknown'))
 
         @listen_for(EventType.LOVE_ACTIVATED)
         def on_love_activated(event: Any) -> None:
@@ -102,7 +102,7 @@ class SystemMonitor:
                 "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
             self.events_received.append(event_record)
-            logger.info(f"📊 SystemMonitor: Love activated - {event.data.get('form', 'Unknown')} for {event.data.get('to', 'Unknown')}")
+            logger.info("📊 SystemMonitor: Love activated - %s for %s", event.data.get('form', 'Unknown'), event.data.get('to', 'Unknown'))
 
     def get_status(self) -> dict[str, Any]:
         """Get current monitoring status."""
@@ -129,5 +129,5 @@ def get_monitor() -> SystemMonitor:
 def start_monitoring() -> SystemMonitor:
     """Start the system monitor."""
     monitor = get_monitor()
-    logger.info(f"📊 System monitoring started at {monitor.start_time.isoformat()}")
+    logger.info("📊 System monitoring started at %s", monitor.start_time.isoformat())
     return monitor

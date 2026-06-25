@@ -112,6 +112,7 @@ class SQLiteSchemaManager:
             "ingestion_time": "TEXT",  # v14.2: bitemporal — when WM learned it
             "is_private": "INTEGER DEFAULT 0",  # v15: exclude from MCP responses
             "model_exclude": "INTEGER DEFAULT 0",  # v15: exclude from AI context
+            "galaxy": "TEXT DEFAULT 'universal'",  # v23.1: 6D galaxy partition
         }
 
         _valid_ident = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
@@ -339,3 +340,5 @@ class SQLiteSchemaManager:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_assoc_edge_type ON associations(edge_type)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_assoc_direction ON associations(direction)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_assoc_strength ON associations(strength)")
+        # v23.1: Galaxy index for fast galaxy-filtered queries
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_galaxy ON memories(galaxy)")

@@ -5,7 +5,6 @@ Enforces License compliance and scrubs private identity from public framework.
 """
 
 import os
-import sys
 import argparse
 import re
 from pathlib import Path

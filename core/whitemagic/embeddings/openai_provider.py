@@ -4,8 +4,7 @@ OpenAI embeddings provider.
 Uses OpenAI's text embedding models for cloud-based embedding generation.
 """
 
-import asyncio
-from typing import List, Optional
+from typing import List
 from openai import AsyncOpenAI, OpenAIError
 
 from .base import EmbeddingProvider

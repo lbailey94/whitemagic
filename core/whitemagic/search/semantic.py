@@ -241,7 +241,7 @@ class SemanticSearcher:
                             # Skip corrupted files but log for debugging
                             import logging
 
-                            logging.debug(f"Skipping {memory_file}: {e}")
+                            logging.debug("Skipping %s: %s", memory_file, e)
                             continue
 
         # Generate embeddings for all memories (with caching)
@@ -538,7 +538,7 @@ async def semantic_search(
     Example:
         >>> results = await semantic_search("debugging async code")
         >>> for result in results:
-        ...     logger.info(f"{result.title}: {result.score:.2f}")
+        ...     logger.info("%s: %s", result.title, result.score)
 
     """
     if manager is None:

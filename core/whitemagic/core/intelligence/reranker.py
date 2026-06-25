@@ -298,7 +298,7 @@ def cross_encoder_rerank(
 
         for i, res in enumerate(reranked[:
             10]):
-            logger.debug(f"RANK {i+1}: id={res.memory_id} combined_score={res.combined_score} (orig={res.original_score}, rerank={res.rerank_score})")
+            logger.debug("RANK %s: id=%s combined_score=%s (orig=%s, rerank=%s)", i+1, res.memory_id, res.combined_score, res.original_score, res.rerank_score)
         return reranked[:top_k]
 
     except Exception as e:

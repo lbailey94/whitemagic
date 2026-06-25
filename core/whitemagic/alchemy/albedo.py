@@ -36,7 +36,7 @@ class AlbedoPurifier:
         Add 'embedding' field to each memory dict.
         memories: list of {'id': str, 'content': str, ...}
         """
-        logger.info(f"Vectorizing {len(memories)} memories...")
+        logger.info("Vectorizing %s memories...", len(memories))
         texts = [m.get('content', '') for m in memories]
 
         # Batch encode
@@ -64,7 +64,7 @@ class AlbedoPurifier:
         # KMeans clustering
         # In a real system, we might use HDBSCAN for density-based,
         # but KMeans is robust for fixed target of 'Golden Rules'
-        logger.info(f"Clustering into {n_clusters} patterns...")
+        logger.info("Clustering into %s patterns...", n_clusters)
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         labels = kmeans.fit_predict(X)
 

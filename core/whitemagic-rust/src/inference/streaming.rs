@@ -15,6 +15,9 @@ use std::path::Path;
 use std::fs::File;
 use memmap2::Mmap;
 
+use crate::inference::quantization::{QuantizedKVCache, Precision};
+use crate::inference::ternary_kernel::{ternary_gemv, pack_ternary_matrix, Ternary};
+
 /// Configuration for streaming engine
 pub struct StreamingConfig {
     /// Path to model weights on SD card
@@ -25,6 +28,10 @@ pub struct StreamingConfig {
     pub use_io_uring: bool,
     /// Enable AVX2 SIMD optimizations
     pub use_simd: bool,
+    /// KV cache quantization precision
+    pub kv_cache_precision: Precision,
+    /// Use ternary kernels for weight computation
+    pub use_ternary: bool,
 }
 
 impl Default for StreamingConfig {
@@ -34,6 +41,8 @@ impl Default for StreamingConfig {
             prefetch_distance: 2,
             use_io_uring: cfg!(target_os = "linux"),
             use_simd: cfg!(target_feature = "avx2"),
+            kv_cache_precision: Precision::Int8,
+            use_ternary: false,
         }
     }
 }
@@ -100,6 +109,8 @@ pub struct StreamingEngine {
     num_layers: usize,
     /// Current active layer
     current_layer: Option<usize>,
+    /// Quantized KV cache (per-layer)
+    kv_caches: Vec<Option<QuantizedKVCache>>,
 }
 
 impl StreamingEngine {
@@ -111,9 +122,10 @@ impl StreamingEngine {
         
         Ok(Self {
             config,
-            layers: vec![None; num_layers],
+            layers: (0..num_layers).map(|_| None).collect(),
             num_layers,
             current_layer: None,
+            kv_caches: (0..num_layers).map(|_| None).collect(),
         })
     }
     
@@ -167,13 +179,16 @@ impl StreamingEngine {
         
         for layer_idx in 0..self.num_layers {
             // Load current layer
-            let layer = self.load_layer(layer_idx)?;
+            let layer_data: Vec<u8> = {
+                let layer = self.load_layer(layer_idx)?;
+                layer.data().to_vec()
+            };
             
             // Prefetch next layers
             self.prefetch_ahead(layer_idx)?;
             
             // Compute layer (placeholder - actual compute in simd.rs)
-            hidden = self.compute_layer(layer, &hidden)?;
+            hidden = self.compute_layer_raw(&layer_data, &hidden)?;
             
             // Free previous layer (if not first)
             if layer_idx > 0 {
@@ -194,6 +209,50 @@ impl StreamingEngine {
         // 2. Activation function (lookup table)
         // 3. Layer norm
         Ok(hidden.to_vec())
+    }
+    
+    /// Compute single layer from raw bytes
+    fn compute_layer_raw(&self, _data: &[u8], hidden: &[f32]) -> Result<Vec<f32>, std::io::Error> {
+        // Placeholder — actual implementation would parse weight data
+        // and dispatch to simd::matmul_f32_simd or ternary_kernel::ternary_gemv
+        // depending on config.use_ternary
+        Ok(hidden.to_vec())
+    }
+    
+    /// Store KV cache for a layer (quantized)
+    pub fn store_kv_cache(&mut self, layer_idx: usize, keys: &[f32], values: &[f32], shape: (usize, usize)) {
+        if layer_idx < self.kv_caches.len() {
+            self.kv_caches[layer_idx] = Some(QuantizedKVCache::with_precision(
+                keys, values, shape, self.config.kv_cache_precision,
+            ));
+        }
+    }
+    
+    /// Retrieve dequantized KV cache for a layer
+    pub fn get_kv_cache(&self, layer_idx: usize) -> Option<(Vec<f32>, Vec<f32>)> {
+        self.kv_caches.get(layer_idx)?.as_ref().map(|c| (c.get_keys(), c.get_values()))
+    }
+    
+    /// Get total KV cache memory usage in bytes
+    pub fn kv_cache_memory_bytes(&self) -> usize {
+        self.kv_caches.iter()
+            .filter_map(|c| c.as_ref())
+            .map(|c| c.memory_bytes())
+            .sum()
+    }
+    
+    /// Get KV cache compression statistics
+    pub fn kv_cache_stats(&self) -> KVCacheStats {
+        let active = self.kv_caches.iter().filter(|c| c.is_some()).count();
+        let total_memory = self.kv_cache_memory_bytes();
+        let precision = self.config.kv_cache_precision;
+        
+        KVCacheStats {
+            active_caches: active,
+            total_layers: self.num_layers,
+            memory_bytes: total_memory,
+            precision,
+        }
     }
     
     /// Get memory statistics
@@ -220,6 +279,21 @@ pub struct MemoryStats {
     pub total_layers: usize,
     pub memory_used_mb: usize,
     pub max_concurrent_layers: usize,
+}
+
+/// KV cache statistics
+#[derive(Debug)]
+pub struct KVCacheStats {
+    pub active_caches: usize,
+    pub total_layers: usize,
+    pub memory_bytes: usize,
+    pub precision: Precision,
+}
+
+impl KVCacheStats {
+    pub fn memory_kb(&self) -> f32 {
+        self.memory_bytes as f32 / 1024.0
+    }
 }
 
 #[cfg(test)]

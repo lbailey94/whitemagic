@@ -332,9 +332,9 @@ if __name__ == "__main__":
     results = exporter.export_all(output_dir)
 
     for format_name, result in results.items():
-        logger.info(f"\n{format_name}:")
-        logger.info(f"  Success: {result['success']}")
-        logger.info(f"  Path: {result['path']}")
-        logger.info(f"  Rules: {result['rules']}")
+        logger.info("\n%s:", format_name)
+        logger.info("  Success: %s", result['success'])
+        logger.info("  Path: %s", result['path'])
+        logger.info("  Rules: %s", result['rules'])
         if "size_bytes" in result:
-            logger.info(f"  Size: {result['size_bytes']} bytes")
+            logger.info("  Size: %s bytes", result['size_bytes'])

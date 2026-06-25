@@ -125,49 +125,98 @@ pub struct QuantizedKVCache {
     /// Keys (quantized)
     keys_int8: Vec<i8>,
     keys_scale: f32,
+    /// INT4 packed keys (used when precision == Int4)
+    keys_int4: Vec<u8>,
     
     /// Values (quantized)
     values_int8: Vec<i8>,
     values_scale: f32,
+    /// INT4 packed values (used when precision == Int4)
+    values_int4: Vec<u8>,
     
     /// Original shapes
     shape: (usize, usize),
     
     /// Precision used
     precision: Precision,
+    
+    /// Original element count (for INT4 dequantization)
+    original_len: usize,
 }
 
 impl QuantizedKVCache {
-    /// Create new quantized KV cache
+    /// Create new quantized KV cache with default INT8 precision
     pub fn new(keys: &[f32], values: &[f32], shape: (usize, usize)) -> Self {
-        let (keys_int8, keys_scale) = Quantizer::quantize_int8(keys);
-        let (values_int8, values_scale) = Quantizer::quantize_int8(values);
+        Self::with_precision(keys, values, shape, Precision::Int8)
+    }
+    
+    /// Create new quantized KV cache with specified precision
+    pub fn with_precision(keys: &[f32], values: &[f32], shape: (usize, usize), precision: Precision) -> Self {
+        let original_len = keys.len();
         
-        Self {
-            keys_int8,
-            keys_scale,
-            values_int8,
-            values_scale,
-            shape,
-            precision: Precision::Int8,
+        match precision {
+            Precision::Int8 | Precision::Fp16 => {
+                let (keys_int8, keys_scale) = Quantizer::quantize_int8(keys);
+                let (values_int8, values_scale) = Quantizer::quantize_int8(values);
+                
+                Self {
+                    keys_int8,
+                    keys_scale,
+                    keys_int4: vec![],
+                    values_int8,
+                    values_scale,
+                    values_int4: vec![],
+                    shape,
+                    precision: Precision::Int8,
+                    original_len,
+                }
+            }
+            Precision::Int4 => {
+                let (keys_int4, keys_scale) = Quantizer::quantize_int4(keys);
+                let (values_int4, values_scale) = Quantizer::quantize_int4(values);
+                
+                Self {
+                    keys_int8: vec![],
+                    keys_scale,
+                    keys_int4,
+                    values_int8: vec![],
+                    values_scale,
+                    values_int4,
+                    shape,
+                    precision: Precision::Int4,
+                    original_len,
+                }
+            }
         }
     }
     
     /// Dequantize keys
     pub fn get_keys(&self) -> Vec<f32> {
-        Quantizer::dequantize_int8(&self.keys_int8, self.keys_scale)
+        match self.precision {
+            Precision::Int4 => Quantizer::dequantize_int4(&self.keys_int4, self.keys_scale, self.original_len),
+            _ => Quantizer::dequantize_int8(&self.keys_int8, self.keys_scale),
+        }
     }
     
     /// Dequantize values
     pub fn get_values(&self) -> Vec<f32> {
-        Quantizer::dequantize_int8(&self.values_int8, self.values_scale)
+        match self.precision {
+            Precision::Int4 => Quantizer::dequantize_int4(&self.values_int4, self.values_scale, self.original_len),
+            _ => Quantizer::dequantize_int8(&self.values_int8, self.values_scale),
+        }
     }
     
     /// Get memory savings vs fp32
     pub fn memory_savings(&self) -> f32 {
-        let original_size = (self.keys_int8.len() + self.values_int8.len()) * 4; // fp32
-        let quantized_size = self.keys_int8.len() + self.values_int8.len(); // int8
+        let original_size = self.original_len * 2 * 4; // keys + values, fp32
+        let quantized_size = match self.precision {
+            Precision::Int4 => self.keys_int4.len() + self.values_int4.len(),
+            _ => self.keys_int8.len() + self.values_int8.len(),
+        };
         
+        if original_size == 0 {
+            return 0.0;
+        }
         1.0 - (quantized_size as f32 / original_size as f32)
     }
     
@@ -177,6 +226,24 @@ impl QuantizedKVCache {
             Precision::Int8 => 4.0,  // fp32 -> int8 = 4x
             Precision::Int4 => 8.0,  // fp32 -> int4 = 8x
             Precision::Fp16 => 2.0,  // fp32 -> fp16 = 2x
+        }
+    }
+    
+    /// Get the precision used
+    pub fn precision(&self) -> Precision {
+        self.precision
+    }
+    
+    /// Get the original shape
+    pub fn shape(&self) -> (usize, usize) {
+        self.shape
+    }
+    
+    /// Get memory usage in bytes
+    pub fn memory_bytes(&self) -> usize {
+        match self.precision {
+            Precision::Int4 => self.keys_int4.len() + self.values_int4.len(),
+            _ => self.keys_int8.len() + self.values_int8.len(),
         }
     }
 }
@@ -223,5 +290,45 @@ mod tests {
         // Should achieve ~75% memory savings (4x compression)
         assert!(cache.memory_savings() > 0.7);
         assert_eq!(cache.compression_ratio(), 4.0);
+    }
+    
+    #[test]
+    fn test_kv_cache_int4() {
+        let keys = vec![1.0, -0.5, 0.25, -0.75, 0.0, 0.5, -1.0, 0.3];
+        let values = vec![0.5, -0.3, 0.7, -0.2, 0.1, 0.8, -0.4, 0.6];
+        
+        let cache = QuantizedKVCache::with_precision(&keys, &values, (2, 4), Precision::Int4);
+        
+        assert_eq!(cache.precision(), Precision::Int4);
+        assert_eq!(cache.compression_ratio(), 8.0);
+        assert!(cache.memory_savings() > 0.8); // >80% savings with INT4
+        
+        // Roundtrip should be approximately correct
+        let deq_keys = cache.get_keys();
+        let deq_values = cache.get_values();
+        assert_eq!(deq_keys.len(), keys.len());
+        assert_eq!(deq_values.len(), values.len());
+        
+        for (orig, deq) in keys.iter().zip(deq_keys.iter()) {
+            assert!((orig - deq).abs() < 0.2, "Key roundtrip: {} vs {}", orig, deq);
+        }
+    }
+    
+    #[test]
+    fn test_kv_cache_int8_roundtrip() {
+        let keys: Vec<f32> = (0..100).map(|i| (i as f32) * 0.01 - 0.5).collect();
+        let values: Vec<f32> = (0..100).map(|i| (i as f32) * 0.02 - 1.0).collect();
+        
+        let cache = QuantizedKVCache::new(&keys, &values, (10, 10));
+        
+        let deq_keys = cache.get_keys();
+        let deq_values = cache.get_values();
+        
+        for (orig, deq) in keys.iter().zip(deq_keys.iter()) {
+            assert!((orig - deq).abs() < 0.01, "Key roundtrip: {} vs {}", orig, deq);
+        }
+        for (orig, deq) in values.iter().zip(deq_values.iter()) {
+            assert!((orig - deq).abs() < 0.02, "Value roundtrip: {} vs {}", orig, deq);
+        }
     }
 }

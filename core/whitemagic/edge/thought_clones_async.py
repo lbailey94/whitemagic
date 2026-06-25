@@ -6,6 +6,7 @@ v14.5: Rust Tokio fast-path (208× faster) with Python asyncio fallback.
 
 import asyncio
 import logging
+import os
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -15,6 +16,34 @@ from typing import Any
 from ..core.async_layer import batch_process, gather_with_concurrency
 
 logger = logging.getLogger(__name__)
+
+# Tier → Ollama model mapping (configurable via env)
+# Xianfeng (vanguard): fast, lightweight model for reconnaissance
+# Wei Wuzu (martial): balanced model for complex logic
+# Huben (tiger): heavy model for critical reasoning
+_TIER_MODELS: dict[str, str] = {
+    "xianfeng": os.environ.get("WM_XIANFENG_MODEL", "qwen2.5:3b"),
+    "wei_wuzu": os.environ.get("WM_WEIWUZU_MODEL", "qwen2.5:7b"),
+    "huben": os.environ.get("WM_HUBEN_MODEL", "qwen2.5:7b"),
+}
+
+# Strategy → system prompt suffix for diverse LLM reasoning
+_STRATEGY_PROMPTS: dict[str, str] = {
+    "analytical": "Analyze this systematically, breaking it into components and identifying patterns.",
+    "creative": "Explore this creatively, considering unconventional approaches and novel connections.",
+    "systematic": "Address this methodically, following a structured approach and verifying each step.",
+    "intuitive": "Use pattern recognition and holistic perspective to understand this.",
+    "skeptical": "Question assumptions, identify potential flaws, and stress-test conclusions about this.",
+    "optimistic": "Focus on positive outcomes and opportunities related to this.",
+    "pragmatic": "Prioritize practical, implementable solutions for this.",
+    "theoretical": "Apply first principles and abstract reasoning to this.",
+    "deep_analytical": "Perform exhaustive analysis with multiple layers of abstraction.",
+    "first_principles": "Reason from fundamental truths, building up step by step.",
+    "comprehensive_review": "Review comprehensively from all angles, leaving no stone unturned.",
+    "adversarial_stress_test": "Try to break this — find edge cases, failure modes, and weaknesses.",
+    "formal_verification": "Verify rigorously — check correctness, completeness, and consistency.",
+    "meta_synthesis": "Synthesize multiple perspectives into a unified understanding.",
+}
 
 # v14.5: Rust Tokio Clone Army fast-path
 _RUST_TOKIO = False
@@ -188,17 +217,17 @@ class AsyncThoughtCloneArmy:
         if valid_paths:
             best_path = max(valid_paths, key=lambda p: p.confidence)
             logger.info(
-                f"Tiered best path [{active_tier.value}]: {best_path.strategy} "
-                f"(confidence: {best_path.confidence:.2f}, cost: {cost_estimate})"
-            )
+                "Tiered best path [%s]: %s "
+                "(confidence: %.2f, cost: %s)"
+            , active_tier.value, best_path.strategy, best_path.confidence, cost_estimate)
             return best_path
 
         # Fallback: if no valid paths and we're not at Huben, escalate
         if active_tier != CloneTier.HUBEN:
             next_tier = CloneTier.WEI_WUZU if active_tier == CloneTier.XIANFENG else CloneTier.HUBEN
             logger.warning(
-                f"No valid paths at {active_tier.value} tier. Escalating to {next_tier.value}."
-            )
+                "No valid paths at %s tier. Escalating to %s."
+            , active_tier.value, next_tier.value)
             return await self.parallel_explore_tiered(
                 prompt, num_clones=num_clones, use_tokio=use_tokio, tier=next_tier
             )
@@ -245,9 +274,9 @@ class AsyncThoughtCloneArmy:
                         self._stats["deployment_time_ms"] += elapsed_ms
                         self._stats["avg_confidence"] = result.get("avg_confidence", 0.0)
                     logger.info(
-                        f"Tokio fast-path: {clones_to_deploy} clones in {elapsed_ms:.1f}ms "
-                        f"(winner: {winner.get('strategy', '?')}, conf: {winner.get('confidence', 0):.2f})"
-                    )
+                        "Tokio fast-path: %s clones in %sms "
+                        "(winner: %s, conf: %s)"
+                    , clones_to_deploy, format(elapsed_ms, ".1f"), winner.get('strategy', '?'), format(winner.get('confidence', 0), ".2f"))
                     return AsyncThoughtPath(
                         strategy=winner.get("strategy", "tokio_direct"),
                         content=winner.get("response", ""),
@@ -265,7 +294,7 @@ class AsyncThoughtCloneArmy:
         # Generate strategies
         strategies = self._generate_strategies(clones_to_deploy)
 
-        # Launch all clones concurrently with concurrency control
+        # Launch all clones concurrently with early stopping
         async def safe_clone(strategy: str, clone_id: int) -> Any:
             """
             Perform the safe clone operation.
@@ -284,15 +313,39 @@ class AsyncThoughtCloneArmy:
                 return None
 
         tasks = [
-            safe_clone(strategy, i)
+            asyncio.ensure_future(safe_clone(strategy, i))
             for i, strategy in enumerate(strategies)
         ]
 
-        # Gather results with concurrency limit
-        paths = await gather_with_concurrency(
-            *tasks,
-            max_concurrent=self.config.max_concurrent_api_calls,
-        )
+        # Collect results as they complete, with early stopping
+        early_stop_threshold = 0.9
+        paths: list[AsyncThoughtPath] = []
+        try:
+            for coro in asyncio.as_completed(tasks):
+                result = await coro
+                if isinstance(result, AsyncThoughtPath):
+                    paths.append(result)
+                    if result.confidence >= early_stop_threshold:
+                        logger.info(
+                            "Early stop: clone %s reached confidence %.2f, skipping %d pending",
+                            result.clone_id, result.confidence, len([t for t in tasks if not t.done()]),
+                        )
+                        # Cancel remaining tasks
+                        for t in tasks:
+                            if not t.done():
+                                t.cancel()
+                        break
+        except Exception as e:
+            logger.debug("Early stop collection error: %s", e)
+            # Fallback: gather whatever we have
+            for t in tasks:
+                if t.done() and not t.cancelled():
+                    try:
+                        r = t.result()
+                        if isinstance(r, AsyncThoughtPath):
+                            paths.append(r)
+                    except Exception:
+                        pass
 
         # Filter successful results
         valid_paths = [p for p in paths if isinstance(p, AsyncThoughtPath)]
@@ -314,6 +367,22 @@ class AsyncThoughtCloneArmy:
                 "total_tokens": self._stats["total_tokens"] + sum(p.tokens for p in valid_paths),
                 "avg_confidence": (prev_conf_sum + new_conf_sum) / max(1, total_success),
             })
+
+        # Feed outcomes to ToolBandit for strategy learning
+        try:
+            from whitemagic.tools.handlers.tool_bandit import get_tool_bandit
+            bandit = get_tool_bandit()
+            for p in valid_paths:
+                bandit.record_clone_outcome(
+                    strategy=p.strategy,
+                    success=p.confidence > 0.5,
+                    clone_type="thought",
+                    task_type="clone_deployment",
+                    metadata={"confidence": p.confidence, "tokens": p.tokens, "llm_used": p.metadata.get("llm_used", False)},
+                    quality=p.confidence,
+                )
+        except Exception as e:
+            logger.debug("Bandit feedback skipped: %s", e)
 
         if valid_paths:
             best_path = max(valid_paths, key=lambda p: p.confidence)
@@ -364,30 +433,32 @@ class AsyncThoughtCloneArmy:
     ) -> AsyncThoughtPath:
         """Single clone's thought process.
 
-        Simulates thinking with configurable delay and success rate.
-        In production, replace with actual LLM API call.
+        Calls Ollama LLM when available for real reasoning.
+        Falls back to simulation when Ollama is not running.
         """
         async with self.semaphore:
             start_time = datetime.now()
 
             try:
-                # Simulate API call (replace with actual LLM call)
-                await asyncio.sleep(random.uniform(0.01, 0.1))
+                # Attempt real LLM call via Ollama
+                content, tokens, llm_used = await self._llm_think(
+                    prompt, strategy, clone_id, tier_hint,
+                )
 
-                # Generate content based on strategy
-                content = self._generate_content(prompt, strategy, clone_id)
+                if not llm_used:
+                    # Fallback: simulate thinking
+                    await asyncio.sleep(random.uniform(0.01, 0.1))
+                    content = self._generate_content(prompt, strategy, clone_id)
+                    if tier_hint == "xianfeng":
+                        tokens = len(content.split()) * random.randint(2, 4)
+                    elif tier_hint == "wei_wuzu":
+                        tokens = len(content.split()) * random.randint(3, 6)
+                    else:
+                        tokens = len(content.split()) * random.randint(5, 9)
 
-                # Calculate confidence based on strategy and random factors
                 confidence = self._calculate_confidence(strategy, tier_hint=tier_hint)
-
-                # Calculate tokens (rough estimate, tiered)
-                if tier_hint == "xianfeng":
-                    tokens = len(content.split()) * random.randint(2, 4)
-                elif tier_hint == "wei_wuzu":
-                    tokens = len(content.split()) * random.randint(3, 6)
-                else :
-                    # huben
-                    tokens = len(content.split()) * random.randint(5, 9)
+                if llm_used:
+                    confidence = min(0.98, confidence + 0.1)
 
                 duration = (datetime.now() - start_time).total_seconds() * 1000
 
@@ -401,6 +472,8 @@ class AsyncThoughtCloneArmy:
                     metadata={
                         "timestamp": datetime.now().isoformat(),
                         "prompt_length": len(prompt),
+                        "llm_used": llm_used,
+                        "model": _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"]) if llm_used else None,
                     },
                 )
 
@@ -409,7 +482,6 @@ class AsyncThoughtCloneArmy:
                 raise
             except Exception as e:
                 logger.error("Clone %s failed: %s", clone_id, e, exc_info=True)
-                # Return error path instead of raising
                 return AsyncThoughtPath(
                     strategy=f"{strategy}_error",
                     content=f"Error: {e!s}",
@@ -417,6 +489,35 @@ class AsyncThoughtCloneArmy:
                     tokens=0,
                     clone_id=clone_id,
                 )
+
+    async def _llm_think(
+        self,
+        prompt: str,
+        strategy: str,
+        clone_id: int,
+        tier_hint: str,
+    ) -> tuple[str, int, bool]:
+        """Call Ollama LLM for real reasoning. Returns (content, tokens, used_llm)."""
+        try:
+            from whitemagic.tools.handlers.ollama import _generate, _ollama_preflight
+            if _ollama_preflight() is not None:
+                return "", 0, False
+
+            model = _TIER_MODELS.get(tier_hint, _TIER_MODELS["xianfeng"])
+            strategy_guidance = _STRATEGY_PROMPTS.get(
+                strategy.split("_")[-1] if "_" in strategy else strategy,
+                _STRATEGY_PROMPTS.get(strategy, f"Approach this using {strategy} methodology."),
+            )
+            system = f"You are clone {clone_id} in a thought clone army. {strategy_guidance} Be concise."
+            result = await _generate(model, prompt, system=system)
+            content = result.get("response", "")
+            if not content:
+                return "", 0, False
+            tokens = result.get("eval_count") or len(content.split())
+            return content, tokens, True
+        except Exception as e:
+            logger.debug("LLM think fallback for clone %s: %s", clone_id, e)
+            return "", 0, False
 
     def _generate_strategies(self, count: int, base_pool: list[str] | None = None) -> list[str]:
         """Generate diverse strategies for clones.

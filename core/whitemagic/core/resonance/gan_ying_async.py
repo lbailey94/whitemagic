@@ -106,7 +106,7 @@ class AsyncGanYingBus:
             self._queue.put_nowait(batch)
         except asyncio.QueueFull:
             self._metrics["events_dropped"] += len(async_events)
-            logger.warning(f"Event queue full, dropping batch of {len(async_events)} events")
+            logger.warning("Event queue full, dropping batch of %s events", len(async_events))
 
     async def queue_event(self, event: AsyncEvent) -> None:
         """Internal helper to queue a single event with filtering."""

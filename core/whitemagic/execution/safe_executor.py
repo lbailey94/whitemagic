@@ -97,8 +97,8 @@ class SafeExecutor:
 
         # Log initialization
         logger.info(
-            f"SafeExecutor initialized with {len(self.allowed_commands)} allowed commands",
-        )
+            "SafeExecutor initialized with %s allowed commands",
+         len(self.allowed_commands))
 
     def _parse_command(self, command: str | list[str]) -> list[str]:
         """Parse command into argument array.
@@ -150,7 +150,7 @@ class SafeExecutor:
                 f"Allowed commands: {sorted(self.allowed_commands)}",
             )
 
-        logger.debug(f"Command validated: {base_command}")
+        logger.debug("Command validated: %s", base_command)
 
     def execute(
         self,
@@ -196,9 +196,9 @@ class SafeExecutor:
             exec_env.update(env)
 
         # Log execution
-        logger.info(f"Executing: {' '.join(cmd_array)}")
+        logger.info("Executing: %s", ' '.join(cmd_array))
         if cwd:
-            logger.debug(f"  Working directory: {cwd}")
+            logger.debug("  Working directory: %s", cwd)
 
         # Execute with shell=False (SAFE)
         try:
@@ -213,7 +213,7 @@ class SafeExecutor:
                 check=check,
             )
 
-            logger.debug(f"Command completed with return code: {result.returncode}")
+            logger.debug("Command completed with return code: %s", result.returncode)
             return result
 
         except subprocess.TimeoutExpired:
@@ -254,7 +254,7 @@ class SafeExecutor:
             exec_env = os.environ.copy()
             exec_env.update(env)
 
-        logger.info(f"Starting async: {' '.join(cmd_array)}")
+        logger.info("Starting async: %s", ' '.join(cmd_array))
 
         # Start process
         return subprocess.Popen(

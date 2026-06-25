@@ -329,6 +329,20 @@ class Governor:
             if safety_status.get("has_violations"):
                 violations = safety_status.get("violations", [])
                 reasons = [v.get("description", "Unknown violation") for v in violations]
+
+                # R&D mode: downgrade Dharma blocks to warnings for memory CRUD tools
+                rd_mode = os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+                memory_tools = {"create_memory", "update_memory", "delete_memory", "remember",
+                                "memory_create", "memory_update", "memory_delete",
+                                "import_memories", "thought_clone"}
+                if rd_mode and tool_name in memory_tools:
+                    return ValidationResult(
+                        safe=True,
+                        reason=f"R&D mode: Dharma warning (not blocked): {'; '.join(reasons)}",
+                        risk_level=RiskLevel.CAUTION,
+                        suggestions=[v.get("suggested_action", "Review ethics") for v in violations],
+                    )
+
                 self._blocked_count += 1
                 return ValidationResult(
                     safe=False,

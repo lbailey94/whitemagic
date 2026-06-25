@@ -63,7 +63,7 @@ class TelepathyMeshBridge:
         if not peers:
             return
 
-        logger.info(f"📡 Syncing from {len(peers)} mesh peers...")
+        logger.info("📡 Syncing from %s mesh peers...", len(peers))
         # Implementation would use vector clocks/digests from mesh
         # For now, we signal readiness for v22 telepathy features
 

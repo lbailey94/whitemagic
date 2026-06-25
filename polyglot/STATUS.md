@@ -76,7 +76,22 @@ New Python dispatcher routes holographic memory queries to Julia/Elixir/Haskell 
 | **Julia** | `bridges/julia/bridge.jl` | ✅ Operational | 15 tests pass |
 | **Elixir** | `bridges/elixir/bridge.exs` | ✅ Operational | 16 tests pass |
 | **Haskell** | `bridges/haskell/bridge.hs` | ✅ Operational | 5 tests pass |
-| **Rust** | `bridges/python/whitemagic_polyglot/__init__.py` (cargo) | ⏳ Pending | Awaiting bridge example |
+| **Rust** | `whitemagic-rs/target/release/examples/bridge` | ✅ Operational | Binary built (649KB) |
+| **Rust Evolution** | `whitemagic-rs/crates/wm-evolution/examples/evolution_bridge.rs` | ✅ Operational | 37 Rust + 44 Python tests pass |
+| **Elixir Actor** | `bridges/elixir/actor_bridge.exs` | ✅ Operational | Actor outcome tests pass |
+| **Julia Yield** | `bridges/julia/yield_bridge.jl` | ✅ Operational | 11 Python tests pass |
+
+### Rust Evolution Bridge Methods
+- **info_theory**: `shannon_entropy`, `kl_divergence`, `information_gain`, `system_uncertainty`, `adapt_weights`, `exploration_score`
+- **thermodynamic**: `thermo_cool`, `thermo_reheat`, `thermo_adapt`, `boltzmann_probabilities`, `boltzmann_select`
+- **hrr_composition**: `hrr_encode`, `hrr_bind`, `hrr_unbind`, `hrr_superposition`, `hrr_synergy`, `hrr_similarity`
+- **mc_integration**: `mc_run_trials`, `mc_importance_sampling`, `mc_control_variates`, `mc_antithetic_variates`
+- **counterfactual**: `cf_project_forward`, `cf_bootstrap_ci`, `cf_estimate_impact`
+
+### Julia Performance Optimizations
+- **StaticArrays.jl**: All 5D coordinates now use `SVector{5, Float64}` (Coord5D) for stack allocation — zero heap alloc on hot paths
+- **NearestNeighbors.jl**: KD-tree based `nearest_neighbors_kdtree` for O(log n) spatial queries (auto-selected when n ≥ 64)
+- **PrecompileTools**: Precompiled KD-tree path in `@compile_workload` block
 
 ### Python Dispatcher
 - `whitemagic_polyglot.auto()` — tries Julia → Elixir → Haskell → Rust
@@ -105,4 +120,25 @@ The Rust `wm-core` crate implements joint symbolic-spatial queries:
 - `hrr_to_coordinate()` — projects HRR vectors onto 5D holographic axes
 - `joint_query()` — scores memories by both HRR cosine similarity AND 5D spatial proximity
 
-*Last updated: 2026-06-04 — after Go + Rust archive recovery from whitemagic0.2.*
+---
+
+## Built-but-Unwired Backends (2026-06-25 Audit)
+
+The following backend classes exist in `bridges/python/whitemagic_polyglot/__init__.py` with compiled binaries, but are **not imported or called** from any core handler:
+
+| Backend Class | Binary | Gap |
+|---------------|--------|-----|
+| `RustCascadeBackend` | `cascade_bridge` (695KB) | Not imported in any handler. GanYingBus uses Haskell/Koka cascade backends instead. |
+| `RustEvolutionBackend` | `evolution_bridge` (641KB) | Not imported in core. Tests exist in archive only. |
+| `JuliaYieldBackend` | `yield_bridge.jl` | Not imported in core. Tests exist in archive only. |
+| `ElixirActorBackend` | `actor_bridge.exs` | Not imported in core. Tests exist in archive only. |
+
+**Missing bridges**: No `bridges/zig/` or `bridges/go/` directories exist. Zig and Go build successfully but have no JSON stdio bridge for Python dispatch.
+
+**Action items**:
+1. Wire `RustCascadeBackend` into GanYingBus as fallback when Haskell/Koka unavailable
+2. Expose `RustEvolutionBackend` methods as dispatch tools (info_theory, thermodynamic, HRR, MC integration)
+3. Create `bridges/zig/` with JSON stdio protocol for storage acceleration
+4. Create `bridges/go/` with JSON stdio protocol for transfer/streaming ops
+
+*Last updated: 2026-06-25 — polyglot bridge audit: Rust bridge marked operational, Koka added to handler enum, unwired backends documented.*

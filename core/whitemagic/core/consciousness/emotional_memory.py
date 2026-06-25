@@ -293,16 +293,16 @@ if __name__ == "__main__":
     logger.info("Recalling joyful memories:")
     joy_memories = system.recall_by_emotion(EmotionType.JOY)
     for mem in joy_memories:
-        logger.info(f"  - {mem.description}")
-        logger.info(f"    Felt: {mem.felt_experience}")
+        logger.info("  - %s", mem.description)
+        logger.info("    Felt: %s", mem.felt_experience)
     logger.info("")
 
     # Get summary
     logger.info("Emotional summary:")
     summary = system.get_emotional_summary()
-    logger.info(f"  Total memories: {summary['total']}")
-    logger.info(f"  Average intensity: {summary['avg_intensity']}")
-    logger.info(f"  By emotion: {summary['by_emotion']}")
+    logger.info("  Total memories: %s", summary['total'])
+    logger.info("  Average intensity: %s", summary['avg_intensity'])
+    logger.info("  By emotion: %s", summary['by_emotion'])
     logger.info("")
 
     logger.info("=" * 60)

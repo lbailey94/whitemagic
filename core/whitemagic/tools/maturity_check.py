@@ -105,10 +105,10 @@ def check_maturity_for_tool(tool_name: str) -> dict[str, Any] | None:
         required_name = stage_names.get(required, str(required))
 
         logger.info(
-            f"Maturity gate blocked {tool_name}: "
-            f"requires {required_name} (stage {required}), "
-            f"current is {current.name} (stage {current.value})",
-        )
+            "Maturity gate blocked %s: "
+            "requires %s (stage %s), "
+            "current is %s (stage %s)",
+         tool_name, required_name, required, current.name, current.value)
 
         return {
             "status": "error",

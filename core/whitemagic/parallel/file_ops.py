@@ -208,7 +208,7 @@ async def batch_read_files(
 
         for result in results:
             if result.success:
-                logger.info(f"{result.path}: {len(result.content)} chars")
+                logger.info("%s: %s chars", result.path, len(result.content))
 
     """
     reader = ParallelFileReader(max_workers=max_workers, encoding=encoding)

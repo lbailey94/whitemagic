@@ -79,9 +79,9 @@ class LLMMetaHarness:
             self._available = self._llm.is_available
 
             if self._available:
-                logger.info(f"LLM Meta-Harness loaded with model: {self.model_name}")
+                logger.info("LLM Meta-Harness loaded with model: %s", self.model_name)
             else:
-                logger.warning(f"LLM not available: {self.model_name}")
+                logger.warning("LLM not available: %s", self.model_name)
         except Exception as e:
             logger.error("Failed to load meta-harness: %s", e, exc_info=True)
             self._available = False

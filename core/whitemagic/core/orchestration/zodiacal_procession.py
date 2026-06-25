@@ -325,6 +325,28 @@ def advance() -> dict[str, Any]:
     }
 
 
+def wire_to_cognitive_modes() -> bool:
+    """Wire ZodiacalProcession events to CognitiveModes.
+
+    Registers callbacks so that:
+    - on_phase_change: Yang→EXECUTOR, Yin→REFLECTOR
+    - on_fixed_sign: →BALANCED (stability hub)
+
+    Returns True if wiring succeeded.
+    """
+    try:
+        from whitemagic.core.intelligence.cognitive_modes import get_cognitive_modes
+        cm = get_cognitive_modes()
+        proc = get_procession()
+        proc.register_callback("on_phase_change", cm.from_procession_event)
+        proc.register_callback("on_fixed_sign", cm.from_procession_event)
+        logger.info("☯️ ZodiacalProcession wired to CognitiveModes")
+        return True
+    except Exception as e:
+        logger.debug("Failed to wire procession to cognitive modes: %s", e)
+        return False
+
+
 if __name__ == "__main__":
     # Demo
     proc = ZodiacalProcession()
@@ -333,10 +355,10 @@ if __name__ == "__main__":
     logger.info("\n🌀 Running partial cycle...")
     for i in range(6):
         sign = proc.next_sign()
-        logger.info(f"  {sign.symbol} {sign.name_str} ({proc.state.current_phase.value})")
+        logger.info("  %s %s (%s)", sign.symbol, sign.name_str, proc.state.current_phase.value)
 
     logger.info("\n🔮 Consulting oracle...")
     oracle = proc.consult_oracle()
-    logger.info(f"  Hexagram: #{oracle['hexagram']}")
-    logger.info(f"  Element: {oracle['element']}")
-    logger.info(f"  Guidance: {oracle['guidance']}")
+    logger.info("  Hexagram: #%s", oracle['hexagram'])
+    logger.info("  Element: %s", oracle['element'])
+    logger.info("  Guidance: %s", oracle['guidance'])

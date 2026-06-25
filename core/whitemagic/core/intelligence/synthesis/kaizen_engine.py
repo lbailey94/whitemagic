@@ -112,7 +112,7 @@ class KaizenEngine:
         rust_metrics = self._gather_rust_metrics()
         if rust_metrics:
             metrics.update(rust_metrics)
-            logger.info(f"Rust metrics: {len(rust_metrics)} fields gathered")
+            logger.info("Rust metrics: %s fields gathered", len(rust_metrics))
 
         # Quality checks
         proposals.extend(self._check_untitled())
@@ -138,6 +138,12 @@ class KaizenEngine:
 
         # Solution Library Applications
         proposals.extend(self._find_solution_applications(proposals))
+
+        # Codebase analysis (STRATA integration)
+        codebase_proposals = self._analyze_codebase()
+        proposals.extend(codebase_proposals)
+        if codebase_proposals:
+            metrics["strata_findings"] = len(codebase_proposals)
 
         # Collect remaining metrics from SQLite if not from Rust
         if "total_memories" not in metrics:
@@ -190,6 +196,53 @@ class KaizenEngine:
         except Exception as e:
             logger.debug("Rust metrics gathering failed, using Python fallback: %s", e, exc_info=True)
             return {}
+
+    def _analyze_codebase(self) -> list[ImprovementProposal]:
+        """Run STRATA static analysis on the WhiteMagic codebase itself.
+
+        This extends kaizen beyond memory DB analysis to include codebase
+        quality checks: structural stubs, dead code, archive drift, hardcoded
+        paths, and 80+ other checks across 15 languages.
+        """
+        try:
+            from whitemagic.tools.strata import Strata, FindingSeverity
+
+            # Determine the WhiteMagic core path
+            core_path = str(Path(__file__).parent.parent.parent.parent.parent)
+            if not Path(core_path, "AGENTS.md").exists():
+                return []
+
+            strata = Strata(core_path)
+            findings = strata.analyze(parallel=True, incremental=True)
+
+            severity_to_impact = {
+                FindingSeverity.ERROR: "high",
+                FindingSeverity.WARNING: "medium",
+                FindingSeverity.INFO: "low",
+            }
+
+            proposals: list[ImprovementProposal] = []
+            for f in findings:
+                proposals.append(ImprovementProposal(
+                    id=f"strata_{f.category}_{f.file}_{f.line}",
+                    category="codebase_quality",
+                    title=f"{f.category}: {f.message}",
+                    description=f.file + (f":{f.line}" if f.line else ""),
+                    impact=severity_to_impact.get(f.severity, "low"),
+                    effort="low" if f.severity == FindingSeverity.ERROR else "medium",
+                    auto_fixable=False,
+                    metadata={
+                        "source": "strata",
+                        "category": f.category,
+                        "file": f.file,
+                        "line": f.line,
+                        "suggestion": f.suggestion,
+                    },
+                ))
+            return proposals
+        except Exception as e:
+            logger.debug("STRATA codebase analysis skipped: %s", e)
+            return []
 
     def _check_untitled(self) -> list[ImprovementProposal]:
         """Find memories without meaningful titles."""
@@ -623,6 +676,87 @@ class KaizenEngine:
                 results["skipped"] += 1
 
         return results
+
+    # ------------------------------------------------------------------
+    # Continuous Evolution facade (fused from ContinuousEvolutionEngine)
+    # ------------------------------------------------------------------
+
+    _evolution_engine_instance: Any = None
+    _meta_learning_engine_instance: Any = None
+    _apotheosis_engine_instance: Any = None
+
+    def _get_evolution_engine(self):
+        """Lazy accessor for the ContinuousEvolutionEngine."""
+        if self._evolution_engine_instance is None:
+            from whitemagic.core.evolution.continuous_evolution import ContinuousEvolutionEngine
+            self._evolution_engine_instance = ContinuousEvolutionEngine()
+        return self._evolution_engine_instance
+
+    def evolution_run_cycle(self) -> dict[str, Any]:
+        """Run a single continuous evolution cycle."""
+        return self._get_evolution_engine().run_single_cycle()
+
+    def evolution_get_status(self) -> dict[str, Any]:
+        """Get continuous evolution engine status."""
+        return self._get_evolution_engine().get_status()
+
+    def evolution_stop(self) -> None:
+        """Stop continuous evolution."""
+        self._get_evolution_engine().stop()
+
+    # ------------------------------------------------------------------
+    # Meta-Learning facade (fused from MetaLearningEngine)
+    # ------------------------------------------------------------------
+
+    def _get_meta_learning_engine(self):
+        """Lazy accessor for the MetaLearningEngine."""
+        if self._meta_learning_engine_instance is None:
+            from whitemagic.core.evolution.meta_learning import MetaLearningEngine
+            self._meta_learning_engine_instance = MetaLearningEngine()
+        return self._meta_learning_engine_instance
+
+    def meta_update_pattern_metrics(self, **kwargs: Any) -> None:
+        """Update metrics for a pattern after application."""
+        self._get_meta_learning_engine().update_pattern_metrics(**kwargs)
+
+    def meta_discover_patterns(self) -> list[Any]:
+        """Discover meta-patterns from pattern metrics."""
+        return self._get_meta_learning_engine().discover_meta_patterns()
+
+    def meta_get_recommendations(self, context: dict | None = None, limit: int = 5) -> list[tuple[str, float, str]]:
+        """Get pattern recommendations based on meta-learning."""
+        return self._get_meta_learning_engine().get_pattern_recommendations(context or {}, limit)
+
+    def meta_get_summary(self) -> dict[str, Any]:
+        """Get meta-learning summary."""
+        return self._get_meta_learning_engine().get_meta_learning_summary()
+
+    # ------------------------------------------------------------------
+    # Apotheosis facade (fused from ApotheosisEngine)
+    # ------------------------------------------------------------------
+
+    def _get_apotheosis_engine(self):
+        """Lazy accessor for the ApotheosisEngine."""
+        if self._apotheosis_engine_instance is None:
+            from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+            self._apotheosis_engine_instance = get_apotheosis_engine()
+        return self._apotheosis_engine_instance
+
+    def apotheosis_start(self) -> None:
+        """Start the Apotheosis Engine."""
+        self._get_apotheosis_engine().start()
+
+    def apotheosis_stop(self) -> None:
+        """Stop the Apotheosis Engine."""
+        self._get_apotheosis_engine().stop()
+
+    def apotheosis_tick(self, available_tools: list[str]) -> dict[str, Any]:
+        """Run a single Apotheosis Engine iteration."""
+        return self._get_apotheosis_engine().tick(available_tools)
+
+    def apotheosis_status_report(self) -> str:
+        """Get human-readable Apotheosis status report."""
+        return self._get_apotheosis_engine().get_status_report()
 
 
 _kaizen_engine = None

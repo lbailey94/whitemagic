@@ -92,6 +92,15 @@ class HomeostaticConfig:
     harmony_intervene: float = 0.3     # intervene when composite < 0.3
     check_interval_s: float = 10.0     # how often to check (seconds)
 
+    # Physical thresholds (laptop-optimizer integration)
+    cpu_temp_advise: float = 65.0      # °C — advise
+    cpu_temp_correct: float = 80.0     # °C — correct
+    cpu_temp_intervene: float = 90.0   # °C — intervene
+    battery_low_advise: float = 30.0   # % — advise
+    battery_low_correct: float = 15.0  # % — correct
+    memory_high_advise: float = 75.0   # % — advise
+    memory_high_correct: float = 90.0  # % — correct
+
 
 class HomeostaticLoop:
     """Periodically samples the Harmony Vector and applies graduated
@@ -127,8 +136,8 @@ class HomeostaticLoop:
         self._thread.start()
         self._attached = True
         logger.info(
-            f"Homeostatic loop started (check every {self._config.check_interval_s}s)",
-        )
+            "Homeostatic loop started (check every %ss)",
+         self._config.check_interval_s)
         return True
 
     def detach(self) -> None:
@@ -220,6 +229,10 @@ class HomeostaticLoop:
                                         self._config.latency_advise,
                                         f"High latency (p95={snap.p95_latency_ms:.0f}ms). "
                                         "Check circuit breaker status."))
+
+        # --- Physical metrics (laptop-optimizer integration) ---
+        physical_actions = self._check_physical()
+        actions.extend(physical_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -397,7 +410,7 @@ class HomeostaticLoop:
             f"CRITICAL: Composite harmony={snap.harmony_score:.3f}. "
             "All corrective measures activated."
         )
-        logger.critical(f"[Homeostasis/INTERVENE] {msg}")
+        logger.critical("[Homeostasis/INTERVENE] %s", msg)
         try:
             from whitemagic.core.resonance.gan_ying_enhanced import (
                 EventType,
@@ -421,6 +434,106 @@ class HomeostaticLoop:
             value=snap.harmony_score, threshold=self._config.harmony_intervene,
             action_taken=msg,
         )
+
+    # ------------------------------------------------------------------
+    # Physical metrics (laptop-optimizer synthesis)
+    # ------------------------------------------------------------------
+
+    def _check_physical(self) -> list[HomeostaticAction]:
+        """Check physical system metrics from laptop-optimizer.
+
+        Graceful degradation: if laptop-optimizer is not running, returns [].
+        """
+        try:
+            from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+            source = get_physical_metrics_source()
+            metrics = source.get_metrics()
+            if not metrics.is_available:
+                return []
+
+            actions: list[HomeostaticAction] = []
+            targets = source.get_adaptive_targets()
+
+            # CPU temperature
+            if metrics.cpu_temp is not None:
+                if metrics.cpu_temp >= self._config.cpu_temp_intervene:
+                    actions.append(HomeostaticAction(
+                        dimension="cpu_temp",
+                        level=ActionLevel.INTERVENE,
+                        value=metrics.cpu_temp,
+                        threshold=self._config.cpu_temp_intervene,
+                        action_taken=f"CRITICAL: CPU at {metrics.cpu_temp:.0f}°C. "
+                                     "Thermal throttling imminent.",
+                    ))
+                elif metrics.cpu_temp >= self._config.cpu_temp_correct:
+                    actions.append(HomeostaticAction(
+                        dimension="cpu_temp",
+                        level=ActionLevel.CORRECT,
+                        value=metrics.cpu_temp,
+                        threshold=self._config.cpu_temp_correct,
+                        action_taken=f"CPU at {metrics.cpu_temp:.0f}°C. "
+                                     "Consider reducing load or increasing TCC offset.",
+                    ))
+                elif metrics.cpu_temp >= targets.cpu_temp_max:
+                    actions.append(self._advise(
+                        "cpu_temp", metrics.cpu_temp,
+                        targets.cpu_temp_max,
+                        f"CPU warm at {metrics.cpu_temp:.0f}°C "
+                        f"(target: {targets.cpu_temp_max:.0f}°C).",
+                    ))
+
+            # Thermal anomaly detection
+            anomaly = source.check_thermal_anomaly()
+            if anomaly:
+                actions.append(HomeostaticAction(
+                    dimension="thermal_anomaly",
+                    level=ActionLevel.INTERVENE if anomaly.pattern == "critical_jump" else ActionLevel.CORRECT,
+                    value=anomaly.current_temp,
+                    threshold=anomaly.threshold,
+                    action_taken=f"Thermal anomaly ({anomaly.pattern}): {anomaly.message}",
+                ))
+
+            # Battery
+            if (metrics.battery_percent is not None and
+                    metrics.battery_status and "Discharg" in metrics.battery_status):
+                if metrics.battery_percent <= self._config.battery_low_correct:
+                    actions.append(HomeostaticAction(
+                        dimension="battery",
+                        level=ActionLevel.CORRECT,
+                        value=metrics.battery_percent,
+                        threshold=self._config.battery_low_correct,
+                        action_taken=f"Battery critical at {metrics.battery_percent:.0f}%. "
+                                     "Switch to powersave mode or connect AC.",
+                    ))
+                elif metrics.battery_percent <= self._config.battery_low_advise:
+                    actions.append(self._advise(
+                        "battery", metrics.battery_percent,
+                        self._config.battery_low_advise,
+                        f"Battery low at {metrics.battery_percent:.0f}%.",
+                    ))
+
+            # Memory pressure
+            if metrics.memory_percent is not None:
+                if metrics.memory_percent >= self._config.memory_high_correct:
+                    actions.append(HomeostaticAction(
+                        dimension="memory_pressure",
+                        level=ActionLevel.CORRECT,
+                        value=metrics.memory_percent,
+                        threshold=self._config.memory_high_correct,
+                        action_taken=f"Memory at {metrics.memory_percent:.0f}%. "
+                                     "Close heavy applications.",
+                    ))
+                elif metrics.memory_percent >= self._config.memory_high_advise:
+                    actions.append(self._advise(
+                        "memory_pressure", metrics.memory_percent,
+                        self._config.memory_high_advise,
+                        f"Memory at {metrics.memory_percent:.0f}%.",
+                    ))
+
+            return actions
+        except Exception as e:
+            logger.debug("Physical metrics check skipped: %s", e)
+            return []
 
     # ------------------------------------------------------------------
     # Introspection

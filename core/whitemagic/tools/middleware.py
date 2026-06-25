@@ -51,6 +51,9 @@ _get_governor: Callable[..., Any] | None = None
 _compact_fn: Callable[..., dict[str, Any]] | None = None
 _get_prometheus: Callable[[], Any] | None = None
 _get_otel: Callable[[], Any] | None = None
+_get_edge_inference: Callable[[], Any] | None = None
+_reason_locally: Callable[..., Any] | None = None
+_get_green_score: Callable[[], Any] | None = None
 _cached: bool = False
 
 
@@ -60,6 +63,7 @@ def _ensure_cached() -> None:
     global _check_tool_permission, _check_maturity_for_tool
     global _get_security_monitor, _get_governor, _compact_fn, _cached
     global _get_prometheus, _get_otel
+    global _get_edge_inference, _reason_locally, _get_green_score
     if _cached:
         return
     try:
@@ -119,6 +123,21 @@ def _ensure_cached() -> None:
         _compact_fn = compact_dict
     except (ImportError, AttributeError):
         pass
+    try:
+        from whitemagic.edge.inference import get_edge_inference
+        _get_edge_inference = get_edge_inference
+    except Exception as e:
+        logger.debug("Middleware: edge_inference dependency missing: %s", e)
+    try:
+        from whitemagic.core.intelligence.agentic.local_reasoning import reason_locally
+        _reason_locally = reason_locally
+    except Exception as e:
+        logger.debug("Middleware: local_reasoning dependency missing: %s", e)
+    try:
+        from whitemagic.core.monitoring.green_score import get_green_score
+        _get_green_score = get_green_score
+    except Exception as e:
+        logger.debug("Middleware: green_score dependency missing: %s", e)
     _cached = True
 
 
@@ -434,6 +453,38 @@ def mw_governor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     return next_fn(ctx)
 
 
+def mw_cognitive_mode(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
+    """Enforce cognitive mode tool restrictions.
+
+    GUARDIAN mode blocks write/destructive tools (read-only safety).
+    Other modes inject preferred/avoided hints into context metadata
+    but do not hard-block — only GUARDIAN enforces.
+    """
+    try:
+        from whitemagic.core.intelligence.cognitive_modes import get_cognitive_modes
+        cm = get_cognitive_modes()
+        mode = cm._effective_mode()
+
+        # GUARDIAN mode: hard-block avoided tools
+        if mode.value == "guardian":
+            if cm.is_tool_avoided(ctx.tool_name):
+                return {
+                    "status": "error",
+                    "error_code": "cognitive_mode_blocked",
+                    "message": f"Tool '{ctx.tool_name}' blocked in GUARDIAN mode (read-only)",
+                    "mode": "guardian",
+                }
+
+        # Inject mode hints into context for downstream use
+        ctx.meta["cognitive_mode"] = mode.value
+        hints = cm.get_tool_hints()
+        ctx.meta["cognitive_preferred"] = hints["preferred_tools"]
+        ctx.meta["cognitive_context_multiplier"] = hints["context_multiplier"]
+    except Exception as e:
+        logger.debug("Middleware: cognitive mode check failed for %s: %s", ctx.tool_name, e, exc_info=True)
+    return next_fn(ctx)
+
+
 def mw_sutra_auto_execute(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Dharma-gated Auto-Execution (GATED: disabled by default).
     Checks the Sutra Kernel to determine if a tool can auto-execute without human approval.
@@ -536,3 +587,148 @@ def mw_zodiac_resonance(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
             logger.warning("Zodiac Resonance post-processor runtime failure: %s", e, exc_info=True)
 
     return result
+
+
+# =========================================================================
+# Inference Router Middleware — P0: Wire InferenceRouter into Dispatch
+# =========================================================================
+
+_INFERENCE_TOOL_PATTERNS = (
+    "ollama", "chat", "generate", "reason", "think", "analyze",
+    "infer", "bitnet", "complete", "answer", "query_llm",
+    "bicameral", "multi_spectral", "ensemble", "edge_infer",
+)
+
+
+def _is_inference_tool(tool_name: str) -> bool:
+    """Check if tool involves LLM/inference that could be resolved locally."""
+    name_lower = tool_name.lower()
+    return any(p in name_lower for p in _INFERENCE_TOOL_PATTERNS)
+
+
+def _extract_prompt(tool_name: str, kwargs: dict[str, Any]) -> str | None:
+    """Extract the prompt/query from tool kwargs."""
+    for key in ("prompt", "query", "message", "text", "input", "question"):
+        val = kwargs.get(key)
+        if isinstance(val, str) and val.strip():
+            return val
+    return None
+
+
+def mw_inference_router(
+    ctx: DispatchContext, next_fn: NextFn,
+) -> dict[str, Any] | None:
+    """Try to resolve inference-type tool calls locally before hitting LLM/cloud.
+
+    Intercepts tool calls that involve LLM inference and attempts to resolve
+    them using edge rules, CPU inference, or local reasoning — avoiding
+    cloud token burn entirely for simple queries.
+
+    If resolved locally with high confidence, short-circuits the pipeline.
+    Otherwise, passes through to the normal handler.
+    """
+    _ensure_cached()
+
+    if not _is_inference_tool(ctx.tool_name):
+        return next_fn(ctx)
+
+    prompt = _extract_prompt(ctx.tool_name, ctx.kwargs)
+    if not prompt:
+        return next_fn(ctx)
+
+    # Tier -1: Compositional reasoning (fastest, pure HRR vector ops)
+    # Resolves relation queries like "what caused X?" at vector speed
+    try:
+        from whitemagic.core.intelligence.agentic.compositional_reasoning import (
+            get_compositional_reasoner,
+        )
+        reasoner = get_compositional_reasoner()
+        if reasoner.can_resolve(prompt):
+            comp_result = reasoner.resolve(prompt)
+            if comp_result.resolved and comp_result.confidence >= 0.3:
+                tokens_saved = comp_result.tokens_saved
+                if _get_green_score is not None:
+                    _get_green_score().record_inference(
+                        locality="edge",
+                        tokens_used=0,
+                        tokens_saved=tokens_saved,
+                        tool=ctx.tool_name,
+                        duration_ms=comp_result.latency_ms,
+                    )
+                return {
+                    "status": "success",
+                    "tool": ctx.tool_name,
+                    "result": comp_result.answer,
+                    "method": comp_result.method,
+                    "confidence": comp_result.confidence,
+                    "resolved_locally": True,
+                    "tokens_saved": tokens_saved,
+                    "latency_ms": round(comp_result.latency_ms, 2),
+                    "relation": comp_result.relation,
+                    "matches": comp_result.matches[:3],
+                }
+    except Exception as e:
+        logger.debug("Compositional reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True)
+
+    # Tier 0: Edge inference (fast, zero tokens, Rust PatternEngine)
+    if _get_edge_inference is not None:
+        try:
+            edge = _get_edge_inference()
+            result = edge.infer(prompt)
+            if result.confidence >= 0.85:
+                tokens_saved = result.tokens_equivalent or max(1, len(prompt) // 4)
+                if _get_green_score is not None:
+                    _get_green_score().record_inference(
+                        locality="edge",
+                        tokens_used=0,
+                        tokens_saved=tokens_saved,
+                        tool=ctx.tool_name,
+                        duration_ms=result.latency_ms,
+                    )
+                return {
+                    "status": "success",
+                    "tool": ctx.tool_name,
+                    "result": result.answer,
+                    "method": result.method,
+                    "confidence": result.confidence,
+                    "resolved_locally": True,
+                    "tokens_saved": tokens_saved,
+                    "latency_ms": round(result.latency_ms, 2),
+                }
+        except Exception as e:
+            logger.debug("Edge inference failed for %s: %s", ctx.tool_name, e, exc_info=True)
+
+    # Tier 1: Local reasoning (CPU + clone army + embedding search)
+    if _reason_locally is not None:
+        try:
+            result = _reason_locally(prompt)
+            if result.insights and not result.ready_for_ai:
+                tokens_saved = result.total_tokens_saved
+                if _get_green_score is not None:
+                    _get_green_score().record_inference(
+                        locality="edge",
+                        tokens_used=0,
+                        tokens_saved=tokens_saved,
+                        tool=ctx.tool_name,
+                        duration_ms=result.duration_ms,
+                    )
+                return {
+                    "status": "success",
+                    "tool": ctx.tool_name,
+                    "result": result.summary,
+                    "method": "local_reasoning",
+                    "confidence": 0.9,
+                    "resolved_locally": True,
+                    "tokens_saved": tokens_saved,
+                    "latency_ms": round(result.duration_ms, 2),
+                    "insights": [
+                        {"source": i.source, "content": i.content[:200], "relevance": i.relevance}
+                        for i in result.insights[:5]
+                    ],
+                }
+        except Exception as e:
+            logger.debug("Local reasoning failed for %s: %s", ctx.tool_name, e, exc_info=True)
+
+    # Not resolved locally — pass through to normal handler
+    ctx.meta["local_inference_attempted"] = True
+    return next_fn(ctx)

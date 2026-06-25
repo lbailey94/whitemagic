@@ -1,4 +1,3 @@
-import System.IO (stderr, hPutStrLn)
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE CApiFFI #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -35,6 +34,8 @@ import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.Marshal.Alloc
 import Foreign.Storable
+import System.IO (stderr, hPutStrLn)
+import System.Environment (lookupEnv)
 import IChing
 import WuXing
 
@@ -73,12 +74,12 @@ c_transition_hexagram hexPtr posPtr numPos = do
     poke newHexPtr newHex
     return newHexPtr
 
--- | Convert hexagram to number (1-64)
+-- | Convert hexagram to King Wen number (1-64)
 foreign export ccall c_hexagram_to_number :: Ptr Hexagram -> IO CInt
 c_hexagram_to_number :: Ptr Hexagram -> IO CInt
 c_hexagram_to_number hexPtr = do
     hex <- peek hexPtr
-    return $ fromIntegral $ toNumber hex
+    return $ fromIntegral $ toKingWenNumber hex
 
 -- | Check if hexagram is balanced
 foreign export ccall c_is_balanced_hexagram :: Ptr Hexagram -> IO CInt

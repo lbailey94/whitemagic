@@ -87,7 +87,7 @@ class HolographicConsolidator:
         """Memory-efficient O(N) Spatial Hashing Clustering.
         Optimized for 276K+ memories to prevent OOM/Blackouts.
         """
-        logger.info(f"🔮 Finding clusters with O(N) Spatial Hashing (radius={radius})...")
+        logger.info("🔮 Finding clusters with O(N) Spatial Hashing (radius=%s)...", radius)
 
         buckets: dict[tuple[int, int, int, int], list[str]] = {}
         coords_map: dict[str, tuple[float, float, float, float]] = {}
@@ -219,7 +219,7 @@ class HolographicConsolidator:
             return result
 
         # Real consolidation with batch synthesis
-        logger.info(f"⏳ Hydrating {len(clusters)} clusters...")
+        logger.info("⏳ Hydrating %s clusters...", len(clusters))
         await self.hydrate_clusters(clusters)
 
         conn = sqlite3.connect(self.db_path)

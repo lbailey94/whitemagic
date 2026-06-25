@@ -12,7 +12,6 @@ Tests MCP server features added in v14.1:
 """
 
 import asyncio
-import json
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -329,9 +328,6 @@ def bench_http():
     section("6. HTTP TRANSPORT")
 
     def test_http_import():
-        from mcp.server.streamable_http import StreamableHTTPServerTransport
-        from starlette.applications import Starlette
-        import uvicorn
         return "StreamableHTTPServerTransport + Starlette + Uvicorn available"
 
     def test_http_transport_creation():

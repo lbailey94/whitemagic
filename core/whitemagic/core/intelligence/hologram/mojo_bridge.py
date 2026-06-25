@@ -65,7 +65,7 @@ class MojoEncoderBridge:
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
                 self.mojo_available = True
-                logger.info(f"🔥 Mojo detected: {result.stdout.strip()}")
+                logger.info("🔥 Mojo detected: %s", result.stdout.strip())
             else:
                 self.mojo_available = False
         except FileNotFoundError:

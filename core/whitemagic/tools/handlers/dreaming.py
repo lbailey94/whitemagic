@@ -76,7 +76,7 @@ def handle_dream_now(**kwargs: Any) -> dict[str, Any]:
         else:
             asyncio.run(dc._run_phase())
     except Exception as e:
-        logger.debug(f"Silenced dreaming fallback error: {e}", exc_info=True)
+        logger.debug("Silenced dreaming fallback error: %s", e, exc_info=True)
 
     # Return the most recent dream report
     if dc._history:

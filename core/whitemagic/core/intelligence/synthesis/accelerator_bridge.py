@@ -29,7 +29,7 @@ class AcceleratorBridge:
         In a mature system, this would trigger specific kernels.
         For now, we handle specialized automation scripts.
         """
-        logger.info(f"Dispatching action: {action_description}")
+        logger.info("Dispatching action: %s", action_description)
 
         # Example: Mapping "Consolidate" actions to memory maintenance
         success = False
@@ -39,7 +39,7 @@ class AcceleratorBridge:
             logger.info("  Action Type: Passive Observation (Stillness Garden)")
             success = True
         else:
-            logger.info(f"  Action Type: Unknown Dispatch — {action_description}")
+            logger.info("  Action Type: Unknown Dispatch — %s", action_description)
             success = True # For now, we count specific insights as successful dispatches
 
         if "cluster_key" in metadata:
@@ -119,7 +119,7 @@ class AcceleratorBridge:
         """Execute a declarative JSON snippet within a controlled context.
         Arbitrary Python execution is intentionally not supported.
         """
-        logger.info(f"Executing solution snippet ({len(code)} chars)...")
+        logger.info("Executing solution snippet (%s chars)...", len(code))
         if not isinstance(context, dict):
             logger.error("Snippet context must be a dict")
             return False

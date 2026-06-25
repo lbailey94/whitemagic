@@ -312,7 +312,7 @@ class UnifiedZodiacCommander:
             selected_armies = armies or [ArmyType.IMMORTAL]
 
         logger.info("🎯 Unified Zodiac Deployment: %s", objective, exc_info=True)
-        logger.info(f"   Selected armies: {[a.value for a in selected_armies]}")
+        logger.info("   Selected armies: %s", [a.value for a in selected_armies])
 
         # Try Rust implementation first
         if self.rust_available:

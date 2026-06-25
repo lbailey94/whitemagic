@@ -49,7 +49,7 @@ class TransmutationPipeline:
         # 1. Nigredo: Load and Classify
         logger.info("--- Stage 1: Nigredo (Decomposition) ---")
         if not DB_PATH.exists():
-            logger.error(f"Database not found: {DB_PATH}")
+            logger.error("Database not found: %s", DB_PATH)
             return
 
         conn = sqlite3.connect(DB_PATH)
@@ -59,7 +59,7 @@ class TransmutationPipeline:
         # Load active memories (LONG_TERM)
         cursor.execute("SELECT id, title, content FROM memories WHERE memory_type != 'quarantined' ORDER BY importance DESC LIMIT ?", (limit,))
         rows = cursor.fetchall()
-        logger.info(f"Loaded {len(rows)} active memories for transmutation.")
+        logger.info("Loaded %s active memories for transmutation.", len(rows))
 
         novelty_memories = []
         routine_count = 0
@@ -83,9 +83,9 @@ class TransmutationPipeline:
                 noise_count += 1
 
         logger.info("Nigredo Yield:")
-        logger.info(f"  Novelty (Gold): {len(novelty_memories)}")
-        logger.info(f"  Routine (Body): {routine_count}")
-        logger.info(f"  Noise (Dross):  {noise_count}")
+        logger.info("  Novelty (Gold): %s", len(novelty_memories))
+        logger.info("  Routine (Body): %s", routine_count)
+        logger.info("  Noise (Dross):  %s", noise_count)
 
         if not novelty_memories:
             logger.warning("No novelty found. Transmutation halted.")
@@ -98,19 +98,19 @@ class TransmutationPipeline:
         # Determine clusters based on count (aim for ~50 items per cluster)
         n_clusters = max(5, min(len(vectorized) // 50, 50))
         clusters = self.purifier.cluster(vectorized, n_clusters=n_clusters)
-        logger.info(f"Purified into {len(clusters)} pattern clusters.")
+        logger.info("Purified into %s pattern clusters.", len(clusters))
 
         # 3. Rubedo: Synthesize Golden Rules
         logger.info("--- Stage 3: Rubedo (Synthesis) ---")
         golden_rules = self.synthesizer.synthesize(clusters)
-        logger.info(f"Synthesized {len(golden_rules)} Golden Rules.")
+        logger.info("Synthesized %s Golden Rules.", len(golden_rules))
 
         # 4. Save Holocron
         self.holocron.save(golden_rules)
 
         elapsed = time.time() - start_time
-        logger.info(f"=== Transmutation Complete in {elapsed:.2f}s ===")
-        logger.info(f"Philosopher's Stone created at {self.holocron.path}")
+        logger.info("=== Transmutation Complete in %ss ===", elapsed)
+        logger.info("Philosopher's Stone created at %s", self.holocron.path)
 
 if __name__ == "__main__":
     pipeline = TransmutationPipeline()

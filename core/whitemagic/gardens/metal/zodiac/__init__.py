@@ -315,12 +315,12 @@ class ZodiacCouncil:
     def activate_core(self, sign: ZodiacSign) -> None:
         """Activate a zodiac core."""
         self.cores[sign].active = True
-        logger.info(f"Activated {sign.value} core")
+        logger.info("Activated %s core", sign.value)
 
     def deactivate_core(self, sign: ZodiacSign) -> None:
         """Deactivate a zodiac core."""
         self.cores[sign].active = False
-        logger.info(f"Deactivated {sign.value} core")
+        logger.info("Deactivated %s core", sign.value)
 
     def get_active_cores(self) -> list[ZodiacCore]:
         """Get list of currently active cores."""

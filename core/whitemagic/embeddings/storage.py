@@ -128,9 +128,9 @@ class FileBasedEmbeddingCache:
                 # Try JSON first (safer), fallback to pickle if needed
                 try:
                     return json.loads(data.decode('utf-8'))
-                except:
+                except (json.JSONDecodeError, UnicodeDecodeError):
                     # Legacy pickle files - use RestrictedUnpickler for safety
-                    logger.warning(f"Loading legacy pickle cache for {file_path} - consider regenerating")
+                    logger.warning("Loading legacy pickle cache for %s - consider regenerating", file_path)
                     import io
                     
                     class RestrictedUnpickler(pickle.Unpickler):
@@ -149,7 +149,7 @@ class FileBasedEmbeddingCache:
                     
                     return RestrictedUnpickler(io.BytesIO(data)).load()
         except Exception as e:
-            logger.debug(f"Failed to load cache for {file_path}: {e}")
+            logger.debug("Failed to load cache for %s: %s", file_path, e)
             cache_path.unlink(missing_ok=True)
             return None
 
@@ -177,7 +177,7 @@ class FileBasedEmbeddingCache:
                 pickle.dump(embedding, f)
             return True
         except Exception as e:
-            logger.debug(f"Failed to cache embedding for {file_path}: {e}")
+            logger.debug("Failed to cache embedding for %s: %s", file_path, e)
             return False
 
     def clear(self) -> int:

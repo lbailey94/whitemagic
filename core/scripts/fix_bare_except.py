@@ -5,9 +5,7 @@ Conservatively replaces bare `except Exception:` with specific exceptions
 or `except Exception as e: logger.debug(...)` based on context.
 """
 
-import ast
 import logging
-import os
 import re
 import sys
 from pathlib import Path

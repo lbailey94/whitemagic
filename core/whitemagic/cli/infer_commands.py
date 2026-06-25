@@ -18,8 +18,9 @@ def infer():
               default='auto', help='Inference mode')
 @click.option('--memory/--no-memory', default=False,
               help='Ground response in memory (RAG)')
-@click.option('--json', is_flag=True, help='Output as JSON')
-def query(query: str, mode: str, memory: bool, json: bool):
+@click.option('--json', 'json_flag', is_flag=True, help='Output as JSON')
+@click.pass_context
+def query(ctx, query: str, mode: str, memory: bool, json_flag: bool):
     """Run inference on a query.
 
     Examples:
@@ -34,7 +35,8 @@ def query(query: str, mode: str, memory: bool, json: bool):
 
         result = run_inference(query, mode=mode, ground_in_memory=memory)
 
-        if json:
+        json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+        if json_output:
             output = {
                 "answer": result.answer,
                 "tier": result.tier,
@@ -55,8 +57,9 @@ def query(query: str, mode: str, memory: bool, json: bool):
 
 
 @infer.command()
-@click.option('--json', is_flag=True, help='Output as JSON')
-def stats(json: bool):
+@click.option('--json', 'json_flag', is_flag=True, help='Output as JSON')
+@click.pass_context
+def stats(ctx, json_flag: bool):
     """Show inference statistics.
 
     Example:
@@ -70,7 +73,8 @@ def stats(json: bool):
 
         stats = get_inference_stats()
 
-        if json:
+        json_output = json_flag or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+        if json_output:
             click.echo(json_lib.dumps(stats, indent=2))
         else:
             click.echo("\n📊 Unified Inference Statistics\n")

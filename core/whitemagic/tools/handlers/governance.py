@@ -44,22 +44,68 @@ def handle_homeostasis(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_homeostasis_status(**kwargs: Any) -> dict[str, Any]:
-    """Get the homeostatic loop's status and recent corrective actions."""
+    """Get the homeostatic loop's status and recent corrective actions.
+
+    Includes physical metrics from laptop-optimizer when available.
+    """
     from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
     loop = get_homeostatic_loop()
-    return {"status": "success", "homeostasis": loop.get_stats()}
+    result: dict[str, Any] = {"status": "success", "homeostasis": loop.get_stats()}
+
+    # Enrich with physical metrics when laptop-optimizer is running
+    try:
+        from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+        source = get_physical_metrics_source()
+        metrics = source.get_metrics()
+        if metrics.is_available:
+            result["physical_metrics"] = {
+                "cpu_temp": metrics.cpu_temp,
+                "cpu_usage": metrics.cpu_usage,
+                "battery_percent": metrics.battery_percent,
+                "battery_status": metrics.battery_status,
+                "memory_percent": metrics.memory_percent,
+                "health_score": metrics.health_score,
+                "thermal_throttling": metrics.thermal_throttling,
+            }
+            result["physical_recommendations"] = source.evaluate_homeostasis()
+            forecast = source.get_thermal_forecast()
+            if forecast:
+                result["thermal_forecast"] = {
+                    "predicted_5min": forecast.predicted_5min,
+                    "predicted_15min": forecast.predicted_15min,
+                    "confidence": forecast.confidence,
+                }
+    except Exception:
+        pass
+
+    return result
 
 
 def handle_homeostasis_check(**kwargs: Any) -> dict[str, Any]:
-    """Manually trigger a homeostatic harmony check."""
+    """Manually trigger a homeostatic harmony check.
+
+    Includes physical metrics evaluation from laptop-optimizer when available.
+    """
     from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
     loop = get_homeostatic_loop()
     actions = loop.check()
-    return {
+    result: dict[str, Any] = {
         "status": "success",
         "actions_taken": len(actions),
         "actions": [a.to_dict() for a in actions],
     }
+
+    # Include physical recommendations
+    try:
+        from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+        source = get_physical_metrics_source()
+        recs = source.evaluate_homeostasis()
+        if recs:
+            result["physical_recommendations"] = recs
+    except Exception:
+        pass
+
+    return result
 
 
 def handle_maturity_assess(**kwargs: Any) -> dict[str, Any]:

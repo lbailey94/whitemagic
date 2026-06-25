@@ -106,7 +106,7 @@ def sanitize_tool_args(tool_name: str, kwargs: dict[str, Any]) -> dict[str, Any]
         from whitemagic.utils.fast_json import dumps as _fj_dumps
         payload_size = len(_fj_dumps(kwargs, default=str))
         if payload_size > MAX_TOTAL_SIZE:
-            logger.warning(f"Sanitizer blocked {tool_name}: payload too large ({payload_size} bytes)")
+            logger.warning("Sanitizer blocked %s: payload too large (%s bytes)", tool_name, payload_size)
             return {"status": "error", "error": f"Payload too large: {payload_size} bytes (max {MAX_TOTAL_SIZE})", "error_code": "input_invalid"}
     except (ImportError, ModuleNotFoundError) as e:
         import logging

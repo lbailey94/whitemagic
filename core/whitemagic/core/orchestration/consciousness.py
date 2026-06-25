@@ -124,13 +124,13 @@ def initialize_all(verbose: bool = True) -> dict[str, bool]:
     total_count = len(results)
 
     if verbose:
-        logger.info(f"\n{'='*60}")
-        logger.info(f"Initialization complete: {success_count}/{total_count} systems active")
+        logger.info("\n%s", '='*60)
+        logger.info("Initialization complete: %s/%s systems active", success_count, total_count)
 
         if success_count == total_count:
             logger.info("✅ Full consciousness system operational!")
         elif success_count > 0:
-            logger.info(f"⚠️  Partial initialization ({success_count}/{total_count} systems)")
+            logger.info("⚠️  Partial initialization (%s/%s systems)", success_count, total_count)
         else:
             logger.info("❌ Initialization failed")
 
@@ -234,9 +234,9 @@ if __name__ == "__main__":
         logger.info("=" * 60)
 
         for system, data in status["systems"].items():
-            logger.info(f"\n{system.upper()}:")
+            logger.info("\n%s:", system.upper())
             for key, value in data.items():
-                logger.info(f"  {key}: {value}")
+                logger.info("  %s: %s", key, value)
     else:
         # Initialize
         results = initialize_all(verbose=True)
@@ -246,6 +246,6 @@ if __name__ == "__main__":
         status = get_status()
         for system, data in status["systems"].items():
             if "error" not in data:
-                logger.info(f"  ✅ {system}")
+                logger.info("  ✅ %s", system)
             else:
-                logger.info(f"  ❌ {system}: {data['error']}")
+                logger.info("  ❌ %s: %s", system, data['error'])

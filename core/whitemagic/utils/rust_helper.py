@@ -99,7 +99,7 @@ def safe_rust_call(func_name: str, args: dict[str, Any]) -> Any | None:
         Result from the Rust function, or None if not available/failed
     """
     if not is_rust_available():
-        logger.debug(f"Rust not available for {func_name}")
+        logger.debug("Rust not available for %s", func_name)
         return None
 
     rs = get_rust_module()
@@ -107,7 +107,7 @@ def safe_rust_call(func_name: str, args: dict[str, Any]) -> Any | None:
         return None
 
     if not hasattr(rs, func_name):
-        logger.debug(f"Rust function {func_name} not found")
+        logger.debug("Rust function %s not found", func_name)
         return None
 
     try:

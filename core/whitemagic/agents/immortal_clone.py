@@ -105,7 +105,7 @@ class ImmortalClone:
         "It's 300 lines of code allocating array with some tools like
         read file, edit file, bash tool, and then you just loop."
         """
-        logger.info(f"🥷 Immortal Clone {self.clone_id} starting loop for task {self.task.id}")
+        logger.info("🥷 Immortal Clone %s starting loop for task %s", self.clone_id, self.task.id)
 
         for self.iteration in range(self.max_iterations):
             try:
@@ -128,7 +128,7 @@ class ImmortalClone:
 
                 # 4. Check victory conditions
                 if self.check_victory_conditions():
-                    logger.info(f"✅ Immortal Clone {self.clone_id} achieved victory at iteration {self.iteration}")
+                    logger.info("✅ Immortal Clone %s achieved victory at iteration %s", self.clone_id, self.iteration)
                     return ActionResult(
                         success=True,
                         data={'context': self.context, 'iterations': self.iteration + 1}
@@ -136,7 +136,7 @@ class ImmortalClone:
 
                 # 5. If failed, context now includes error for next iteration
                 if not result.success:
-                    logger.debug(f"🔄 Immortal Clone {self.clone_id} iteration {self.iteration} failed, feeding error back")
+                    logger.debug("🔄 Immortal Clone %s iteration %s failed, feeding error back", self.clone_id, self.iteration)
 
             except Exception as e:
                 logger.error("❌ Immortal Clone %s exception at iteration %s: %s", self.clone_id, self.iteration, e, exc_info=True)
@@ -505,7 +505,7 @@ class GasTownOrchestrator:
         self.work_queue = self.decompose_to_meow()
         results = []
 
-        logger.info(f"🏭 Gas Town deploying {len(self.work_queue)} MEOW units with {self.max_workers} workers")
+        logger.info("🏭 Gas Town deploying %s MEOW units with %s workers", len(self.work_queue), self.max_workers)
 
         with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
             futures: dict[Any, tuple[ImmortalClone, MEOW]] = {}
@@ -546,9 +546,9 @@ class GasTownOrchestrator:
                         self.completed_work.append((meow, result))
                         results.append(result)
 
-                        logger.info(f"✅ MEOW {meow.type}:{meow.target} completed by clone {clone.clone_id}")
+                        logger.info("✅ MEOW %s:%s completed by clone %s", meow.type, meow.target, clone.clone_id)
 
-        logger.info(f"🏁 Gas Town completed {len(results)} MEOW units")
+        logger.info("🏁 Gas Town completed %s MEOW units", len(results))
         return results
 
     def _dependencies_met(self, meow: MEOW) -> bool:

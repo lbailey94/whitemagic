@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.memory.neural.identity_anchors import auto_protect_memory
 from whitemagic.core.memory.neural.neural_memory import MemoryState, NeuralMemory
 
 logger = logging.getLogger(__name__)
@@ -231,13 +230,13 @@ def calculate_neuro_score(memory: NeuralMemory, detailed: bool = False) -> float
 
 
 class NeuroScoreEngine:
-    """Engine for managing neuro_scores across memories.
+    """Backward-compat shim — fused into RetentionEngine (slot 24, Dipper 斗).
 
-    Handles:
-    - Score calculation
-    - Decay processing
-    - Recall boosting
-    - Archive threshold checking
+    All neuro_score management logic now lives in
+    whitemagic.core.memory.mindful_forgetting.RetentionEngine.
+
+    This class delegates to the RetentionEngine singleton for all
+    score management, decay processing, and recall boosting.
     """
 
     def __init__(
@@ -245,11 +244,22 @@ class NeuroScoreEngine:
         archive_threshold: float = 0.2,
         decay_interval_hours: float = 24.0,
         auto_protect: bool = True,
-    ):
+    ) -> None:
+        from whitemagic.core.memory.mindful_forgetting import get_retention_engine
+        self._engine = get_retention_engine(archive_threshold=archive_threshold)
+        self._engine._decay_interval_hours = decay_interval_hours
+        self._engine._auto_protect = auto_protect
         self.archive_threshold = archive_threshold
         self.decay_interval_hours = decay_interval_hours
         self.auto_protect = auto_protect
-        self._last_decay_run: datetime | None = None
+
+    @property
+    def _last_decay_run(self) -> datetime | None:
+        return getattr(self._engine, "_last_decay_run", None)
+
+    @_last_decay_run.setter
+    def _last_decay_run(self, value: datetime | None) -> None:
+        self._engine._last_decay_run = value
 
     def calculate_score(self, memory: NeuralMemory, detailed: bool = False) -> float | ScoreBreakdown:
         """Calculate neuro_score for a memory."""
@@ -257,72 +267,23 @@ class NeuroScoreEngine:
 
     def update_score(self, memory: NeuralMemory) -> NeuralMemory:
         """Update memory's neuro_score based on current state."""
-        score = calculate_neuro_score(memory)
-        if isinstance(score, float):
-            memory.neuro_score = score
-        else:
-            memory.neuro_score = score.final_score
-        return memory
+        return self._engine.update_score(memory)
 
     def on_recall(self, memory: NeuralMemory) -> NeuralMemory:
-        """Called when memory is recalled/accessed.
-        Boosts the memory's strength.
-        """
-        memory.recall()
-        score = calculate_neuro_score(memory)
-        if isinstance(score, float):
-            memory.neuro_score = score
-        else:
-            memory.neuro_score = score.final_score
-        return memory
+        """Called when memory is recalled/accessed."""
+        return self._engine.on_recall(memory)
 
     def on_create(self, memory: NeuralMemory) -> NeuralMemory:
-        """Called when memory is created.
-        Applies auto-protection and initial scoring.
-        """
-        if self.auto_protect:
-            memory = auto_protect_memory(memory)
-
-        score = calculate_neuro_score(memory)
-        if isinstance(score, float):
-            memory.neuro_score = score
-        else:
-            memory.neuro_score = score.final_score
-        return memory
+        """Called when memory is created."""
+        return self._engine.on_create(memory)
 
     def process_decay(self, memories: list[NeuralMemory]) -> list[NeuralMemory]:
-        """Process decay for a batch of memories.
-
-        Returns list of memories that should be archived.
-        """
-        to_archive = []
-
-        for memory in memories:
-            # Apply decay
-            memory.decay()
-
-            # Recalculate score
-            score = calculate_neuro_score(memory)
-            if isinstance(score, float):
-                memory.neuro_score = score
-            else:
-                memory.neuro_score = score.final_score
-
-            # Check archive threshold
-            if memory.should_archive():
-                to_archive.append(memory)
-
-        self._last_decay_run = datetime.now()
-
-        return to_archive
+        """Process decay for a batch of memories."""
+        return self._engine.process_decay(memories)
 
     def should_run_decay(self) -> bool:
         """Check if it's time to run decay processing."""
-        if self._last_decay_run is None:
-            return True
-
-        hours_since = (datetime.now() - self._last_decay_run).total_seconds() / 3600
-        return hours_since >= self.decay_interval_hours
+        return self._engine.should_run_decay()
 
     def get_memories_by_state(
         self,
@@ -333,38 +294,12 @@ class NeuroScoreEngine:
         return [m for m in memories if m.state == state]
 
     def get_weak_memories(self, memories: list[NeuralMemory]) -> list[NeuralMemory]:
-        """Get memories that are fading or weak (candidates for review)."""
-        return [
-            m for m in memories
-            if m.state in (MemoryState.FADING, MemoryState.WEAK)
-        ]
+        """Get memories that are fading or weak."""
+        return self._engine.get_weak_memories(memories)
 
     def get_stats(self, memories: list[NeuralMemory]) -> dict[str, Any]:
         """Get statistics about memory health."""
-        if not memories:
-            return {
-                "total": 0,
-                "by_state": {},
-                "average_score": 0,
-                "protected_count": 0,
-            }
-
-        by_state = {}
-        for state in MemoryState:
-            count = len([m for m in memories if m.state == state])
-            if count > 0:
-                by_state[state.value] = count
-
-        avg_score = sum(m.neuro_score for m in memories) / len(memories)
-        protected = len([m for m in memories if m.is_protected])
-
-        return {
-            "total": len(memories),
-            "by_state": by_state,
-            "average_score": round(avg_score, 3),
-            "protected_count": protected,
-            "archive_candidates": len([m for m in memories if m.should_archive()]),
-        }
+        return self._engine.get_neuro_stats(memories)
 
 
 # === SINGLETON ===

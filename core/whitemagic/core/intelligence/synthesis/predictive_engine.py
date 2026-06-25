@@ -193,6 +193,109 @@ class PredictiveEngine:
             velocity_metrics=self._calculate_velocity(),
         )
 
+    def get_calibration(self) -> dict[str, float]:
+        """Fetch Brier calibration data from TemporalForecastDB.
+
+        Returns:
+            Dict with brier_score, calibration_gap, and brier_skill_score.
+            Empty dict if TemporalForecastDB unavailable.
+        """
+        try:
+            from whitemagic.forecasting.temporal_db import TemporalForecastDB
+            db = TemporalForecastDB()
+            summary = db.summary()
+            return {
+                "brier_score": summary.get("brier_score", 0.0),
+                "calibration_gap": summary.get("calibration_gap", 0.0),
+                "brier_skill_score": summary.get("brier_skill_score", 0.0),
+            }
+        except Exception:
+            return {}
+
+    def apply_calibration(self, confidence: float) -> float:
+        """Adjust a confidence value based on Brier calibration gap.
+
+        If the system is overconfident (negative gap), widen intervals
+        (reduce confidence). If underconfident (positive gap), narrow
+        them (increase confidence).
+
+        Args:
+            confidence: Raw confidence value (0-1).
+
+        Returns:
+            Calibrated confidence value (0-1).
+        """
+        cal = self.get_calibration()
+        gap = cal.get("calibration_gap", 0.0)
+        # Negative gap = overconfident → reduce confidence
+        # Positive gap = underconfident → increase confidence
+        adjustment = gap * 0.3  # Dampened correction
+        adjusted = confidence + adjustment
+        return max(0.01, min(0.99, adjusted))
+
+    def auto_prescience_claims(self, min_confidence: float = 0.7) -> dict[str, Any]:
+        """Generate predictions and auto-store high-confidence ones as prescience claims.
+
+        This is the unified forecasting pipeline: PredictiveEngine generates
+        predictions from all sources (milestones, roadmaps, velocity, gaps,
+        patterns, automation, gardens, constellations, associations, temporal),
+        and high-confidence predictions are automatically stored in
+        TemporalForecastDB for future Brier calibration.
+
+        Args:
+            min_confidence: Minimum confidence threshold for auto-storing (0-1).
+
+        Returns:
+            Summary dict with total predictions, stored claims, and categories.
+        """
+        report = self.predict()
+
+        # Convert Confidence enum to float
+        conf_map = {
+            Confidence.HIGH: 0.85,
+            Confidence.MEDIUM: 0.6,
+            Confidence.LOW: 0.35,
+            Confidence.EMERGENT: 0.5,
+        }
+
+        stored = 0
+        categories: dict[str, int] = {}
+
+        try:
+            from whitemagic.forecasting.temporal_db import TemporalForecastDB
+            db = TemporalForecastDB()
+
+            for pred in report.predictions:
+                conf_val = conf_map.get(pred.confidence, 0.5)
+
+                # Apply calibration before storing
+                calibrated = self.apply_calibration(conf_val)
+
+                if calibrated >= min_confidence:
+                    try:
+                        db.add_prediction(
+                            claim=pred.title,
+                            source_date=datetime.now().date().isoformat(),
+                            confidence=calibrated,
+                            category=f"auto_{pred.prediction_type.value}",
+                            source_ref=f"predictive_engine:{pred.id}",
+                            notes=pred.description[:200],
+                        )
+                        stored += 1
+                        cat = pred.prediction_type.value
+                        categories[cat] = categories.get(cat, 0) + 1
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.debug("TemporastDB unavailable for auto claims: %s", e)
+
+        return {
+            "total_predictions": len(report.predictions),
+            "stored_claims": stored,
+            "categories": categories,
+            "min_confidence": min_confidence,
+        }
+
     def _predict_from_milestones(self) -> list[Prediction]:
         """Analyze milestone patterns to predict next steps."""
         predictions = []
@@ -958,6 +1061,51 @@ class PredictiveEngine:
             "daily_avg_7d": row["last_7d"] / 7,
             "daily_avg_30d": row["last_30d"] / 30,
         }
+
+    # ------------------------------------------------------------------
+    # Foresight facade (fused from ForesightEngine)
+    # ------------------------------------------------------------------
+
+    _foresight_engine_instance: Any = None
+    _predictive_maintenance_instance: Any = None
+
+    def _get_foresight_engine(self):
+        """Lazy accessor for the ForesightEngine."""
+        if self._foresight_engine_instance is None:
+            from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+            self._foresight_engine_instance = get_foresight_engine()
+        return self._foresight_engine_instance
+
+    def foresight_analyze(self) -> Any:
+        """Run full foresight analysis (constellation drift, decay, convergence)."""
+        return self._get_foresight_engine().analyze()
+
+    # ------------------------------------------------------------------
+    # Predictive Maintenance facade (fused from PredictiveMaintenanceEngine)
+    # ------------------------------------------------------------------
+
+    def _get_predictive_maintenance(self):
+        """Lazy accessor for the PredictiveMaintenanceEngine."""
+        if self._predictive_maintenance_instance is None:
+            from whitemagic.core.autonomous.apotheosis_engine import PredictiveMaintenanceEngine
+            self._predictive_maintenance_instance = PredictiveMaintenanceEngine()
+        return self._predictive_maintenance_instance
+
+    def maintenance_analyze_trends(self, health_history: list[Any]) -> list[Any]:
+        """Analyze health trends to predict future issues."""
+        return self._get_predictive_maintenance().analyze_trends(health_history)
+
+    def maintenance_forecast_memory_growth(
+        self, current_count: int, growth_rate_per_day: float, days_ahead: int = 30,
+    ) -> dict[str, Any]:
+        """Forecast memory growth and predict when maintenance is needed."""
+        return self._get_predictive_maintenance().forecast_memory_growth(
+            current_count, growth_rate_per_day, days_ahead,
+        )
+
+    def maintenance_get_active_alerts(self, max_age_hours: float = 24.0) -> list[Any]:
+        """Get alerts still within their prediction window."""
+        return self._get_predictive_maintenance().get_active_alerts(max_age_hours)
 
 
 # Global instance

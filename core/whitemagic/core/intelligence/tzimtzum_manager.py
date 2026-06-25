@@ -21,7 +21,7 @@ class TzimtzumManager:
         self.is_vacant_space_active = True
         self.intensity_cap = max(0.1, min(1.0, intensity))
         self.last_adjustment = datetime.now()
-        logger.info(f"🌌 Tzimtzum: Created Vacant Space (Intensity Cap: {self.intensity_cap:.2f})")
+        logger.info("🌌 Tzimtzum: Created Vacant Space (Intensity Cap: %s)", self.intensity_cap)
 
     def release_space(self) -> Any:
         """Deactivate 'Vacant Space' mode."""

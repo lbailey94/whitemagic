@@ -70,9 +70,9 @@ class MansionBridge:
         self._zig_status = self._detect_zig()
 
         logger.info("MansionBridge initialized:")
-        logger.info(f"  Rust: {'✅' if self._rust_status.available else '❌'}")
-        logger.info(f"  Mojo: {'✅' if self._mojo_status.available else '❌'}")
-        logger.info(f"  Zig:  {'✅' if self._zig_status.available else '❌'}")
+        logger.info("  Rust: %s", '✅' if self._rust_status.available else '❌')
+        logger.info("  Mojo: %s", '✅' if self._mojo_status.available else '❌')
+        logger.info("  Zig:  %s", '✅' if self._zig_status.available else '❌')
 
     def _detect_rust(self) -> BackendStatus:
         """Detect Rust backend (whitemagic_rs)."""

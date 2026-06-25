@@ -11,6 +11,8 @@
 pub mod streaming;
 pub mod quantization;
 pub mod simd;
+pub mod ternary_kernel;
 
 pub use streaming::StreamingEngine;
 pub use quantization::{QuantizedKVCache, Quantizer};
+pub use ternary_kernel::{ternary_gemv, ternary_dot, pack_ternary_matrix, Ternary};

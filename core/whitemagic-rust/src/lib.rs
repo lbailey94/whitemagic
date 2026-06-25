@@ -97,6 +97,11 @@ pub mod sutra_kernel;
 #[cfg(feature = "python")]
 pub mod geneseed_miner;
 
+// Inference engine (ternary SIMD, streaming, quantization)
+pub mod inference;
+#[cfg(feature = "python")]
+pub mod inference_pymodule;
+
 // WASM-specific module
 #[cfg(feature = "wasm")]
 mod wasm;
@@ -175,6 +180,11 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
         pipeline::massive_deployer::benchmark_rust_vs_python,
         m
     )?)?;
+
+    // Add inference sub-module (ternary SIMD kernels)
+    let inference_module = PyModule::new_bound(_py, "inference")?;
+    inference_pymodule::inference(_py, &inference_module)?;
+    m.add_submodule(&inference_module)?;
 
     // --- START RECONCILLATION ---
     // Manually register missing top-level functions from submodules for flat whitemagic_rust access
@@ -264,9 +274,27 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(geneseed_miner::mine_geneseed_patterns, m)?)?;
     m.add_function(wrap_pyfunction!(geneseed_miner::get_geneseed_stats, m)?)?;
 
-    // Convergence Detector — functions wired via convergence_bridge.py
+    // Code Writing Clone Army — parallel file operations via Rayon
+    m.add_class::<pipeline::code_writing_clone::CodeOperation>()?;
+    m.add_class::<pipeline::code_writing_clone::CodeWritingResult>()?;
+    m.add_class::<pipeline::code_writing_clone::CodeWritingClone>()?;
+    m.add_class::<pipeline::code_writing_clone::CodeWritingArmy>()?;
+    m.add_function(wrap_pyfunction!(
+        pipeline::code_writing_clone::benchmark_code_writing,
+        m
+    )?)?;
+
+    // Add convergence Detector — functions wired via convergence_bridge.py
     m.add_function(wrap_pyfunction!(search::convergence_detector::detect_convergence, m)?)?;
     m.add_function(wrap_pyfunction!(search::convergence_detector::convergence_score, m)?)?;
+
+    // Directory walker — parallel file tree walk for STRATA acceleration
+    m.add_function(wrap_pyfunction!(search::dir_walker::walk_directory, m)?)?;
+
+    // STRATA accelerators — batch regex scan + fast content hashing
+    m.add_function(wrap_pyfunction!(search::strata_accel::batch_regex_scan, m)?)?;
+    m.add_function(wrap_pyfunction!(search::strata_accel::fast_sha256, m)?)?;
+    m.add_function(wrap_pyfunction!(search::strata_accel::batch_sha256, m)?)?;
 
     // StateBoard — mmap-backed shared-memory blackboard for system vital signs
     pipeline::state_board::register_state_board(m)?;
@@ -276,6 +304,15 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<monte_carlo::MonteCarloResult>()?;
     m.add_class::<monte_carlo::MonteCarloForecast>()?;
     m.add_function(wrap_pyfunction!(monte_carlo::run_mc_forecast_calibration, m)?)?;
+
+    // I Ching engine (Phase 2a)
+    m.add_function(wrap_pyfunction!(iching::iching_cast, m)?)?;
+    m.add_function(wrap_pyfunction!(iching::iching_cast_stochastic, m)?)?;
+
+    // Hexagram SIMD engine (Phase 6b)
+    m.add_function(wrap_pyfunction!(hexagram_simd_py_execute, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_dispatch_info, m)?)?;
+    m.add_function(wrap_pyfunction!(hexagram_boltzmann_select, m)?)?;
 
     Ok(())
 }
@@ -287,6 +324,66 @@ pub use wasm::*;
 #[cfg(feature = "python")]
 pub mod monte_carlo;
 
+#[cfg(feature = "python")]
+pub mod iching;
+
+#[cfg(feature = "python")]
+pub mod iching_dispatch;
+
+#[cfg(feature = "python")]
+pub mod iching_resonance;
+
+#[cfg(feature = "python")]
+pub mod kuramoto;
+
+#[cfg(feature = "python")]
+pub mod hexagram_hrr;
+
+#[cfg(feature = "python")]
+pub mod hexagram_simd;
+
 // Zig FFI module for polyglot bridge support (Python only)
 #[cfg(feature = "python")]
 mod zig_ffi;
+
+// ---------------------------------------------------------------------------
+// Phase 6b: PyO3 wrappers for hexagram SIMD engine
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_simd_py_execute(loads: std::collections::HashMap<u32, Vec<f64>>) -> Vec<(u32, Vec<f64>)> {
+    let mut engine = hexagram_simd::HexagramSimdEngine::new();
+    for (&num, data) in &loads {
+        engine.load(num, data.clone());
+    }
+    engine.execute();
+    engine.collect()
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_dispatch_info(hexagram_num: u32) -> Option<(String, String, u32, u32, bool)> {
+    use iching_dispatch::dispatch_for_hexagram;
+    dispatch_for_hexagram(hexagram_num).map(|d| {
+        (
+            format!("{:?}", d.effective_compute),
+            format!("{:?}", d.effective_io),
+            d.lane_width,
+            d.priority,
+            d.fully_simd,
+        )
+    })
+}
+
+#[cfg(feature = "python")]
+#[pyfunction]
+fn hexagram_boltzmann_select(temperature: f64) -> u32 {
+    use rand::SeedableRng;
+    use rand::rngs::SmallRng;
+    let mut rng = SmallRng::from_entropy();
+    iching_dispatch::boltzmann_select(&mut rng, temperature)
+}

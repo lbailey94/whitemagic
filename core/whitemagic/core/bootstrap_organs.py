@@ -76,7 +76,7 @@ def bootstrap_nervous_system():
     # Wire Feedback Loops (Subscribers)
     _wire_feedback_loops(ns)
 
-    logger.info(f"Nervous System Bootstrap Complete. Organs online: {len(ns.organs)}")
+    logger.info("Nervous System Bootstrap Complete. Organs online: %s", len(ns.organs))
 
 def _wire_feedback_loops(ns):
     """Wire Gan Ying events to Nervous System signals."""

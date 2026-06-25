@@ -83,7 +83,7 @@ hasKeyword word ctx = word `elem` keywords ctx
 -- | Interpret hexagram
 interpret :: Hexagram -> Text
 interpret hex =
-    case getHexagramInfo (toNumber hex) of
+    case getHexagramInfo (toKingWenNumber hex) of
         Just info -> judgment info
         Nothing -> "Unknown hexagram"
 

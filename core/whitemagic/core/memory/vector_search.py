@@ -188,7 +188,7 @@ class VectorSearch:
                 shm.add_or_update(memory_id, np.array(vec, dtype=np.float32))
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).warning(f"Failed to sync embedding to SHM: {e}")
+                logging.getLogger(__name__).warning("Failed to sync embedding to SHM: %s", e)
 
     def search(self, query: str, limit: int = 10) -> list[VSearchResult]:
             """
@@ -258,7 +258,7 @@ class VectorSearch:
                             return results
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).warning(f"Koka SHM Search failed, falling back to Python: {e}")
+                logging.getLogger(__name__).warning("Koka SHM Search failed, falling back to Python: %s", e)
 
             with self._lock:
                 # Try Zig SIMD batch top-K for large corpora
@@ -273,6 +273,25 @@ class VectorSearch:
                         scored = [(ids[idx], score) for idx, score in topk]
                     except (ImportError, AttributeError):
                         scored = []
+
+                # Try Rust PyO3 batch cosine (GIL-released native SIMD)
+                if not scored and len(self._cache) > 10:
+                    try:
+                        import numpy as np
+                        import whitemagic_rs
+
+                        ids = list(self._cache.keys())
+                        vecs = list(self._cache.values())
+                        query_arr = np.ascontiguousarray(qvec, dtype=np.float64)
+                        candidates_arr = np.ascontiguousarray(vecs, dtype=np.float64)
+                        similarities = whitemagic_rs.rust_batch_cosine_numpy(query_arr, candidates_arr)
+
+                        if similarities is not None:
+                            scored = [(ids[i], float(similarities[i])) for i in range(len(similarities))]
+                            scored.sort(key=lambda x: x[1], reverse=True)
+                    except Exception:
+                        scored = []
+
                 if not scored:
                     for mid,vec in self._cache.items():
                         s = _cosine(qvec, vec)

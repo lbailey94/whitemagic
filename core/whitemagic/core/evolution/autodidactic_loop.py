@@ -111,10 +111,25 @@ class AutodidacticLoop:
             )
         """)
 
+        # Objective B: Pattern correlations for interaction-aware MC
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS pattern_correlations (
+                correlation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pattern_a TEXT NOT NULL,
+                pattern_b TEXT NOT NULL,
+                correlation REAL NOT NULL,
+                co_occurrences INTEGER NOT NULL,
+                updated_at REAL NOT NULL,
+                UNIQUE(pattern_a, pattern_b)
+            )
+        """)
+
         # Indexes
         c.execute("CREATE INDEX IF NOT EXISTS idx_pattern_id ON pattern_applications(pattern_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_outcome_pattern ON pattern_outcomes(pattern_id)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_update_pattern ON pattern_updates(pattern_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_corr_a ON pattern_correlations(pattern_a)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_corr_b ON pattern_correlations(pattern_b)")
 
         conn.commit()
         conn.close()
@@ -166,6 +181,9 @@ class AutodidacticLoop:
 
         # Trigger confidence update
         self._update_pattern_confidence(outcome.pattern_id)
+
+        # Objective B: Update pairwise correlations
+        self.update_correlations(outcome.pattern_id, outcome.success)
 
     def _update_pattern_confidence(self, pattern_id: str) -> None:
         """Update pattern confidence based on accumulated outcomes"""
@@ -373,3 +391,149 @@ class AutodidacticLoop:
             'decreased_patterns': decreased_patterns,
             'learning_active': total_outcomes > 0,
         }
+
+    # ------------------------------------------------------------------
+    # Objective B: Interaction-Aware MC — correlation tracking
+    # ------------------------------------------------------------------
+
+    def update_correlations(self, pattern_id: str, success: bool) -> None:
+        """Update pairwise correlations after a pattern outcome is recorded.
+
+        Finds all other patterns that have outcomes recorded and updates the
+        correlation between this pattern and each of them by pairing outcomes
+        sorted by time.
+
+        Args:
+            pattern_id: The pattern that just had an outcome recorded.
+            success: Whether the outcome was successful.
+        """
+        conn = sqlite3.connect(str(self.db_path))
+        c = conn.cursor()
+
+        # Get this pattern's outcomes sorted by time
+        c.execute("""
+            SELECT success, measured_at FROM pattern_outcomes
+            WHERE pattern_id = ? ORDER BY measured_at
+        """, (pattern_id,))
+        own_outcomes = [(r[0], r[1]) for r in c.fetchall()]
+
+        if len(own_outcomes) < 2:
+            conn.close()
+            return
+
+        # Find all other patterns that have outcomes
+        c.execute("""
+            SELECT DISTINCT pattern_id FROM pattern_outcomes
+            WHERE pattern_id != ?
+        """, (pattern_id,))
+        other_patterns = [r[0] for r in c.fetchall()]
+
+        for other_id in other_patterns:
+            c.execute("""
+                SELECT success, measured_at FROM pattern_outcomes
+                WHERE pattern_id = ? ORDER BY measured_at
+            """, (other_id,))
+            other_outcomes = [(r[0], r[1]) for r in c.fetchall()]
+
+            if len(other_outcomes) < 2:
+                continue
+
+            # Pair by index (both sorted by time)
+            n = min(len(own_outcomes), len(other_outcomes))
+            a_vals = [float(own_outcomes[i][0]) for i in range(n)]
+            b_vals = [float(other_outcomes[i][0]) for i in range(n)]
+
+            a_mean = sum(a_vals) / n
+            b_mean = sum(b_vals) / n
+
+            cov = sum((a - a_mean) * (b - b_mean) for a, b in zip(a_vals, b_vals)) / n
+            a_std = (sum((a - a_mean) ** 2 for a in a_vals) / n) ** 0.5
+            b_std = (sum((b - b_mean) ** 2 for b in b_vals) / n) ** 0.5
+
+            if a_std > 0 and b_std > 0:
+                correlation = cov / (a_std * b_std)
+            else:
+                correlation = 0.0
+
+            correlation = max(-1.0, min(1.0, correlation))
+
+            c.execute("""
+                INSERT INTO pattern_correlations (pattern_a, pattern_b, correlation, co_occurrences, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(pattern_a, pattern_b)
+                DO UPDATE SET correlation = ?, co_occurrences = ?, updated_at = ?
+            """, (
+                pattern_id, other_id, correlation, n, time.time(),
+                correlation, n, time.time(),
+            ))
+
+        conn.commit()
+        conn.close()
+
+    def get_correlation(self, pattern_a: str, pattern_b: str) -> float:
+        """Get the correlation between two patterns.
+
+        Returns:
+            Correlation in [-1, 1], or 0.0 if no correlation data exists.
+        """
+        conn = sqlite3.connect(str(self.db_path))
+        c = conn.cursor()
+
+        # Try both orderings
+        c.execute("""
+            SELECT correlation FROM pattern_correlations
+            WHERE (pattern_a = ? AND pattern_b = ?)
+               OR (pattern_a = ? AND pattern_b = ?)
+        """, (pattern_a, pattern_b, pattern_b, pattern_a))
+
+        result = c.fetchone()
+        conn.close()
+
+        return result[0] if result else 0.0
+
+    def get_correlation_matrix(self, pattern_ids: list[str]) -> dict[str, dict[str, float]]:
+        """Get the correlation matrix for a set of patterns.
+
+        Args:
+            pattern_ids: List of pattern IDs to include.
+
+        Returns:
+            Nested dict: matrix[a][b] = correlation.
+        """
+        matrix: dict[str, dict[str, float]] = {}
+        for a in pattern_ids:
+            matrix[a] = {}
+            for b in pattern_ids:
+                if a == b:
+                    matrix[a][b] = 1.0
+                else:
+                    matrix[a][b] = self.get_correlation(a, b)
+        return matrix
+
+    def get_all_correlations(self) -> list[dict[str, Any]]:
+        """Get all recorded correlations.
+
+        Returns:
+            List of dicts with pattern_a, pattern_b, correlation, co_occurrences.
+        """
+        conn = sqlite3.connect(str(self.db_path))
+        c = conn.cursor()
+
+        c.execute("""
+            SELECT pattern_a, pattern_b, correlation, co_occurrences
+            FROM pattern_correlations
+            ORDER BY ABS(correlation) DESC
+        """)
+
+        rows = c.fetchall()
+        conn.close()
+
+        return [
+            {
+                "pattern_a": r[0],
+                "pattern_b": r[1],
+                "correlation": r[2],
+                "co_occurrences": r[3],
+            }
+            for r in rows
+        ]

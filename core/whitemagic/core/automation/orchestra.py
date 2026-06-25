@@ -248,7 +248,7 @@ class AutomationOrchestra:
         # Step 2: Heal Critical Threats
         critical_threats = [t for t in threats if t.level == ThreatLevel.CRITICAL]
         if critical_threats:
-            logger.info(f"\n2️⃣  Healing {len(critical_threats)} critical threats...")
+            logger.info("\n2️⃣  Healing %s critical threats...", len(critical_threats))
             outcomes = self.immune_response.respond_to_threats(critical_threats, auto_heal=not dry_run)
             results["steps"].append({
                 "step": "heal_critical",
@@ -279,7 +279,7 @@ class AutomationOrchestra:
 
         logger.info("\n" + "=" * 60)
         logger.info("✅ Maintenance cycle complete")
-        logger.info(f"   Final Health Score: {final_health['health_score']}/100")
+        logger.info("   Final Health Score: %s/100", final_health['health_score'])
 
         return results
 

@@ -69,7 +69,7 @@ class UniversalRouter:
         # In a real implementation, we would fuzzy match against self.known_skills
 
         # 2. Consult the Oracle (LLM)
-        logger.info(f"compass Routing intent via LLM: '{intent}'")
+        logger.info("compass Routing intent via LLM: '%s'", intent)
 
         try:
             from whitemagic.brain import generate  # type: ignore[import-not-found]
@@ -157,7 +157,7 @@ class UniversalRouter:
     async def execute(self, chain: ExecutionChain, initial_context: dict[str, Any] | None = None) -> dict[str, Any]:
         """Execute the routed chain using REAL Gana instances.
         """
-        logger.info(f"🚀 Executing chain with {len(chain.steps)} steps...")
+        logger.info("🚀 Executing chain with %s steps...", len(chain.steps))
 
         context = {"original_intent": chain.intent}
         if initial_context:
@@ -222,7 +222,7 @@ class UniversalRouter:
                     # Store result in context
                     key = f"step_{i}_{step.mansion}"
                     context[key] = result
-                    logger.info(f"    ✅ Result type: {type(result)}")
+                    logger.info("    ✅ Result type: %s", type(result))
 
                 except Exception as e:
                     logger.error("    ❌ Execution Failed: %s", e, exc_info=True)

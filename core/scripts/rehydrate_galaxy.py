@@ -22,7 +22,6 @@ Usage:
 import argparse
 import sqlite3
 import time
-import os
 from pathlib import Path
 
 # Paths

@@ -31,11 +31,46 @@ import logging
 import threading
 import time
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# ── Reconsolidation constants (fused from reconsolidation.py) ──
+DEFAULT_LABILE_WINDOW = 300  # 5 minutes
+MAX_LABILE = 20
+
+
+@dataclass
+class LabileMemory:
+    """A memory in labile (modifiable) state after retrieval.
+
+    When a memory is recalled, it enters a brief labile state where it can
+    be updated with new context before being re-stored. This mirrors the
+    neuroscience finding that recalled memories are temporarily destabilized
+    and can be modified during reconsolidation.
+    """
+
+    memory_id: str
+    original_content: str
+    original_tags: list[str]
+    retrieved_at: float = 0.0
+    query_context: str = ""
+    updates: list[dict[str, Any]] = field(default_factory=list)
+    reconsolidated: bool = False
+
+    def __post_init__(self) -> None:
+        if self.retrieved_at == 0.0:
+            self.retrieved_at = time.time()
+
+    @property
+    def is_expired(self) -> bool:
+        return (time.time() - self.retrieved_at) > DEFAULT_LABILE_WINDOW
+
+    @property
+    def age_seconds(self) -> float:
+        return time.time() - self.retrieved_at
 
 
 @dataclass
@@ -112,6 +147,7 @@ class MemoryConsolidator:
         tag_overlap_threshold: float = 0.3,
         importance_boost: float = 0.15,
         max_memories: int = 2000,
+        labile_window: float = DEFAULT_LABILE_WINDOW,
     ) -> None:
         self._min_cluster_size = min_cluster_size
         self._tag_overlap_threshold = tag_overlap_threshold
@@ -121,6 +157,15 @@ class MemoryConsolidator:
         self._total_consolidations = 0
         self._total_strategies = 0
         self._total_promotions = 0
+        # Reconsolidation state (fused from ReconsolidationEngine)
+        self._labile_window = labile_window
+        self._labile: dict[str, LabileMemory] = {}
+        self._reconsolidation_stats = {
+            "total_marked": 0,
+            "total_updated": 0,
+            "total_reconsolidated": 0,
+            "total_expired": 0,
+        }
 
     # ------------------------------------------------------------------
     # Core consolidation
@@ -130,9 +175,10 @@ class MemoryConsolidator:
         """Run a full consolidation cycle.
 
         1. Load recent memories (or use provided list)
-        2. Cluster by tag/association similarity
-        3. Synthesize strategy memories from strong clusters
-        4. Promote high-value memories to LONG_TERM
+        2. Rust pre-pass: content-based consolidation (PyO3 accelerated)
+        3. Cluster by tag/association similarity
+        4. Synthesize strategy memories from strong clusters
+        5. Promote high-value memories to LONG_TERM
         """
         start = time.perf_counter()
         report = ConsolidationReport()
@@ -147,6 +193,11 @@ class MemoryConsolidator:
             return report
 
         report.memories_analyzed = len(memories)
+
+        # Step 1.5: Rust content-based consolidation pre-pass
+        rust_clusters = self._rust_content_consolidation(memories)
+        if rust_clusters:
+            report.details = {"rust_consolidation": rust_clusters}
 
         # Step 2: Cluster by tag similarity
         clusters = self._cluster_by_tags(memories)
@@ -177,6 +228,11 @@ class MemoryConsolidator:
         # Step 5.5: G5 Synthesis — Create KG relations linking source → strategy
         self._feed_knowledge_graph(clusters, strategies)
 
+        # Step 5.6: Reconsolidate any labile memories (fused from ReconsolidationEngine)
+        reconsolidation_results = self.reconsolidate_all()
+        if reconsolidation_results:
+            logger.debug("Reconsolidated %d labile memories during consolidation", len(reconsolidation_results))
+
         # Step 6: Feed Harmony Vector energy from consolidation health
         self._update_harmony(report)
 
@@ -184,13 +240,13 @@ class MemoryConsolidator:
         self._emit_events(report, strategies)
 
         logger.info(
-            f"Consolidation #{self._total_consolidations}: "
-            f"{report.memories_analyzed} analyzed, "
-            f"{report.clusters_found} clusters, "
-            f"{report.strategies_synthesized} strategies, "
-            f"{report.promotions} promotions, "
-            f"{report.duration_ms}ms",
-        )
+            "Consolidation #%s: "
+            "%s analyzed, "
+            "%s clusters, "
+            "%s strategies, "
+            "%s promotions, "
+            "%sms",
+         self._total_consolidations, report.memories_analyzed, report.clusters_found, report.strategies_synthesized, report.promotions, report.duration_ms)
 
         return report
 
@@ -207,6 +263,46 @@ class MemoryConsolidator:
         except Exception as e:
             logger.debug("Consolidation: could not load memories: %s", e, exc_info=True)
             return []
+
+    def _rust_content_consolidation(self, memories: list[Any]) -> dict[str, Any] | None:
+        """Rust PyO3 content-based consolidation pre-pass.
+
+        Uses whitemagic_rs.consolidate_memories_from_content to find
+        content-similar memory clusters at native speed. Returns a dict
+        with cluster info, or None if Rust is unavailable.
+        """
+        try:
+            import whitemagic_rs
+
+            # Build (id, content) tuples for Rust
+            mem_tuples = [
+                (m.id, str(m.content)[:500])
+                for m in memories
+                if hasattr(m, "content") and m.content
+            ]
+            if len(mem_tuples) < 3:
+                return None
+
+            result = whitemagic_rs.consolidate_memories_from_content(
+                mem_tuples,
+                top_n=min(20, len(mem_tuples) // 3),
+                similarity_threshold=0.3,
+            )
+
+            if result and len(result) >= 5:
+                total, consolidated, n_clusters, similarity, top_ids, cluster_details = result[:6]
+                return {
+                    "total_memories": total,
+                    "consolidated_count": consolidated,
+                    "clusters_found": n_clusters,
+                    "avg_similarity": round(similarity, 4),
+                    "top_memory_ids": top_ids if isinstance(top_ids, list) else [],
+                    "accelerated": True,
+                    "engine": "rust_consolidate",
+                }
+        except Exception as e:
+            logger.debug("Rust content consolidation skipped: %s", e, exc_info=True)
+        return None
 
     # ------------------------------------------------------------------
     # Step 2: Cluster
@@ -232,7 +328,7 @@ class MemoryConsolidator:
 
             candidates = minhash_find_duplicates(keyword_sets, threshold=0.4, max_results=200)
             if candidates:
-                logger.debug(f"MinHash found {len(candidates)} near-duplicate candidates")
+                logger.debug("MinHash found %s near-duplicate candidates", len(candidates))
             return candidates or []
         except Exception as e:
             logger.debug("MinHash near-duplicate detection skipped: %s", e, exc_info=True)
@@ -353,9 +449,9 @@ class MemoryConsolidator:
 
         if result["duplicates_resolved"] > 0:
             logger.info(
-                f"🔗 Entity resolution: {result['duplicates_found']} duplicates found, "
-                f"{result['duplicates_resolved']} resolved ({result['duration_ms']:.0f}ms)",
-            )
+                "🔗 Entity resolution: %s duplicates found, "
+                "%s resolved (%.0fms)",
+             result['duplicates_found'], result['duplicates_resolved'], result['duration_ms'])
         return result
 
     def _cluster_by_tags(self, memories: list[Any]) -> list[MemoryCluster]:
@@ -363,7 +459,7 @@ class MemoryConsolidator:
         # Pre-pass: use MinHash to identify near-duplicates (Rust accelerated)
         minhash_candidates = self._find_near_duplicates_minhash(memories)
         if minhash_candidates:
-            logger.info(f"MinHash pre-filter: {len(minhash_candidates)} near-duplicate pairs detected")
+            logger.info("MinHash pre-filter: %s near-duplicate pairs detected", len(minhash_candidates))
 
         # Build tag-to-memory index
         tag_index: dict[str, list] = defaultdict(list)
@@ -564,9 +660,9 @@ class MemoryConsolidator:
         all_links = logical_links[:5] + creative_links[:5]
         if all_links:
             logger.info(
-                f"Bicameral enrichment: {len(logical_links)} logical, "
-                f"{len(creative_links)} creative cross-cluster links",
-            )
+                "Bicameral enrichment: %s logical, "
+                "%s creative cross-cluster links",
+             len(logical_links), len(creative_links))
             for link in all_links:
                 strategies.append(link)
 
@@ -762,7 +858,225 @@ class MemoryConsolidator:
                     "importance_boost": self._importance_boost,
                     "max_memories": self._max_memories,
                 },
+                "reconsolidation": self.get_reconsolidation_status(),
             }
+
+    # ------------------------------------------------------------------
+    # Reconsolidation (fused from ReconsolidationEngine)
+    # ------------------------------------------------------------------
+
+    def mark_labile(
+        self,
+        memory_id: str,
+        content: str,
+        tags: list[str],
+        query: str = "",
+    ) -> LabileMemory:
+        """Mark a memory as labile (modifiable) after retrieval.
+
+        When a memory is recalled, it enters a brief labile state where it
+        can be updated with new context before being re-stored.
+
+        Args:
+            memory_id: The memory's unique ID
+            content: Current content of the memory
+            tags: Current tags
+            query: The query that triggered retrieval (provides context)
+
+        Returns:
+            The LabileMemory entry
+        """
+        self._expire_old()
+
+        if memory_id in self._labile:
+            existing = self._labile[memory_id]
+            existing.retrieved_at = time.time()
+            existing.query_context = query or existing.query_context
+            return existing
+
+        if len(self._labile) >= MAX_LABILE:
+            self._evict_oldest()
+
+        labile = LabileMemory(
+            memory_id=memory_id,
+            original_content=content,
+            original_tags=list(tags),
+            query_context=query,
+        )
+        self._labile[memory_id] = labile
+        self._reconsolidation_stats["total_marked"] += 1
+        logger.debug("Memory %s entered labile state (query: %s)", memory_id, query[:50])
+        return labile
+
+    def update_labile(
+        self,
+        memory_id: str,
+        new_context: str | None = None,
+        new_tags: list[str] | None = None,
+        annotation: str | None = None,
+    ) -> bool:
+        """Update a labile memory with new context.
+
+        Args:
+            memory_id: The memory to update
+            new_context: Additional context to append
+            new_tags: New tags to merge
+            annotation: A note about why the update happened
+
+        Returns:
+            True if the memory was updated, False if not labile or expired
+        """
+        labile = self._labile.get(memory_id)
+        if labile is None or labile.is_expired:
+            return False
+
+        update: dict[str, Any] = {"timestamp": time.time()}
+        if new_context:
+            update["context"] = new_context
+        if new_tags:
+            update["tags"] = new_tags
+        if annotation:
+            update["annotation"] = annotation
+
+        labile.updates.append(update)
+        self._reconsolidation_stats["total_updated"] += 1
+        logger.debug("Labile memory %s updated (%s updates)", memory_id, len(labile.updates))
+        return True
+
+    def is_labile(self, memory_id: str) -> bool:
+        """Check if a memory is currently in labile state."""
+        labile = self._labile.get(memory_id)
+        if labile is None:
+            return False
+        if labile.is_expired:
+            del self._labile[memory_id]
+            return False
+        return True
+
+    def reconsolidate(self, memory_id: str, memory_store: Any = None) -> dict[str, Any] | None:
+        """Reconsolidate a single labile memory — apply updates and re-stabilize.
+
+        Args:
+            memory_id: The memory to reconsolidate
+            memory_store: Optional memory store to persist changes
+
+        Returns:
+            Dict with reconsolidation details, or None if not labile
+        """
+        labile = self._labile.get(memory_id)
+        if labile is None:
+            return None
+
+        if not labile.updates:
+            del self._labile[memory_id]
+            return {"memory_id": memory_id, "action": "no_changes", "expired": labile.is_expired}
+
+        content_additions = []
+        tag_additions: set[str] = set()
+        annotations = []
+
+        for update in labile.updates:
+            if "context" in update:
+                content_additions.append(update["context"])
+            if "tags" in update:
+                tag_additions.update(update["tags"])
+            if "annotation" in update:
+                annotations.append(update["annotation"])
+
+        new_content = labile.original_content
+        if content_additions:
+            reconsolidation_note = "\n\n[Reconsolidated: " + "; ".join(content_additions) + "]"
+            new_content += reconsolidation_note
+
+        new_tags = list(set(labile.original_tags) | tag_additions | {"reconsolidated"})
+
+        if memory_store is not None:
+            try:
+                memory_store.update_memory(
+                    memory_id,
+                    content=new_content,
+                    tags=new_tags,
+                )
+                logger.info("Reconsolidated memory %s: +%s contexts, +%s tags", memory_id, len(content_additions), len(tag_additions))
+            except Exception as e:
+                logger.warning("Failed to persist reconsolidation for %s: %s", memory_id, e, exc_info=True)
+
+        labile.reconsolidated = True
+        del self._labile[memory_id]
+        self._reconsolidation_stats["total_reconsolidated"] += 1
+
+        return {
+            "memory_id": memory_id,
+            "action": "reconsolidated",
+            "updates_applied": len(labile.updates),
+            "content_additions": len(content_additions),
+            "tag_additions": list(tag_additions),
+            "annotations": annotations,
+            "labile_duration_s": round(labile.age_seconds, 1),
+        }
+
+    def reconsolidate_all(self, memory_store: Any = None) -> list[dict[str, Any]]:
+        """Reconsolidate all labile memories that have updates.
+
+        Typically called at session end, during consolidation cycles, or
+        periodically.
+
+        Args:
+            memory_store: Memory store to persist changes
+
+        Returns:
+            List of reconsolidation reports
+        """
+        results = []
+        ids = list(self._labile.keys())
+        for memory_id in ids:
+            result = self.reconsolidate(memory_id, memory_store)
+            if result:
+                results.append(result)
+        return results
+
+    def get_labile_ids(self) -> list[str]:
+        """Get IDs of all currently labile memories."""
+        self._expire_old()
+        return list(self._labile.keys())
+
+    def get_reconsolidation_status(self) -> dict[str, Any]:
+        """Get reconsolidation engine status."""
+        self._expire_old()
+        return {
+            "labile_count": len(self._labile),
+            "labile_window_s": self._labile_window,
+            "max_labile": MAX_LABILE,
+            **self._reconsolidation_stats,
+            "labile_memories": [
+                {
+                    "memory_id": lm.memory_id,
+                    "age_s": round(lm.age_seconds, 1),
+                    "updates": len(lm.updates),
+                    "query": lm.query_context[:50],
+                }
+                for lm in self._labile.values()
+            ],
+        }
+
+    def get_status(self) -> dict[str, Any]:
+        """Backward-compat alias for get_reconsolidation_status."""
+        return self.get_reconsolidation_status()
+
+    def _expire_old(self) -> None:
+        """Remove expired labile entries."""
+        expired = [mid for mid, lm in self._labile.items() if lm.is_expired]
+        for mid in expired:
+            del self._labile[mid]
+            self._reconsolidation_stats["total_expired"] += 1
+
+    def _evict_oldest(self) -> None:
+        """Evict the oldest labile memory to make room."""
+        if not self._labile:
+            return
+        oldest_id = min(self._labile, key=lambda k: self._labile[k].retrieved_at)
+        del self._labile[oldest_id]
+        self._reconsolidation_stats["total_expired"] += 1
 
 
 # ---------------------------------------------------------------------------
@@ -781,3 +1095,111 @@ def get_consolidator() -> MemoryConsolidator:
             if _consolidator is None:
                 _consolidator = MemoryConsolidator()
     return _consolidator
+
+
+# ---------------------------------------------------------------------------
+# Consolidation Daemon (v23.1) — Auto-scheduled background consolidation
+# ---------------------------------------------------------------------------
+
+class ConsolidationDaemon:
+    """Background thread that auto-schedules memory consolidation.
+
+    Runs consolidation on a configurable interval (default: every 30 minutes).
+    Starts automatically when first accessed via get_consolidation_daemon().
+    Can be started/stopped manually. Graceful degradation: if consolidation
+    fails, it logs and continues to the next cycle.
+    """
+
+    def __init__(
+        self,
+        interval_seconds: int = 1800,
+        consolidator: MemoryConsolidator | None = None,
+    ) -> None:
+        self._interval = interval_seconds
+        self._consolidator = consolidator
+        self._thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
+        self._last_report: ConsolidationReport | None = None
+        self._last_run_ts: str = ""
+        self._total_runs = 0
+        self._total_errors = 0
+        self._started = False
+
+    @property
+    def consolidator(self) -> MemoryConsolidator:
+        if self._consolidator is None:
+            self._consolidator = get_consolidator()
+        return self._consolidator
+
+    def start(self) -> None:
+        """Start the daemon background thread."""
+        if self._started:
+            return
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run_loop, daemon=True, name="wm-consolidation")
+        self._thread.start()
+        self._started = True
+        logger.info("ConsolidationDaemon started (interval=%ds)", self._interval)
+
+    def stop(self) -> None:
+        """Stop the daemon."""
+        if not self._started:
+            return
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+        self._started = False
+        logger.info("ConsolidationDaemon stopped")
+
+    def _run_loop(self) -> None:
+        """Main daemon loop."""
+        while not self._stop_event.is_set():
+            try:
+                report = self.consolidator.consolidate()
+                self._last_report = report
+                self._last_run_ts = datetime.now().isoformat()
+                self._total_runs += 1
+                if report.clusters_found > 0:
+                    logger.info(
+                        "ConsolidationDaemon: %d clusters, %d strategies, %d promotions",
+                        report.clusters_found, report.strategies_synthesized, report.promotions,
+                    )
+            except Exception as e:
+                self._total_errors += 1
+                logger.debug("ConsolidationDaemon cycle error: %s", e, exc_info=True)
+
+            # Wait for interval or stop signal
+            self._stop_event.wait(timeout=self._interval)
+
+    def get_status(self) -> dict[str, Any]:
+        """Get daemon status."""
+        return {
+            "running": self._started,
+            "interval_seconds": self._interval,
+            "total_runs": self._total_runs,
+            "total_errors": self._total_errors,
+            "last_run": self._last_run_ts,
+            "last_report": self._last_report.to_dict() if self._last_report else None,
+        }
+
+    def run_once(self) -> ConsolidationReport:
+        """Run a single consolidation cycle without starting the daemon."""
+        report = self.consolidator.consolidate()
+        self._last_report = report
+        self._last_run_ts = datetime.now().isoformat()
+        self._total_runs += 1
+        return report
+
+
+_consolidation_daemon: ConsolidationDaemon | None = None
+_consolidation_daemon_lock = threading.Lock()
+
+
+def get_consolidation_daemon() -> ConsolidationDaemon:
+    """Get the global ConsolidationDaemon (auto-starts on first access)."""
+    global _consolidation_daemon
+    if _consolidation_daemon is None:
+        with _consolidation_daemon_lock:
+            if _consolidation_daemon is None:
+                _consolidation_daemon = ConsolidationDaemon()
+    return _consolidation_daemon

@@ -15,6 +15,7 @@ Usage:
 """
 
 import logging
+import os
 import time
 
 import requests  # type: ignore
@@ -24,22 +25,26 @@ logger = logging.getLogger(__name__)
 class LocalLLM:
     """Interface for local LLM inference."""
 
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "phi3:mini"):
+    def __init__(self, base_url: str = "http://localhost:11434", model: str | None = None):
         self.base_url = base_url.rstrip("/")
-        self.model = model
+        self._requested_model = model
+        self.model = model or os.environ.get("WM_LLM_MODEL", "phi3:mini")
         self._available = False
         self._check_availability()
 
     def _check_availability(self):
-        """Check if Ollama server is running."""
+        """Check if Ollama server is running and auto-select model if needed."""
         try:
             resp = requests.get(f"{self.base_url}/api/tags", timeout=1.0)
             if resp.status_code == 200:
                 self._available = True
-                # Check if model exists, if not, try to pull or warn?
                 models = [m['name'] for m in resp.json().get('models', [])]
                 if self.model not in models and f"{self.model}:latest" not in models:
-                    logger.warning(f"Model {self.model} not found in Ollama. Available: {models}")
+                    if models:
+                        self.model = models[0]
+                        logger.info("Auto-selected Ollama model: %s", self.model)
+                    else:
+                        logger.warning("Model %s not found and no models available", self.model)
             else:
                 self._available = False
         except Exception as e:
@@ -75,11 +80,11 @@ class LocalLLM:
 
         try:
             start = time.time()
-            resp = requests.post(url, json=payload, timeout=60.0)  # type: ignore[arg-type]
+            resp = requests.post(url, json=payload, timeout=120.0)  # type: ignore[arg-type]
             resp.raise_for_status()
             data = resp.json()
             latency = (time.time() - start) * 1000
-            logger.debug(f"Local inference finished in {latency:.2f}ms")
+            logger.debug("Local inference finished in %sms", latency)
             res = data.get("response", "")
             return str(res)
         except Exception as e:

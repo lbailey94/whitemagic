@@ -167,7 +167,7 @@ def setup_gan_ying_listeners() -> None:
                     if memory:
                         # Extra boost for explicit confirmation
                         memory.neuro_score = min(1.0, memory.neuro_score + 0.1)
-                        logger.info(f"🧠 Neural reinforcement: {memory.title} boosted by user confirmation")
+                        logger.info("🧠 Neural reinforcement: %s boosted by user confirmation", memory.title)
                 except Exception as e:
                     logger.info("⚠️ Neural reinforcement failed: %s", e, exc_info=True)
 
@@ -271,7 +271,7 @@ def setup_gan_ying_listeners() -> None:
                         if mem:
                             # Boost memories that were found
                             mem.neuro_score = min(1.0, mem.neuro_score + 0.05)
-                    logger.info(f"🧠 Boosted {len(related_results)} memories from successful clone search")
+                    logger.info("🧠 Boosted %s memories from successful clone search", len(related_results))
                 except (ImportError, AttributeError):
                     pass
 

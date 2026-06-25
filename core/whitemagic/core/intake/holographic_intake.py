@@ -215,7 +215,7 @@ class HolographicIntake:
                 logger.debug("Operation failed: %s", e)
                 pass
 
-            logger.info(f"Loaded {len(self._known_hashes)} known content hashes")
+            logger.info("Loaded %s known content hashes", len(self._known_hashes))
         except Exception as e:
             logger.warning("Failed to load known hashes: %s", e, exc_info=True)
 
@@ -480,7 +480,7 @@ class HolographicIntake:
                 # Scan for new files
                 new_items = self.scan_all()
                 if new_items:
-                    logger.info(f"Detected {len(new_items)} new files for ingestion")
+                    logger.info("Detected %s new files for ingestion", len(new_items))
 
                 # Sleep for 5 minutes
                 for _ in range(300):
@@ -547,25 +547,25 @@ if __name__ == "__main__":
 
     if cmd == "scan" and len(sys.argv) > 2:
         items = intake.scan_directory(sys.argv[2])
-        logger.info(f"Found {len(items)} new files")
+        logger.info("Found %s new files", len(items))
         for item in items[:
             10]:
-            logger.info(f"  {item.path}")
+            logger.info("  %s", item.path)
 
     elif cmd == "process":
         stats = intake.process_queue()
-        logger.info(f"Processed: {stats['processed']}, Errors: {stats['errors']}")
+        logger.info("Processed: %s, Errors: %s", stats['processed'], stats['errors'])
 
     elif cmd == "status":
         stats = intake.get_queue_stats()
         logger.info("Queue Status:")
         for status, count in stats.items():
             if count > 0:
-                logger.info(f"  {status}: {count}")
+                logger.info("  %s: %s", status, count)
 
     elif cmd == "watch" and len(sys.argv) > 2:
         if intake.add_watch(sys.argv[2]):
-            logger.info(f"Added watch: {sys.argv[2]}")
+            logger.info("Added watch: %s", sys.argv[2])
         else:
             logger.info("Failed to add watch")
 

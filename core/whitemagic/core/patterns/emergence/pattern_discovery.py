@@ -88,7 +88,7 @@ class PatternDiscovery:
         # Register all known pattern sources (v22 paths)
         self._register_sources()
 
-        logger.info(f"Pattern Discovery initialized with {len(self.sources)} sources")
+        logger.info("Pattern Discovery initialized with %s sources", len(self.sources))
 
     def _register_sources(self) -> None:
         """Register all pattern extraction systems (v22 module paths)."""
@@ -237,9 +237,9 @@ class PatternDiscovery:
 
         logger.info("=" * 60)
         logger.info(
-            f"DISCOVERY COMPLETE: {total_patterns} patterns from "
-            f"{sources_run}/{sources_attempted} sources in {duration:.2f}s"
-        )
+            "DISCOVERY COMPLETE: %s patterns from "
+            "%s/%s sources in %.2fs"
+        , total_patterns, sources_run, sources_attempted, duration)
         logger.info("=" * 60)
 
         if save_report:

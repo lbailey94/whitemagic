@@ -46,7 +46,7 @@ class HemisphereAgent:
                 from whitemagic.core.resonance import EventType, get_bus
                 get_bus().listen(EventType.REASONING_COMPLETE, self._on_reasoning)
                 self._listening = True
-                logger.info(f"{self.name} hemisphere agent registered on Gan Ying bus")
+                logger.info("%s hemisphere agent registered on Gan Ying bus", self.name)
             except Exception as exc:
                 logger.warning("%s failed to register: %s", self.name, exc, exc_info=True)
 

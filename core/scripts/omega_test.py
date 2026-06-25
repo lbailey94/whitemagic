@@ -22,7 +22,6 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 # Ensure core is on PYTHONPATH
 REPO_ROOT = Path(__file__).resolve().parent.parent

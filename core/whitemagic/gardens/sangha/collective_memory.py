@@ -240,7 +240,7 @@ class CollectiveMemory:
             context.lineage_tree[parent_sig].append(child_sig)
             context.last_updated = datetime.now()
             self._save_context(context)
-            logger.info(f"🧬 Lineage link established: {parent_sig[:8]} -> {child_sig[:8]}")
+            logger.info("🧬 Lineage link established: %s -> %s", parent_sig[:8], child_sig[:8])
 
     def _save_context(self, context: SharedContext) -> None:
         """Save shared context to disk.

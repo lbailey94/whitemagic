@@ -36,7 +36,7 @@ def rust_search(
     """Fast file search via Rust."""
     rust, err = _load_rust()
     if not rust:
-        logger.info(f"❌ Rust bridge not available: {err}")
+        logger.info("❌ Rust bridge not available: %s", err)
         return 1
 
     try:
@@ -48,12 +48,12 @@ def rust_search(
             payload = [{"path": r[0], "score": r[1]} for r in results]
             logger.info(_json_dumps(payload, indent=2))
         else:
-            logger.info(f"🔍 Found {len(results)} results:")
+            logger.info("🔍 Found %s results:", len(results))
             for path, score in results[:
                 20]:
-                logger.info(f"  {score:.2f}  {path}")
+                logger.info("  %s  %s", score, path)
             if len(results) > 20:
-                logger.info(f"  ... and {len(results) - 20} more")
+                logger.info("  ... and %s more", len(results) - 20)
         return 0
     except Exception as e:
         logger.info("❌ Search error: %s", e, exc_info=True)
@@ -64,12 +64,12 @@ def rust_compress(input_path: str, output_path: str) -> int:
     """Compress a file via Rust."""
     rust, err = _load_rust()
     if not rust:
-        logger.info(f"❌ Rust bridge not available: {err}")
+        logger.info("❌ Rust bridge not available: %s", err)
         return 1
 
     try:
         compressed = rust.compress_file(input_path, output_path)
-        logger.info(f"✅ Compressed: {compressed} bytes written to {output_path}")
+        logger.info("✅ Compressed: %s bytes written to %s", compressed, output_path)
         return 0
     except (OSError, FileNotFoundError, PermissionError) as e:
         logger.info("❌ Compression error: %s", e, exc_info=True)
@@ -85,7 +85,7 @@ def rust_consolidate(
     """Consolidate memories via Rust."""
     rust, err = _load_rust()
     if not rust:
-        logger.info(f"❌ Rust bridge not available: {err}")
+        logger.info("❌ Rust bridge not available: %s", err)
         return 1
 
     try:
@@ -103,10 +103,10 @@ def rust_consolidate(
             logger.info(_json_dumps(payload, indent=2))
         else:
             logger.info("🧠 Consolidation complete:")
-            logger.info(f"   Short-term: {payload['short_term_count']}")
-            logger.info(f"   Long-term created: {payload['long_term_created']}")
-            logger.info(f"   Clusters: {payload['clusters_found']}")
-            logger.info(f"   Duration: {payload['duration_seconds']:.2f}s")
+            logger.info("   Short-term: %s", payload['short_term_count'])
+            logger.info("   Long-term created: %s", payload['long_term_created'])
+            logger.info("   Clusters: %s", payload['clusters_found'])
+            logger.info("   Duration: %ss", payload['duration_seconds'])
         return 0
     except Exception as e:
         logger.info("❌ Consolidation error: %s", e, exc_info=True)
@@ -118,10 +118,10 @@ def rust_status() -> int:
     rust, err = _load_rust()
     if rust:
         logger.info("✅ Rust bridge available")
-        logger.info(f"   Module: {rust}")
+        logger.info("   Module: %s", rust)
         try:
             exports = [x for x in dir(rust) if not x.startswith("_")]
-            logger.info(f"   Exports: {len(exports)}")
+            logger.info("   Exports: %s", len(exports))
         except Exception as e:
             logger.debug("Operation failed: %s", e)
             pass
@@ -146,10 +146,12 @@ def register_rust_commands(cli: Any) -> Any:
     @click.option("--extensions", "-e", multiple=True, help="File extensions")
     @click.option("--max-size", default=2_000_000, help="Max file size")
     @click.option("--json", "output_json", is_flag=True, help="JSON output")
-    def search(root_path, pattern, limit, extensions, max_size, output_json):
+    @click.pass_context
+    def search(ctx, root_path, pattern, limit, extensions, max_size, output_json):
         """Fast file search via Rust SIMD."""
+        json_output = output_json or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
         ext_list = list(extensions) if extensions else None
-        return rust_search(root_path, pattern, limit, ext_list, max_size, output_json)
+        return rust_search(root_path, pattern, limit, ext_list, max_size, json_output)
 
     @rust.command()
     @click.argument("input_path")
@@ -163,9 +165,11 @@ def register_rust_commands(cli: Any) -> Any:
     @click.option("--top-n", default=20, help="Top N memories")
     @click.option("--threshold", default=0.7, help="Similarity threshold")
     @click.option("--json", "output_json", is_flag=True, help="JSON output")
-    def consolidate(short_term_dir, top_n, threshold, output_json):
+    @click.pass_context
+    def consolidate(ctx, short_term_dir, top_n, threshold, output_json):
         """Consolidate memories via Rust."""
-        return rust_consolidate(short_term_dir, top_n, threshold, output_json)
+        json_output = output_json or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+        return rust_consolidate(short_term_dir, top_n, threshold, json_output)
 
     @rust.command()
     def status():

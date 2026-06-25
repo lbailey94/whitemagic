@@ -78,4 +78,7 @@ defmodule WhiteMagic.Bridge do
   end
 end
 
+# Warmup: trigger module loading before serving requests
+WhiteMagicElixir.Coordinate.encode("warmup")
+
 WhiteMagic.Bridge.loop()

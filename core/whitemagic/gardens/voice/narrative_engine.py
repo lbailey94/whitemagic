@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 
 class NarrativeArc(Enum):
@@ -194,6 +195,68 @@ class NarrativeEngine:
         slug = re.sub(r"[-\s]+", "-", slug)
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         return f"{slug}-{timestamp}"
+
+    # ------------------------------------------------------------------
+    # Story Engine facade (fused from narrative.py NarrativeEngine)
+    # ------------------------------------------------------------------
+
+    _story_engine_instance: Any = None
+
+    def _get_story_engine(self):
+        """Lazy accessor for the story-based NarrativeEngine."""
+        if self._story_engine_instance is None:
+            from whitemagic.gardens.voice.narrative import NarrativeEngine as StoryNarrativeEngine
+            from whitemagic.config.paths import MEMORY_DIR
+            self._story_engine_instance = StoryNarrativeEngine(base_dir=MEMORY_DIR / "narrative")
+        return self._story_engine_instance
+
+    def create_story(self, title: str, theme: str | None = None) -> Any:
+        """Create a new story."""
+        return self._get_story_engine().create_story(title, theme)
+
+    def add_chapter(self, story: str, chapter: str, summary: str | None = None) -> Any:
+        """Add a chapter to a story."""
+        return self._get_story_engine().add_chapter(story, chapter, summary)
+
+    def create_thread(self, name: str, theme: str) -> Any:
+        """Create a narrative thread (story-engine variant)."""
+        return self._get_story_engine().create_thread(name, theme)
+
+    def add_entry(self, story: str, chapter: str, text: str, context: dict[str, Any] | None = None) -> str:
+        """Add a narrative entry to a story chapter."""
+        return self._get_story_engine().add_entry(story, chapter, text, context)
+
+    def get_story(self, title: str) -> Any:
+        """Get a story by title."""
+        return self._get_story_engine().get_story(title)
+
+    def get_chapter(self, name: str) -> Any:
+        """Get a chapter by name."""
+        return self._get_story_engine().get_chapter(name)
+
+    def get_entry(self, entry_id: str) -> dict[str, Any] | None:
+        """Get an entry by ID."""
+        return self._get_story_engine().get_entry(entry_id)
+
+    def get_recent_entries(self, story: str | None = None, limit: int = 10) -> list[dict[str, Any]]:
+        """Get recent narrative entries."""
+        return self._get_story_engine().get_recent_entries(story, limit)
+
+    def list_stories(self) -> list[str]:
+        """List all story titles."""
+        return self._get_story_engine().list_stories()
+
+    def list_chapters(self, story: str | None = None) -> list[str]:
+        """List chapters (optionally filtered by story)."""
+        return self._get_story_engine().list_chapters(story)
+
+    def list_threads(self) -> list[str]:
+        """List all thread IDs (story-engine variant)."""
+        return self._get_story_engine().list_threads()
+
+    def search_entries(self, query: str, story: str | None = None) -> list[dict[str, Any]]:
+        """Search narrative entries."""
+        return self._get_story_engine().search_entries(query, story)
 
 
 # Singleton instance

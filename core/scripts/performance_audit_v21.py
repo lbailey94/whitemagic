@@ -6,7 +6,6 @@ Benchmarks for SQLite Batching and SIMD Acceleration.
 
 import time
 import json
-import statistics
 import random
 import os
 import sys
@@ -17,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 import whitemagic_rust as rs
-from whitemagic_rust import rust_cosine_similarity, euclidean_distance
+from whitemagic_rust import rust_cosine_similarity
 # PySQLiteBackend is in the sqlite_backend submodule
 PySQLiteBackend = rs.sqlite_backend.PySQLiteBackend
 

@@ -357,11 +357,22 @@ class TokenOptimizer:
         if cached:
             return cached.result, optimized_context, cached.tokens_saved
 
-        # 2. Compress context if provided
+        # 2. Compress context if provided — use VSA for large contexts
         if context:
-            compressed, saved = self.compressor.truncate_to_budget(context, 2000)
-            optimized_context = compressed
-            tokens_saved += saved
+            if len(context) > 2000:
+                vsa_result = self._vsa_compress(context, query)
+                if vsa_result is not None:
+                    compressed, saved = vsa_result
+                    optimized_context = compressed
+                    tokens_saved += saved
+                else:
+                    compressed, saved = self.compressor.truncate_to_budget(context, 2000)
+                    optimized_context = compressed
+                    tokens_saved += saved
+            else:
+                compressed, saved = self.compressor.truncate_to_budget(context, 2000)
+                optimized_context = compressed
+                tokens_saved += saved
 
         # 3. Try local reasoning first
         try:
@@ -370,7 +381,6 @@ class TokenOptimizer:
             )
             result = reason_locally(query)
             if result.insights and not result.ready_for_ai:
-                # Fully resolved locally!
                 total_saved = tokens_saved + result.total_tokens_saved
                 self.cache.set(cache_key, f"[LOCAL] {result.summary}", total_saved)
                 self.budget.save(total_saved)
@@ -380,16 +390,76 @@ class TokenOptimizer:
             logger.info("DEBUG: reason_locally failed: %s", e, exc_info=True)
             pass
 
-        # 3. Compress context if provided
-        if context:
-            # Extract keywords from query
+        # 4. Extract relevant lines from context using query keywords
+        if context and len(context) > 500:
             keywords = [w for w in query.split() if len(w) > 3]
             compressed, saved = self.compressor.extract_relevant_lines(context, keywords)
-            optimized_context = compressed
-            tokens_saved += saved
+            if saved > 0 and len(compressed) < len(optimized_context):
+                optimized_context = compressed
+                tokens_saved += saved
 
         self.budget.save(tokens_saved)
         return query, optimized_context, tokens_saved
+
+    def _vsa_compress(self, context: str, query: str) -> tuple[str, int] | None:
+        """Compress context using VSA HRR superposition.
+
+        Splits context into chunks, binds each to a role vector, superposes
+        into one vector, and returns a compact text summary with the top
+        most relevant chunks.
+
+        Returns (compressed_text, tokens_saved) or None if VSA unavailable.
+        """
+        try:
+            from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+
+            compressor = get_vsa_context_compressor()
+
+            paragraphs = context.split("\n\n")
+            if len(paragraphs) < 3:
+                lines = context.split("\n")
+                chunks = []
+                current = ""
+                for line in lines:
+                    if len(current) + len(line) > 500 and current:
+                        chunks.append(current)
+                        current = line
+                    else:
+                        current = current + "\n" + line if current else line
+                if current:
+                    chunks.append(current)
+            else:
+                chunks = []
+                current = ""
+                for para in paragraphs:
+                    if len(current) + len(para) > 500 and current:
+                        chunks.append(current)
+                        current = para
+                    else:
+                        current = current + "\n\n" + para if current else para
+                if current:
+                    chunks.append(current)
+
+            items = [
+                {"content": chunk, "source": "context", "id": f"chunk_{i}"}
+                for i, chunk in enumerate(chunks)
+            ]
+
+            result = compressor.compress(items, query=query, max_text_items=5)
+
+            if result.method == "empty":
+                return None
+
+            original_tokens = len(context) // 4
+            new_tokens = len(result.summary) // 4
+            saved = original_tokens - new_tokens
+
+            if saved > 0:
+                return result.summary, saved
+            return None
+        except Exception as e:
+            logger.debug("VSA compression unavailable: %s", e)
+            return None
 
     def record_usage(self, tokens_used: int) -> None:
         """Record tokens actually used in AI call."""
@@ -440,8 +510,8 @@ if __name__ == "__main__":
 
     for query, context in queries:
         q, ctx, saved = optimizer.optimize_query(query, context)
-        logger.info(f"\nQuery: {query}")
-        logger.info(f"Saved: {saved} tokens")
-        logger.info(f"Result: {ctx[:100]}...")
+        logger.info("\nQuery: %s", query)
+        logger.info("Saved: %s tokens", saved)
+        logger.info("Result: %s...", ctx[:100])
 
     logger.info("\n" + optimizer.report())

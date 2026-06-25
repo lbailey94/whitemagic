@@ -77,3 +77,69 @@ def handle_import_memories(**kwargs: Any) -> dict[str, Any]:
     )
     result = mgr.import_memories(request)
     return {"status": "success" if result.get("success") else "error", **result}
+
+
+# ---------------------------------------------------------------------------
+# CodeGenome facade (fused from CodeGenomeEngine)
+# ---------------------------------------------------------------------------
+
+def handle_codegenome_generate(**kwargs: Any) -> dict[str, Any]:
+    """Generate code from a named template."""
+    from whitemagic.codegenome.engine import CodeGenomeEngine
+    template_name = kwargs.get("template_name", "")
+    if not template_name:
+        return {"status": "error", "message": "template_name is required"}
+    tier = kwargs.get("tier")
+    variables = {k: v for k, v in kwargs.items() if k not in ("template_name", "tier")}
+    engine = CodeGenomeEngine()
+    rendered = engine.render(template_name, tier=tier, **variables)
+    return {"status": "success", "template": template_name, "code": rendered}
+
+
+def handle_codegenome_list(**kwargs: Any) -> dict[str, Any]:
+    """List available code templates."""
+    from whitemagic.codegenome.engine import CodeGenomeEngine
+    tag = kwargs.get("tag")
+    engine = CodeGenomeEngine()
+    templates = engine.list_templates(tag=tag)
+    return {"status": "success", "templates": templates, "count": len(templates)}
+
+
+def handle_codegenome_status(**kwargs: Any) -> dict[str, Any]:
+    """Get CodeGenome engine status."""
+    from whitemagic.codegenome.engine import CodeGenomeEngine
+    engine = CodeGenomeEngine()
+    return {"status": "success", **engine.status()}
+
+
+# ---------------------------------------------------------------------------
+# PromptEngine facade (fused from PromptEngine)
+# ---------------------------------------------------------------------------
+
+def handle_prompt_generate(**kwargs: Any) -> dict[str, Any]:
+    """Generate a prompt from a named template."""
+    from whitemagic.prompts.engine import PromptEngine
+    template_name = kwargs.get("template_name", "")
+    if not template_name:
+        return {"status": "error", "message": "template_name is required"}
+    wu_xing = kwargs.get("wu_xing")
+    variables = {k: v for k, v in kwargs.items() if k not in ("template_name", "wu_xing")}
+    engine = PromptEngine()
+    rendered = engine.render(template_name, wu_xing=wu_xing, **variables)
+    return {"status": "success", "template": template_name, "prompt": rendered}
+
+
+def handle_prompt_list(**kwargs: Any) -> dict[str, Any]:
+    """List available prompt templates."""
+    from whitemagic.prompts.engine import PromptEngine
+    tag = kwargs.get("tag")
+    engine = PromptEngine()
+    templates = engine.list_templates(tag=tag)
+    return {"status": "success", "templates": templates, "count": len(templates)}
+
+
+def handle_prompt_status(**kwargs: Any) -> dict[str, Any]:
+    """Get PromptEngine status."""
+    from whitemagic.prompts.engine import PromptEngine
+    engine = PromptEngine()
+    return {"status": "success", **engine.status()}

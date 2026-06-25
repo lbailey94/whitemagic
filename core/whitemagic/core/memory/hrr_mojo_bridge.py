@@ -26,9 +26,6 @@ class HRRMojoBridge:
         from pathlib import Path
         project_root = Path(__file__).resolve().parent.parent.parent.parent.parent
         self.hrr_mojo_path = project_root / "projects/whitemagic-mojo/hrr.mojo"
-        # Fallback to archives if not found
-        if not self.hrr_mojo_path.exists():
-            self.hrr_mojo_path = Path("/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/whitemagic-mojo/hrr.mojo")
 
     def _check_mojo(self) -> bool:
         """Check if Mojo compiler is available."""
@@ -221,7 +218,7 @@ def patch_hrr_engine():
         HRREngine.bind = patched_bind
         HRREngine.unbind = patched_unbind
 
-        logger.info(f"HRR engine patched with Mojo bridge (available: {bridge.mojo_available})")
+        logger.info("HRR engine patched with Mojo bridge (available: %s)", bridge.mojo_available)
         return True
     except Exception as e:
         logger.warning("Failed to patch HRR engine: %s", e, exc_info=True)

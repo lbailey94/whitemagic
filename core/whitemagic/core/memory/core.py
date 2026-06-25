@@ -81,7 +81,7 @@ class MemoryManager:
                 (memory_id, content, title, tag_str, now, now),
             )
             conn.commit()
-        logger.info(f"Stored memory {memory_id}: {title}")
+        logger.info("Stored memory %s: %s", memory_id, title)
         return memory_id
 
 # --- SINGLETONS ---

@@ -63,7 +63,7 @@ class NervousSystem:
     def register_organ(self, organ_type: OrganType, organ_instance: Any):
         """Register a biological subsystem."""
         self.organs[organ_type.value] = organ_instance
-        logger.info(f"Organ registered: {organ_type.value}")
+        logger.info("Organ registered: %s", organ_type.value)
 
     def get_organ(self, organ_type: OrganType) -> Any | None:
         """Retrieve a registered organ."""

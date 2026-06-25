@@ -34,7 +34,7 @@ def handle_corpus_callosum_debate(params: dict[str, Any]) -> dict[str, Any]:
 
         return make_result("corpus_callosum.debate", data)
     except Exception as exc:
-        logger.error(f"corpus_callosum.debate error: {exc}", exc_info=True)
+        logger.error("corpus_callosum.debate error: %s", exc, exc_info=True)
         return make_result("corpus_callosum.debate", {}, error=str(exc))
 
 
@@ -46,5 +46,5 @@ def handle_corpus_callosum_status(params: dict[str, Any]) -> dict[str, Any]:
         bus = get_corpus_callosum_bus()
         return make_result("corpus_callosum.status", bus.status())
     except Exception as exc:
-        logger.error(f"corpus_callosum.status error: {exc}", exc_info=True)
+        logger.error("corpus_callosum.status error: %s", exc, exc_info=True)
         return make_result("corpus_callosum.status", {}, error=str(exc))

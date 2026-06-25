@@ -55,7 +55,7 @@ class SingletonRegistry:
         # Create and cache instance
         instance = factory()
         cls._instances[name] = instance
-        logger.debug(f"Registered singleton: {name}")
+        logger.debug("Registered singleton: %s", name)
         return instance
 
     @classmethod
@@ -67,7 +67,7 @@ class SingletonRegistry:
         """
         if name in cls._instances:
             del cls._instances[name]
-            logger.debug(f"Reset singleton: {name}")
+            logger.debug("Reset singleton: %s", name)
 
     @classmethod
     def reset_all(cls) -> None:
@@ -77,7 +77,7 @@ class SingletonRegistry:
         """
         count = len(cls._instances)
         cls._instances.clear()
-        logger.debug(f"Reset all {count} singletons")
+        logger.debug("Reset all %s singletons", count)
 
     @classmethod
     def get_registered_names(cls) -> list[str]:

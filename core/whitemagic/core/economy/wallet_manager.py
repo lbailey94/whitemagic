@@ -30,7 +30,7 @@ class WalletManager:
         self.beneficiaries = self._load_beneficiaries()
 
         if self.enabled:
-            logger.info(f"💳 Wallet Manager Active. Receive-Only Address: {self.public_address}")
+            logger.info("💳 Wallet Manager Active. Receive-Only Address: %s", self.public_address)
         else:
             logger.debug("💳 Wallet Manager disabled. Set WM_XRP_ADDRESS to enable tipping.")
 

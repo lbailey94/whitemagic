@@ -59,7 +59,7 @@ class SessionStartupOrchestrator:
         try:
             activate_fn()
             status.activated = True
-            logger.info(f"✅ {name} activated")
+            logger.info("✅ %s activated", name)
         except Exception as e:
             status.error = str(e)
             logger.warning("⚠️ %s failed: %s", name, e, exc_info=True)
@@ -127,7 +127,7 @@ class SessionStartupOrchestrator:
 
                 result = subprocess.run(["bash", script_path], capture_output=True, text=True, timeout=600)
                 if result.returncode != 0:
-                    logger.warning(f"⚠️ Rust bridge build failed: {result.stderr[:500]}")
+                    logger.warning("⚠️ Rust bridge build failed: %s", result.stderr[:500])
                     return
                 # Try import again to verify success
                 import whitemagic_rs  # noqa: F401
@@ -297,7 +297,7 @@ class SessionStartupOrchestrator:
                 engine = get_local_ml_engine()
                 self._run_with_timeout("local_ml_engine", engine.start, timeout_s=2.0)
                 status = engine.get_status()
-                logger.info(f"🧠 Local ML Engine active (Default: {status.get('default_backend')})")
+                logger.info("🧠 Local ML Engine active (Default: %s)", status.get('default_backend'))
 
             results.append(self._safe_activate("Local ML Engine", start_local_ml))
 
@@ -313,7 +313,7 @@ class SessionStartupOrchestrator:
             engine = get_hologram_engine()
             self._run_with_timeout("hologram_engine", engine.start, timeout_s=2.0)
             if engine.enabled:
-                logger.info(f"🌌 Hologram Engine active with backend: {engine.get_stats().get('backend', 'unknown')}")
+                logger.info("🌌 Hologram Engine active with backend: %s", engine.get_stats().get('backend', 'unknown'))
             else:
                 logger.warning("🌌 Hologram Engine started in limited mode (no Rust backend)")
         results.append(self._safe_activate("Hologram Engine", start_hologram))
@@ -501,7 +501,7 @@ class SessionStartupOrchestrator:
             manager = get_temporal_context_manager()
             manager.start_session()
             ctx = manager.get_context()
-            logger.info(f"⏳ Temporal Context: {ctx.summary()}")
+            logger.info("⏳ Temporal Context: %s", ctx.summary())
         results.append(self._safe_activate("Temporal Grounding", init_temporal))
 
         # 1. User Profile Sync (New in Phase 5)
@@ -544,7 +544,7 @@ class SessionStartupOrchestrator:
         intake_dir = PROJECT_ROOT / "memory" / "intake"
         resume_files = list(intake_dir.glob("RESUME_*.md"))
         if resume_files:
-            logger.info(f"Found {len(resume_files)} RESUME files for continuity")
+            logger.info("Found %s RESUME files for continuity", len(resume_files))
 
     def init_circuit_breaker(self) -> None:
         """
@@ -570,7 +570,7 @@ class SessionStartupOrchestrator:
         )
         coherence = get_coherence()
         stats = coherence.get_iteration_stats()
-        logger.info(f"Coherence level: {stats['coherence_level']}%")
+        logger.info("Coherence level: %s%%", stats['coherence_level'])
 
     def check_handoff(self) -> None:
         """
@@ -601,7 +601,7 @@ class SessionStartupOrchestrator:
             from whitemagic.harmony.vector import get_harmony_vector
             hv = get_harmony_vector()
             snap = hv.snapshot()
-            logger.info(f"Harmony Vector: composite={snap.harmony_score:.2f}")
+            logger.info("Harmony Vector: composite=%s", format(snap.harmony_score, ".2f"))
         results.append(self._safe_activate("Harmony Vector", init_harmony_vector))
 
         # 2. Dharma Rules Engine — declarative ethical rules
@@ -614,7 +614,7 @@ class SessionStartupOrchestrator:
             """
             from whitemagic.dharma.rules import get_rules_engine
             engine = get_rules_engine()
-            logger.info(f"Dharma Rules: profile={engine.get_profile()}, rules={len(engine.get_rules())}")
+            logger.info("Dharma Rules: profile=%s, rules=%s", engine.get_profile(), len(engine.get_rules()))
         results.append(self._safe_activate("Dharma Rules Engine", init_dharma_rules))
 
         # 3. Karma Ledger — side-effect tracking
@@ -627,7 +627,7 @@ class SessionStartupOrchestrator:
             """
             from whitemagic.dharma.karma_ledger import get_karma_ledger
             ledger = get_karma_ledger()
-            logger.info(f"Karma Ledger: debt={ledger.get_debt():.2f}")
+            logger.info("Karma Ledger: debt=%s", format(ledger.get_debt(), ".2f"))
         results.append(self._safe_activate("Karma Ledger", init_karma_ledger))
 
         # 4. Temporal Scheduler — FAST/MEDIUM/SLOW event lanes
@@ -684,7 +684,7 @@ class SessionStartupOrchestrator:
             """
             from whitemagic.tools.circuit_breaker import get_breaker_registry
             reg = get_breaker_registry()
-            logger.info(f"Circuit Breaker Registry: {len(reg.all_status())} breakers tracked")
+            logger.info("Circuit Breaker Registry: %s breakers tracked", len(reg.all_status()))
         results.append(self._safe_activate("Circuit Breaker Registry", init_breaker_registry))
 
         # 8. Gratitude Pulse (XRPL Background Scanner)
@@ -824,8 +824,8 @@ class SessionStartupOrchestrator:
             total = len(briefing.items)
 
             if verbose and total > 0:
-                logger.info(f"📋 Intelligence Briefing: {total} insights "
-                          f"({critical} critical, {high} high priority)")
+                logger.info("📋 Intelligence Briefing: %s insights "
+                          "(%s critical, %s high priority)", total, critical, high)
                 if critical > 0:
                     for item in briefing.critical_items[:
                         3]:
@@ -840,6 +840,18 @@ class SessionStartupOrchestrator:
         if briefing:
             return briefing.to_dict()  # type: ignore[no-any-return]
         return None
+
+    def start_dream_cycle(self) -> list[SystemStatus]:
+        """Start the Dream Cycle for background memory consolidation."""
+        results: list[SystemStatus] = []
+
+        def start_dreaming() -> None:
+            from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
+            dc = get_dream_cycle()
+            dc.start()
+            logger.info("Dream Cycle started (idle threshold: %.0fs)", dc._idle_threshold)
+        results.append(self._safe_activate("Dream Cycle", start_dreaming))
+        return results
 
     def start_all(self, verbose: bool = True) -> dict[str, Any]:
         """Start ALL WhiteMagic systems in correct order.
@@ -900,6 +912,11 @@ class SessionStartupOrchestrator:
                 logger.info("\n📋 Phase 8: Intelligence Briefing")
             self.start_insight_briefing(verbose=verbose)
 
+            # Phase 9: Dream Cycle (v23.3: auto-start background dreaming)
+            if verbose:
+                logger.info("\n🌙 Phase 9: Dream Cycle")
+            self.start_dream_cycle()
+
             self._started = True
             duration = (datetime.now() - start_time).total_seconds()
 
@@ -928,6 +945,91 @@ class SessionStartupOrchestrator:
             "systems": {k: {"activated": v.activated, "error": v.error}
                        for k, v in self.systems.items()},
         }
+
+    # ------------------------------------------------------------------
+    # Cycle Engine methods (fused from CycleEngine)
+    # ------------------------------------------------------------------
+
+    def gather_cycle_state(self) -> dict[str, Any]:
+        """Gather unified cycle state from all available subsystems."""
+        return self._get_cycle_engine().gather_state().__dict__
+
+    def advance_cycle(self) -> dict[str, Any]:
+        """Advance one cycle: gather state, advance zodiac, record activity."""
+        state = self._get_cycle_engine().advance()
+        return state.__dict__
+
+    def run_cycle_rounds(self, n_rounds: int = 3) -> dict[str, Any]:
+        """Run N full zodiacal rounds."""
+        metrics = self._get_cycle_engine().run_rounds(n_rounds)
+        return metrics.__dict__
+
+    def should_pause(self) -> bool:
+        """Check if yin-yang balance suggests a pause (burnout prevention)."""
+        return self._get_cycle_engine().should_pause()
+
+    def get_recommended_phase(self) -> str:
+        """Get the currently recommended campaign phase."""
+        return self._get_cycle_engine().get_recommended_phase()
+
+    def cycle_status(self) -> dict[str, Any]:
+        """Return full cycle engine status as a dict."""
+        return self._get_cycle_engine().status()
+
+    # ------------------------------------------------------------------
+    # Wu Xing Engine methods (fused from WuXingEngine)
+    # ------------------------------------------------------------------
+
+    def get_wu_xing_element(self, element: Any) -> dict[str, Any]:
+        """Get the current state of a Wu Xing element."""
+        eng = self._get_wu_xing_engine()
+        state = eng.get_element(element)
+        return {"element": state.element.value, "energy": state.energy, "quality": state.quality}
+
+    def adjust_wu_xing(self, element: Any, energy_change: float, quality: str | None = None) -> None:
+        """Adjust the energy of a Wu Xing element."""
+        self._get_wu_xing_engine().adjust_element(element, energy_change, quality)
+
+    def analyze_situation(self, situation: str) -> dict[str, Any]:
+        """Analyze a situation using Wu Xing principles."""
+        return self._get_wu_xing_engine().analyze_situation(situation)
+
+    def get_wu_xing_balance(self) -> float:
+        """Calculate overall elemental balance (0.0 to 1.0)."""
+        return self._get_wu_xing_engine().get_balance_score()
+
+    def get_wu_xing_harmony(self) -> float:
+        """Calculate harmony based on proper elemental relationships."""
+        return self._get_wu_xing_engine().get_harmony_score()
+
+    def rebalance_wu_xing(self) -> None:
+        """Attempt to rebalance all elements toward harmony."""
+        self._get_wu_xing_engine().rebalance()
+
+    def get_wu_xing_cycle(self) -> str:
+        """Describe the current elemental cycle phase."""
+        return self._get_wu_xing_engine().get_current_cycle()
+
+    # ------------------------------------------------------------------
+    # Lazy accessors for fused sub-engines
+    # ------------------------------------------------------------------
+
+    _cycle_engine_instance = None
+    _wu_xing_engine_instance = None
+
+    def _get_cycle_engine(self):
+        """Get or create the CycleEngine instance."""
+        if self._cycle_engine_instance is None:
+            from whitemagic.cycle_engine import CycleEngine
+            self._cycle_engine_instance = CycleEngine()
+        return self._cycle_engine_instance
+
+    def _get_wu_xing_engine(self):
+        """Get or create the WuXingEngine instance."""
+        if self._wu_xing_engine_instance is None:
+            from whitemagic.wu_xing import WuXingEngine
+            self._wu_xing_engine_instance = WuXingEngine()
+        return self._wu_xing_engine_instance
 
 
 # Singleton instance
@@ -959,6 +1061,23 @@ def start_session(verbose: bool = True) -> dict[str, Any]:
 def session_status() -> dict[str, Any]:
     """Get current session status."""
     return get_orchestrator().get_status()
+
+
+# Backward-compat aliases for fused engines
+
+def get_cycle_engine():
+    """Backward-compat — get_cycle_engine now returns the SessionStartupOrchestrator singleton.
+
+    The CycleEngine has been fused into SessionEngine (slot 0, Horn 角).
+    """
+    return get_orchestrator()
+
+def get_wuxing_engine():
+    """Backward-compat — get_wuxing_engine now returns the SessionStartupOrchestrator singleton.
+
+    The WuXingEngine has been fused into SessionEngine (slot 0, Horn 角).
+    """
+    return get_orchestrator()
 
 
 # Auto-start when imported (optional - can be disabled)

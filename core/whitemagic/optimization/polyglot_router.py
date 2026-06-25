@@ -884,7 +884,7 @@ def get_performance_stats() -> dict[str, Any]:
     """
     router = get_router()
     stats = router.get_stats()
-    logger.info(f"\n🚀 Polyglot v5.1 | Speedup: {stats['speedup']}x | Native: {router.metrics.native_usage_rate:.1f}%")
+    logger.info("\n🚀 Polyglot v5.1 | Speedup: %sx | Native: %s%%", stats['speedup'], router.metrics.native_usage_rate)
     return stats
 
 if __name__ == "__main__":

@@ -51,6 +51,14 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "galaxy.taxonomy": LazyHandler("galaxy", "handle_galaxy_taxonomy"),
     "galaxy.lineage_stats": LazyHandler("galaxy", "handle_galaxy_lineage_stats"),
 
+    # --- v23.1: 6D Holographic Galaxy Router ---
+    "galaxy.route": LazyHandler("galaxy", "handle_galaxy_route"),
+    "galaxy.stats": LazyHandler("galaxy", "handle_galaxy_stats"),
+    "galaxy.migrate": LazyHandler("galaxy", "handle_galaxy_migrate"),
+    "galaxy.list_types": LazyHandler("galaxy", "handle_galaxy_list_types"),
+    "galaxy.export": LazyHandler("galaxy", "handle_galaxy_export"),
+    "galaxy.import": LazyHandler("galaxy", "handle_galaxy_import"),
+
     # --- v14.0 Living Graph ---
     "hybrid_recall": LazyHandler("living_graph", "handle_hybrid_recall"),
     "graph_topology": LazyHandler("living_graph", "handle_graph_topology"),
@@ -98,4 +106,12 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
     "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
     "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
+
+    # --- Unified Read API (v23.1) ---
+    "wm_read": LazyHandler("wm_read", "handle_wm_read"),
+    "wm_read.status": LazyHandler("wm_read", "handle_wm_read_status"),
+
+    # --- Unified Write API (v23.1) ---
+    "wm_write": LazyHandler("wm_write", "handle_wm_write"),
+    "wm_write.status": LazyHandler("wm_write", "handle_wm_write_status"),
 }

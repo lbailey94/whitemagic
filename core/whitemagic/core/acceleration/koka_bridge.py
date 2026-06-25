@@ -175,7 +175,7 @@ class KokaRuntime:
         # Check if binary exists
         binary_path = f"{self.koka_dir}/batch_ipc"
         if not os.path.exists(binary_path):
-            logger.warning(f"Koka batch_ipc binary not found at {binary_path}")
+            logger.warning("Koka batch_ipc binary not found at %s", binary_path)
             return None
 
         # Mirror the batch client: unbuffered stdio and a short startup handshake.

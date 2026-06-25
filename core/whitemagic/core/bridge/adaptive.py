@@ -20,7 +20,7 @@ def list_cascade_patterns() -> list[dict[str, Any]]:
 
 def execute_cascade(pattern: str, tools: list[str], **kwargs: Any) -> dict[str, Any]:
     """Execute a cascade pattern."""
-    logger.info(f"Executing cascade pattern: {pattern} with {len(tools)} tools")
+    logger.info("Executing cascade pattern: %s with %s tools", pattern, len(tools))
 
     results = []
     for tool in tools:

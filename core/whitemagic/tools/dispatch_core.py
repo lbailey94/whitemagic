@@ -34,6 +34,8 @@ WRITE_TOOLS: set[str] = {
     "karma_record", "karma.anchor", "set_dharma_profile",
     # Configuration mutations
     "sandbox.set_limits", "sangha_lock",
+    # Unified Write API (v23.1)
+    "wm_write",
 }
 
 

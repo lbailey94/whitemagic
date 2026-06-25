@@ -38,19 +38,19 @@ class Holocron:
         }
         with open(self.path, "w") as f:
             json.dump(data, f, indent=2)
-        logger.info(f"Holocron saved with {len(rules)} rules to {self.path}")
+        logger.info("Holocron saved with %s rules to %s", len(rules), self.path)
 
     def load(self):
         """Load rules from the Holocron."""
         if not self.path.exists():
-            logger.warning(f"Holocron not found at {self.path}")
+            logger.warning("Holocron not found at %s", self.path)
             return
 
         try:
             with open(self.path) as f:
                 data = json.load(f)
             self.rules = data.get("rules", [])
-            logger.info(f"Holocron loaded with {len(self.rules)} rules")
+            logger.info("Holocron loaded with %s rules", len(self.rules))
         except (OSError, FileNotFoundError, PermissionError) as e:
             logger.error("Failed to load Holocron: %s", e, exc_info=True)
 

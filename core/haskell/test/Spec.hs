@@ -5,6 +5,7 @@ import Casting
 import WuXing
 import HexagramData
 import qualified Data.Text as T
+import Data.Text (isInfixOf)
 import System.Exit (exitFailure, exitSuccess)
 
 -- Minimal test harness (no external deps)
@@ -29,16 +30,28 @@ main = do
                 n = toNumber h
             in n >= 1 && n <= 64
           )
-        , ( "The Creative is #1 (all Yang)"
-          , toNumber (hexagram Yang Yang Yang Yang Yang Yang) == 64
-            -- Note: all-Yang = binary 111111 = 63, +1 = 64
+        , ( "The Creative is King Wen #1 (all Yang)"
+          , toKingWenNumber (hexagram Yang Yang Yang Yang Yang Yang) == 1
           )
-        , ( "The Receptive is all Yin"
-          , toNumber (hexagram Yin Yin Yin Yin Yin Yin) == 1
+        , ( "The Receptive is King Wen #2 (all Yin)"
+          , toKingWenNumber (hexagram Yin Yin Yin Yin Yin Yin) == 2
+          )
+        , ( "Difficulty at Beginning is King Wen #3"
+          , toKingWenNumber (hexagram Yang Yin Yin Yin Yang Yin) == 3
+          )
+        , ( "After Completion is King Wen #63"
+          , toKingWenNumber (hexagram Yang Yin Yang Yin Yang Yin) == 63
+          )
+        , ( "Before Completion is King Wen #64"
+          , toKingWenNumber (hexagram Yin Yang Yin Yang Yin Yang) == 64
           )
         , ( "fromNumber . toNumber round-trips"
           , let h = hexagram Yin Yang Yin Yang Yin Yang
             in fromNumber (toNumber h) == Just h
+          )
+        , ( "fromKingWenNumber . toKingWenNumber round-trips"
+          , let h = hexagram Yang Yang Yang Yang Yang Yang
+            in fromKingWenNumber (toKingWenNumber h) == Just h
           )
         , ( "allHexagrams has 64 elements"
           , length allHexagrams == 64
@@ -48,10 +61,15 @@ main = do
                 o = oppositeHexagram h
             in o == hexagram Yin Yin Yin Yin Yin Yin
           )
-        , ( "complementaryHexagram swaps trigrams"
-          , let h = hexagram Yin Yin Yin Yang Yang Yang
+        , ( "complementaryHexagram rotates 180 degrees"
+          , let h = hexagram Yin Yin Yang Yang Yang Yang
                 c = complementaryHexagram h
-            in c == hexagram Yang Yang Yang Yin Yin Yin
+            in c == hexagram Yang Yang Yang Yang Yin Yin
+          )
+        , ( "complementaryHexagram: KW 3 <-> KW 4 (inversion pair)"
+          , let h3 = hexagram Yang Yin Yin Yin Yang Yin
+                h4 = complementaryHexagram h3
+            in toKingWenNumber h4 == 4
           )
         , ( "isBalanced: 3 yin 3 yang"
           , isBalanced (hexagram Yin Yang Yin Yang Yin Yang)
@@ -65,9 +83,14 @@ main = do
           )
 
           -- HexagramData
-        , ( "getHexagramInfo 1 returns Just"
+        , ( "getHexagramInfo 1 returns Just with correct name"
           , case getHexagramInfo 1 of
-              Just info -> hexName info == T.pack "\20094"  -- 乾 (U+4E7E)
+              Just info -> hexName info == T.pack "\20094"
+              Nothing   -> False
+          )
+        , ( "getHexagramInfo 14 returns Da You (Great Possession)"
+          , case getHexagramInfo 14 of
+              Just info -> hexPinyin info == T.pack "Da You"
               Nothing   -> False
           )
         , ( "getHexagramInfo 0 returns Nothing"
@@ -105,15 +128,20 @@ main = do
           )
 
           -- Casting
-        , ( "cast produces a valid hexagram (number 1-64)"
+        , ( "cast produces a valid King Wen number (1-64)"
           , let ctx = Context [T.pack "speed"] 0.5 0.7
                 st  = SystemState (WuXingState 0.6 0.4 0.3 0.5 0.2) 0.8 []
-                n   = toNumber (cast ctx st)
+                n   = toKingWenNumber (cast ctx st)
             in n >= 1 && n <= 64
           )
         , ( "interpret returns non-empty text"
           , let h = hexagram Yang Yang Yang Yang Yang Yang
             in not $ T.null (interpret h)
+          )
+        , ( "interpret on all-Yang returns Creative judgment"
+          , let h = hexagram Yang Yang Yang Yang Yang Yang
+                txt = interpret h
+            in isInfixOf (T.pack "Creative") txt
           )
         , ( "changingLines: all-Yang has imbalance 6 -> [1..6]"
           , changingLines (hexagram Yang Yang Yang Yang Yang Yang) == [1..6]

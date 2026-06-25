@@ -69,7 +69,7 @@ class AutoimmuneSystem:
         self.base_dir = base_dir or Path(".")
         self.anti_patterns: dict[str, AntiPattern] = {}
         self._load_patterns()
-        logger.info(f"🛡️  Loaded {len(self.anti_patterns)} anti-patterns")
+        logger.info("🛡️  Loaded %s anti-patterns", len(self.anti_patterns))
 
     def _load_patterns(self) -> Any:
         """Load from v2.3.1 analysis."""

@@ -97,13 +97,13 @@ class UnifiedNervousSystem:
         for event_type in event_types:
             self._subsystems[subsystem].handlers[event_type].append(handler)
 
-        logger.info(f"🔌 Registered {subsystem.value} for events: {event_types}")
+        logger.info("🔌 Registered %s for events: %s", subsystem.value, event_types)
 
     def unregister_subsystem(self, subsystem: BiologicalSubsystem) -> None:
         """Unregister a subsystem."""
         if subsystem in self._subsystems:
             self._subsystems[subsystem].active = False
-            logger.info(f"🔌 Unregistered {subsystem.value}")
+            logger.info("🔌 Unregistered %s", subsystem.value)
 
     def emit(
         self,

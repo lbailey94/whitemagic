@@ -7,7 +7,6 @@ Tests: Zig SIMD, Rust PyO3, Haskell FFI, and pure Python baselines.
 """
 import time
 import random
-import math
 import sys
 import os
 import statistics
@@ -148,8 +147,7 @@ def bench_distance_matrix():
     section("3. DISTANCE MATRIX — Zig SIMD vs Python")
     
     from whitemagic.core.acceleration.simd_distance import (
-        pairwise_distance_matrix, _py_distance_matrix, cosine_similarity_zig,
-        _py_cosine, simd_distance_status,
+        pairwise_distance_matrix, _py_distance_matrix, simd_distance_status,
     )
     
     status = simd_distance_status()

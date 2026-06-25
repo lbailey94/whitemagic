@@ -135,6 +135,9 @@ def gnosis_snapshot(compact: bool = False) -> dict[str, Any]:
     # --- v14.0 Living Graph ---
     living_graph = _safe(lambda: _living_graph_portal())
 
+    # --- Capability Discovery (fused from CapabilityDiscoveryEngine) ---
+    capability_discovery = _safe(lambda: _capability_discovery_portal())
+
     return cast("dict[str, Any]", _json_safe({
         "timestamp": timestamp,
         "harmony": harmony,
@@ -158,6 +161,7 @@ def gnosis_snapshot(compact: bool = False) -> dict[str, Any]:
         "resonance": resonance,
         "capabilities": capabilities,
         "living_graph": living_graph,
+        "capability_discovery": capability_discovery,
     }))
 
 
@@ -630,3 +634,78 @@ def _capabilities_portal() -> dict[str, Any]:
         "polyglot_accelerated": polyglot_count,
         "note": "Call capability.matrix for full details",
     }
+
+
+def _capability_discovery_portal() -> dict[str, Any]:
+    """Capability Discovery — emergent capability testing results (fused from CapabilityDiscoveryEngine)."""
+    try:
+        from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+        engine = get_apotheosis_engine()
+        cap = engine.capability
+        return {
+            "discovered_count": len(cap._discovered),
+            "tested_combinations": len(cap._tested_combinations),
+            "emergent_capabilities": cap.report_emergent_capabilities(),
+        }
+    except Exception:
+        return {
+            "discovered_count": 0,
+            "tested_combinations": 0,
+            "emergent_capabilities": [],
+            "note": "Apotheosis engine not yet initialized",
+        }
+
+
+# ---------------------------------------------------------------------------
+# Forecast facade functions (fused from ForecastEngine / SelfModel)
+# ---------------------------------------------------------------------------
+
+def forecast_metrics(steps_ahead: int | None = None) -> dict[str, Any]:
+    """Forecast all tracked system metrics. Delegates to SelfModel."""
+    from whitemagic.core.intelligence.self_model import get_self_model
+    model = get_self_model()
+    forecasts = model.forecast_all(steps_ahead)
+    return {k: v.to_dict() for k, v in forecasts.items()}
+
+
+def get_forecast_alerts() -> list[dict[str, Any]]:
+    """Get only forecasts with active threshold alerts."""
+    from whitemagic.core.intelligence.self_model import get_self_model
+    model = get_self_model()
+    alerts = model.get_alerts()
+    return [a.to_dict() for a in alerts]
+
+
+def record_metric(metric: str, value: float) -> None:
+    """Record a metric observation into the SelfModel."""
+    from whitemagic.core.intelligence.self_model import get_self_model
+    model = get_self_model()
+    model.record(metric, value)
+
+
+# ---------------------------------------------------------------------------
+# Capability discovery facade functions (fused from CapabilityDiscoveryEngine)
+# ---------------------------------------------------------------------------
+
+def discover_capabilities(available_tools: list[str]) -> list[dict[str, Any]]:
+    """Discover emergent capabilities by testing unused tools and combinations."""
+    from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+    engine = get_apotheosis_engine()
+    discoveries = engine.capability.discover_capabilities(available_tools)
+    return [
+        {
+            "name": d.capability_name,
+            "description": d.description,
+            "tools": d.tools_involved,
+            "confidence": d.confidence,
+            "tested": d.tested,
+        }
+        for d in discoveries
+    ]
+
+
+def report_emergent_capabilities() -> list[dict[str, Any]]:
+    """Report discovered and tested capabilities with high confidence."""
+    from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+    engine = get_apotheosis_engine()
+    return engine.capability.report_emergent_capabilities()

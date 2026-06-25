@@ -53,8 +53,8 @@ class PracticeRitualConductor:
 
         """
         logger.info("\n🌸 Practice Garden - Conductor Ritual")
-        logger.info(f"   Ritual: {self.ritual_config.ritual_name}")
-        logger.info(f"   Intention: {intention}")
+        logger.info("   Ritual: %s", self.ritual_config.ritual_name)
+        logger.info("   Intention: %s", intention)
 
         # Announce ritual start
         self.practice_garden.deepen_practice(
@@ -117,7 +117,7 @@ class PracticeRitualConductor:
         # Update practice consistency
         if self._mastery_achieved:
             self.practice_garden.consistency = min(1.0, self.practice_garden.consistency + 0.1)
-            logger.info(f"✨ Mastery achieved! Practice consistency: {self.practice_garden.consistency:.2f}")
+            logger.info("✨ Mastery achieved! Practice consistency: %s", self.practice_garden.consistency)
 
         # Emit completion
         emit_event(

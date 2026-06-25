@@ -117,7 +117,7 @@ class UnifiedMemory:
 
         if not os.getenv("WM_SILENT_INIT"):
             stats = self.backend.get_stats()
-            logger.info(f"🧠 Unified Memory initialized: {stats['total_memories']} memories (SQLite)")
+            logger.info("🧠 Unified Memory initialized: %s memories (SQLite)", stats['total_memories'])
 
     @property
     def holographic(self) -> Any:
@@ -167,11 +167,12 @@ class UnifiedMemory:
     def store(self, content: Any, memory_type: MemoryType | str = MemoryType.SHORT_TERM,
               tags: set[str] | None = None, emotional_valence: float = 0.0,
               importance: float = 0.5, metadata: dict | None = None, title: str | None = None,
-              auto_embed: bool = True, **kwargs: Any) -> Memory:
+              auto_embed: bool = True, galaxy: str = "universal", **kwargs: Any) -> Memory:
         """Store a new memory.
 
         v14.0: Surprise-gated ingestion evaluates novelty before storage.
         High surprise → boosted importance. Low surprise → reinforce existing.
+        v23.1: Galaxy parameter routes memory to cognitive galaxy (6D).
         """
         # Convert string memory_type to enum for backward compatibility
         if isinstance(memory_type, str):
@@ -200,7 +201,7 @@ class UnifiedMemory:
                     logger.debug("Content hash dedup: reinforced %s instead of creating duplicate", existing_id, exc_info=True)
                     return existing
         except (sqlite3.Error, AttributeError, TypeError) as _e:
-            logger.debug(f"Dedup check failed: {_e}")  # Proceed normally
+            logger.debug("Dedup check failed: %s", _e)  # Proceed normally
 
         # v14.0: Surprise-gated ingestion
         surprise_verdict = None
@@ -229,7 +230,7 @@ class UnifiedMemory:
                                 logger.debug("Surprise gate: reinforced %s instead of creating duplicate", target_id, exc_info=True)
                                 return existing
                         except (sqlite3.Error, AttributeError, TypeError) as _e:
-                            logger.debug(f"Surprise gate reinforcement failed: {_e}")  # Fall through
+                            logger.debug("Surprise gate reinforcement failed: %s", _e)  # Fall through
 
                 elif surprise_verdict.action == SurpriseAction.CREATE_BOOSTED:
                     importance = min(1.0, importance + 0.15)
@@ -237,7 +238,7 @@ class UnifiedMemory:
                     metadata["surprise_score"] = round(surprise_verdict.surprise_score, 3)
 
             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Surprise gate unavailable: {_e}")  # Proceed normally
+                logger.debug("Surprise gate unavailable: %s", _e)  # Proceed normally
 
         # Generate ID
         content_str = str(content)[:1000]
@@ -253,6 +254,7 @@ class UnifiedMemory:
             importance=importance,
             metadata=metadata,
             title=title,
+            galaxy=galaxy,
             **kwargs,
         )
 
@@ -265,6 +267,31 @@ class UnifiedMemory:
             if coords:
                 self.backend.store_coords(memory.id, *coords)
 
+        # Compute and cache HRR vector for compositional memory operations
+        # This binds the content embedding with a type role vector using HRR,
+        # enabling typed retrieval via unbind(compressed, type_vector)
+        try:
+            from whitemagic.core.memory.hrr import get_hrr_engine
+            from whitemagic.core.memory.embeddings import get_embedding_engine
+            hrr_engine = get_hrr_engine()
+            embed_engine = get_embedding_engine()
+            if embed_engine and embed_engine.available():
+                content_vec = embed_engine.encode(str(memory.content)[:2000])
+                if content_vec is not None:
+                    # Bind content with memory type as role vector for typed retrieval
+                    if memory.memory_type:
+                        type_rel = hrr_engine.get_relation_vector("OBJECT")
+                        bound_vec = hrr_engine.bind(content_vec, type_rel)
+                    else:
+                        bound_vec = content_vec
+                    # Store in HRR vector cache (if backend supports it)
+                    try:
+                        self.backend.cache_hrr_vector(memory.id, bound_vec)
+                    except (AttributeError, sqlite3.Error, TypeError):
+                        pass  # Backend doesn't support HRR vector caching yet
+        except (ImportError, ModuleNotFoundError, Exception) as _e:
+            logger.debug("HRR vector computation skipped for %s: %s", memory.id, _e)
+
         # Auto-index embedding if sentence-transformers is available and auto_embed=True
         if auto_embed:
             try:
@@ -275,10 +302,17 @@ class UnifiedMemory:
                     if embedding:
                         try:
                             engine.cache_embedding(memory.id, embedding)
+                            # Invalidate HRR pre-filter cache so new memory
+                            # appears in pre-filter results on next query
+                            try:
+                                from whitemagic.core.intelligence.core_access import get_core_access
+                                get_core_access().invalidate_hrr_cache()
+                            except (ImportError, AttributeError):
+                                pass
                         except (sqlite3.Error, AttributeError, TypeError) as _e:
-                            logger.debug(f"Embedding cache failed for {memory.id}: {_e}")  # Skip silently
+                            logger.debug("Embedding cache failed for %s: %s", memory.id, _e)  # Skip silently
             except (ImportError, ModuleNotFoundError) as _e:
-                logger.debug(f"Embedding engine unavailable: {_e}")  # Skip silently
+                logger.debug("Embedding engine unavailable: %s", _e)  # Skip silently
 
         # v15.2: Auto-extract entities and relations into knowledge graph
         if enable_entity_extraction:
@@ -315,15 +349,15 @@ class UnifiedMemory:
                 try:
                     self.backend.update_galactic_distance(memory_id, new_distance)
                 except (sqlite3.Error, AttributeError, TypeError) as _e:
-                    logger.debug(f"Galactic distance update failed for {memory_id}: {_e}")  # Don't fail recall
+                    logger.debug("Galactic distance update failed for %s: %s", memory_id, _e)  # Don't fail recall
         return memory
 
     def search(self, query: str | None = None, tags: set[str] | None = None,
                memory_type: MemoryType | None = None, min_importance: float = 0.0,
-               limit: int = 10) -> list[Memory]:
+               limit: int = 10, galaxy: str | None = None) -> list[Memory]:
         """Search memories with various filters."""
         results = self.backend.search(query=query, tags=tags, memory_type=memory_type,
-                                 min_importance=min_importance, limit=limit)
+                                 min_importance=min_importance, limit=limit, galaxy=galaxy)
 
         # Annotate results with constellation context via hooks (breaks circular dep)
         if results:
@@ -347,7 +381,7 @@ class UnifiedMemory:
                     },
                 )
             except (ImportError, ModuleNotFoundError, AttributeError) as _e:
-                logger.debug(f"Gan Ying event emission failed: {_e}")  # Don't fail search
+                logger.debug("Gan Ying event emission failed: %s", _e)  # Don't fail search
 
         return cast(list[Memory], results)
 
@@ -679,12 +713,34 @@ class UnifiedMemory:
     ) -> list[dict[str, Any]]:
         """Multi-hop graph-aware recall (v14.0 Living Graph).
 
-        Combines anchor search (BM25 + embedding) with graph walk expansion
-        to discover memories connected via the association graph that would
-        never appear in a stateless single-hop search.
+        Consolidated delegation chain (v23.1):
+        1. CoreAccessLayer.hybrid_recall — vector + graph RRF (most powerful)
+        2. GraphWalker.hybrid_recall — anchor search + multi-hop graph walk
+        3. search_hybrid — 3-channel RRF (BM25 + embedding + 5D spatial)
 
         Returns list of dicts with memory data + reasoning paths.
         """
+        # 1. Try CoreAccessLayer (vector + graph RRF with Rust acceleration)
+        try:
+            from whitemagic.core.intelligence.core_access import get_core_access
+            cal = get_core_access()
+            results = cal.hybrid_recall(query=query, k=final_limit)
+            if results:
+                return [
+                    {
+                        "memory_id": r.memory_id,
+                        "title": r.title,
+                        "content": r.content_preview,
+                        "score": r.score,
+                        "sources": r.sources,
+                        "source": "core_access_rrf",
+                    }
+                    for r in results
+                ]
+        except Exception as e:
+            logger.debug("hybrid_recall: CoreAccessLayer unavailable: %s", e, exc_info=True)
+
+        # 2. Try GraphWalker (anchor search + multi-hop graph walk)
         try:
             from whitemagic.core.memory.graph_walker import get_graph_walker
             walker = get_graph_walker()
@@ -696,18 +752,19 @@ class UnifiedMemory:
             ))
         except Exception as e:
             logger.debug("hybrid_recall: graph walker unavailable, falling back to search_hybrid: %s", e, exc_info=True)
-            # Graceful fallback to standard hybrid search
-            results = self.search_hybrid(query=query, limit=final_limit)
-            return [
-                {
-                    "memory_id": m.id,
-                    "title": m.title,
-                    "content": str(m.content)[:500],
-                    "importance": m.importance,
-                    "source": "fallback_hybrid",
-                }
-                for m in results
-            ]
+
+        # 3. Fallback to standard 3-channel hybrid search
+        results = self.search_hybrid(query=query, limit=final_limit)
+        return [
+            {
+                "memory_id": m.id,
+                "title": m.title,
+                "content": str(m.content)[:500],
+                "importance": m.importance,
+                "source": "fallback_hybrid",
+            }
+            for m in results
+        ]
 
     def associate(self, memory_id1: str, memory_id2: str, strength: float = 0.5) -> None:
         """Create bidirectional association between memories."""
@@ -751,7 +808,7 @@ class UnifiedMemory:
         if not weak_candidates:
             return 0
 
-        logger.info(f"🌌 Starting Galactic Rotation for {len(weak_candidates)} memories.")
+        logger.info("🌌 Starting Galactic Rotation for %s memories.", len(weak_candidates))
 
         rotated_count = 0
         for mem in weak_candidates:
@@ -777,6 +834,7 @@ class UnifiedMemory:
         self,
         memory_type: MemoryType | None = None,
         limit: int = 10000,
+        galaxy: str | None = None,
     ) -> bytes | None:
         """Export memories as Arrow IPC bytes (v14.7 — 32× faster than JSON).
 
@@ -795,7 +853,7 @@ class UnifiedMemory:
                 return None
 
             memories = self.backend.search(
-                query=None, memory_type=memory_type, limit=limit,
+                query=None, memory_type=memory_type, limit=limit, galaxy=galaxy,
             )
             if not memories:
                 return None
@@ -816,6 +874,7 @@ class UnifiedMemory:
                     "w": coords[3] if coords else 0.5,
                     "v": coords[4] if coords and len(coords) > 4 else 0.5,
                     "tags": sorted(m.tags) if m.tags else [],
+                    "galaxy": getattr(m, 'galaxy', 'universal'),
                 })
             return arrow_encode_memories(_json.dumps(docs))
         except (ImportError, ModuleNotFoundError, AttributeError) as _e:
@@ -865,6 +924,7 @@ class UnifiedMemory:
                     title=doc.get("title"),
                     importance=doc.get("importance", 0.5),
                     tags=tags,
+                    galaxy=doc.get("galaxy", "universal"),
                 )
                 count += 1
             logger.info("Arrow IPC import: %s memories imported", count, exc_info=True)

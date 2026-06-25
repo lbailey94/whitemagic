@@ -37,6 +37,10 @@ use pyo3::prelude::*;
 
 use std::sync::Arc;
 
+fn default_galaxy() -> String {
+    "universal".to_string()
+}
+
 #[cfg(feature = "arrow")]
 lazy_static::lazy_static! {
     /// Canonical Arrow schema for WhiteMagic memories
@@ -52,6 +56,8 @@ lazy_static::lazy_static! {
         Field::new("w", DataType::Float64, true),
         Field::new("v", DataType::Float64, true),
         Field::new("tags", DataType::List(Arc::new(Field::new("item", DataType::Utf8, true))), true),
+        // v23.1: 6D galaxy partition
+        Field::new("galaxy", DataType::Utf8, true),
     ]));
 }
 
@@ -69,6 +75,8 @@ pub struct MemoryRecord {
     pub w: f64,
     pub v: f64,
     pub tags: Vec<String>,
+    #[serde(default = "default_galaxy")]
+    pub galaxy: String,
 }
 
 #[cfg(feature = "arrow")]
@@ -87,6 +95,7 @@ pub fn memories_to_arrow(
     let mut w_builder = Float64Builder::new();
     let mut v_builder = Float64Builder::new();
     let mut tags_builder = ListBuilder::new(StringBuilder::new());
+    let mut galaxy_builder = StringBuilder::new();
 
     for rec in records {
         id_builder.append_value(&rec.id);
@@ -105,6 +114,7 @@ pub fn memories_to_arrow(
             values.append_value(tag);
         }
         tags_builder.append(true);
+        galaxy_builder.append_value(&rec.galaxy);
     }
 
     RecordBatch::try_new(
@@ -121,6 +131,7 @@ pub fn memories_to_arrow(
             Arc::new(w_builder.finish()) as ArrayRef,
             Arc::new(v_builder.finish()) as ArrayRef,
             Arc::new(tags_builder.finish()) as ArrayRef,
+            Arc::new(galaxy_builder.finish()) as ArrayRef,
         ],
     )
 }
@@ -205,6 +216,11 @@ pub fn arrow_to_memories(batch: &RecordBatch) -> Vec<MemoryRecord> {
         .as_any()
         .downcast_ref::<Float64Array>()
         .unwrap();
+    let galaxies = batch
+        .column(11)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .unwrap();
 
     (0..n)
         .map(|i| MemoryRecord {
@@ -219,6 +235,7 @@ pub fn arrow_to_memories(batch: &RecordBatch) -> Vec<MemoryRecord> {
             w: ws.value(i),
             v: vs.value(i),
             tags: vec![], // TODO: extract from list column
+            galaxy: galaxies.value(i).to_string(),
         })
         .collect()
 }

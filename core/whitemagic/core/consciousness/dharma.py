@@ -59,11 +59,11 @@ class DharmaProtocol:
     def validate_action(self, action_name: str, intent: Intent, metadata: dict[str, Any]) -> None:
         """Validate if an action aligns with the project's ethics."""
         if intent in self.forbidden_intents:
-            logger.critical(f"🚫 ETHICAL BREACH: Action '{action_name}' attempted with forbidden intent: {intent.value}")
+            logger.critical("🚫 ETHICAL BREACH: Action '%s' attempted with forbidden intent: %s", action_name, intent.value)
             raise EthicsViolation(f"Action '{action_name}' violates the Dharma Protocol.")
 
         # Log valid alignment
-        logger.debug(f"✨ Action '{action_name}' validated for {intent.value}.")
+        logger.debug("✨ Action '%s' validated for %s.", action_name, intent.value)
 
     def sign_artifact(self, artifact_name: str) -> Any:
         """Sign a generated insight or artifact with the Dharma seal."""

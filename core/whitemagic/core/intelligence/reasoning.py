@@ -104,43 +104,68 @@ class ScratchpadAnalysis:
     reasoning_chain: list[str]
     timestamp: datetime
 
-# --- CORE REASONER ---
+# --- CORE REASONER (delegates to real multi_spectral_reasoning.py) ---
 
 class MultiSpectralReasoner:
-    """Orchestrates multiple wisdom-based reasoning perspectives."""
+    """Orchestrates multiple wisdom-based reasoning perspectives.
+
+    This is a compatibility wrapper that delegates to the real
+    MultiSpectralReasoner in multi_spectral_reasoning.py.
+    """
 
     def __init__(self, base_dir: Path | None = None):
-        self.base_dir = base_dir or WM_ROOT
+        from whitemagic.core.intelligence.multi_spectral_reasoning import (
+            MultiSpectralReasoner as _RealReasoner,
+        )
+        self._real = _RealReasoner(base_dir=base_dir or WM_ROOT)
         self.reasoning_history: list[ReasoningResult] = []
 
     def reason(self, question: str, lenses: Sequence[ReasoningLens] | None = None, context: ReasoningContext | None = None) -> ReasoningResult:
-        """
-        Perform the reason operation.
+        from whitemagic.core.intelligence.multi_spectral_reasoning import (
+            ReasoningContext as _RealContext,
+            ReasoningLens as _RealLens,
+        )
 
-        Args:
-            question: Parameter description.
-            lenses: Parameter description.
-            context: Parameter description.
+        # Map stub lenses to real lenses where possible
+        lens_map = {
+            ReasoningLens.WU_XING: _RealLens.WU_XING,
+            ReasoningLens.ART_OF_WAR: _RealLens.ART_OF_WAR,
+        }
+        real_lenses = None
+        if lenses:
+            mapped = [lens_map[l] for l in lenses if l in lens_map]
+            if mapped:
+                real_lenses = mapped
 
-        Returns:
-            ReasoningResult
-        """
-        if context is None:
-            context = ReasoningContext(question=question)
-        if lenses is None:
-            lenses = list(ReasoningLens)
+        # Map context
+        real_ctx = None
+        if context:
+            real_ctx = _RealContext(
+                question=context.question,
+                task_type=context.task_type,
+                stakes=context.stakes,
+                complexity=context.complexity,
+            )
 
+        real_result = self._real.reason(question=question, lenses=real_lenses, context=real_ctx)
+
+        # Wrap back to stub types
         perspectives = []
-        for lens in lenses:
-            perspectives.append(LensPerspective(lens=lens, analysis="Simulated analysis", guidance="Simulated guidance", confidence=0.8))
+        for p in real_result.perspectives:
+            perspectives.append(LensPerspective(
+                lens=ReasoningLens.WU_XING,
+                analysis=p.analysis,
+                guidance=p.guidance,
+                confidence=p.confidence,
+                details=p.details,
+            ))
 
-        synthesis = f"Synthesized from {len(perspectives)} perspectives."
         result = ReasoningResult(
             question=question,
             perspectives=perspectives,
-            synthesis=synthesis,
-            recommendation="Proceed with focus.",
-            confidence=0.85
+            synthesis=real_result.synthesis,
+            recommendation=real_result.recommendation,
+            confidence=real_result.confidence,
         )
         self.reasoning_history.append(result)
         return result

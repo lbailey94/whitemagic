@@ -255,7 +255,7 @@ class SecurityImmuneSystem:
         # Analyze for patterns
         self._analyze_event(event)
 
-        logger.info(f"Security threat reported: {threat_type} - {reason}")
+        logger.info("Security threat reported: %s - %s", threat_type, reason)
 
     def _emit_event(self, event: SecurityEvent) -> None:
         """Emit security event to Gan Ying bus."""
@@ -275,7 +275,7 @@ class SecurityImmuneSystem:
                 timestamp=event.timestamp,
             ))
         except Exception as e:
-            logger.debug(f"Failed to emit security event: {e}")
+            logger.debug("Failed to emit security event: %s", e)
 
     def _analyze_event(self, event: SecurityEvent) -> None:
         """Analyze event for patterns and generate antibodies."""
@@ -296,9 +296,9 @@ class SecurityImmuneSystem:
                 self.antibodies[antibody.antibody_id] = antibody
 
                 logger.warning(
-                    f"New threat pattern detected: {pattern.pattern_type} "
-                    f"(frequency={pattern.frequency})",
-                )
+                    "New threat pattern detected: %s "
+                    "(frequency=%s)",
+                 pattern.pattern_type, pattern.frequency)
 
                 # Emit emergence event
                 self._emit_emergence(pattern, antibody)
@@ -383,7 +383,7 @@ class SecurityImmuneSystem:
             effectiveness=0.5,  # Start neutral
         )
 
-        logger.info(f"Generated security antibody for {pattern.pattern_type}")
+        logger.info("Generated security antibody for %s", pattern.pattern_type)
         return antibody
 
     def _emit_emergence(self, pattern: ThreatPattern, antibody: SecurityAntibody) -> None:
@@ -411,7 +411,7 @@ class SecurityImmuneSystem:
                 timestamp=datetime.now(),
             ))
         except Exception as e:
-            logger.debug(f"Failed to emit emergence event: {e}")
+            logger.debug("Failed to emit emergence event: %s", e)
 
     def on_security_event(self, event: Any) -> None:
         """Handle incoming security event from Gan Ying."""
@@ -537,20 +537,20 @@ class SecurityAutoimmune:
 
             if fp_rate > self.false_positive_threshold:
                 logger.warning(
-                    f"Antibody {antibody.antibody_id} has high false positive rate: {fp_rate:.2%}",
-                )
+                    "Antibody %s has high false positive rate: %s",
+                 antibody.antibody_id, format(fp_rate, ".2%"))
 
                 if fp_rate > 0.5:
                     # Remove overly aggressive antibody
                     del self.immune.antibodies[antibody.antibody_id]
-                    logger.info(f"Removed antibody {antibody.antibody_id} (too aggressive)")
+                    logger.info("Removed antibody %s (too aggressive)", antibody.antibody_id)
 
                     # Emit autoimmune event
                     self._emit_autoimmune_event(antibody, "removed")
                 else:
                     # Weaken antibody
                     antibody.effectiveness *= 0.5
-                    logger.info(f"Weakened antibody {antibody.antibody_id}")
+                    logger.info("Weakened antibody %s", antibody.antibody_id)
 
                     self._emit_autoimmune_event(antibody, "weakened")
 

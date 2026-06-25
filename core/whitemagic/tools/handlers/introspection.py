@@ -287,6 +287,43 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
     report["degraded_reasons"] = runtime_status.get("degraded_reasons", [])
     report["debug_enabled"] = runtime_status.get("debug_enabled", False)
 
+    # 10. Physical health (laptop-optimizer integration)
+    try:
+        from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+        source = get_physical_metrics_source()
+        metrics = source.get_metrics()
+        if metrics.is_available:
+            report["physical_health"] = {
+                "cpu_temp": metrics.cpu_temp,
+                "cpu_usage": metrics.cpu_usage,
+                "battery_percent": metrics.battery_percent,
+                "battery_status": metrics.battery_status,
+                "memory_percent": metrics.memory_percent,
+                "swap_percent": metrics.swap_percent,
+                "disk_usage": metrics.disk_usage,
+                "power_draw": metrics.power_draw,
+                "fan_rpm": metrics.fan_rpm,
+                "thermal_throttling": metrics.thermal_throttling,
+                "laptop_optimizer_score": metrics.health_score,
+            }
+            # Thermal forecast
+            forecast = source.get_thermal_forecast()
+            if forecast:
+                report["physical_health"]["thermal_forecast"] = {
+                    "predicted_5min": forecast.predicted_5min,
+                    "predicted_15min": forecast.predicted_15min,
+                    "confidence": forecast.confidence,
+                }
+            # Adaptive targets
+            targets = source.get_adaptive_targets()
+            report["physical_health"]["adaptive_targets"] = {
+                "cpu_temp_max": targets.cpu_temp_max,
+                "battery_min": targets.battery_min,
+                "memory_max": targets.memory_max,
+            }
+    except Exception:
+        pass
+
     return report
 
 

@@ -10,7 +10,6 @@ except block by maintaining a stack of `try/except` contexts.
 This is approximate but works for the typical patterns.
 """
 import re
-import subprocess
 from pathlib import Path
 
 ROOT = Path("whitemagic")

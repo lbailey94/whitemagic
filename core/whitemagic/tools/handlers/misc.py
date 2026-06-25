@@ -132,6 +132,81 @@ def handle_immune_heal(**kwargs: Any) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
+# --- DNA Validation ---
+def handle_dna_validate(**kwargs: Any) -> dict[str, Any]:
+    """Validate a proposed fix against WhiteMagic's core DNA principles.
+
+    Uses the DNAValidator from the immune system to check that proposed
+    changes don't violate immutable principles (no self-destruction,
+    memory integrity, reversibility, etc.).
+
+    Args:
+        fix_details: Dict with 'action', 'file', and other fix metadata
+        threat_type: Optional threat type string
+    """
+    try:
+        from collections import namedtuple
+
+        from whitemagic.core.intelligence.immune.dna import DNAValidator, ImmuneRegulator
+
+        # Build a minimal threat object if threat_type is provided
+        threat_type = kwargs.get("threat_type", "unknown")
+        fix_details = kwargs.get("fix_details", {})
+        if not isinstance(fix_details, dict):
+            return {"status": "error", "error": "fix_details must be a dict"}
+
+        # Ensure fix_details has required keys
+        fix_details.setdefault("action", "unknown")
+        fix_details.setdefault("file", "")
+
+        validator = DNAValidator()
+        regulator = ImmuneRegulator()
+
+        # Create a simple threat namedtuple for the validator
+        Threat = namedtuple("Threat", ["threat_type", "location", "description"])
+        threat = Threat(
+            threat_type=namedtuple("ThreatType", ["value"])(value=threat_type),
+            location=fix_details.get("file", ""),
+            description=fix_details.get("action", ""),
+        )
+
+        violation = validator.validate_proposed_fix(threat, None, fix_details)
+        should_suppress, reason = regulator.should_suppress_response(
+            threat, None, fix_details,
+            recent_failures=kwargs.get("recent_failures", 0),
+        )
+
+        result = {
+            "status": "success",
+            "safe": violation is None and not should_suppress,
+            "violation": None,
+            "should_suppress": should_suppress,
+            "suppression_reason": reason,
+        }
+
+        if violation:
+            result["violation"] = {
+                "principle": violation.principle.value,
+                "description": violation.description,
+                "severity": violation.severity,
+                "risk_level": violation.risk_level,
+                "proposed_action": violation.proposed_action,
+            }
+
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_dna_principles(**kwargs: Any) -> dict[str, Any]:
+    """List all core DNA principles."""
+    from whitemagic.core.intelligence.immune.dna import DNAPrinciple
+    principles = {}
+    for p in DNAPrinciple:
+        principles[p.value] = p.name.replace("_", " ").title()
+    return {"status": "success", "principles": principles, "count": len(principles)}
+
+
 # --- Symbolic / Oracle ---
 def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
     """
@@ -196,20 +271,55 @@ def handle_get_metrics_summary(**kwargs: Any) -> dict[str, Any]:
     """
     Handle a get metrics summary event.
 
+    Includes physical metrics from laptop-optimizer and STRATA codebase
+    quality metrics when available.
+
     Returns:
         dict[str, Any]
     """
+    result: dict[str, Any] = {
+        "status": "success",
+        "metrics": {},
+        "total_metrics": 0,
+        "timeframe": kwargs.get("timeframe", "session"),
+    }
+
     try:
         from whitemagic.core.bridge.metrics import get_metrics_summary
-        return _ensure_result_dict(get_metrics_summary(**kwargs), "get_metrics_summary")
+        base = _ensure_result_dict(get_metrics_summary(**kwargs), "get_metrics_summary")
+        result.update(base)
     except ImportError:
-        return {
-            "status": "success",
-            "metrics": {},
-            "total_metrics": 0,
-            "timeframe": kwargs.get("timeframe", "session"),
-            "note": "Metrics module archived - no metrics available"
-        }
+        result["note"] = "Core metrics module archived - using enhanced metrics"
+
+    # Enrich with physical metrics
+    try:
+        from whitemagic.harmony.physical_metrics import get_physical_metrics_source
+        source = get_physical_metrics_source()
+        metrics = source.get_metrics()
+        if metrics.is_available:
+            physical: dict[str, Any] = {
+                "cpu_temp": metrics.cpu_temp,
+                "cpu_usage": metrics.cpu_usage,
+                "battery_percent": metrics.battery_percent,
+                "memory_percent": metrics.memory_percent,
+                "health_score": metrics.health_score,
+            }
+            result.setdefault("metrics", {})["physical"] = physical
+            result["total_metrics"] = result.get("total_metrics", 0) + len(physical)
+    except Exception:
+        pass
+
+    # Enrich with Prometheus export capability
+    try:
+        from whitemagic.harmony.metrics_exporter import get_metrics_exporter
+        exporter = get_metrics_exporter()
+        result["prometheus_available"] = True
+        if kwargs.get("format") == "prometheus":
+            result["prometheus_text"] = exporter.export()
+    except Exception:
+        pass
+
+    return result
 
 
 # --- Intelligence ---

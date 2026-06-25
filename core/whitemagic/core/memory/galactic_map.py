@@ -314,12 +314,13 @@ class GalacticMap:
 
         self._total_sweeps += 1
         logger.info(
-            f"🌌 Galactic Map Sweep #{self._total_sweeps}: "
-            f"{report.total_memories} memories mapped, "
-            f"CORE={report.core_count}, EDGE={report.edge_count}, "
-            f"avg_distance={report.avg_distance:.3f}, "
-            f"in {report.sweep_duration_ms:.0f}ms",
-        )
+            "🌌 Galactic Map Sweep #%s: "
+            "%s memories mapped, "
+            "CORE=%s, EDGE=%s, "
+            "avg_distance=%.3f, "
+            "in %.0fms",
+         self._total_sweeps, report.total_memories, report.core_count, report.edge_count,
+         report.avg_distance, report.sweep_duration_ms)
 
         return report
 
@@ -359,9 +360,9 @@ class GalacticMap:
                 if result is not None:
                     drifted = result.get("drifted", 0)
                     logger.info(
-                        f"🌀 Decay drift (Rust): {drifted} memories drifted outward by {drift_rate} "
-                        f"(inactive > {inactivity_days}d)",
-                    )
+                        "🌀 Decay drift (Rust): %s memories drifted outward by %s "
+                        "(inactive > %sd)",
+                     drifted, drift_rate, inactivity_days)
                     return {
                         "status": "success",
                         "memories_drifted": drifted,
@@ -392,9 +393,9 @@ class GalacticMap:
             conn.commit()
 
         logger.info(
-            f"🌀 Decay drift: {drifted} memories drifted outward by {drift_rate} "
-            f"(inactive > {inactivity_days}d)",
-        )
+            "🌀 Decay drift: %s memories drifted outward by %s "
+            "(inactive > %sd)",
+         drifted, drift_rate, inactivity_days)
         return {
             "status": "success",
             "memories_drifted": drifted,
@@ -459,6 +460,48 @@ class GalacticMap:
             return counts
         except Exception as e:
             logger.debug("get_zone_counts failed: %s", e, exc_info=True)
+            return {}
+
+    def get_zone_counts_by_galaxy(self, galaxy: str | None = None) -> dict[str, dict[str, int]]:
+        """Get zone counts per galaxy (or for a specific galaxy).
+
+        Args:
+            galaxy: If specified, return counts for just that galaxy.
+                    If None, return {galaxy_name: {zone: count}} for all galaxies.
+
+        Returns:
+            Dict mapping galaxy names to zone count dicts.
+        """
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            backend = get_unified_memory().backend
+
+            result: dict[str, dict[str, int]] = {}
+
+            with backend.pool.connection() as conn:
+                if galaxy:
+                    rows = conn.execute(
+                        "SELECT galaxy, galactic_distance FROM memories "
+                        "WHERE galactic_distance IS NOT NULL AND galaxy = ?",
+                        (galaxy,),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT galaxy, galactic_distance FROM memories "
+                        "WHERE galactic_distance IS NOT NULL",
+                    ).fetchall()
+
+            for row in rows:
+                g = row[0] if isinstance(row, tuple) else row["galaxy"]
+                dist = row[1] if isinstance(row, tuple) else row["galactic_distance"]
+                zone = classify_zone(dist).value
+                if g not in result:
+                    result[g] = {z.value: 0 for z in GalacticZone}
+                result[g][zone] = result[g].get(zone, 0) + 1
+
+            return result
+        except Exception as e:
+            logger.debug("get_zone_counts_by_galaxy failed: %s", e, exc_info=True)
             return {}
 
     # ------------------------------------------------------------------
@@ -590,12 +633,13 @@ class GalacticMap:
 
         self._total_sweeps += 1
         logger.info(
-            f"🌌 Galactic Map Async Sweep #{self._total_sweeps}: "
-            f"{report.total_memories} memories mapped, "
-            f"CORE={report.core_count}, EDGE={report.edge_count}, "
-            f"avg_distance={report.avg_distance:.3f}, "
-            f"in {report.sweep_duration_ms:.0f}ms",
-        )
+            "🌌 Galactic Map Async Sweep #%s: "
+            "%s memories mapped, "
+            "CORE=%s, EDGE=%s, "
+            "avg_distance=%.3f, "
+            "in %.0fms",
+         self._total_sweeps, report.total_memories, report.core_count, report.edge_count,
+         report.avg_distance, report.sweep_duration_ms)
 
         return report
 
@@ -630,6 +674,53 @@ class GalacticMap:
         except Exception as e:
             logger.debug("get_zone_counts_async failed: %s", e, exc_info=True)
             return {}
+
+
+    # ------------------------------------------------------------------
+    # Galactic Telepathy facade (fused from GalacticTelepathyEngine)
+    # ------------------------------------------------------------------
+
+    _telepathy_engine_instance: Any = None
+
+    def _get_telepathy_engine(self):
+        """Lazy accessor for the GalacticTelepathyEngine."""
+        if self._telepathy_engine_instance is None:
+            from whitemagic.core.memory.galactic_telepathy import GalacticTelepathyEngine
+            from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+            gm = get_galaxy_manager()
+            self._telepathy_engine_instance = GalacticTelepathyEngine(gm)
+        return self._telepathy_engine_instance
+
+    def telepathy_incremental_sync(
+        self,
+        source_galaxy: str,
+        target_galaxy: str,
+        since_timestamp: float | None = None,
+        include_embeddings: bool = True,
+        include_associations: bool = True,
+        conflict_resolution: str = "timestamp_wins",
+    ) -> dict[str, Any]:
+        """Sync only memories changed since last sync between galaxies."""
+        return self._get_telepathy_engine().incremental_sync(
+            source_galaxy, target_galaxy, since_timestamp,
+            include_embeddings, include_associations, conflict_resolution,
+        )
+
+    def telepathy_federated_sync(
+        self,
+        galaxy_chain: list[str],
+        sync_options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Multi-hop synchronization across a galaxy chain."""
+        return self._get_telepathy_engine().federated_sync(galaxy_chain, sync_options)
+
+    def telepathy_resolve_pending(
+        self,
+        galaxy: str,
+        auto_resolve: bool = True,
+    ) -> dict[str, Any]:
+        """Resolve pending associations after batch transfers."""
+        return self._get_telepathy_engine().resolve_pending_associations(galaxy, auto_resolve)
 
 
 # Singleton instance

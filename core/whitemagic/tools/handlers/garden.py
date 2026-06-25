@@ -59,16 +59,55 @@ def handle_garden_synergy(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_garden_health(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a garden health event.
+    """Get real health metrics for all gardens.
 
-    Returns:
-        dict[str, Any]
+    Returns per-garden vitality data: activation count, active status,
+    last activated timestamp, and total hours active.
     """
     from whitemagic.gardens import get_all_gardens
+    from whitemagic.gardens.garden_state import get_garden_state_tracker
+
     gardens = get_all_gardens()
-    health = {name: "healthy" for name in gardens.keys()}
-    return {"status": "success", "health": health}
+    tracker = get_garden_state_tracker()
+    all_stats = tracker.get_stats()
+
+    health = {}
+    for name in gardens.keys():
+        stats = all_stats.get(name, {})
+        is_active = stats.get("is_active", False)
+        activation_count = stats.get("activation_count", 0)
+        last_activated = stats.get("last_activated")
+        total_hours = stats.get("total_hours_active", 0.0)
+
+        # Determine vitality level
+        if is_active:
+            vitality = "thriving"
+        elif activation_count > 0:
+            vitality = "dormant"
+        else:
+            vitality = "unseeded"
+
+        health[name] = {
+            "status": vitality,
+            "is_active": is_active,
+            "activation_count": activation_count,
+            "last_activated": last_activated,
+            "total_hours_active": round(total_hours, 2),
+        }
+
+    active_count = sum(1 for h in health.values() if h["is_active"])
+    total = len(health)
+
+    return {
+        "status": "success",
+        "health": health,
+        "summary": {
+            "total_gardens": total,
+            "active": active_count,
+            "dormant": total - active_count,
+            "overall_vitality": "healthy" if active_count > 0 else "idle",
+        },
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

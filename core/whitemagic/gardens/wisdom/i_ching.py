@@ -71,7 +71,7 @@ class IChingAdvisor:
         for num, name, chinese, judgment, image, lines, guidance in COMPLETE_HEXAGRAMS:
             self.hexagrams[num] = Hexagram(num, name, chinese, judgment, image, lines, guidance)
 
-        logger.info(f"📿 I Ching initialized with {len(self.hexagrams)} hexagrams (complete 64-set!)")
+        logger.info("📿 I Ching initialized with %s hexagrams (complete 64-set!)", len(self.hexagrams))
 
     def cast_hexagram(self, question: str) -> Hexagram:
         """Cast hexagram for a question.

@@ -5,6 +5,57 @@ All notable changes to WhiteMagic will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [23.0.0] - 2026-06-25
+
+Major release: unified read/write APIs, 6D galaxy substrate, evolution layer,
+STRATA integration, Fragment search, and polyglot expansion across 7 languages.
+
+### Added
+- **10 new dispatch tools** (478 → 488): `wm_read`, `wm_write`, `fragment.index`,
+  `fragment.query`, `fragment.search`, `strata.survey`, `strata.analyze`,
+  `immune.scan`, `immune.heal`, `tool.bandit`
+- **6D Holographic Galaxy** — extends 5D memory with `g:galaxy` dimension for
+  cognitively specialized memory partitioning (`core/memory/galaxy_router.py`)
+- **Evolution layer** (10,184 lines): recursive improvement loop, Bayesian dream
+  cycle, counterfactual estimation, causal ledger, HRR composition, and more
+  (`core/evolution/`)
+- **STRATA integration** — 80+ codebase checkers for static analysis
+  (`tools/strata/`)
+- **Fragment search** — Rust-accelerated semantic + BM25 search with
+  tree-sitter chunking (`tools/handlers/fragment.py`)
+- **Unified read/write APIs** — `wm_read` and `wm_write` Gana tools with
+  automatic backend selection
+- **Polyglot expansion**: Galaxy modules in Rust, Elixir, Go, Julia, Haskell,
+  Zig, and Koka
+- **Physical metrics integration** — laptop-optimizer homeostasis synthesis
+  (`harmony/physical_metrics.py`)
+- **Inference router** — complexity-aware model routing (`inference/router.py`)
+- **Token tracker** — monitoring and budget feedback (`monitoring/token_tracker.py`)
+
+### Changed
+- `MultiSpectralReasoner` fully implemented (675 lines) — no longer a stub
+- Tool counts updated across all canonical docs (516 callable, 488 dispatch)
+- Polyglot language count: 7 active (Mojo deprioritized — compiler unavailable)
+- `CorpusCallosumBus` now uses real `BicameralReasoner` in sync context
+  (heuristic fallback only on timeout/error)
+- Cognitive modes enforced in dispatch pipeline via `mw_cognitive_mode`
+  middleware (GUARDIAN mode hard-blocks write/destructive tools)
+- Working memory bidirectionally wired to scratchpad system: tool results
+  attended to WM and synced to active scratchpad for persistence
+
+### Fixed
+- HRR singleton dimension mismatch — `get_hrr_engine()` now creates new
+  engine when requested `dim` differs from cached singleton
+- `Path.home()` violation in `embedding_daemon.py` — routed through
+  `CACHE_DIR` from `config/paths.py`
+- Flaky profiling test thresholds relaxed (1ms → 2ms) for shared hardware
+- Julia polyglot and recursive_loop timing tests marked `@flaky`
+
+### Known Issues
+- (none remaining)
+
 ## [22.2.3] - 2026-06-18
 
 Polish marathon release. All ruff warnings and mypy errors

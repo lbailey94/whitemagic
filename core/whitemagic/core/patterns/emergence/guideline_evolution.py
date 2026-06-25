@@ -151,6 +151,6 @@ def example_self_reflection() -> GuidelineProposal:
 if __name__ == "__main__":
     # Demonstrate self-reflection
     proposal = example_self_reflection()
-    logger.info(f"AI Proposed: {proposal.title}")
-    logger.info(f"Confidence: {proposal.confidence}")
-    logger.info(f"Status: {proposal.status}")
+    logger.info("AI Proposed: %s", proposal.title)
+    logger.info("Confidence: %s", proposal.confidence)
+    logger.info("Status: %s", proposal.status)

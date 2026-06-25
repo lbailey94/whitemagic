@@ -54,8 +54,30 @@ class TitleGenerator:
 class SerendipityEngine:
     """Detects unexpected connections and novel insights (serendipity)."""
     def find_serendipity(self, pool: Any = None) -> list[dict[str, Any]]:
-        """Find serendipitous connections across the memory pool."""
-        raise NotImplementedError("Serendipity detection is not yet implemented.")
+        """Find serendipitous connections across the memory pool.
+
+        Detects cross-cluster associations that bridge previously unrelated
+        constellations, indicating novel insight opportunities.
+        """
+        results: list[dict[str, Any]] = []
+        try:
+            from whitemagic.core.intelligence.core_access import get_core_access_layer
+            cal = get_core_access_layer()
+            # Query for cross-cluster edges (associations between different constellations)
+            cross_edges = cal.query_cross_cluster_associations(limit=20)
+            for edge in cross_edges:
+                results.append({
+                    "source": edge.get("source_memory_id", ""),
+                    "target": edge.get("target_memory_id", ""),
+                    "edge_type": edge.get("association_type", "related"),
+                    "source_cluster": edge.get("source_cluster", ""),
+                    "target_cluster": edge.get("target_cluster", ""),
+                    "novelty_score": edge.get("weight", 0.5),
+                    "description": f"Cross-cluster link: {edge.get('source_cluster', '?')} → {edge.get('target_cluster', '?')}",
+                })
+        except Exception:
+            pass
+        return results
 
 # --- SOLVER ENGINE ---
 

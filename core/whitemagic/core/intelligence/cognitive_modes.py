@@ -338,6 +338,43 @@ class CognitiveModes:
             if len(self._mode_history) > 50:
                 self._mode_history = self._mode_history[-50:]
 
+    # ------------------------------------------------------------------
+    # Zodiacal Procession integration
+    # ------------------------------------------------------------------
+
+    def from_procession_event(self, event: dict[str, Any]) -> None:
+        """Adjust cognitive mode based on ZodiacalProcession events.
+
+        Called as a registered callback on on_phase_change and on_fixed_sign:
+        - Yang phase → EXECUTOR (creative, outward)
+        - Yin phase → REFLECTOR (receptive, inward)
+        - Fixed sign → BALANCED (stability hub)
+
+        Never overrides GUARDIAN (safety) or manual overrides.
+        """
+        if self._safety_override is not None:
+            return
+        if self._manual_override is not None:
+            return
+
+        # Fixed sign events take precedence within a phase
+        if event.get("is_fixed") or "sign" in event and event.get("bidirectional"):
+            self._mode = CognitiveMode.BALANCED
+            self._record_transition("balanced", f"Procession fixed sign: {event.get('sign', '?')}")
+            logger.info("☯️ Cognitive mode → BALANCED (fixed sign %s)", event.get("sign", "?"))
+            return
+
+        # Phase change events
+        to_phase = event.get("to_phase", "")
+        if to_phase == "yang":
+            self._mode = CognitiveMode.EXECUTOR
+            self._record_transition("executor", "Procession phase: Yang")
+            logger.info("☯️ Cognitive mode → EXECUTOR (Yang phase)")
+        elif to_phase == "yin":
+            self._mode = CognitiveMode.REFLECTOR
+            self._record_transition("reflector", "Procession phase: Yin")
+            logger.info("☯️ Cognitive mode → REFLECTOR (Yin phase)")
+
     def get_stats(self) -> dict[str, Any]:
         """Get cognitive modes statistics."""
         with self._lock:

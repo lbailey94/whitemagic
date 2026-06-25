@@ -5,13 +5,11 @@ Evaluates Recall performance against the LongMemEval standard.
 """
 
 import json
-import sqlite3
 from pathlib import Path
 from datetime import datetime
 
 # Whitemagic imports
 from whitemagic.core.memory.sqlite_backend import SQLiteBackend
-from whitemagic.core.memory.unified_types import MemoryType
 
 # Paths
 REPO_ROOT = Path(__file__).resolve().parent.parent

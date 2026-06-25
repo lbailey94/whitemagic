@@ -189,14 +189,14 @@ def log_function_call(
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             log = logger or get_logger(func.__module__)
-            log.debug(f"Calling {func.__name__}", extra={"args": args, "kwargs": kwargs})
+            log.debug("Calling %s", func.__name__, extra={"args": args, "kwargs": kwargs})
             try:
                 result = func(*args, **kwargs)
-                log.debug(f"Completed {func.__name__}")
+                log.debug("Completed %s", func.__name__)
                 return result
             except Exception as e:
                 logger.debug("Operation failed: %s", e)  # type: ignore[union-attr]
-                log.error(f"Error in {func.__name__}", exc_info=True)
+                log.error("Error in %s", func.__name__, exc_info=True)
                 raise
         return wrapper
     return decorator
@@ -217,7 +217,8 @@ def log_performance(
                 result = func(*args, **kwargs)
                 duration = time.time() - start_time
                 log.info(
-                    f"Performance: {func.__name__}",
+                    "Performance: %s",
+                    func.__name__,
                     extra={
                         "function": func.__name__,
                         "duration_ms": duration * 1000,
@@ -228,7 +229,8 @@ def log_performance(
             except Exception as e:
                 duration = time.time() - start_time
                 log.error(
-                    f"Performance: {func.__name__}",
+                    "Performance: %s",
+                    func.__name__,
                     extra={
                         "function": func.__name__,
                         "duration_ms": duration * 1000,

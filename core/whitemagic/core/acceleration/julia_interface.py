@@ -61,7 +61,7 @@ class JuliaBridge:
             )
 
             if result.returncode != 0:
-                logger.warning(f"Julia Logic Error (Falling back to simulation): {result.stderr}")
+                logger.warning("Julia Logic Error (Falling back to simulation): %s", result.stderr)
                 return {"status": "CONVERGED", "total_resonance": magnitude * 0.95, "half_life": 4.2, "peak_amplitude": magnitude * 0.5}
 
             return dict(_json_loads(result.stdout))

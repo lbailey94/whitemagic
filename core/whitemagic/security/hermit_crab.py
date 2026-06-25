@@ -443,7 +443,7 @@ class HermitCrab:
             # Just estimate total from what we can count
             record.memory_count_locked = len(memories) if memories else 0
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to update locked memory count: {e}", exc_info=True)
+            logger.debug("Failed to update locked memory count: %s", e, exc_info=True)
 
         self._withdrawal_records.append(record)
 

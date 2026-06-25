@@ -26,7 +26,7 @@ def _emit(event_type_name: str, data: dict[str, Any]) -> None:
         from whitemagic.core.resonance import emit_event
         emit_event(event_type_name, data, source="broker")
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced broker emit error: {e}", exc_info=True)
+        logger.debug("Silenced broker emit error: %s", e, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ class _AsyncBroker:
             redis.publish(channel, serialized),
             redis.lpush(f"history:{channel}", serialized),
         )
-        asyncio.create_task(redis.ltrim(f"history:{channel}", 0, 99))
+        self._ltrim_task = asyncio.create_task(redis.ltrim(f"history:{channel}", 0, 99))
         return msg_id
 
     async def history(self, channel: str, limit: int = 20) -> list[dict[str, Any]]:

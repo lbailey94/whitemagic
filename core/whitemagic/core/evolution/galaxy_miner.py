@@ -68,20 +68,20 @@ class GalaxyPatternMiner:
         self.patterns: list[AccessPattern] = []
         self.clusters: list[SemanticCluster] = []
 
-        logger.info(f"🌌 GalaxyPatternMiner initialized with {len(galaxy_paths)} galaxies")
+        logger.info("🌌 GalaxyPatternMiner initialized with %s galaxies", len(galaxy_paths))
 
     def connect(self) -> None:
         """Connect to all galaxy databases."""
         for path in self.galaxy_paths:
             if not Path(path).exists():
-                logger.warning(f"Galaxy DB not found: {path}")
+                logger.warning("Galaxy DB not found: %s", path)
                 continue
 
             try:
                 conn = sqlite3.connect(path)
                 conn.row_factory = sqlite3.Row
                 self.connections[path] = conn
-                logger.info(f"✓ Connected to: {Path(path).name}")
+                logger.info("✓ Connected to: %s", Path(path).name)
             except Exception as e:
                 logger.error("Failed to connect to %s: %s", path, e, exc_info=True)
 
@@ -120,7 +120,7 @@ class GalaxyPatternMiner:
                     except Exception as e:
                         logger.warning("Rust mining failed for %s: %s", db_path, e, exc_info=True)
             self.patterns.extend(patterns)
-            logger.info(f"✓ Discovered {len(patterns)} access patterns (Rust)")
+            logger.info("✓ Discovered %s access patterns (Rust)", len(patterns))
             return patterns
 
         # Python fallback
@@ -161,13 +161,13 @@ class GalaxyPatternMiner:
                         discovered_at=datetime.now().isoformat()
                     )
                     patterns.append(pattern)
-                    logger.info(f"  Found {len(memory_ids)} frequently accessed memories in {Path(db_path).name}")
+                    logger.info("  Found %s frequently accessed memories in %s", len(memory_ids), Path(db_path).name)
 
             except Exception as e:
                 logger.error("Error mining access patterns from %s: %s", db_path, e, exc_info=True)
 
         self.patterns.extend(patterns)
-        logger.info(f"✓ Discovered {len(patterns)} access patterns")
+        logger.info("✓ Discovered %s access patterns", len(patterns))
         return patterns
 
     def mine_co_access_patterns(self, min_co_occurrence: int = 3) -> list[AccessPattern]:
@@ -219,13 +219,13 @@ class GalaxyPatternMiner:
                         )
                         patterns.append(pattern)
 
-                    logger.info(f"  Found {len(co_access_pairs)} co-access pairs in {Path(db_path).name}")
+                    logger.info("  Found %s co-access pairs in %s", len(co_access_pairs), Path(db_path).name)
 
             except Exception as e:
                 logger.error("Error mining co-access patterns from %s: %s", db_path, e, exc_info=True)
 
         self.patterns.extend(patterns)
-        logger.info(f"✓ Discovered {len(patterns)} co-access patterns")
+        logger.info("✓ Discovered %s co-access patterns", len(patterns))
         return patterns
 
     def mine_cache_candidates(self, min_access: int = 10, min_importance: float = 0.7) -> list[AccessPattern]:
@@ -258,7 +258,7 @@ class GalaxyPatternMiner:
                     except Exception as e:
                         logger.warning("Rust cache mining failed for %s: %s", db_path, e, exc_info=True)
             self.patterns.extend(patterns)
-            logger.info(f"✓ Discovered {len(patterns)} cache candidates (Rust)")
+            logger.info("✓ Discovered %s cache candidates (Rust)", len(patterns))
             return patterns
 
         # Python fallback
@@ -301,13 +301,13 @@ class GalaxyPatternMiner:
                         discovered_at=datetime.now().isoformat()
                     )
                     patterns.append(pattern)
-                    logger.info(f"  Found {len(memory_ids)} cache candidates in {Path(db_path).name}")
+                    logger.info("  Found %s cache candidates in %s", len(memory_ids), Path(db_path).name)
 
             except Exception as e:
                 logger.error("Error mining cache candidates from %s: %s", db_path, e, exc_info=True)
 
         self.patterns.extend(patterns)
-        logger.info(f"✓ Discovered {len(patterns)} cache candidate patterns")
+        logger.info("✓ Discovered %s cache candidate patterns", len(patterns))
         return patterns
 
     def mine_semantic_clusters(self, min_cluster_size: int = 3) -> list[SemanticCluster]:
@@ -338,7 +338,7 @@ class GalaxyPatternMiner:
                     except Exception as e:
                         logger.warning("Rust cluster mining failed for %s: %s", db_path, e, exc_info=True)
             self.clusters.extend(clusters)
-            logger.info(f"✓ Discovered {len(clusters)} semantic clusters (Rust)")
+            logger.info("✓ Discovered %s semantic clusters (Rust)", len(clusters))
             return clusters
 
         # Python fallback
@@ -393,7 +393,7 @@ class GalaxyPatternMiner:
                 clusters.append(cluster)
 
         self.clusters.extend(clusters)
-        logger.info(f"✓ Discovered {len(clusters)} semantic clusters")
+        logger.info("✓ Discovered %s semantic clusters", len(clusters))
         return clusters
 
     def get_summary(self) -> dict[str, Any]:

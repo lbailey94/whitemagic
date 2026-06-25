@@ -71,7 +71,7 @@ class GrimoireAuditor:
                         category="core_intelligence",
                     ))
 
-        logger.info(f"Grimoire Audit complete: Found {len(spells)} potential spells.")
+        logger.info("Grimoire Audit complete: Found %s potential spells.", len(spells))
         return spells
 
     def generate_capability_report(self) -> dict[str, Any]:

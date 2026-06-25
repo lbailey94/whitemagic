@@ -64,13 +64,55 @@ def handle_causal_stats(**kwargs: Any) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def handle_emergence_scan(**kwargs: Any) -> dict[str, Any]:
-    """Scan for emergent patterns in the knowledge graph."""
+    """Scan for emergent patterns in the knowledge graph.
+
+    Uses Rust PyO3 PyEmergenceDetector when available for native-speed
+    pattern detection, phase transition analysis, and synchronization
+    detection. Falls back to Python EmergenceDetector.
+    """
+    scan_depth = kwargs.get("scan_depth", 3)
+    threshold = kwargs.get("threshold", 0.7)
+
+    # Rust PyO3 fast path
+    try:
+        import whitemagic_rs
+        detector = whitemagic_rs.PyEmergenceDetector()
+
+        # Feed observations from memory system if available
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            recent = um.backend.search(query=None, limit=100)
+            for i, mem in enumerate(recent):
+                detector.add_observation({
+                    "value": float(mem.importance),
+                    "novelty": float(mem.novelty_score),
+                    "time": i,
+                })
+        except Exception:
+            pass  # No observations to feed — still run detection on existing data
+
+        patterns = detector.detect_patterns()
+        phase_transitions = detector.detect_phase_transitions()
+        sync_events = detector.detect_synchronization()
+
+        return {
+            "status": "success",
+            "emergent_patterns_found": len(patterns) if isinstance(patterns, list) else 0,
+            "patterns": patterns if isinstance(patterns, list) else [],
+            "phase_transitions": phase_transitions if isinstance(phase_transitions, list) else [],
+            "synchronization_events": sync_events if isinstance(sync_events, list) else [],
+            "scan_depth": scan_depth,
+            "threshold": threshold,
+            "accelerated": True,
+            "engine": "rust_py_emergence",
+        }
+    except Exception:
+        pass  # Fall through to Python
+
     try:
         from whitemagic.core.intelligence.emergence import EmergenceDetector
         detector = EmergenceDetector()
-
-        scan_depth = kwargs.get("scan_depth", 3)
-        threshold = kwargs.get("threshold", 0.7)
 
         emergent_patterns = detector.scan(depth=scan_depth, threshold=threshold)
         return {
@@ -178,12 +220,76 @@ def handle_association_mine_semantic(**kwargs: Any) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
-    """Detect constellations (memory clusters) in the graph."""
+    """Detect constellations (memory clusters) in the graph.
+
+    Uses Rust PyO3 PyConstellationDetector when available for native-speed
+    5D clustering. Falls back to Python ConstellationDetector.
+    """
+    sample_limit = kwargs.get("sample_limit", 50000)
+
+    # Rust PyO3 fast path
+    try:
+        import sqlite3
+        import whitemagic_rs
+
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+        backend = um.backend
+
+        with backend.pool.connection() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("""
+                SELECT hc.memory_id, hc.x, hc.y, hc.z, hc.w, hc.v,
+                       m.title, m.importance
+                FROM holographic_coords hc
+                JOIN memories m ON hc.memory_id = m.id
+                WHERE hc.x IS NOT NULL AND hc.y IS NOT NULL
+                ORDER BY m.importance DESC
+                LIMIT ?
+            """, (sample_limit,)).fetchall()
+
+        if len(rows) < 5:
+            return {
+                "status": "success",
+                "constellations_found": 0,
+                "constellations": [],
+                "note": "Not enough memories with coordinates for clustering",
+            }
+
+        detector = whitemagic_rs.PyConstellationDetector()
+        for row in rows:
+            detector.add_point(
+                row["memory_id"],
+                [float(row["x"]), float(row["y"]), float(row["z"]), float(row["w"]), float(row["v"])],
+            )
+
+        raw_constellations = detector.detect_constellations()
+
+        # Convert Constellation objects to dicts
+        constellations = []
+        for c in raw_constellations:
+            constellations.append({
+                "id": c.id,
+                "name": c.name,
+                "members": c.members,
+                "centroid": c.centroid,
+                "radius": c.radius,
+            })
+
+        return {
+            "status": "success",
+            "constellations_found": len(constellations) if isinstance(constellations, list) else 0,
+            "constellations": constellations if isinstance(constellations, list) else [],
+            "memories_scanned": len(rows),
+            "accelerated": True,
+            "engine": "rust_py_constellation",
+        }
+    except Exception:
+        pass  # Fall through to Python
+
     try:
         from whitemagic.core.memory.constellations import ConstellationDetector
         detector = ConstellationDetector()
-
-        sample_limit = kwargs.get("sample_limit", 50000)
 
         report = detector.detect(sample_limit=sample_limit)
         constellations = getattr(report, "constellations", []) or []

@@ -89,7 +89,7 @@ class ParallelMemoryConsolidator:
                             frontmatter[key.strip()] = clean_value
                         except Exception as e:
                             import logging
-                            logging.getLogger(__name__).warning(f"Failed to parse frontmatter line: {line} - {e}")
+                            logging.getLogger(__name__).warning("Failed to parse frontmatter line: %s - %s", line, e)
         return frontmatter
 
     def _process_single_file(self, filepath: Path) -> MemoryFile | None:

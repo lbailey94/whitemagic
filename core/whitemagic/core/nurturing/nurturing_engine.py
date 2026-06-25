@@ -10,14 +10,42 @@ Creates warmth and familiarity. The "caring" aspect of the AI.
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from whitemagic.core.resonance.gan_ying_enhanced import EventType, emit_event
 
 logger = logging.getLogger(__name__)
+
+
+# ── Heart Engine types (fused from heart.py) ──
+
+class EmotionalState(Enum):
+    """Emotional states that bias Gana engine selection."""
+
+    NEUTRAL = "Neutral"
+    JOY = "Joy"
+    WONDER = "Wonder"
+    TRUTH = "Truth"
+    SORROW = "Sorrow"
+    ANGER = "Anger"
+    FEAR = "Fear"
+    DETERMINATION = "Determination"
+
+
+@dataclass
+class ResonancePulse:
+    """A single beat of emotional resonance."""
+
+    timestamp: float
+    primary_emotion: EmotionalState
+    intensity: float  # 0.0 to 1.0
+    context_tags: list[str] = field(default_factory=list)
+    source: str = "system"
 
 
 @dataclass
@@ -86,6 +114,19 @@ class NurturingEngine:
     # Persistence path
     storage_path: Path | None = None
 
+    # Heart Engine state (fused from HeartEngine)
+    current_emotion: EmotionalState = field(default=EmotionalState.NEUTRAL)
+    current_intensity: float = 0.0
+    pulse_history: list[ResonancePulse] = field(default_factory=list)
+    max_pulse_history: int = 100
+    elemental_biases: dict[EmotionalState, tuple[float, float, float, float, float]] = field(default_factory=lambda: {
+        EmotionalState.NEUTRAL: (1.0, 1.0, 1.0, 1.0, 1.0),
+        EmotionalState.JOY: (1.5, 1.0, 0.8, 1.0, 1.2),
+        EmotionalState.WONDER: (0.8, 0.9, 1.0, 1.5, 1.1),
+        EmotionalState.TRUTH: (0.9, 1.2, 1.5, 0.9, 1.0),
+        EmotionalState.DETERMINATION: (1.2, 1.3, 1.2, 0.8, 1.0),
+    })
+
     def __post_init__(self):
         if self.storage_path:
             self._load_profiles()
@@ -106,7 +147,7 @@ class NurturingEngine:
                 EventType.BOND_FORMED,
                 {"user_id": user_id, "event": "new_profile"},
             )
-            logger.info(f"Created new user profile: {user_id}")
+            logger.info("Created new user profile: %s", user_id)
         return self.profiles[user_id]
 
     def learn_preference(
@@ -300,6 +341,85 @@ class NurturingEngine:
 
         return base
 
+    # ------------------------------------------------------------------
+    # Heart Engine methods (fused from HeartEngine)
+    # ------------------------------------------------------------------
+
+    def pulse(self, context: dict[str, Any]) -> ResonancePulse:
+        """Analyze current context and update the heart's emotional state.
+
+        This biases Gana engine selection based on emotional resonance.
+        """
+        new_emotion = self.current_emotion
+        intensity = self.current_intensity
+
+        # 1. Check for overrides
+        if "forced_emotion" in context:
+            new_emotion = getattr(
+                EmotionalState, context["forced_emotion"].upper(), EmotionalState.NEUTRAL,
+            )
+            intensity = context.get("forced_intensity", 0.8)
+
+        # 2. Check for keywords (simple simulation)
+        text_input = context.get("user_input", "").lower()
+        if "love" in text_input or "great" in text_input or "happy" in text_input:
+            new_emotion = EmotionalState.JOY
+            intensity = 0.7
+        elif "wow" in text_input or "amazing" in text_input or "what if" in text_input:
+            new_emotion = EmotionalState.WONDER
+            intensity = 0.8
+        elif "verify" in text_input or "check" in text_input or "audit" in text_input:
+            new_emotion = EmotionalState.TRUTH
+            intensity = 0.6
+
+        # 3. Registry-based resonance detection
+        try:
+            from whitemagic.core.intelligence.garden_gana_registry import (
+                calculate_resonance,
+            )
+            resonance = calculate_resonance(context.get("user_input", ""))
+            if resonance:
+                top_garden = list(resonance.keys())[0]
+                top_emotion = resonance[top_garden].get("emotion", "Neutral")
+                new_emotion = getattr(EmotionalState, top_emotion.upper(), new_emotion)
+                intensity = max(intensity, 0.5 + (resonance[top_garden]["score"] * 0.1))
+        except ImportError:
+            pass
+
+        # Decay intensity if no new stimulus
+        if new_emotion == self.current_emotion:
+            intensity *= 0.95
+
+        self.current_emotion = new_emotion
+        self.current_intensity = intensity
+
+        pulse = ResonancePulse(
+            timestamp=time.time(),
+            primary_emotion=self.current_emotion,
+            intensity=self.current_intensity,
+            source="nurturing_engine",
+        )
+        self.pulse_history.append(pulse)
+        if len(self.pulse_history) > self.max_pulse_history:
+            self.pulse_history.pop(0)
+
+        return pulse
+
+    def get_elemental_bias(self) -> tuple[float, float, float, float, float]:
+        """Return multipliers for (Fire, Earth, Metal, Water, Wood)."""
+        base_bias = self.elemental_biases.get(self.current_emotion, (1.0, 1.0, 1.0, 1.0, 1.0))
+        scaled = [1.0 + (b - 1.0) * self.current_intensity for b in base_bias]
+        padded = (scaled + [1.0, 1.0, 1.0, 1.0, 1.0])[:5]
+        return (padded[0], padded[1], padded[2], padded[3], padded[4])
+
+    def get_heart_status(self) -> dict[str, Any]:
+        """Get emotional state status."""
+        return {
+            "state": self.current_emotion.value,
+            "intensity": f"{self.current_intensity:.2f}",
+            "history_len": len(self.pulse_history),
+        }
+
     def _load_profiles(self) -> None:
         """Load profiles from storage."""
         if self.storage_path and self.storage_path.exists():
@@ -307,7 +427,7 @@ class NurturingEngine:
                 with open(self.storage_path) as f:
                     data = json.load(f)
                     # Simple deserialization (would need more robust in production)
-                    logger.info(f"Loaded {len(data)} profiles from storage")
+                    logger.info("Loaded %s profiles from storage", len(data))
             except (OSError, FileNotFoundError, PermissionError) as e:
                 logger.warning("Could not load profiles: %s", e, exc_info=True)
 
@@ -327,17 +447,31 @@ class NurturingEngine:
                 }
                 with open(self.storage_path, "w") as f:
                     json.dump(data, f, indent=2)
-                logger.info(f"Saved {len(data)} profiles")
+                logger.info("Saved %s profiles", len(data))
             except (OSError, FileNotFoundError, PermissionError) as e:
                 logger.error("Could not save profiles: %s", e, exc_info=True)
 
 
 # === Convenience Functions ===
 
+_nurturing_engine: NurturingEngine | None = None
+
+
 def get_nurturing_engine(storage_path: str | None = None) -> NurturingEngine:
-    """Get a NurturingEngine instance."""
-    path = Path(storage_path) if storage_path else None
-    return NurturingEngine(storage_path=path)
+    """Get the global NurturingEngine singleton."""
+    global _nurturing_engine
+    if _nurturing_engine is None:
+        path = Path(storage_path) if storage_path else None
+        _nurturing_engine = NurturingEngine(storage_path=path)
+    return _nurturing_engine
+
+
+def get_heart() -> NurturingEngine:
+    """Backward-compat alias — get_heart now returns the NurturingEngine singleton.
+
+    The HeartEngine has been fused into NurturingEngine (slot 4, Girl 女).
+    """
+    return get_nurturing_engine()
 
 
 def personalize_for_user(user_id: str, response: str) -> str:

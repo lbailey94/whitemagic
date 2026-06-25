@@ -1,5 +1,4 @@
 import asyncio
-import sys
 from whitemagic.security.sandbox import get_sandbox
 
 async def main():

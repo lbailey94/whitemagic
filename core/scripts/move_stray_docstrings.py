@@ -16,7 +16,6 @@ still serves as a "section header" in the source) and the imports
 become contiguous.
 """
 import ast
-import re
 from pathlib import Path
 
 ROOT = Path("whitemagic")

@@ -214,6 +214,129 @@ fn batch_cosine_scalar(
     num_vectors
 }
 
+/// Batch circular convolution for HRR binding operations.
+///
+/// Binds N query vectors with a single relation vector using circular convolution.
+/// This is the batched version of `circular_convolution` for GHRR attention.
+///
+/// # Arguments
+/// * `queries` - N query vectors concatenated (N * dim floats, row-major)
+/// * `relation` - Single relation vector (dim floats)
+/// * `dim` - Dimension of each vector
+/// * `n_vectors` - Number of query vectors
+/// * `results` - Output buffer (N * dim floats)
+///
+/// # Returns
+/// Number of vectors processed
+#[inline]
+pub fn batch_circular_convolution_simd(
+    queries: &[f32],
+    relation: &[f32],
+    dim: usize,
+    n_vectors: usize,
+    results: &mut [f32],
+) -> usize {
+    if n_vectors == 0 || dim == 0 || queries.len() < n_vectors * dim || results.len() < n_vectors * dim {
+        return 0;
+    }
+
+    // Circular convolution via direct computation (O(n²) per vector)
+    // For production use, FFT would be preferred, but this provides
+    // a SIMD-accelerated direct path that avoids FFT overhead for small dims.
+    for i in 0..n_vectors {
+        let q_offset = i * dim;
+        let r_offset = 0;
+        let out_offset = i * dim;
+
+        if is_x86_feature_detected!("avx2") {
+            unsafe {
+                circular_conv_avx2(
+                    &queries[q_offset..q_offset + dim],
+                    &relation[r_offset..r_offset + dim],
+                    dim,
+                    &mut results[out_offset..out_offset + dim],
+                );
+            }
+        } else {
+            circular_conv_scalar(
+                &queries[q_offset..q_offset + dim],
+                &relation[r_offset..r_offset + dim],
+                dim,
+                &mut results[out_offset..out_offset + dim],
+            );
+        }
+    }
+
+    n_vectors
+}
+
+/// AVX2-accelerated circular convolution for a single pair
+#[target_feature(enable = "avx2")]
+unsafe fn circular_conv_avx2(a: &[f32], b: &[f32], dim: usize, out: &mut [f32]) {
+    for k in 0..dim {
+        let mut sum = _mm256_setzero_ps();
+        let mut j = 0;
+
+        while j + 8 <= dim {
+            // a[j] * b[(k - j) mod dim]
+            let a_vec = _mm256_loadu_ps(a.as_ptr().add(j));
+            // Gather b indices (modular)
+            let idx = [
+                ((k as i64 - j as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 1) as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 2) as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 3) as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 4) as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 5) as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 6) as i64 + dim as i64) % dim as i64) as usize,
+                ((k as i64 - (j + 7) as i64 + dim as i64) % dim as i64) as usize,
+            ];
+            let b_vals = [
+                *b.get_unchecked(idx[0]),
+                *b.get_unchecked(idx[1]),
+                *b.get_unchecked(idx[2]),
+                *b.get_unchecked(idx[3]),
+                *b.get_unchecked(idx[4]),
+                *b.get_unchecked(idx[5]),
+                *b.get_unchecked(idx[6]),
+                *b.get_unchecked(idx[7]),
+            ];
+            let b_vec = _mm256_loadu_ps(b_vals.as_ptr());
+            let prod = _mm256_mul_ps(a_vec, b_vec);
+            sum = _mm256_add_ps(sum, prod);
+            j += 8;
+        }
+
+        // Horizontal sum
+        let mut dot = 0.0f32;
+        let sum_array: [f32; 8] = std::mem::transmute(sum);
+        for &val in &sum_array {
+            dot += val;
+        }
+
+        // Handle remaining
+        while j < dim {
+            let b_idx = ((k as i64 - j as i64 + dim as i64) % dim as i64) as usize;
+            dot += a[j] * *b.get_unchecked(b_idx);
+            j += 1;
+        }
+
+        out[k] = dot;
+    }
+}
+
+/// Scalar circular convolution for a single pair
+fn circular_conv_scalar(a: &[f32], b: &[f32], dim: usize, out: &mut [f32]) {
+    for k in 0..dim {
+        let mut sum = 0.0f32;
+        for j in 0..dim {
+            let b_idx = (k as i64 - j as i64 + dim as i64) % dim as i64;
+            sum += a[j] * b[b_idx as usize];
+        }
+        out[k] = sum;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,5 +376,36 @@ mod tests {
         assert!((results[0] - 1.0).abs() < 1e-6);
         assert!((results[1] - 0.0).abs() < 1e-6);
         assert!((results[2] - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_batch_circular_convolution() {
+        // Test with known vectors: bind([1,0,0], [0,1,0]) = [0,1,0] (shifted)
+        let queries = vec![
+            1.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+        ];
+        let relation = vec![0.0, 1.0, 0.0];
+        let mut results = vec![0.0; 6];
+
+        let count = batch_circular_convolution_simd(&queries, &relation, 3, 2, &mut results);
+        assert_eq!(count, 2);
+
+        // bind([1,0,0], [0,1,0]) = [0,0,0] shifted → circular conv gives [0, 0, 0]
+        // Actually: out[k] = sum_j a[j] * b[(k-j) mod dim]
+        // out[0] = a[0]*b[0] + a[1]*b[2] + a[2]*b[1] = 1*0 + 0*0 + 0*1 = 0
+        // out[1] = a[0]*b[1] + a[1]*b[0] + a[2]*b[2] = 1*1 + 0*0 + 0*0 = 1
+        // out[2] = a[0]*b[2] + a[1]*b[1] + a[2]*b[0] = 1*0 + 0*1 + 0*0 = 0
+        assert!((results[0] - 0.0).abs() < 1e-5);
+        assert!((results[1] - 1.0).abs() < 1e-5);
+        assert!((results[2] - 0.0).abs() < 1e-5);
+
+        // bind([0,1,0], [0,1,0]) = [0,0,1] (double shift)
+        // out[0] = 0*0 + 1*0 + 0*1 = 0
+        // out[1] = 0*1 + 1*0 + 0*0 = 0
+        // out[2] = 0*0 + 1*1 + 0*0 = 1
+        assert!((results[3] - 0.0).abs() < 1e-5);
+        assert!((results[4] - 0.0).abs() < 1e-5);
+        assert!((results[5] - 1.0).abs() < 1e-5);
     }
 }

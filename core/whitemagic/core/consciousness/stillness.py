@@ -44,7 +44,7 @@ class StillnessManager:
         if self._is_still:
             return
 
-        logger.info(f"🧘 ENTERING STILLNESS: {reason}")
+        logger.info("🧘 ENTERING STILLNESS: %s", reason)
         self._is_still = True
         self._stillness_start = datetime.now()
         self._interruption_count = 0
@@ -68,7 +68,7 @@ class StillnessManager:
 
         start = self._stillness_start or datetime.now()
         duration = (datetime.now() - start).total_seconds()
-        logger.info(f"🌅 EXITING STILLNESS. Duration: {duration:.1f}s")
+        logger.info("🌅 EXITING STILLNESS. Duration: %ss", duration)
 
         self._is_still = False
 
@@ -89,7 +89,7 @@ class StillnessManager:
         if not self._is_still:
             return
         self._interruption_count += 1
-        logger.debug(f"Stillness interrupted by {source}")
+        logger.debug("Stillness interrupted by %s", source)
 
 _stillness_manager = None
 def get_stillness_manager() -> StillnessManager:

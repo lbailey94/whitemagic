@@ -121,7 +121,7 @@ class LibraryLoader:
 
             path = self._find_library()
             if not path:
-                logger.debug(f"Library {self.lib_name} not found")
+                logger.debug("Library %s not found", self.lib_name)
                 self._available = False
                 return None
 
@@ -131,7 +131,7 @@ class LibraryLoader:
                     self.setup_function(lib)
                 self._lib = lib
                 self._available = True
-                logger.info(f"Library {self.lib_name} loaded from: {path}")
+                logger.info("Library %s loaded from: %s", self.lib_name, path)
                 return lib
             except Exception as e:
                 logger.warning("Failed to load library %s: %s", self.lib_name, e, exc_info=True)

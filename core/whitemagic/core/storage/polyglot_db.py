@@ -47,7 +47,7 @@ class PolyglotDB:
         else:
             self.active_backend = backend
 
-        logger.info(f"PolyglotDB initialized with {self.active_backend.value} backend")
+        logger.info("PolyglotDB initialized with %s backend", self.active_backend.value)
 
     def _init_rust(self):
         """Initialize Rust backend (DashMap + RocksDB)."""

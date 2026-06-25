@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import os
 import re
 import threading
 from dataclasses import dataclass, field
@@ -349,6 +350,25 @@ rules:
     profile: secure
     keyword_patterns: ["external", "http", "url", "network", "remote"]
 
+  # === Research Profile (R&D mode — relaxed for memory CRUD, audit trail intact) ===
+  - name: research_allow_memory_writes
+    description: Allow memory CRUD operations in research mode without privacy blocking
+    action: log
+    severity: 0.1
+    explain: "Research mode — memory CRUD operations are logged but not privacy-restricted."
+    profile: research
+    tool_patterns: ["create_memory", "update_memory", "delete_memory", "remember",
+                    "memory_create", "memory_update", "memory_delete",
+                    "import_memories", "thought_clone"]
+
+  - name: research_log_privacy
+    description: Log privacy-sensitive operations in research mode instead of warning
+    action: log
+    severity: 0.2
+    explain: "Research mode — privacy-sensitive operation logged for audit trail."
+    profile: research
+    keyword_patterns: ["personal", "private", "sensitive"]
+
   # === Violet Profile (Edgerunner Violet — purple-team security) ===
   - name: violet_require_engagement_token
     description: Block offensive security tools without a valid engagement token
@@ -453,7 +473,7 @@ class DharmaRulesEngine:
     # ------------------------------------------------------------------
 
     # Profiles that are only defined in the Python rules engine (not Haskell)
-    _PYTHON_ONLY_PROFILES = frozenset({"violet"})
+    _PYTHON_ONLY_PROFILES = frozenset({"violet", "research"})
 
     def evaluate(self, action: dict[str, Any]) -> DharmaDecision:
         """Evaluate an action against the active profile's rules.
@@ -985,7 +1005,7 @@ class DharmaRulesEngine:
         if not sources:
             sources.append("built-in defaults")
 
-        logger.info(f"Dharma rules engine: {len(rules)} rules loaded from {', '.join(sources)}")
+        logger.info("Dharma rules engine: %s rules loaded from %s", len(rules), ', '.join(sources))
 
     def _load_yaml_file(
         self, path: Path,
@@ -1001,8 +1021,9 @@ class DharmaRulesEngine:
                 spec_version = data.get("dharma_spec_version")
                 if spec_version and spec_version not in ("0.1.0", "0.2.0"):
                     logger.warning(
-                        f"Dharma rules {path.name}: unknown spec version {spec_version!r}. "
-                        f"Expected 0.1.0 or 0.2.0"
+                        "Dharma rules %s: unknown spec version %r. "
+                        "Expected 0.1.0 or 0.2.0",
+                        path.name, spec_version,
                     )
                 # Phase 1: extends inheritance (store for future resolution)
                 extends = data.get("extends")
@@ -1080,4 +1101,8 @@ def get_rules_engine(rules_path: Path | None = None) -> DharmaRulesEngine:
                     rules_path=rules_path,
                     rules_dir=rules_dir,
                 )
+                # R&D mode: auto-switch to research profile
+                if os.getenv("WM_RD_MODE", "").strip().lower() in ("1", "true", "yes", "on"):
+                    _engine.set_profile("research")
+                    logger.info("WM_RD_MODE=1: Dharma profile set to 'research'")
     return _engine

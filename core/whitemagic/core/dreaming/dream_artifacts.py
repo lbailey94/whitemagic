@@ -174,7 +174,7 @@ class DreamArtifactWriter:
                 dominant=data.get("dominant", "balanced"),
             )
         except Exception as exc:
-            logger.error(f"Failed to write dream artifact: {exc}", exc_info=True)
+            logger.error("Failed to write dream artifact: %s", exc, exc_info=True)
 
     def write_artifact(
         self,

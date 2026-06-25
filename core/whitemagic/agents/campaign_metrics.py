@@ -394,7 +394,7 @@ class CampaignTracker:
         """
         self._campaign_start = time.time()
         self._campaign_name = name
-        logger.info(f"Campaign '{name}' started")
+        logger.info("Campaign '%s' started", name)
 
     def end_campaign(self) -> None:
         """
@@ -644,7 +644,7 @@ class CampaignTracker:
         md_path = reports_dir / f"grand_army_aar_{ts}.md"
         md_path.write_text(self.after_action_markdown())
 
-        logger.info(f"After-action reports saved: {json_path}, {md_path}")
+        logger.info("After-action reports saved: %s, %s", json_path, md_path)
         return json_path, md_path
 
 

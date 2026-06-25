@@ -56,7 +56,7 @@ class BenchmarkHistoryTracker:
             try:
                 with open(self.history_file) as f:
                     self.history = json.load(f)
-                logger.info(f"📊 Loaded {len(self.history)} historical benchmark runs")
+                logger.info("📊 Loaded %s historical benchmark runs", len(self.history))
             except Exception as e:
                 logger.error("Failed to load history: %s", e, exc_info=True)
                 self.history = []
@@ -83,7 +83,7 @@ class BenchmarkHistoryTracker:
         self.history.append(run_data)
         self.save_history()
 
-        logger.info(f"✅ Recorded benchmark run with {len(results)} results")
+        logger.info("✅ Recorded benchmark run with %s results", len(results))
 
     def get_latest_run(self) -> dict[str, Any] | None:
         """Get the most recent benchmark run."""

@@ -284,3 +284,151 @@ def handle_galaxy_lineage_stats(**kwargs: Any) -> dict[str, Any]:
         return {"status": "success", **stats}
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ── v23.1: 6D Holographic Galaxy Router ──────────────────────────
+
+
+def handle_galaxy_route(**kwargs: Any) -> dict[str, Any]:
+    """Determine which cognitive galaxy a subsystem's memory belongs to."""
+    subsystem = kwargs.get("subsystem")
+    if not subsystem:
+        return {"status": "error", "error": "subsystem is required"}
+
+    from whitemagic.core.memory.galaxy_router import get_galaxy_router
+
+    try:
+        router = get_galaxy_router()
+        galaxy = router.route(subsystem, metadata=kwargs.get("metadata"))
+        return {
+            "status": "success",
+            "subsystem": subsystem,
+            "galaxy": galaxy,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_stats(**kwargs: Any) -> dict[str, Any]:
+    """Get statistics for a specific cognitive galaxy."""
+    galaxy = kwargs.get("galaxy", "universal")
+
+    from whitemagic.core.memory.galaxy_router import get_galaxy_router
+
+    try:
+        router = get_galaxy_router()
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+        stats = router.get_galaxy_stats(galaxy, um)
+        return {"status": "success", **stats}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_migrate(**kwargs: Any) -> dict[str, Any]:
+    """Migrate a memory from one cognitive galaxy to another."""
+    memory_id = kwargs.get("memory_id")
+    target_galaxy = kwargs.get("target_galaxy")
+
+    if not memory_id:
+        return {"status": "error", "error": "memory_id is required"}
+    if not target_galaxy:
+        return {"status": "error", "error": "target_galaxy is required"}
+
+    from whitemagic.core.memory.galaxy_router import get_galaxy_router
+
+    try:
+        router = get_galaxy_router()
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+        success = router.migrate(memory_id, target_galaxy, um)
+        if success:
+            return {"status": "success", "message": f"Migrated {memory_id} to galaxy '{target_galaxy}'"}
+        return {"status": "error", "error": "Migration failed (see logs)"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_galaxy_list_types(**kwargs: Any) -> dict[str, Any]:
+    """List all registered cognitive galaxy types."""
+    from whitemagic.core.memory.galaxy_router import get_galaxy_router
+
+    try:
+        router = get_galaxy_router()
+        galaxies = router.list_galaxies()
+        return {
+            "status": "success",
+            "count": len(galaxies),
+            "galaxies": {
+                name: {
+                    "description": info.description,
+                    "color": info.color,
+                    "decay_multiplier": info.decay_multiplier,
+                }
+                for name, info in galaxies.items()
+            },
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def handle_galaxy_export(params: dict) -> dict:
+    """Export memories from a galaxy as Arrow IPC bytes (base64-encoded)."""
+    try:
+        import base64
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+
+        galaxy = params.get("galaxy", "universal")
+        memory_type_str = params.get("memory_type")
+        limit = params.get("limit", 10000)
+
+        memory_type = None
+        if memory_type_str:
+            from whitemagic.core.memory.unified_types import MemoryType
+            try:
+                memory_type = MemoryType[memory_type_str.upper()]
+            except (KeyError, ValueError):
+                pass
+
+        ipc_bytes = um.arrow_export(memory_type=memory_type, limit=limit, galaxy=galaxy)
+        if ipc_bytes is None:
+            return {
+                "status": "success",
+                "galaxy": galaxy,
+                "exported": 0,
+                "ipc_bytes_b64": None,
+                "message": "Arrow bridge unavailable or no memories found",
+            }
+
+        return {
+            "status": "success",
+            "galaxy": galaxy,
+            "exported": len(ipc_bytes),
+            "ipc_bytes_b64": base64.b64encode(ipc_bytes).decode("ascii"),
+            "size_bytes": len(ipc_bytes),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def handle_galaxy_import(params: dict) -> dict:
+    """Import memories from base64-encoded Arrow IPC bytes."""
+    try:
+        import base64
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+
+        ipc_b64 = params.get("ipc_bytes_b64", "")
+        if not ipc_b64:
+            return {"status": "error", "error": "Missing ipc_bytes_b64 parameter"}
+
+        ipc_bytes = base64.b64decode(ipc_b64)
+        count = um.arrow_import(ipc_bytes)
+
+        return {
+            "status": "success",
+            "imported": count,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

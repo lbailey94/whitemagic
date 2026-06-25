@@ -19,6 +19,10 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
     "simd.cosine": LazyHandler("simd", "handle_simd_cosine"),
     "simd.batch": LazyHandler("simd", "handle_simd_batch"),
     "simd.status": LazyHandler("simd", "handle_simd_status"),
+    # --- Hexagram SIMD (Phase 6b) ---
+    "hexagram.simd_execute": LazyHandler("simd", "handle_hexagram_simd_execute"),
+    "hexagram.dispatch": LazyHandler("simd", "handle_hexagram_dispatch"),
+    "hexagram.boltzmann_select": LazyHandler("simd", "handle_hexagram_boltzmann_select"),
 
     # --- Knowledge Graph ---
     "kg.extract": LazyHandler("knowledge_graph", "handle_kg_extract"),
@@ -63,6 +67,9 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
 
     # --- Unified Zodiacal Progression ---
     "zodiac.status": LazyHandler("zodiac_progression", "handle_zodiac_status"),
+    "zodiac.activate": LazyHandler("zodiac_progression", "handle_zodiac_activate"),
+    "zodiac.council": LazyHandler("zodiac_progression", "handle_zodiac_council"),
+    "zodiac.stats": LazyHandler("zodiac_progression", "handle_zodiac_stats"),
 
 
     # --- BitNet Inference ---
@@ -153,6 +160,12 @@ DISPATCH_INTELLIGENCE: dict[str, Callable[..., dict[str, Any]]] = {
     "vector.search": LazyHandler("vector_search", "handle_vector_search"),
     "vector.index": LazyHandler("vector_search", "handle_vector_index"),
     "vector.status": LazyHandler("vector_search", "handle_vector_status"),
+
+    # --- Fragment (Rust-powered codebase search) ---
+    "fragment.search": LazyHandler("fragment", "handle_fragment_search"),
+    "fragment.index": LazyHandler("fragment", "handle_fragment_index"),
+    "fragment.status": LazyHandler("fragment", "handle_fragment_status"),
+    "fragment.query": LazyHandler("fragment", "handle_fragment_query"),
 
     # --- Cross-Session Learning ---
     "learning.patterns": LazyHandler("learning", "handle_learning_patterns"),

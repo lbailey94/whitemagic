@@ -49,8 +49,8 @@ class UnifiedEmbedder:
         self.rust_onnx_available = self._check_rust_onnx()
 
         logger.info("UnifiedEmbedder initialized")
-        logger.info(f"  Mojo GPU: {'✓' if self.mojo_available else '✗'}")
-        logger.info(f"  Rust ONNX: {'✓' if self.rust_onnx_available else '✗'}")
+        logger.info("  Mojo GPU: %s", '✓' if self.mojo_available else '✗')
+        logger.info("  Rust ONNX: %s", '✓' if self.rust_onnx_available else '✗')
 
     def _get_default_model_path(self) -> str:
         """Get default ONNX model path."""
@@ -259,7 +259,7 @@ def batch_embed_memories(
                 )
 
             total_embedded += len(batch_texts)
-            logger.info(f"Embedded {total_embedded} memories...")
+            logger.info("Embedded %s memories...", total_embedded)
 
             batch_ids.clear()
             batch_texts.clear()
@@ -278,7 +278,7 @@ def batch_embed_memories(
     conn.commit()
     conn.close()
 
-    logger.info(f"✅ Completed! {total_embedded} memories embedded")
+    logger.info("✅ Completed! %s memories embedded", total_embedded)
     return total_embedded
 
 

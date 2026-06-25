@@ -194,7 +194,7 @@ def extract_relationships(
         base_path = _MEM_DIR
     db_path = base_path / "whitemagic.db"
     if not db_path.exists():
-        logger.error(f"Database not found at {db_path}")
+        logger.error("Database not found at %s", db_path)
         return {}
 
     # Connect to DB with long timeout for WAL recovery

@@ -29,7 +29,8 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 # Build paths
-_BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent / "whitemagic-koka"
+# From core/whitemagic/core/acceleration/ → up 5 parents to repo root → polyglot/whitemagic-koka/
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "whitemagic-koka"
 _BUILD_DIR = _BASE_DIR  # Binaries are in root, not .koka_build/native
 _DISPATCHER_BIN = _BASE_DIR / "orchestrator"  # Use orchestrator as dispatcher
 
@@ -40,9 +41,13 @@ _MODULE_BINS = {
     "gan_ying": _BASE_DIR / "gan_ying",
     "gana": _BASE_DIR / "gan_ying",  # gan_ying handles gana operations
     "circuit": _BASE_DIR / "circuit",
-    "retry": _BASE_DIR / "circuit",  # circuit handles retry logic
+    "circuit_dispatch": _BASE_DIR / "circuit_dispatch",  # stateful circuit breaker
+    "backpressure": _BASE_DIR / "backpressure",  # stateful backpressure handler
+    "transactions": _BASE_DIR / "transactions",  # stateful transaction handler
+    "timeout": _BASE_DIR / "timeout",  # stateful timeout handler
+    "retry": _BASE_DIR / "retry",  # stateful retry logic handler
     "session": _BASE_DIR / "unified_runtime_v3",  # unified runtime for sessions
-"resources": _BASE_DIR / "ring_buffer",
+    "resources": _BASE_DIR / "ring_buffer",
     "dream": _BASE_DIR / "dream_cycle",
     "metrics": _BASE_DIR / "metrics",
     "hot_paths": _BASE_DIR / "hot_paths",
@@ -70,7 +75,7 @@ class KokaCircuitBreaker:
             self.last_failure_time = time.time()
             if self.failures >= self.failure_threshold:
                 self.state = "OPEN"
-                logger.warning(f"Koka circuit breaker OPENED after {self.failures} failures")
+                logger.warning("Koka circuit breaker OPENED after %s failures", self.failures)
 
     def record_success(self):
         """
@@ -108,7 +113,7 @@ class KokaNativeBridge:
     """
 
     def __init__(self, max_connections: int = 4):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._max_connections = max_connections
         self._processes: dict[str, list[subprocess.Popen]] = {}
         self._available: dict[str, list[subprocess.Popen]] = {}
@@ -354,6 +359,66 @@ class KokaNativeBridge:
             if proc.poll() is None:
                 self._return_process(module, proc)
 
+    def dispatch_line(
+        self,
+        module: str,
+        command: str,
+        timeout: float = 5.0
+    ) -> str | None:
+        """Dispatch a line-protocol command to a Koka native module.
+
+        Args:
+            module: Koka module name (e.g., "circuit", "backpressure")
+            command: Line protocol command (e.g., "check:default", "admit:1")
+            timeout: Maximum seconds to wait for response
+
+        Returns:
+            Raw response string (e.g., "ok:closed") or None on failure
+        """
+        if not self.is_available(module):
+            logger.debug("Koka module not available: %s", module)
+            return None
+
+        breaker = self._breakers.get(module)
+        if breaker and not breaker.allow_request():
+            logger.warning("Koka circuit breaker OPEN for %s - skipping dispatch", module)
+            return None
+
+        proc = self._get_process(module)
+        if not proc:
+            logger.warning("Koka process pool exhausted for %s", module)
+            return None
+
+        try:
+            if proc.stdin is not None:
+                proc.stdin.write(command + "\n")
+                proc.stdin.flush()
+            else:
+                logger.error("Koka process stdin is None for %s", module)
+                return None
+
+            response_line = self._readline_with_timeout(proc, timeout)
+
+            if not response_line:
+                logger.error("Koka process timed out for %s.%s", module, command)
+                if breaker:
+                    breaker.record_failure()
+                self._discard_process(module, proc)
+                return None
+
+            if breaker:
+                breaker.record_success()
+            return response_line.strip()
+
+        except Exception as e:
+            logger.error("Koka dispatch_line error: %s", e)
+            if breaker:
+                breaker.record_failure()
+            return None
+        finally:
+            if proc.poll() is None:
+                self._return_process(module, proc)
+
     def close(self) -> None:
         """Close all Koka processes."""
         with self._lock:
@@ -366,6 +431,127 @@ class KokaNativeBridge:
                         proc.kill()
             self._processes.clear()
             self._available.clear()
+
+    # -----------------------------------------------------------------------
+    # High-level effect dispatch wrappers (line protocol)
+    # -----------------------------------------------------------------------
+
+    def backpressure_admit(self, priority: int = 0) -> bool | None:
+        """Request admission under backpressure control."""
+        resp = self.dispatch_line("backpressure", f"admit:{priority}")
+        if resp and resp.startswith("ok:"):
+            return resp == "ok:true"
+        return None
+
+    def backpressure_should_shed(self) -> bool | None:
+        """Check if load shedding is needed."""
+        resp = self.dispatch_line("backpressure", "should-shed")
+        if resp and resp.startswith("ok:"):
+            return resp == "ok:true"
+        return None
+
+    def backpressure_current_load(self) -> float | None:
+        """Get current load factor (0.0-1.0)."""
+        resp = self.dispatch_line("backpressure", "current-load")
+        if resp and resp.startswith("ok:"):
+            try:
+                return float(resp[3:])
+            except ValueError:
+                return None
+        return None
+
+    def backpressure_set_threshold(self, threshold: float) -> bool:
+        """Set the load shedding threshold."""
+        resp = self.dispatch_line("backpressure", f"set-threshold:{threshold}")
+        return resp == "ok:set"
+
+    def timeout_set(self, ms: int) -> bool:
+        """Set the timeout duration in milliseconds."""
+        resp = self.dispatch_line("timeout", f"set:{ms}")
+        return resp == "ok:set"
+
+    def timeout_get(self) -> int | None:
+        """Get the current timeout in milliseconds."""
+        resp = self.dispatch_line("timeout", "get")
+        if resp and resp.startswith("ok:"):
+            try:
+                return int(resp[3:])
+            except ValueError:
+                return None
+        return None
+
+    def timeout_is_timed_out(self) -> bool | None:
+        """Check if the timeout has been reached."""
+        resp = self.dispatch_line("timeout", "is-timed-out")
+        if resp and resp.startswith("ok:"):
+            return resp == "ok:true"
+        return None
+
+    def timeout_time_remaining(self) -> int | None:
+        """Get remaining time in milliseconds."""
+        resp = self.dispatch_line("timeout", "time-remaining")
+        if resp and resp.startswith("ok:"):
+            try:
+                return int(resp[3:])
+            except ValueError:
+                return None
+        return None
+
+    def retry_attempt(self, description: str = "") -> int | None:
+        """Record a retry attempt, returns attempt count."""
+        resp = self.dispatch_line("retry", f"attempt:{description}")
+        if resp and resp.startswith("ok:"):
+            try:
+                return int(resp[3:])
+            except ValueError:
+                return None
+        return None
+
+    def retry_should_retry(self) -> bool | None:
+        """Check if another retry should be attempted."""
+        resp = self.dispatch_line("retry", "should-retry")
+        if resp and resp.startswith("ok:"):
+            return resp == "ok:true"
+        return None
+
+    def retry_backoff_delay(self) -> int | None:
+        """Get the current backoff delay in milliseconds."""
+        resp = self.dispatch_line("retry", "backoff-delay")
+        if resp and resp.startswith("ok:"):
+            try:
+                return int(resp[3:])
+            except ValueError:
+                return None
+        return None
+
+    def retry_set_strategy(self, strategy: str, base_ms: int = 100, max_ms: int = 30000) -> bool:
+        """Set the backoff strategy (e.g., 'exponential', 'linear')."""
+        resp = self.dispatch_line("retry", f"set-strategy:{strategy}:{base_ms}:{max_ms}")
+        return resp == "ok:set"
+
+    def transaction_begin(self) -> str | None:
+        """Begin a new transaction, returns transaction ID."""
+        resp = self.dispatch_line("transactions", "begin")
+        if resp and resp.startswith("ok:"):
+            return resp[3:]
+        return None
+
+    def transaction_commit(self, tx_id: str) -> bool:
+        """Commit a transaction."""
+        resp = self.dispatch_line("transactions", f"commit:{tx_id}")
+        return resp == "ok:true"
+
+    def transaction_rollback(self, tx_id: str) -> bool:
+        """Rollback a transaction."""
+        resp = self.dispatch_line("transactions", f"rollback:{tx_id}")
+        return resp == "ok:true"
+
+    def transaction_status(self, tx_id: str) -> str | None:
+        """Get transaction status (active, committed, rolled_back, unknown)."""
+        resp = self.dispatch_line("transactions", f"status:{tx_id}")
+        if resp and resp.startswith("ok:"):
+            return resp[3:]
+        return None
 
 
 # Global bridge instance
@@ -537,3 +723,118 @@ def benchmark_koka_dispatch(
         "p95_us": latencies[int(n * 0.95)],
         "p99_us": latencies[int(n * 0.99)],
     }
+
+
+class KokaCircuitDispatch:
+    """Python bridge to the Koka circuit_dispatch binary.
+
+    Uses a persistent subprocess with line protocol (op:name:args).
+    State is maintained inside the Koka handler scope, so circuit
+    breaker state persists across calls within the same process.
+
+    Protocol: "op:name:arg1:arg2:..."
+    Response: "ok:result" or "error:message"
+    """
+
+    _instance: KokaCircuitDispatch | None = None
+    _init_lock = threading.Lock()
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self._proc: subprocess.Popen | None = None
+        self._binary = _BASE_DIR / "circuit"
+        self._started = False
+
+    @classmethod
+    def get_instance(cls) -> KokaCircuitDispatch:
+        if cls._instance is None:
+            with cls._init_lock:
+                if cls._instance is None:
+                    cls._instance = KokaCircuitDispatch()
+        return cls._instance
+
+    def _ensure_running(self) -> bool:
+        """Start the subprocess if not running."""
+        if self._proc is not None and self._proc.poll() is None:
+            return True
+
+        if not self._binary.exists() or not os.access(self._binary, os.X_OK):
+            return False
+
+        try:
+            self._proc = subprocess.Popen(
+                ["stdbuf", "-o0", "-i0", str(self._binary)],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+            )
+            self._started = True
+            logger.info("KokaCircuitDispatch started")
+            return True
+        except Exception as e:
+            logger.error("Failed to start circuit_dispatch: %s", e)
+            return False
+
+    def _send(self, line: str) -> str | None:
+        """Send a line and read the response."""
+        with self._lock:
+            if not self._ensure_running():
+                return None
+            assert self._proc is not None
+            assert self._proc.stdin is not None
+            assert self._proc.stdout is not None
+
+            try:
+                self._proc.stdin.write(line + "\n")
+                self._proc.stdin.flush()
+                response = self._proc.stdout.readline()
+                if not response:
+                    return None
+                return response.strip()
+            except (BrokenPipeError, OSError, ValueError) as e:
+                logger.debug("circuit_dispatch I/O error: %s", e)
+                self._proc = None
+                return None
+
+    def check(self, name: str) -> str:
+        """Check circuit state. Returns 'closed', 'open', or 'half-open'."""
+        resp = self._send(f"check:{name}")
+        if resp and resp.startswith("ok:"):
+            return resp[3:]
+        return "closed"  # safe default
+
+    def record_success(self, name: str) -> bool:
+        resp = self._send(f"success:{name}")
+        return resp == "ok:recorded"
+
+    def record_failure(self, name: str) -> bool:
+        resp = self._send(f"failure:{name}")
+        return resp == "ok:recorded"
+
+    def reset(self, name: str) -> bool:
+        resp = self._send(f"reset:{name}")
+        return resp == "ok:reset"
+
+    def configure(self, name: str, threshold: int, timeout_ms: int, half_open_max: int) -> bool:
+        resp = self._send(f"configure:{name}:{threshold}:{timeout_ms}:{half_open_max}")
+        return resp == "ok:configured"
+
+    def is_open(self, name: str) -> bool:
+        return self.check(name) == "open"
+
+    def close(self) -> None:
+        with self._lock:
+            if self._proc is not None:
+                try:
+                    if self._proc.stdin is not None:
+                        self._proc.stdin.write("quit\n")
+                        self._proc.stdin.flush()
+                    self._proc.wait(timeout=2.0)
+                except (subprocess.TimeoutExpired, BrokenPipeError, OSError):
+                    try:
+                        self._proc.kill()
+                    except (ProcessLookupError, OSError):
+                        pass
+                self._proc = None

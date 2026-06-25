@@ -72,7 +72,7 @@ class RefiningFire:
             )
 
             self.library.add_solution(solution)
-            logger.info(f"🔥 Refining Fire: Extracted spark '{sol_id}' from husk {memory.id}")
+            logger.info("🔥 Refining Fire: Extracted spark '%s' from husk %s", sol_id, memory.id)
             return sol_id
 
         return None

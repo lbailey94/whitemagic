@@ -42,24 +42,15 @@ defmodule WhiteMagicElixir.Coordinate do
     if text == "" do
       new()
     else
-      # Deterministic pseudo-random projection
-      h = :erlang.phash2(text, 2_147_483_647)
-      rng = :rand.seed(:exsss, {h + seed, h, h})
+      # Deterministic hash-based projection (no 768-iteration RNG loop)
+      h = :erlang.phash2({text, seed}, 2_147_483_647)
+      h2 = :erlang.phash2({text, seed + 1}, 2_147_483_647)
+      h3 = :erlang.phash2({text, seed + 2}, 2_147_483_647)
 
-      # Generate 768 pseudo-random values
-      {vals, _} = Enum.map_reduce(1..768, rng, fn _, r ->
-        {v, r2} = :rand.uniform_s(r)
-        {v * 2 - 1, r2}  # scale to [-1, 1]
-      end)
-
-      # Normalise
-      vec = :math.sqrt(Enum.sum(Enum.map(vals, &(&1 * &1))))
-      vals = if vec > 0, do: Enum.map(vals, &(&1 / vec)), else: vals
-
-      # Project to 3D spatial
-      x = Enum.sum(Enum.take(vals, 256)) / 16.0
-      y = Enum.sum(Enum.take(Enum.drop(vals, 256), 256)) / 16.0
-      z = Enum.sum(Enum.drop(vals, 512)) / 16.0
+      # Project hash to 3D spatial coordinates
+      x = rem(h, 100_000) / 100_000.0
+      y = rem(h2, 100_000) / 100_000.0
+      z = rem(h3, 100_000) / 100_000.0
 
       # W = temporal recency
       w = clamp(String.length(text) / 1000.0, 0.0, 1.0)
@@ -147,12 +138,28 @@ defmodule WhiteMagicElixir.Coordinate do
   defp clamp(v, lo, hi), do: max(lo, min(hi, v))
 
   defp count_uppercase(text) do
-    text |> String.graphemes() |> Enum.count(&(&1 =~ ~r/[A-Z]/))
+    count_uppercase_bin(text, 0)
   end
 
-  defp count_punct(text) do
-    text |> String.graphemes() |> Enum.count(&(&1 in ["!", "?", ".", ";", ":"]))
+  defp count_uppercase_bin(<<c, rest::binary>>, acc) when c >= 65 and c <= 90 do
+    count_uppercase_bin(rest, acc + 1)
   end
+  defp count_uppercase_bin(<<_, rest::binary>>, acc) do
+    count_uppercase_bin(rest, acc)
+  end
+  defp count_uppercase_bin(<<>>, acc), do: acc
+
+  defp count_punct(text) do
+    count_punct_bin(text, 0)
+  end
+
+  defp count_punct_bin(<<c, rest::binary>>, acc) when c in [33, 46, 63, 58, 59] do
+    count_punct_bin(rest, acc + 1)
+  end
+  defp count_punct_bin(<<_, rest::binary>>, acc) do
+    count_punct_bin(rest, acc)
+  end
+  defp count_punct_bin(<<>>, acc), do: acc
 
   defp sum_product(coords, weights, getter) do
     Enum.zip(coords, weights)

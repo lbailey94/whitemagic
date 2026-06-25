@@ -180,7 +180,7 @@ def ensure_paths() -> Any:
     """Ensure all core directories exist."""
     log = logging.getLogger(__name__)
     if not os.getenv("WM_SILENT_INIT"):
-        log.info(f"Ensuring paths exist at {WM_ROOT}...")
+        log.info("Ensuring paths exist at %s...", WM_ROOT)
     for path in [
         WM_ROOT,
         DATA_DIR,

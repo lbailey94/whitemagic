@@ -42,21 +42,21 @@ def rust_search_available() -> bool:
 
 def search_build_index(
     documents: list[dict[str, str]],
-) -> str | None:
+) -> tuple[int, int] | None:
     """Build a BM25 inverted index from documents.
 
     Args:
         documents: List of dicts with keys: id, title, content.
 
     Returns:
-        JSON string of index handle/stats, or None if Rust unavailable.
+        (doc_count, vocab_size) tuple, or None if Rust unavailable.
 
     """
     if not _RUST_SEARCH:
         return None
     try:
         docs_json = _json_dumps(documents)
-        result: str = _rs.search_build_index(docs_json)
+        result: tuple[int, int] = _rs.search_build_index(docs_json)
         return result
     except Exception as e:
         logger.debug("Rust search_build_index failed: %s", e, exc_info=True)

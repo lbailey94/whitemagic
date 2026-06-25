@@ -1,6 +1,6 @@
 # WhiteMagic Documentation Index
 
-**Version**: 22.2.0
+**Version**: 23.0.0
 **Last Updated**: June 18, 2026 (documentation sweep — 888 docstrings + polyglot survey + standalone paper)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
@@ -81,6 +81,11 @@ Private filenames are intentionally not enumerated in this public index.
 | `V22_2_2_SCOPE_2026-06-18.md` | v22.2.2 patch scope proposal | Jun 18 |
 | `WHITEMAGIC_PAPER_2026-06-18.md` | Standalone technical paper for AI audience | Jun 18 |
 | `INTERNAL_RESEARCH_2026-06-09.md` | Codebase reality check: 935 files, 2,422 tests | Jun 9 |
+| `DEEP_SURVEY_SYNTHESIS_2026-06-22.md` | Comprehensive deep survey synthesis — timeline, identity, codebase, archives, prescience, narrative threads | Jun 22 |
+| `STRATA_CLEANUP_HANDOFF.md` | STRATA findings cleanup progress + deferred work guide | Jun 24 |
+| `VPS_DEPLOYMENT_HANDOFF.md` | VPS deployment scripts reference + execution guide | Jun 24 |
+| `COGNITIVE_GAPS_HANDOFF.md` | 5 cognitive system gaps with fix instructions | Jun 24 |
+| `STRATA_SESSION_HANDOFF_2026-06-25.md` | STRATA checker refinements — 3,787→1,555 findings (58.9% reduction) + polyglot fix | Jun 25 |
 
 ### Research & Strategy
 
@@ -95,6 +100,7 @@ Private filenames are intentionally not enumerated in this public index.
 | `WHITEMAGIC_PAPER_2026-06-18.md` | Technical paper for AI/AGI/ASI audience | Jun 18 |
 | `RESEARCH_SYNTHESIS_2026-06-04.md` | Internal audit + 8-domain external research | Jun 4 |
 | `SELF_IMPROVING_WORKFLOW.md` | WhiteMagic managing itself — operational spec | May 29 |
+| `RECURSIVE_IMPROVEMENT_STRATEGY.md` | 30 objectives (A–Z) for recursive self-improvement — all implemented, tested, and wired | Jun 24 |
 
 ### Prescience & Methodology
 
@@ -198,6 +204,7 @@ High-level infrastructure decisions.
 | `INFRASTRUCTURE_DECISION.md` | Platform and hosting choices |
 | `MONOREPO_VS_MULTIREPO.md` | Why monorepo |
 | `IA_v1.md` | Information Architecture freeze — URL scheme, nav structure, redirect map, epistemic tagging, multilingual support (Obj 4) |
+| `GALAXY_6D_STRATEGY.md` | 6D holographic galaxy strategy — polyglot language assignments, galaxy sharing protocol, 8-phase implementation plan |
 
 ---
 
@@ -219,6 +226,7 @@ Roadmaps and planning documents.
 | File | Topic |
 |------|-------|
 | `ROADMAP.md` | High-level project roadmap (leap-based) |
+| `CLONE_ARMY_REVIVAL_PLAN.md` | Wiring clone army systems to real LLM inference (8 phases) |
 
 ### Planning History: `docs/plans/planning_history/`
 

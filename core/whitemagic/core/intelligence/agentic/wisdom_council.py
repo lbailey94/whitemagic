@@ -54,7 +54,7 @@ class WisdomCouncil:
         """Main deliberation loop.
         In a production environment, this would call specialized LLM prompts for each role.
         """
-        logger.info(f"⚖️ Wisdom Council deliberating on: {topic}")
+        logger.info("⚖️ Wisdom Council deliberating on: %s", topic)
 
         perspectives = []
         for role in self.roles:

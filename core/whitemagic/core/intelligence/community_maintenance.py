@@ -202,7 +202,7 @@ class CommunityMaintainer:
         self._member_to_community[memory_id] = community_id
         self._stats["total_new_communities"] += 1
 
-        logger.debug(f"Created new community {community_id} ({label}) for {memory_id}")
+        logger.debug("Created new community %s (%s) for %s", community_id, label, memory_id)
 
         return PropagationResult(
             memory_id=memory_id,
@@ -270,7 +270,7 @@ class CommunityMaintainer:
         del self._communities[absorbed_id]
         self._stats["total_merges"] += 1
 
-        logger.info(f"Merged community {absorbed_id} into {survivor_id} ({survivor.member_count} members)")
+        logger.info("Merged community %s into %s (%s members)", absorbed_id, survivor_id, survivor.member_count)
         return survivor_id
 
     def check_health(self) -> dict[str, Any]:
@@ -333,7 +333,7 @@ class CommunityMaintainer:
             self._communities[community_id].member_count += 1
             count += 1
 
-        logger.info(f"Imported {count} batch community assignments across {len(self._communities)} communities")
+        logger.info("Imported %s batch community assignments across %s communities", count, len(self._communities))
         return count
 
     def get_status(self) -> dict[str, Any]:

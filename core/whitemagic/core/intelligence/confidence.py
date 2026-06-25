@@ -55,7 +55,7 @@ class ConfidenceLearner:
 
         conn.commit()
         conn.close()
-        logger.info(f"Confidence updated for {cluster_key}: {'SUCCESS' if success else 'FAILURE'}")
+        logger.info("Confidence updated for %s: %s", cluster_key, 'SUCCESS' if success else 'FAILURE')
 
     def get_score(self, cluster_key: str) -> float:
         """Calculate a confidence multiplier (0.5 to 1.5)."""

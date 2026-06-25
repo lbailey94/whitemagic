@@ -267,16 +267,16 @@ if __name__ == "__main__":
 
     logger.info("Holographic Pattern Analysis")
     logger.info("=" * 50)
-    logger.info(f"Patterns found: {result['total_patterns']}")
-    logger.info(f"Insights generated: {result['total_insights']}")
+    logger.info("Patterns found: %s", result['total_patterns'])
+    logger.info("Insights generated: %s", result['total_insights'])
 
     logger.info("\n--- Patterns ---")
     for p in result["patterns"]:
-        logger.info(f"  [{p.pattern_type}] {p.description}")
+        logger.info("  [%s] %s", p.pattern_type, p.description)
         if p.evidence:
-            logger.info(f"       Evidence: {p.evidence[:2]}")
+            logger.info("       Evidence: %s", p.evidence[:2])
 
     logger.info("\n--- Insights ---")
     for i in result["insights"]:
-        logger.info(f"  [{i.priority:.1f}] {i.title}")
-        logger.info(f"       {i.description}")
+        logger.info("  [%s] %s", format(i.priority, ".1f"), i.title)
+        logger.info("       %s", i.description)

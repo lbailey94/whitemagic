@@ -72,7 +72,7 @@ def _nervous_system_check(tool_name: str) -> tuple[bool, str]:
         if result == DispatchResult.IMMATURE:
             return False, f"Tool maturity gate blocked: {tool_name}"
     except Exception as e:
-        logger.debug(f"Nervous system check failed for {tool_name}: {e}")  # Advisory — never block on failure
+        logger.debug("Nervous system check failed for %s: %s", tool_name, e)  # Advisory — never block on failure
     return True, ""
 
 
@@ -407,10 +407,10 @@ def _canonical_tool_name(tool_name: str) -> str:
     # Log deprecation warning for aliases (but not too frequently)
     if canonical != name and name in _TOOL_ALIASES:
         logger.warning(
-            f"DEPRECATION: Tool alias '{name}' is deprecated. "
-            f"Use '{canonical}' instead. "
-            f"This alias will be removed in the next minor release."
-        )
+            "DEPRECATION: Tool alias '%s' is deprecated. "
+            "Use '%s' instead. "
+            "This alias will be removed in the next minor release."
+        , name, canonical)
 
     return canonical
 
@@ -461,6 +461,8 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Session learner record_tool_use failed: %s", e, exc_info=True)
 
+    _cognitive_mode: str | None = None
+
     def _record_telemetry(out: dict[str, Any]) -> None:
         duration = time.time() - call_started_at
         status_value = str(out.get("status", "")).lower()
@@ -498,6 +500,8 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             if isinstance(metrics, dict):
                 metrics["harmony_score"] = snap.harmony_score
                 metrics["guna"] = snap.guna_rajasic_pct
+                if _cognitive_mode:
+                    metrics["cognitive_mode"] = _cognitive_mode
         except Exception as e:
             logger.debug("Failed to add harmony snapshot to metrics: %s", e, exc_info=True)
         try:
@@ -618,6 +622,90 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                     retryable=True,
                 ))
 
+        # Cognitive mode pre-dispatch enforcement (v23.2: all modes enforce behavior)
+        try:
+            from whitemagic.core.intelligence.cognitive_modes import get_cognitive_modes
+            cm = get_cognitive_modes()
+            hints = cm.get_tool_hints()
+            _cognitive_mode = hints["mode"]
+            _preferred = hints.get("preferred_tools", [])
+            if canonical in hints.get("avoided_tools", []):
+                # GUARDIAN mode enforces read-only — block avoided tools
+                if _cognitive_mode == "guardian":
+                    return _finish(err(
+                        tool=canonical,
+                        request_id=request_id,
+                        idempotency_key=idempotency_key,
+                        timestamp=ts,
+                        error_code=ErrorCode.POLICY_BLOCKED,
+                        message=f"Tool {canonical} blocked by GUARDIAN cognitive mode (read-only)",
+                        details={"tool": canonical, "cognitive_mode": _cognitive_mode},
+                        retryable=False,
+                    ))
+                # EXECUTOR mode: increased strictness for avoided tools — block writes
+                if _cognitive_mode == "executor" and tool_def is not None and tool_def.safety != ToolSafety.READ:
+                    return _finish(err(
+                        tool=canonical,
+                        request_id=request_id,
+                        idempotency_key=idempotency_key,
+                        timestamp=ts,
+                        error_code=ErrorCode.POLICY_BLOCKED,
+                        message=f"Tool {canonical} blocked by EXECUTOR mode (avoided tool for write operations)",
+                        details={"tool": canonical, "cognitive_mode": _cognitive_mode},
+                        retryable=False,
+                    ))
+                logger.warning(
+                    "🧠 Cognitive mode %s avoids tool %s — proceeding but mode mismatch",
+                    _cognitive_mode, canonical,
+                )
+            # Log preferred tool usage for non-balanced modes
+            if _cognitive_mode != "balanced" and canonical in _preferred:
+                logger.debug(
+                    "🧠 Cognitive mode %s prefers tool %s — alignment confirmed",
+                    _cognitive_mode, canonical,
+                )
+        except Exception as e:
+            logger.debug("Cognitive mode hint failed: %s", e)
+
+        # SelfModel forecast pre-dispatch (v23.1: feed forecasts into dispatch)
+        try:
+            from whitemagic.core.intelligence.self_model import get_self_model
+            sm = get_self_model()
+            alerts = sm.get_alerts()
+            if alerts:
+                for alert in alerts:
+                    # Block write tools when error rate or energy is critical
+                    if alert.threshold_eta is not None and alert.threshold_eta <= 2:
+                        if alert.metric in ("error_rate", "energy") and tool_def is not None and tool_def.safety != ToolSafety.READ:
+                            return _finish(err(
+                                tool=canonical,
+                                request_id=request_id,
+                                idempotency_key=idempotency_key,
+                                timestamp=ts,
+                                error_code=ErrorCode.POLICY_BLOCKED,
+                                message=f"Write tool blocked: {alert.metric} critical ETA {alert.threshold_eta} steps ({alert.alert})",
+                                details={"tool": canonical, "self_model_alert": alert.to_dict()},
+                                retryable=True,
+                            ))
+                        # Log warning for non-critical alerts
+                        if alert.metric not in ("error_rate", "energy"):
+                            logger.warning("SelfModel alert: %s", alert.alert)
+                        break
+        except Exception as e:
+            logger.debug("SelfModel forecast check failed: %s", e)
+
+        # Garden resonance pre-dispatch (v23.3: gardens as active participants)
+        try:
+            from whitemagic.core.engines.registry import get_garden_for_tool
+            garden_name = get_garden_for_tool(canonical)
+            if garden_name is not None:
+                from whitemagic.gardens import get_garden
+                garden = get_garden(garden_name)
+                if garden is not None:
+                    garden.boost(0.1)
+        except Exception:
+            pass
+
         # Dispatch to handler.
         try:
             dispatch_kwargs = dict(kwargs)
@@ -627,6 +715,16 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             # — tell the middleware pipeline to skip redundant Python checks
             if ns_allowed:
                 dispatch_kwargs["_zig_prevalidated"] = True
+            # Working memory context injection (v23.2: bridge working memory to dispatch)
+            if canonical not in LIGHTWEIGHT_STATUS_TOOLS:
+                try:
+                    from whitemagic.core.intelligence.working_memory import get_working_memory
+                    _wm = get_working_memory()
+                    _wm_context = _wm.get_context(max_tokens=500)
+                    if _wm_context and "_working_memory_context" not in dispatch_kwargs:
+                        dispatch_kwargs["_working_memory_context"] = _wm_context
+                except Exception:
+                    pass
             if canonical in LIGHTWEIGHT_STATUS_TOOLS:
                 raw = _dispatch_lightweight_tool(canonical, **dispatch_kwargs)
             else:
@@ -703,6 +801,75 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 time.time() - call_started_at,
                 out.get("status") in ("success", "ok"),
             )
+
+        # SelfModel post-dispatch recording (v23.1: auto-record metrics)
+        try:
+            from whitemagic.core.intelligence.self_model import get_self_model
+            _sm = get_self_model()
+            _elapsed = time.time() - call_started_at
+            _is_success = out.get("status") in ("success", "ok")
+            # Record latency (seconds)
+            _sm.record("latency", _elapsed)
+            # Record error rate (1.0 for error, 0.0 for success)
+            _sm.record("error_rate", 0.0 if _is_success else 1.0)
+            # Record energy as inverse of latency (normalized 0-1, 5s+ = 0)
+            _sm.record("energy", max(0.0, 1.0 - _elapsed / 5.0))
+            # Route critical alerts to homeostasis loop
+            _sm_alerts = _sm.get_alerts()
+            if _sm_alerts:
+                try:
+                    from whitemagic.harmony.homeostatic_loop import HomeostaticLoop
+                    _loop = HomeostaticLoop()
+                    _loop.check()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # v23.3: Bidirectional WM↔Scratchpad sync — attend important tool
+        # results to working memory and persist to active scratchpad.
+        if (
+            canonical not in LIGHTWEIGHT_STATUS_TOOLS
+            and out.get("status") in ("success", "ok")
+        ):
+            try:
+                from whitemagic.core.intelligence.working_memory import (
+                    get_working_memory,
+                )
+                _wm = get_working_memory()
+                # Attend the tool result to working memory
+                _result_summary = str(out.get("details", out.get("result", "")))[:300]
+                if _result_summary and _result_summary != "None":
+                    _wm.attend(
+                        memory_id=f"dispatch:{canonical}:{request_id}",
+                        content=_result_summary,
+                        title=canonical,
+                        importance=0.4,
+                        tags=["dispatch", canonical.split(".")[0]],
+                    )
+                    # Sync to active scratchpad if one exists
+                    try:
+                        from whitemagic.core.memory.scratchpad_interleave import (
+                            ScratchpadManager,
+                        )
+                        from whitemagic.config.paths import WM_ROOT
+                        _sm_mgr = ScratchpadManager(
+                            scratch_dir=WM_ROOT / "scratchpads",
+                        )
+                        if _sm_mgr.scratchpads:
+                            _active_pad = max(
+                                _sm_mgr.scratchpads.values(),
+                                key=lambda p: p.last_active,
+                            )
+                            _sm_mgr.write_to(
+                                _active_pad.name,
+                                f"[{canonical}] {_result_summary[:150]}",
+                                tag="dispatch_sync",
+                            )
+                    except Exception:
+                        pass  # Scratchpad sync is best-effort
+            except Exception:
+                pass  # Working memory attendance is best-effort
 
         return _finish(out)
 

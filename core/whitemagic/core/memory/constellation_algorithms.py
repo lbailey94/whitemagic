@@ -108,9 +108,9 @@ def detect_hdbscan(
         stabilities.append(avg_prob)
 
     logger.info(
-        f"HDBSCAN: {len(groups)} clusters, "
-        f"{sum(1 for lbl in labels if lbl == -1)} noise points",
-    )
+        "HDBSCAN: %s clusters, "
+        "%s noise points",
+     len(groups), sum(1 for lbl in labels if lbl == -1))
     return groups, stabilities
 
 
@@ -156,7 +156,7 @@ def detect_kdtree(
             stability = max(0.0, 1.0 - c.radius / max_radius) if max_radius > 0 else 0.5
             stabilities.append(stability)
 
-    logger.info(f"KD-tree: {len(groups)} constellations from {len(coords)} points")
+    logger.info("KD-tree: %s constellations from %s points", len(groups), len(coords))
     return groups, stabilities
 
 
@@ -360,7 +360,7 @@ def detect_semantic(
             stabilities.append(avg_sim)
 
     logger.info(
-        f"Semantic: {len(groups)} clusters from {n} embeddings "
-        f"(threshold={similarity_threshold})",
-    )
+        "Semantic: %s clusters from %s embeddings "
+        "(threshold=%s)",
+     len(groups), n, similarity_threshold)
     return groups, stabilities

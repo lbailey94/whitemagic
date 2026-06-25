@@ -91,9 +91,9 @@ class WorkerDaemon:
         self._running = True
         self._started_at = datetime.now().isoformat()
 
-        logger.info(f"Worker daemon '{self.worker_name}' started")
-        logger.info(f"Tasks dir: {_tasks_dir()}")
-        logger.info(f"Poll interval: {self.poll_interval}s")
+        logger.info("Worker daemon '%s' started", self.worker_name)
+        logger.info("Tasks dir: %s", _tasks_dir())
+        logger.info("Poll interval: %ss", self.poll_interval)
 
         # Register as an agent
         self._register()
@@ -103,7 +103,7 @@ class WorkerDaemon:
                 try:
                     pending = self._get_pending_tasks()
                     if pending:
-                        logger.info(f"Found {len(pending)} pending task(s)")
+                        logger.info("Found %s pending task(s)", len(pending))
                         for task in pending[:
                             self.max_concurrent]:
                             self._execute_task(task)

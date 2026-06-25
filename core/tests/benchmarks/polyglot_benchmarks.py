@@ -48,9 +48,16 @@ class BenchmarkSuite:
         Returns:
             BenchmarkResult with timing statistics
         """
+        from whitemagic.utils.progress_bar import ProgressBar
+
+        total = self.warmup_iterations + self.benchmark_iterations
+        bar = ProgressBar(total=total, label=name)
+        bar.start()
+
         # Warmup phase
         for _ in range(self.warmup_iterations):
             func(*args, **kwargs)
+            bar.advance()
 
         # Measurement phase
         timings_ms = []
@@ -59,6 +66,9 @@ class BenchmarkSuite:
             result = func(*args, **kwargs)
             end = time.perf_counter()
             timings_ms.append((end - start) * 1000)
+            bar.advance()
+
+        bar.finish()
 
         # Calculate statistics
         total_time = sum(timings_ms)

@@ -33,7 +33,7 @@ try:
     from whitemagic.core.memory.manager import MemoryManager
     from whitemagic.plugins import list_plugins
 except ImportError as e:
-    logger.info(f"Error importing WhiteMagic: {e}")
+    logger.info("Error importing WhiteMagic: %s", e)
     logger.info("Make sure you're running this from the WhiteMagic directory")
     sys.exit(1)
 
@@ -609,8 +609,8 @@ if __name__ == "__main__":
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind to")
     args = parser.parse_args()
 
-    logger.info(f"Starting WhiteMagic Dashboard Server on {args.host}:{args.port}")
-    logger.info(f"Dashboard will be available at: http://{args.host}:{args.port}")
-    logger.info(f"API endpoints: http://{args.host}:{args.port}/api/")
+    logger.info("Starting WhiteMagic Dashboard Server on %s:%s", args.host, args.port)
+    logger.info("Dashboard will be available at: http://%s:%s", args.host, args.port)
+    logger.info("API endpoints: http://%s:%s/api/", args.host, args.port)
 
     app.run(host=args.host, port=args.port, debug=args.debug)

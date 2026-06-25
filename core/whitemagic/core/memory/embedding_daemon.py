@@ -119,12 +119,12 @@ class EmbeddingDaemon:
                 from whitemagic.core.memory.embeddings import EMBEDDING_DIM
                 if rust_dim == EMBEDDING_DIM:
                     self._stats.rust_available = True
-                    logger.info(f"EmbeddingDaemon: Rust acceleration enabled ({rust_dim} dims)")
+                    logger.info("EmbeddingDaemon: Rust acceleration enabled (%s dims)", rust_dim)
                 else:
                     logger.warning(
-                        f"EmbeddingDaemon: Rust dimension mismatch ({rust_dim} vs {EMBEDDING_DIM}), "
-                        f"using Python fallback"
-                    )
+                        "EmbeddingDaemon: Rust dimension mismatch (%s vs %s), "
+                        "using Python fallback"
+                    , rust_dim, EMBEDDING_DIM)
                     self._rust_engine = None
                     self._stats.rust_available = False
         except Exception as e:
@@ -144,8 +144,9 @@ class EmbeddingDaemon:
                 model_dirs.append(Path(hf_home) / "hub")
             if cache_home:
                 model_dirs.append(Path(cache_home) / "huggingface" / "hub")
+            from whitemagic.config.paths import CACHE_DIR
             model_dirs.extend([
-                Path.home() / ".cache" / "huggingface" / "hub",
+                CACHE_DIR / "huggingface" / "hub",
                 Path("/models"),
                 Path.cwd() / "models",
             ])
@@ -292,9 +293,9 @@ class EmbeddingDaemon:
                 result["rate"] = total_embedded / elapsed
 
             logger.info(
-                f"EmbeddingDaemon cycle: embedded={total_embedded}, "
-                f"failed={total_failed}, rate={result['rate']:.1f}/sec"
-            )
+                "EmbeddingDaemon cycle: embedded=%s, "
+                "failed=%s, rate=%.1f/sec"
+            , total_embedded, total_failed, result['rate'])
 
         finally:
             db.close()

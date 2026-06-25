@@ -112,7 +112,7 @@ class WuXingScheduler:
 
     def transition_to(self, phase: Phase, reason: str = ""):
         """Force transition to a specific phase."""
-        logger.info(f"Transitioning {self.state.current.value} -> {phase.value} ({reason})")
+        logger.info("Transitioning %s -> %s (%s)", self.state.current.value, phase.value, reason)
         self.state.current = phase
         self.state.start_time = datetime.now()
         self.state.duration_minutes = 0.0

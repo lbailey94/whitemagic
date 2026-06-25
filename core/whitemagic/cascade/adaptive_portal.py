@@ -97,7 +97,7 @@ class AdaptiveToolPortal:
             self.morphologies[tool_name] = {}
 
         self.morphologies[tool_name][morphology_name] = handler
-        logger.debug(f"Registered {tool_name}:{morphology_name} morphology")
+        logger.debug("Registered %s:%s morphology", tool_name, morphology_name)
 
     async def invoke(
         self,
@@ -644,7 +644,7 @@ class AdaptiveToolPortal:
                                 "source": "rust_grep",
                             })
                     if formatted:
-                        logger.debug(f"Rust search found {len(formatted)} results")
+                        logger.debug("Rust search found %s results", len(formatted))
                         return formatted
         except ImportError:
             logger.debug("whitemagic_rs not available, falling back to UnifiedMemory")
@@ -851,15 +851,15 @@ if __name__ == "__main__":
         # Test recall with auto-morphology
         logger.info("\n📝 Testing recall (auto-morphology):")
         result = await portal.invoke("recall", {"query": "authentication"})
-        logger.info(f"   Mode: {result['mode']}")
-        logger.info(f"   Morphology: {result['_meta']['morphology']}")
-        logger.info(f"   Duration: {result['_meta']['duration_ms']:.1f}ms")
+        logger.info("   Mode: %s", result['mode'])
+        logger.info("   Morphology: %s", result['_meta']['morphology'])
+        logger.info("   Duration: %sms", result['_meta']['duration_ms'])
 
         # Test recall with forced morphology
         logger.info("\n📝 Testing recall (forced: mystery):")
         result = await portal.invoke("recall", {"query": "patterns"}, force_morphology="mystery")
-        logger.info(f"   Mode: {result['mode']}")
-        logger.info(f"   Questions: {result.get('questions', [])}")
+        logger.info("   Mode: %s", result['mode'])
+        logger.info("   Questions: %s", result.get('questions', []))
 
         logger.info("\n✅ Portal test complete")
 

@@ -238,7 +238,7 @@ class ToolGate:
 
         if risk == ToolRisk.DANGEROUS:
             if self.allow_dangerous_in_cloud:
-                logger.warning(f"Dangerous tool {tool_name} allowed via override")
+                logger.warning("Dangerous tool %s allowed via override", tool_name)
                 return True, "Dangerous tool explicitly allowed (WARNING)"
 
             # Report to immune system

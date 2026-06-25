@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whitemagic"
 version = "23.0.0"
-description = "Cognitive operating system for AI agents — 490 tools across 28 Gana meta-tools, 5D holographic memory, ethical governance, and 7-language polyglot acceleration"
+description = "Cognitive operating system for AI agents — 516 tools across 28 Gana meta-tools, 5D holographic memory, ethical governance, and 7-language polyglot acceleration"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -391,6 +391,7 @@ markers = [
     "network: marks tests that require outbound network access",
     "bridge: marks tests that require Rust/Zig native bridges",
     "core: marks tests covering the stable public contract (state-root, tool conformance, critical paths)",
+    "flaky: marks tests that may flake under load (auto-retries via pytest-flaky)",
 ]
 
 [tool.mypy]

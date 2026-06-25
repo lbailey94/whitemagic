@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "../whitemagic-public"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../Agent-SafetyBench"
+		},
+		{
+			"path": "../reports"
+		},
+		{
+			"path": "../archives"
+		},
+		{
+			"path": "../vercel-deploy"
+		},
+		{
+			"path": "../WHITEMAGIC-aux"
+		}
+	]
+}

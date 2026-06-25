@@ -62,7 +62,7 @@ def verify_xrpl_payment(tx_hash: str, expected_destination: str = "", expected_t
     Returns:
         Verification result with amount, sender, destination, status
     """
-    logger.info(f"XRPL verification requested for tx: {tx_hash}")
+    logger.info("XRPL verification requested for tx: %s", tx_hash)
 
     if not _HTTPX_AVAILABLE:
         return {
@@ -170,7 +170,7 @@ def verify_x402_payment(tx_hash: str, expected_amount_usdc: float = 0.0) -> dict
     Returns:
         Verification result with status, gas, block info
     """
-    logger.info(f"x402 verification requested for tx: {tx_hash}")
+    logger.info("x402 verification requested for tx: %s", tx_hash)
 
     if not _HTTPX_AVAILABLE:
         return {

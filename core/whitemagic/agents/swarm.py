@@ -221,14 +221,46 @@ class AgentSwarm:
 
         return plan
 
-    def route(self, plan_id: str) -> dict[str, Any]:
+    def route(self, plan_id: str, engagement_token_id: str | None = None) -> dict[str, Any]:
         """Route subtasks to available agents based on capability matching.
         Uses the agent registry to find suitable agents.
+
+        Args:
+            plan_id: The swarm plan ID to route.
+            engagement_token_id: Optional engagement token ID. If provided,
+                tasks are only assigned to agents whose capabilities fall
+                within the token's authorized scope.
         """
         with self._lock:
             plan = self._plans.get(plan_id)
             if not plan:
                 return {"status": "error", "error": f"Plan {plan_id} not found"}
+
+        # Validate engagement token if provided
+        token_valid = True
+        token_scope: list[str] = []
+        if engagement_token_id:
+            try:
+                from whitemagic.security.engagement_tokens import get_token_manager
+                result = get_token_manager().validate(
+                    token_id=engagement_token_id,
+                    tool="swarm_route",
+                    target=plan_id,
+                )
+                token_valid = result.get("valid", False)
+                if token_valid:
+                    token_details = result.get("token", {})
+                    token_scope = token_details.get("scope", [])
+            except Exception as e:
+                logger.debug("Engagement token validation failed: %s", e)
+                token_valid = False
+
+            if not token_valid:
+                return {
+                    "status": "error",
+                    "error": "Engagement token validation failed",
+                    "plan_id": plan_id,
+                }
 
         # Get available agents
         agents: list[dict[str, Any]] = []
@@ -271,6 +303,7 @@ class AgentSwarm:
                     "task_id": task.id,
                     "agent_id": best_agent,
                     "capabilities_matched": best_score,
+                    "engagement_token": engagement_token_id,
                 })
             else:
                 assignments.append({
@@ -279,11 +312,28 @@ class AgentSwarm:
                     "reason": "no matching agent found",
                 })
 
+        # Emit Gan Ying event for task routing
+        try:
+            from whitemagic.core.resonance._consolidated import EventType, get_bus, ResonanceEvent
+            get_bus().emit(ResonanceEvent(
+                source="agent_swarm",
+                event_type=EventType.TASK_CREATED,
+                data={
+                    "plan_id": plan_id,
+                    "assignments": len(assignments),
+                    "agents_available": len(agents),
+                    "engagement_token": engagement_token_id,
+                },
+            ), async_dispatch=True)
+        except Exception:
+            pass
+
         return {
             "status": "success",
             "plan_id": plan_id,
             "assignments": assignments,
             "agents_available": len(agents),
+            "engagement_token_validated": engagement_token_id is not None,
         }
 
     def complete_task(self, plan_id: str, task_id: str, result: Any = None,
@@ -307,7 +357,23 @@ class AgentSwarm:
             if all_done:
                 plan.completed_at = time.time()
 
-            return {"status": "success", "plan": plan.to_dict()}
+        # Emit Gan Ying event for task completion
+        try:
+            from whitemagic.core.resonance._consolidated import EventType, get_bus, ResonanceEvent
+            get_bus().emit(ResonanceEvent(
+                source="agent_swarm",
+                event_type=EventType.TASK_COMPLETED if success else EventType.TASK_FAILED,
+                data={
+                    "plan_id": plan_id,
+                    "task_id": task_id,
+                    "success": success,
+                    "all_done": all_done,
+                },
+            ), async_dispatch=True)
+        except Exception:
+            pass
+
+        return {"status": "success", "plan": plan.to_dict()}
 
     def vote(self, topic_id: str, agent_id: str, value: Any,
              confidence: float = 1.0) -> dict[str, Any]:

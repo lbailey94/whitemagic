@@ -376,7 +376,7 @@ class ShelterManager:
             if not self._available_tiers.get(resolved_tier.value, False):
                 # Graceful degradation
                 resolved_tier = _best_available_tier(self._available_tiers)
-                logger.info(f"Shelter '{name}': requested {tier}, degraded to {resolved_tier.value}")
+                logger.info("Shelter '%s': requested %s, degraded to %s", name, tier, resolved_tier.value)
 
         # Parse capabilities
         caps = ShelterCapabilities()
@@ -421,7 +421,7 @@ class ShelterManager:
         with self._lock:
             self._shelters[name] = shelter
 
-        logger.info(f"🏠 Shelter '{name}' created (tier={resolved_tier.value})")
+        logger.info("🏠 Shelter '%s' created (tier=%s)", name, resolved_tier.value)
         return {"status": "ok", **shelter.to_dict()}
 
     def execute(
@@ -516,9 +516,9 @@ class ShelterManager:
             self._cleanup_workdir(shelter)
 
         logger.info(
-            f"🏠 Shelter '{name}': exit={exit_code}, "
-            f"tier={shelter.tier.value}, {elapsed:.0f}ms",
-        )
+            "🏠 Shelter '%s': exit=%s, "
+            "tier=%s, %.0fms",
+         name, exit_code, shelter.tier.value, elapsed)
 
         return {
             "status": "ok" if exit_code == 0 else "error",

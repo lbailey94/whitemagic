@@ -87,7 +87,7 @@ class AutoLinker:
                     title_str = m.title or ""
                     memories_data.append((m.id, content_str + " " + title_str, list(m.tags)))
 
-                logger.info(f"🔗 AutoLinker: Sending {len(memories_data)} memories to Rust graph builder...")
+                logger.info("🔗 AutoLinker: Sending %s memories to Rust graph builder...", len(memories_data))
 
                 # Build graph in Rust
                 connections = whitemagic_rs.build_memory_graph(

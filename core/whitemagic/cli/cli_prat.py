@@ -19,31 +19,34 @@ def prat() -> None:
 
 @prat.command()
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
-def context(as_json: bool) -> None:
+@click.pass_context
+def context(ctx, as_json: bool) -> None:
     """Show current unified consciousness context"""
     from whitemagic.cascade.context_synthesizer import get_context_synthesizer
     from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
+    json_output = as_json or ((ctx.obj or {}).get("json_output", False) if isinstance(ctx.obj, dict) else False)
+
     synth = get_context_synthesizer()
 
-    if as_json:
-        ctx = synth.gather()
+    if json_output:
+        snap = synth.gather()
         output = {
-            "primary_garden": ctx.primary_garden,
-            "active_gardens": ctx.active_gardens,
-            "wu_xing_phase": ctx.wu_xing_phase,
-            "wu_xing_qualities": ctx.wu_xing_qualities,
-            "zodiac_position": ctx.zodiac_position,
-            "zodiac_element": ctx.zodiac_element,
-            "zodiac_modality": ctx.zodiac_modality,
-            "phase_intention": ctx.phase_intention,
-            "yin_yang_balance": ctx.yin_yang_balance,
-            "burnout_risk": ctx.burnout_risk,
-            "coherence_level": ctx.coherence_level,
-            "coherence_score": ctx.coherence_score,
-            "dominant_influence": ctx.get_dominant_influence(),
-            "recommended_morphology": ctx.get_recommended_morphology(),
-            "time_of_day": ctx.time_of_day,
+            "primary_garden": snap.primary_garden,
+            "active_gardens": snap.active_gardens,
+            "wu_xing_phase": snap.wu_xing_phase,
+            "wu_xing_qualities": snap.wu_xing_qualities,
+            "zodiac_position": snap.zodiac_position,
+            "zodiac_element": snap.zodiac_element,
+            "zodiac_modality": snap.zodiac_modality,
+            "phase_intention": snap.phase_intention,
+            "yin_yang_balance": snap.yin_yang_balance,
+            "burnout_risk": snap.burnout_risk,
+            "coherence_level": snap.coherence_level,
+            "coherence_score": snap.coherence_score,
+            "dominant_influence": snap.get_dominant_influence(),
+            "recommended_morphology": snap.get_recommended_morphology(),
+            "time_of_day": snap.time_of_day,
         }
         click.echo(_json_dumps(output, indent=2))
     else:

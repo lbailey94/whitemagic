@@ -33,7 +33,7 @@ def handle_dream_list(params: dict[str, Any]) -> dict[str, Any]:
             },
         )
     except Exception as exc:
-        logger.error(f"dream.list error: {exc}", exc_info=True)
+        logger.error("dream.list error: %s", exc, exc_info=True)
         return make_result("dream.list", {}, error=str(exc))
 
 
@@ -52,7 +52,7 @@ def handle_dream_read(params: dict[str, Any]) -> dict[str, Any]:
         revisit_dream(dream_id)
         return make_result("dream.read", {"dream": data})
     except Exception as exc:
-        logger.error(f"dream.read error: {exc}", exc_info=True)
+        logger.error("dream.read error: %s", exc, exc_info=True)
         return make_result("dream.read", {}, error=str(exc))
 
 
@@ -77,7 +77,7 @@ def handle_dream_promote(params: dict[str, Any]) -> dict[str, Any]:
             },
         )
     except Exception as exc:
-        logger.error(f"dream.promote error: {exc}", exc_info=True)
+        logger.error("dream.promote error: %s", exc, exc_info=True)
         return make_result("dream.promote", {}, error=str(exc))
 
 
@@ -100,5 +100,5 @@ def handle_dream_expire(params: dict[str, Any]) -> dict[str, Any]:
             },
         )
     except Exception as exc:
-        logger.error(f"dream.expire error: {exc}", exc_info=True)
+        logger.error("dream.expire error: %s", exc, exc_info=True)
         return make_result("dream.expire", {}, error=str(exc))

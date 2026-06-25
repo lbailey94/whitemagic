@@ -128,15 +128,16 @@ class SQLiteBackend:
                 "ingestion_time": "TEXT",   # v14.2: bitemporal — when WM learned it
                 "is_private": "INTEGER DEFAULT 0",    # v15: exclude from MCP responses
                 "model_exclude": "INTEGER DEFAULT 0", # v15: exclude from AI context
+                "galaxy": "TEXT DEFAULT 'universal'",  # v23.1: 6D galaxy partition
             }
 
             for col_name, col_type in new_columns.items():
                 if col_name not in existing_columns:
-                    logger.debug(f"Adding column {col_name} to memories table")
+                    logger.debug("Adding column %s to memories table", col_name)
                     try:
                         conn.execute(f"ALTER TABLE memories ADD COLUMN {col_name} {col_type}")
                     except sqlite3.OperationalError as e:
-                        logger.warning(f"Could not add column {col_name}: {e}")
+                        logger.warning("Could not add column %s: %s", col_name, e)
 
             # 1b. Generated column for garden (extracted from JSON metadata) — v23 optimization
             # This avoids full-table-scan json_extract on every aggregation query
@@ -223,7 +224,7 @@ class SQLiteBackend:
                 if col_name not in assoc_columns:
                     try:
                         conn.execute(f"ALTER TABLE associations ADD COLUMN {col_name} {col_def}")
-                        logger.info(f"Added {col_name} column to associations table")
+                        logger.info("Added %s column to associations table", col_name)
                     except sqlite3.OperationalError:
                         pass
 
@@ -297,6 +298,8 @@ class SQLiteBackend:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_assoc_edge_type ON associations(edge_type)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_assoc_direction ON associations(direction)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_assoc_strength ON associations(strength)")
+            # v23.1: Galaxy index for fast galaxy-filtered queries
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_memories_galaxy ON memories(galaxy)")
 
     def find_by_content_hash(self, content_hash: str) -> str | None:
         """Find an existing memory ID by content SHA-256 hash.
@@ -324,8 +327,8 @@ class SQLiteBackend:
                         metadata, title,
                         galactic_distance, retention_score, last_retention_sweep,
                         content_hash, event_time, ingestion_time,
-                        is_private, model_exclude
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        is_private, model_exclude, galaxy
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     memory.id,
                     json.dumps(memory.content) if not isinstance(memory.content, str) else memory.content,
@@ -351,6 +354,7 @@ class SQLiteBackend:
                     datetime.now().isoformat(),          # always set at ingestion
                     1 if memory.is_private else 0,
                     1 if memory.model_exclude else 0,
+                    getattr(memory, 'galaxy', 'universal'),
                 ))
 
                 # Update Tags
@@ -437,6 +441,7 @@ class SQLiteBackend:
                 galactic_distance=row["galactic_distance"] if "galactic_distance" in row.keys() else 0.0,
                 retention_score=row["retention_score"] if "retention_score" in row.keys() else 0.5,
                 last_retention_sweep=parse_datetime(row["last_retention_sweep"]) if "last_retention_sweep" in row.keys() and row["last_retention_sweep"] else None,
+                galaxy=row["galaxy"] if "galaxy" in row.keys() else "universal",
                 metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             )
 
@@ -457,7 +462,7 @@ class SQLiteBackend:
 
     def search(self, query: str | None = None, tags: set[str] | None = None,
                memory_type: MemoryType | None = None, min_importance: float = 0.0,
-               limit: int = 10) -> list[Memory]:
+               limit: int = 10, galaxy: str | None = None) -> list[Memory]:
         """Search memories with FTS5 BM25 ranking."""
         with self.pool.connection() as conn:
             conn.row_factory = sqlite3.Row
@@ -495,6 +500,10 @@ class SQLiteBackend:
                     sql += " AND m.memory_type = ?"
                     params.append(memory_type.name)
 
+                if galaxy:
+                    sql += " AND m.galaxy = ?"
+                    params.append(galaxy)
+
                 if tags:
                     placeholders = ",".join("?" * len(tags))
                     sql += f" AND m.id IN (SELECT memory_id FROM tags WHERE tag IN ({placeholders}) GROUP BY memory_id HAVING COUNT(DISTINCT tag) = ?)"
@@ -516,6 +525,10 @@ class SQLiteBackend:
                 if memory_type:
                     sql += " AND memory_type = ?"
                     params.append(memory_type.name)
+
+                if galaxy:
+                    sql += " AND galaxy = ?"
+                    params.append(galaxy)
 
                 if tags:
                     placeholders = ",".join("?" * len(tags))
@@ -710,9 +723,9 @@ class SQLiteBackend:
         No memory is ever truly forgotten.
         """
         logger.warning(
-            f"delete() called for {memory_id} — redirecting to archive_to_edge(). "
-            f"No memory is ever truly forgotten.",
-        )
+            "delete() called for %s — redirecting to archive_to_edge(). "
+            "No memory is ever truly forgotten.",
+         memory_id)
         return self.archive_to_edge(memory_id, galactic_distance=0.95)
 
     def update_galactic_distance(self, memory_id: str, distance: float) -> bool:
@@ -853,6 +866,7 @@ class SQLiteBackend:
                     galactic_distance=row["galactic_distance"] if "galactic_distance" in row.keys() else 0.0,
                     retention_score=row["retention_score"] if "retention_score" in row.keys() else 0.5,
                     last_retention_sweep=parse_datetime(row["last_retention_sweep"]) if "last_retention_sweep" in row.keys() and row["last_retention_sweep"] else None,
+                    galaxy=row["galaxy"] if "galaxy" in row.keys() else "universal",
                     metadata=json.loads(row["metadata"]) if row["metadata"] else {},
                 )
 
@@ -862,7 +876,7 @@ class SQLiteBackend:
 
                 memories.append(mem)
             except Exception as e:
-                logger.error(f"Error hydrating memory {mem_id}: {e}")
+                logger.error("Error hydrating memory %s: %s", mem_id, e)
 
         return memories
 
@@ -949,7 +963,7 @@ class SQLiteBackend:
                 conn.commit()
             except Exception as e:
                 conn.rollback()
-                logger.error(f"Consolidation failed: {e}")
+                logger.error("Consolidation failed: %s", e)
                 raise
 
         return consolidated_count
@@ -1056,8 +1070,8 @@ class SQLiteBackend:
         }
         if total > 0:
             logger.info(
-                f"🔗 Association decay: {decayed} decayed, {pruned} pruned out of {total} evaluated",
-            )
+                "🔗 Association decay: %s decayed, %s pruned out of %s evaluated",
+             decayed, pruned, total)
         return result
 
     # ------------------------------------------------------------------
@@ -1177,9 +1191,9 @@ class SQLiteBackend:
             "size_delta_mb": round((size_before - size_after) / 1048576, 2),
         }
         logger.info(
-            f"✂️ Association pruning: {orphaned} orphaned + {weak_pruned} weak "
-            f"(< {min_strength}) pruned. {total} → {remaining}",
-        )
+            "✂️ Association pruning: %s orphaned + %s weak "
+            "(< %s) pruned. %s → %s",
+         orphaned, weak_pruned, min_strength, total, remaining)
         return result
 
     def get_tag_stats(self) -> list[tuple[str, int]]:

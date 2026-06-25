@@ -66,7 +66,7 @@ class GanaSwarm:
             decision = governor.govern(task, context=state)
 
             if decision.action == GovernanceAction.BLOCK:
-                logger.info(f"🛑 Dharma Governor BLOCKED task: {task[:50]}... Reason: {decision.concerns}")
+                logger.info("🛑 Dharma Governor BLOCKED task: %s... Reason: %s", task[:50], decision.concerns)
                 # Emit rejection event
                 try:
                     from whitemagic.core.resonance.gan_ying import EventType, emit_event

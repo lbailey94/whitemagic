@@ -124,7 +124,7 @@ def handle_execute_phase(args: dict[str, Any]) -> dict[str, Any]:
         else:
             return {"status": "error", "message": f"Unknown phase: {phase}"}
     except Exception as e:
-        logger.error(f"Phase execution error: {traceback.format_exc()}")
+        logger.error("Phase execution error: %s", traceback.format_exc())
         return {"status": "error", "message": str(e)}
 
 def main():
@@ -142,7 +142,7 @@ def main():
             op = request.get("op")
             args = request.get("args", {})
 
-            logger.info(f"Received op: {op}")
+            logger.info("Received op: %s", op)
 
             if op == "ping":
                 response = handle_ping(args)
@@ -161,7 +161,7 @@ def main():
             logger.error("Invalid JSON: %s", line, exc_info=True)
         except Exception as e:
             logger.debug("Operation failed: %s", e)
-            logger.error(f"Unexpected error: {traceback.format_exc()}")
+            logger.error("Unexpected error: %s", traceback.format_exc())
             send_response({"status": "error", "message": "Internal bridge error"})
 
 if __name__ == "__main__":

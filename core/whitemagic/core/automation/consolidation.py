@@ -469,13 +469,13 @@ def consolidate_cli(args: Any) -> None:
 
     if not check["should_consolidate"]:
         logger.info("✓ No consolidation needed")
-        logger.info(f"  Short-term memories: {check['count']}/{check['threshold']}")
+        logger.info("  Short-term memories: %s/%s", check['count'], check['threshold'])
         return
 
     logger.info("📊 Consolidation Analysis:")
-    logger.info(f"  Short-term count: {check['count']}/{check['threshold']}")
+    logger.info("  Short-term count: %s/%s", check['count'], check['threshold'])
     for reason in check["reasons"]:
-        logger.info(f"  • {reason}")
+        logger.info("  • %s", reason)
 
     # Run consolidation
     dry_run = not args.no_dry_run
@@ -487,46 +487,46 @@ def consolidate_cli(args: Any) -> None:
 
     results = engine.auto_consolidate(dry_run=dry_run)
 
-    logger.info(f"\n{'Would be' if dry_run else 'Consolidation'} Results:")
+    logger.info("\n%s Results:", 'Would be' if dry_run else 'Consolidation')
     if results["archived"]:
-        logger.info(f"  📦 Archived: {len(results['archived'])} memories")
+        logger.info("  📦 Archived: %s memories", len(results['archived']))
         for item in results["archived"][:
             5]:
-            logger.info(f"     - {item['filename']} ({item.get('age_days', '?')} days old)")
+            logger.info("     - %s (%s days old)", item['filename'], item.get('age_days', '?'))
         if len(results["archived"]) > 5:
-            logger.info(f"     ... and {len(results['archived']) - 5} more")
+            logger.info("     ... and %s more", len(results['archived']) - 5)
 
     if results["merged"]:
-        logger.info(f"  🔗 Merged: {len(results['merged'])} memory pairs")
+        logger.info("  🔗 Merged: %s memory pairs", len(results['merged']))
         for item in results["merged"][:
             3]:
-            logger.info(f"     - {item['source1']} + {item['source2']} ({item['similarity']})")
+            logger.info("     - %s + %s (%s)", item['source1'], item['source2'], item['similarity'])
         if len(results["merged"]) > 3:
-            logger.info(f"     ... and {len(results['merged']) - 3} more")
+            logger.info("     ... and %s more", len(results['merged']) - 3)
 
     if results["promoted"]:
-        logger.info(f"  ⬆️  Promoted: {len(results['promoted'])} memories to long-term")
+        logger.info("  ⬆️  Promoted: %s memories to long-term", len(results['promoted']))
         for item in results["promoted"][:
             3]:
             reason = item.get("reason", "N/A")
-            logger.info(f"     - {item['source']} ({reason})")
+            logger.info("     - %s (%s)", item['source'], reason)
         if len(results["promoted"]) > 3:
-            logger.info(f"     ... and {len(results['promoted']) - 3} more")
+            logger.info("     ... and %s more", len(results['promoted']) - 3)
 
     if results["scratchpads_cleaned"]:
-        logger.info(f"  🧹 Scratchpads: {len(results['scratchpads_cleaned'])} cleaned (>24h old)")
+        logger.info("  🧹 Scratchpads: %s cleaned (>24h old)", len(results['scratchpads_cleaned']))
         for item in results["scratchpads_cleaned"][:
             3]:
             age_hours = item.get("age_hours", 0)
-            logger.info(f"     - {item['name']} ({age_hours:.1f}h old)")
+            logger.info("     - %s (%sh old)", item['name'], age_hours)
         if len(results["scratchpads_cleaned"]) > 3:
-            logger.info(f"     ... and {len(results['scratchpads_cleaned']) - 3} more")
+            logger.info("     ... and %s more", len(results['scratchpads_cleaned']) - 3)
 
     if results["errors"]:
-        logger.info(f"\n⚠️  Errors: {len(results['errors'])}")
+        logger.info("\n⚠️  Errors: %s", len(results['errors']))
         for error in results["errors"][:
             3]:
-            logger.info(f"     - {error}")
+            logger.info("     - %s", error)
 
     if dry_run:
         logger.info("\n💡 Run with --no-dry-run to execute consolidation")

@@ -51,7 +51,7 @@ def _emit(event_type_name: str, data: dict[str, Any]) -> None:
         from whitemagic.core.resonance import emit_event
         emit_event(event_type_name, data, source="ensemble")
     except (ImportError, ModuleNotFoundError) as e:
-        logger.debug(f"Silenced ensemble emit error: {e}", exc_info=True)
+        logger.debug("Silenced ensemble emit error: %s", e, exc_info=True)
 
 
 def _ensemble_dir() -> Path:
@@ -270,7 +270,7 @@ def handle_ensemble_query(**kwargs: Any) -> dict[str, Any]:
         path = _ensemble_dir() / f"{ensemble_id}.json"
         path.write_text(_json_dumps(record, indent=2, default=str), encoding="utf-8")
     except Exception as e:
-        logger.debug(f"Silenced ensemble write error: {e}", exc_info=True)
+        logger.debug("Silenced ensemble write error: %s", e, exc_info=True)
 
     _emit("ENSEMBLE_COMPLETE", {
         "ensemble_id": ensemble_id,

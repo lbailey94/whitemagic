@@ -84,8 +84,8 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
         "metadata": metadata,
         "auto_embed": auto_embed,
         "enable_surprise_gate": False,
-        "enable_entity_extraction": False,
-        "enable_holographic_index": False,
+        "enable_entity_extraction": True,
+        "enable_holographic_index": True,
     }
     if memory_type is not None:
         store_kwargs["memory_type"] = memory_type

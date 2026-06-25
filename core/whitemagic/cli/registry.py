@@ -7,6 +7,8 @@ reducing tight coupling between boot.py and command modules.
 from collections.abc import Callable
 from typing import TypeVar
 
+import click
+
 T = TypeVar("T")
 
 
@@ -25,19 +27,7 @@ class CommandRegistry:
             func_name: Function name in module (defaults to module's CLI group)
         """
         def decorator(func: Callable) -> Callable:
-            """
-            Perform the decorator operation.
-
-            Args:
-                func: Parameter description.
-
-            Returns:
-                Callable
-            """
             def loader():
-                """
-                Perform the loader operation.
-                """
                 try:
                     module = __import__(import_path, fromlist=[func_name] if func_name else None)
                     if func_name:
@@ -80,3 +70,44 @@ def get_optional_command(name: str) -> T | None:
 def list_optional_commands() -> list[str]:
     """List all registered optional commands."""
     return _registry.all_names()
+
+
+def register_optional(
+    main_group: click.Group,
+    name: str,
+    import_path: str,
+    func_name: str | None = None,
+    *,
+    cli_name: str | None = None,
+    warn_on_fail: bool = False,
+) -> bool:
+    """Register an optional CLI command group with graceful degradation.
+
+    Replaces the try/except ImportError boilerplate in boot.py.
+
+    Args:
+        main_group: Click group to add the command to
+        name: Internal name for logging
+        import_path: Dotted module path to import
+        func_name: Attribute name in module (defaults to module itself)
+        cli_name: Override CLI command name (defaults to auto from the command)
+        warn_on_fail: If True, print a warning on ImportError
+    Returns:
+        True if registered, False if import failed
+    """
+    try:
+        module = __import__(import_path, fromlist=[func_name] if func_name else None)
+        cmd = getattr(module, func_name) if func_name else module
+        if cli_name:
+            main_group.add_command(cmd, name=cli_name)
+        else:
+            main_group.add_command(cmd)
+        return True
+    except (ImportError, ModuleNotFoundError) as e:
+        if warn_on_fail:
+            try:
+                from rich.console import Console
+                Console().print(f"[yellow]Warning: Failed to load {name}: {e}[/yellow]")
+            except ImportError:
+                click.echo(f"Warning: Failed to load {name}: {e}", err=True)
+        return False

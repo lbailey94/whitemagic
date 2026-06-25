@@ -241,6 +241,10 @@ tmp/
 temp_venv/
 scratch/
 wm
+test_fs
+test_fs2
+test_fs3
+memory/
 .restructure_backups/whitemagic-legacy-v21.0.0.tar.gz
 polyglot/codex/
 polyglot/codex/00_source/

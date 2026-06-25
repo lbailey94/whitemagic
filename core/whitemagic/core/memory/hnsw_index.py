@@ -252,7 +252,7 @@ class HNSWIndex:
                 'dim': self.dim,
                 'm': self.m
             }, f)
-        logger.info(f"HNSW index saved: {len(self.nodes)} vectors")
+        logger.info("HNSW index saved: %s vectors", len(self.nodes))
 
     def load(self) -> bool:
         """Load index from disk."""
@@ -266,7 +266,7 @@ class HNSWIndex:
                 self.max_level = data['max_level']
                 self.dim = data['dim']
                 self.m = data['m']
-            logger.info(f"HNSW index loaded: {len(self.nodes)} vectors")
+            logger.info("HNSW index loaded: %s vectors", len(self.nodes))
             return True
         except Exception as e:
             logger.error("Failed to load HNSW index: %s", e, exc_info=True)

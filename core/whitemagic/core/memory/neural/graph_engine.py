@@ -30,7 +30,7 @@ class GraphEngine:
         if not force and not self._is_dirty and self._graph_cache:
             return self._graph_cache
 
-        logger.info(f"Building memory graph for {len(memories)} memories...")
+        logger.info("Building memory graph for %s memories...", len(memories))
 
         # Convert to tuples for Rust
         # Memory content might be Any, cast to str
@@ -48,7 +48,7 @@ class GraphEngine:
         )
 
         self._is_dirty = False
-        logger.info(f"Graph built with {len(self._graph_cache)} nodes")
+        logger.info("Graph built with %s nodes", len(self._graph_cache))
         return self._graph_cache
 
     def get_cluster(self, start_id: str, memories: list[Memory], max_depth: int = 3) -> set[str]:

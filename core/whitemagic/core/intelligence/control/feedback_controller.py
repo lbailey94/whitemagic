@@ -59,7 +59,7 @@ class FeedbackController:
         data = event.data
         pattern = data.get("core_pattern")
 
-        logger.info(f"⚡ FeedbackController handling BREAKTHROUGH: {pattern}")
+        logger.info("⚡ FeedbackController handling BREAKTHROUGH: %s", pattern)
 
         # 1. Enrich Active Session
         session = self._session_manager.get_active_session()

@@ -269,16 +269,16 @@ if __name__ == "__main__":
 
     result = calc.recalculate_all(dry_run=True)
 
-    logger.info(f"\nTotal memories: {result['total_memories']}")
+    logger.info("\nTotal memories: %s", result['total_memories'])
 
     logger.info("\nOLD Distribution (bimodal):")
     for tier, count in result["old_distribution"].items():
         pct = count / result["total_memories"] * 100
         bar = "█" * int(pct / 2)
-        logger.info(f"  {tier:10s}: {count:3d} ({pct:5.1f}%) {bar}")
+        logger.info("  %s: %s (%s%%) %s", tier, count, pct, bar)
 
     logger.info("\nNEW Distribution (continuous):")
     for tier, count in result["new_distribution"].items():
         pct = count / result["total_memories"] * 100
         bar = "█" * int(pct / 2)
-        logger.info(f"  {tier:10s}: {count:3d} ({pct:5.1f}%) {bar}")
+        logger.info("  %s: %s (%s%%) %s", tier, count, pct, bar)

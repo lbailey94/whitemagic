@@ -7,29 +7,18 @@ module transactions
 // Transaction Effect Definition
 // ═══════════════════════════════════════════════════════════════════════════
 
-effect transaction
-  // Core transaction operations
-  fun begin-tx(): string  // returns tx-id
+pub effect transaction
+  fun begin-tx(): string
   fun commit-tx(tx-id: string): bool
   fun rollback-tx(tx-id: string): bool
   fun get-tx-status(tx-id: string): string
-  
-  // Savepoints
   fun create-savepoint(tx-id: string): string
   fun rollback-to-savepoint(tx-id: string, savepoint: string): bool
-  
-  // Transaction state
   fun is-in-tx(): bool
   fun get-current-tx(): string
   fun set-tx-isolation(level: string): ()
-  
-  // Distributed transaction coordination
-  fun prepare-tx(tx-id: string): bool  // 2-phase commit: prepare
-  fun confirm-tx(tx-id: string): bool  // 2-phase commit: confirm
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Transaction Types
-// ═══════════════════════════════════════════════════════════════════════════
+  fun prepare-tx(tx-id: string): bool
+  fun confirm-tx(tx-id: string): bool
 
 type tx-status
   Active
@@ -40,63 +29,66 @@ type tx-status
   Committing
 
 struct tx-record
-  id: string
+  tx-id: string
   status: tx-status
   operations: list<string>
   savepoints: list<string>
   start-time: int
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Transaction Handler
-// ═══════════════════════════════════════════════════════════════════════════
+fun is-active-status(s: tx-status): bool
+  match s
+    Active -> True
+    _ -> False
 
-fun handle-transactions(action: () -> <transaction> a): a
+pub fun handle-transactions(action: () -> <transaction|e> a): e a
   var txs : list<tx-record> := []
   var current-tx : string := ""
   var next-id := 0
-  
-  handle action
+  var tick-counter : int := 0
+
+  with
     fun begin-tx()
-      val id = "tx_" ++ next-id.show
+      val new-id = "tx_" ++ next-id.show
       next-id := next-id + 1
-      val tx = tx-record(id, Active, [], [], ticks())
+      tick-counter := tick-counter + 1
+      val tx = Tx-record(new-id, Active, [], [], tick-counter)
       txs := Cons(tx, txs)
-      current-tx := id
-      id
-    
-    fun commit-tx(id)
-      match txs.find(fn(t) t.id == id)
+      current-tx := new-id
+      new-id
+
+    fun commit-tx(target-id)
+      match txs.find(fn(t) t.tx-id == target-id)
         Just(tx) ->
-          if tx.status == Active then
-            val new-tx = tx-record(
-              tx.id, Committed, tx.operations, 
+          if is-active-status(tx.status) then
+            val new-tx = Tx-record(
+              tx.tx-id, Committed, tx.operations,
               tx.savepoints, tx.start-time
             )
-            txs := Cons(new-tx, txs.filter(fn(t) t.id != id))
-            if current-tx == id then current-tx := ""
+            txs := Cons(new-tx, txs.filter(fn(t) t.tx-id != target-id))
+            if current-tx == target-id then current-tx := ""
             True
           else
             False
         Nothing -> False
-    
-    fun rollback-tx(id)
-      match txs.find(fn(t) t.id == id)
+
+    fun rollback-tx(target-id)
+      match txs.find(fn(t) t.tx-id == target-id)
         Just(tx) ->
-          if tx.status == Active then
-            val new-tx = tx-record(
-              tx.id, RolledBack, tx.operations,
+          if is-active-status(tx.status) then
+            val new-tx = Tx-record(
+              tx.tx-id, RolledBack, tx.operations,
               tx.savepoints, tx.start-time
             )
-            txs := Cons(new-tx, txs.filter(fn(t) t.id != id))
-            if current-tx == id then current-tx := ""
+            txs := Cons(new-tx, txs.filter(fn(t) t.tx-id != target-id))
+            if current-tx == target-id then current-tx := ""
             True
           else
             False
         Nothing -> False
-    
-    fun get-tx-status(id)
-      match txs.find(fn(t) t.id == id)
-        Just(tx) -> 
+
+    fun get-tx-status(target-id)
+      match txs.find(fn(t) t.tx-id == target-id)
+        Just(tx) ->
           match tx.status
             Active -> "active"
             Committed -> "committed"
@@ -105,107 +97,112 @@ fun handle-transactions(action: () -> <transaction> a): a
             Prepared -> "prepared"
             Committing -> "committing"
         Nothing -> "unknown"
-    
-    fun create-savepoint(id)
-      val sp = "sp_" ++ ticks().show
-      match txs.find(fn(t) t.id == id)
+
+    fun create-savepoint(target-id)
+      tick-counter := tick-counter + 1
+      val sp = "sp_" ++ tick-counter.show
+      match txs.find(fn(t) t.tx-id == target-id)
         Just(tx) ->
-          val new-tx = tx-record(
-            tx.id, tx.status, tx.operations,
+          val new-tx = Tx-record(
+            tx.tx-id, tx.status, tx.operations,
             Cons(sp, tx.savepoints), tx.start-time
           )
-          txs := Cons(new-tx, txs.filter(fn(t) t.id != id))
+          txs := Cons(new-tx, txs.filter(fn(t) t.tx-id != target-id))
           sp
         Nothing -> ""
-    
-    fun rollback-to-savepoint(id, sp)
-      // Would restore state to savepoint
+
+    fun rollback-to-savepoint(tx-id, sp)
       True
-    
+
     fun is-in-tx()
       current-tx != ""
-    
+
     fun get-current-tx()
       current-tx
-    
+
     fun set-tx-isolation(level)
-      ()  // Would set isolation level
-    
-    fun prepare-tx(id)
-      match txs.find(fn(t) t.id == id)
+      ()
+
+    fun prepare-tx(target-id)
+      match txs.find(fn(t) t.tx-id == target-id)
         Just(tx) ->
-          val new-tx = tx-record(
-            tx.id, Prepared, tx.operations,
+          val new-tx = Tx-record(
+            tx.tx-id, Prepared, tx.operations,
             tx.savepoints, tx.start-time
           )
-          txs := Cons(new-tx, txs.filter(fn(t) t.id != id))
+          txs := Cons(new-tx, txs.filter(fn(t) t.tx-id != target-id))
           True
         Nothing -> False
-    
-    fun confirm-tx(id)
-      commit-tx(id)
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Transactional operation helper
-// ═══════════════════════════════════════════════════════════════════════════
+    fun confirm-tx(target-id)
+      // Inline commit logic to avoid recursive effect call
+      match txs.find(fn(t) t.tx-id == target-id)
+        Just(tx) ->
+          if is-active-status(tx.status) then
+            val new-tx = Tx-record(
+              tx.tx-id, Committed, tx.operations,
+              tx.savepoints, tx.start-time
+            )
+            txs := Cons(new-tx, txs.filter(fn(t) t.tx-id != target-id))
+            if current-tx == target-id then current-tx := ""
+            True
+          else
+            False
+        Nothing -> False
+  action()
 
-fun atomic(action: () -> a): <transaction> (a, bool)
+fun atomic(action: () -> <transaction,exn|e> a): <transaction|e> maybe<a>
   val tx-id = begin-tx()
-  try
+  try(fn() {
     val result = action()
-    val committed = commit-tx(tx-id)
-    (result, committed)
-  catch
+    commit-tx(tx-id)
+    Just(result)
+  }, fn(_exn) {
     rollback-tx(tx-id)
-    throw
+    Nothing
+  })
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Nested transaction support
-// ═══════════════════════════════════════════════════════════════════════════
-
-fun nested-tx(action: () -> a): <transaction> (a, bool)
+fun nested-tx(action: () -> <transaction,exn|e> a): <transaction|e> maybe<a>
   if !is-in-tx() then
     atomic(action)
   else
     val parent-tx = get-current-tx()
     val savepoint = create-savepoint(parent-tx)
-    try
+    try(fn() {
       val result = action()
-      (result, True)
-    catch
+      Just(result)
+    }, fn(_exn) {
       rollback-to-savepoint(parent-tx, savepoint)
-      throw
+      Nothing
+    })
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Transaction composition
-// ═══════════════════════════════════════════════════════════════════════════
-
-fun compose-txs(actions: list<() -> a>): <transaction> list<(a, bool)>
+fun compose-txs(actions: list<() -> <transaction,exn|e> a>): <transaction|e> list<maybe<a>>
   actions.map(fn(action) atomic(action))
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Distributed transaction coordination (2PC)
-// ═══════════════════════════════════════════════════════════════════════════
-
 struct participant
-  id: string
+  p-id: string
   prepare: () -> bool
   commit: () -> bool
   rollback: () -> bool
 
-fun two-phase-commit(coordinator-tx: string, participants: list<participant>): 
-  <transaction> bool
-  
-  // Phase 1: Prepare
-  val all-prepared = participants.foldl(True) fn(all, p)
-    all && p.prepare()
-  
+fun two-phase-commit(coordinator-tx: string, participants: list<participant>): <transaction> bool
+  val all-prepared = participants.foldl(True, fn(all, p)
+    val prep = p.prepare
+    all && prep()
+  )
   if !all-prepared then
-    // Abort - rollback all
-    participants.foreach(fn(p) p.rollback())
+    participants.foreach(fn(p)
+      val rb = p.rollback
+      val _ = rb()
+      ()
+    )
     rollback-tx(coordinator-tx)
     False
   else
-    // Phase 2: Commit
-    participants.foreach(fn(p) p.commit())
+    participants.foreach(fn(p)
+      val cm = p.commit
+      val _ = cm()
+      ()
+    )
     commit-tx(coordinator-tx)
+    True

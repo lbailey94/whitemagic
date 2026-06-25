@@ -21,7 +21,8 @@ def handle_swarm_route(**kwargs: Any) -> dict[str, Any]:
     plan_id = kwargs.get("plan_id", "")
     if not plan_id:
         return {"status": "error", "error": "plan_id is required"}
-    return cast("dict[str, Any]", get_swarm().route(plan_id))
+    engagement_token_id = kwargs.get("engagement_token_id", None)
+    return cast("dict[str, Any]", get_swarm().route(plan_id, engagement_token_id=engagement_token_id))
 
 
 def handle_swarm_complete(**kwargs: Any) -> dict[str, Any]:

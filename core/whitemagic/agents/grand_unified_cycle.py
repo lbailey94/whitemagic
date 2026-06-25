@@ -304,26 +304,26 @@ class GrandUnifiedCycle:
         self._ensure_initialized()
         self._cycle_count += 1
 
-        logger.info(f"\n{'='*60}")
+        logger.info("\n%s", '='*60)
         logger.info("🌀 GRAND CYCLE %s — Advancing all systems", self._cycle_count, exc_info=True)
-        logger.info(f"{'='*60}")
+        logger.info("%s", '='*60)
 
         # 1. COSMIC LAYER: Advance Zodiac
         zodiac_sign = self._advance_zodiac()
-        logger.info(f"  🌟 Zodiac: {zodiac_sign.value.upper()}")
+        logger.info("  🌟 Zodiac: %s", zodiac_sign.value.upper())
 
         # 2. ELEMENTAL LAYER: Map Zodiac → Wu Xing
         element = self._zodiac_to_wuxing(zodiac_sign)
         self._adjust_wu_xing(element)
-        logger.info(f"  ☯️  Wu Xing: {element.value.upper()}")
+        logger.info("  ☯️  Wu Xing: %s", element.value.upper())
 
         # 3. POLARITY LAYER: Check Yin-Yang Balance
         balance = self._check_yin_yang_balance()
-        logger.info(f"  ⚖️  Yin-Yang: {balance['balance']:.2f} (burnout: {balance['burnout_risk']:.0%})")
+        logger.info("  ⚖️  Yin-Yang: %s (burnout: %s)", balance['balance'], balance['burnout_risk'])
 
         # 4. TACTICAL LAYER: Determine Pipeline Phase
         pipeline_phase = self._determine_pipeline_phase(element, balance)
-        logger.info(f"  🎯 Pipeline: {pipeline_phase.value.upper()}")
+        logger.info("  🎯 Pipeline: %s", pipeline_phase.value.upper())
 
         # 5. STRATEGIC/EXECUTION LAYER: Select Tactic
         tactic = self._select_tactic(pipeline_phase, balance)
@@ -358,9 +358,9 @@ class GrandUnifiedCycle:
         # Store in history
         self._phase_history.append(self.state)
 
-        logger.info(f"\n  ✨ Dominant: {self.state.get_dominant_influence()}")
-        logger.info(f"  💡 Action: {self.state.get_recommended_action()}")
-        logger.info(f"{'='*60}\n")
+        logger.info("\n  ✨ Dominant: %s", self.state.get_dominant_influence())
+        logger.info("  💡 Action: %s", self.state.get_recommended_action())
+        logger.info("%s\n", '='*60)
 
         return self.state
 
@@ -573,9 +573,9 @@ class GrandUnifiedCycle:
         Returns:
             List of UnifiedState for each phase
         """
-        logger.info(f"\n{'#'*60}")
+        logger.info("\n%s", '#'*60)
         logger.info("🌀 STARTING FULL ROUND — %s phases", num_phases, exc_info=True)
-        logger.info(f"{'#'*60}\n")
+        logger.info("%s\n", '#'*60)
 
         states = []
         for i in range(num_phases):
@@ -583,9 +583,9 @@ class GrandUnifiedCycle:
             states.append(state)
             time.sleep(0.1)  # Brief pause for resonance propagation
 
-        logger.info(f"\n{'#'*60}")
+        logger.info("\n%s", '#'*60)
         logger.info("✅ FULL ROUND COMPLETE — %s phases executed", num_phases, exc_info=True)
-        logger.info(f"{'#'*60}\n")
+        logger.info("%s\n", '#'*60)
 
         return states
 

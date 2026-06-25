@@ -331,7 +331,7 @@ class ChariotArchaeologist:
                 f.write(json.dumps(finding) + "\n")
             self.stats_data["found"] += 1
             if self.stats_data["found"] % 100 == 0:
-                logger.info(f"Artifacts found so far: {self.stats_data['found']}")
+                logger.info("Artifacts found so far: %s", self.stats_data['found'])
 
     def scan_file(self, file_path: Path) -> None:
         """
@@ -423,7 +423,7 @@ class ChariotArchaeologist:
                 if not file.startswith("."):
                     files_to_scan.append(Path(root) / file)
 
-        logger.info(f"Identified {len(files_to_scan)} potential artifacts. Beginning Chariot run...")
+        logger.info("Identified %s potential artifacts. Beginning Chariot run...", len(files_to_scan))
 
         # Parallel processing for speed
         with ThreadPoolExecutor(max_workers=8) as executor:

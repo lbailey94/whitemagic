@@ -46,7 +46,7 @@ class JuliaPersistentClient:
             server_script = Path("/media/lucas/SD_CARD/WHITEMAGIC/archives/whitemagic-clean-BACKUP-20250407/whitemagic-julia/src/julia_server.jl")
 
         if not Path(julia_path).exists():
-            logger.error(f"Julia not found at {julia_path}")
+            logger.error("Julia not found at %s", julia_path)
             return False
 
         logger.info("Starting Julia persistent server...")
@@ -68,7 +68,7 @@ class JuliaPersistentClient:
             if self.server_process.poll() is not None:
                 stderr_stream = self.server_process.stderr
                 stderr = stderr_stream.read().decode() if stderr_stream else "Unknown error"
-                logger.error(f"Julia server failed: {stderr}")
+                logger.error("Julia server failed: %s", stderr)
                 return False
 
         logger.error("Julia server startup timeout")

@@ -355,65 +355,37 @@ def main() -> int:
     print(" WhiteMagic Comprehensive Benchmark Suite — v22.2.0")
     print("=" * 65)
 
+    from whitemagic.utils.progress_bar import ProgressBar
+
     results: dict[str, Any] = {
         "version": "v22.2.0",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
-    # 1. Cosine
-    print("\n[1/5] Cosine Similarity (dim=768, n=500)...")
-    results["cosine"] = benchmark_cosine(dim=768, iterations=500)
-    c = results["cosine"]
-    print(f"  Python  mean={c['python']['mean_ms']:.3f}ms  p95={c['python']['p95_ms']:.3f}ms")
-    if "zig_simd" in c:
-        print(f"  Zig SIMD mean={c['zig_simd']['mean_ms']:.3f}ms  ({c['zig_speedup']:.1f}×)")
-    if "rust_simd" in c:
-        print(f"  Rust SIMD mean={c['rust_simd']['mean_ms']:.3f}ms  ({c['rust_speedup']:.1f}×)")
+    phases = [
+        ("Cosine Similarity", "[1/5] Cosine Similarity (dim=768, n=500)...",
+         lambda: benchmark_cosine(dim=768, iterations=500)),
+        ("Batch Cosine", "[2/5] Batch Cosine (dim=768, corpus=1000, n=50)...",
+         lambda: benchmark_batch_cosine(dim=768, corpus_size=1000, iterations=50)),
+        ("5D Properties", "[3/5] Property-Based 5D Math (n=10,000)...",
+         lambda: benchmark_5d_properties(iterations=10_000)),
+        ("Dispatch", "[4/5] Dispatch Pipeline (n=8, per-tool)...",
+         lambda: benchmark_dispatch(iterations=8)),
+        ("PRAT Scaffold", "[5/5] PRAT Compression Scaffold...",
+         lambda: benchmark_prat_compression()),
+    ]
 
-    # 2. Batch
-    print("\n[2/5] Batch Cosine (dim=768, corpus=1000, n=50)...")
-    results["batch_cosine"] = benchmark_batch_cosine(dim=768, corpus_size=1000, iterations=50)
-    b = results["batch_cosine"]
-    print(f"  Python  mean={b['python']['mean_ms']:.2f}ms")
-    if "zig_simd" in b:
-        print(f"  Zig SIMD mean={b['zig_simd']['mean_ms']:.2f}ms  ({b['zig_speedup']:.1f}×)")
+    bar = ProgressBar(total=len(phases), label="Suite")
+    bar.start()
 
-    # 3. 5D Properties
-    print("\n[3/5] Property-Based 5D Math (n=10,000)...")
-    results["5d_properties"] = benchmark_5d_properties(iterations=10_000)
-    p = results["5d_properties"]
-    print(f"  cosine(a,a)==1.0  pass={p['cosine_idempotent']['rate']*100:.2f}%")
-    print(f"  cosine(a,b)==cosine(b,a)  pass={p['cosine_symmetric']['rate']*100:.2f}%")
-    print(f"  triangle_inequality  pass={p['triangle_inequality']['rate']*100:.2f}%")
-    if p["errors"]:
-        print(f"  ⚠️  {len(p['errors'])} sample errors")
+    for i, (label, header, fn) in enumerate(phases):
+        bar.set_label(label)
+        print(f"\n{header}")
+        results_key = ["cosine", "batch_cosine", "5d_properties", "dispatch", "prat_compression"][i]
+        results[results_key] = fn()
+        bar.advance()
 
-    # 4. Dispatch — small N to stay under per-tool rate-limit thresholds
-    # (e.g., health_report rate-limit is ~10 calls / 5 s). For higher-N
-    # latency profiling, run with the rate limiter disabled.
-    print("\n[4/5] Dispatch Pipeline (n=8, per-tool)...")
-    results["dispatch"] = benchmark_dispatch(iterations=8)
-    d = results["dispatch"]
-    if "error" not in d:
-        g = d["gnosis_status"]
-        h = d["health_report"]
-        print(f"  gnosis/status  mean={g['mean_ms']:.3f}ms  p95={g['p95_ms']:.3f}ms  ok={g['ok']}/{g['ok'] + g['err']}")
-        print(f"  health_report  mean={h['mean_ms']:.3f}ms  p95={h['p95_ms']:.3f}ms  ok={h['ok']}/{h['ok'] + h['err']}")
-        if g["err"] > 0 or h["err"] > 0:
-            print("  ⚠️  Non-zero error count — latency includes failure paths; investigate before publishing.")
-    else:
-        print(f"  ⚠️  {d['error']}")
-
-    # 5. PRAT Scaffold
-    print("\n[5/5] PRAT Compression Scaffold...")
-    results["prat_compression"] = benchmark_prat_compression()
-    pr = results["prat_compression"]
-    if "error" not in pr:
-        print(f"  Tools: {pr['total_tools']} → {pr['gana_count']} Ganas (~{pr['avg_tools_per_gana']} tools/Gana)")
-        print(f"  Est. token savings: {pr['estimated_token_savings']} ({pr['estimated_savings_pct']}%)")
-        print(f"  Status: {pr['status']}")
-    else:
-        print(f"  ⚠️  {pr['message']}")
+    bar.finish()
 
     # Write report
     report_dir = REPO_ROOT / "reports"

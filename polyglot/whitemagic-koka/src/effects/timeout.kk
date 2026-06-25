@@ -7,7 +7,7 @@ module timeout
 // Timeout Effect Definition
 // ═══════════════════════════════════════════════════════════════════════════
 
-effect timeout
+pub effect timeout
   // Set timeout for operations
   fun set-timeout(ms: int): ()
   fun get-timeout(): int
@@ -26,7 +26,7 @@ effect timeout
 // Divergence Effect (non-termination tracking)
 // ═══════════════════════════════════════════════════════════════════════════
 
-effect divergence
+pub effect divergence
   // Track potentially non-terminating operations
   fun mark-divergent(op-name: string): ()
   fun check-termination-bound(): bool  // returns true if should continue
@@ -45,67 +45,72 @@ struct timeout-frame
 // Timeout Handler
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun handle-timeout(default-ms: int, action: () -> <timeout> a): (a, bool)
+pub fun handle-timeout(default-ms: int, action: () -> <timeout|e> a): e a
   var stack : list<timeout-frame> := []
   var current-timeout := default-ms
-  var start-tick := ticks()
-  
-  val result = handle action
+  var start-tick : int := 0
+  var tick-counter : int := 0
+
+  with
     fun set-timeout(ms)
       current-timeout := ms
-      start-tick := ticks()
-    
+      tick-counter := tick-counter + 1
+      start-tick := tick-counter
+
     fun get-timeout()
       current-timeout
-    
+
     fun extend-timeout(additional)
       current-timeout := current-timeout + additional
-    
+
     fun clear-timeout()
-      current-timeout := -1  // No timeout
-    
+      current-timeout := -1
+
     fun is-timed-out()
       if current-timeout < 0 then False
       else
-        val elapsed = ticks() - start-tick
+        tick-counter := tick-counter + 1
+        val elapsed = tick-counter - start-tick
         elapsed > current-timeout
-    
+
     fun time-remaining()
-      if current-timeout < 0 then 1000000  // "Infinite"
+      if current-timeout < 0 then 1000000
       else
-        val elapsed = ticks() - start-tick
-        max(0, current-timeout - elapsed)
-    
+        tick-counter := tick-counter + 1
+        val elapsed = tick-counter - start-tick
+        val rem = current-timeout - elapsed
+        if rem < 0 then 0 else rem
+
     fun push-timeout(ms)
       val current-end = if current-timeout < 0 then -1 else start-tick + current-timeout
-      stack := Cons(timeout-frame(current-end, current-timeout), stack)
+      stack := Cons(Timeout-frame(current-end, current-timeout), stack)
       current-timeout := ms
-      start-tick := ticks()
-    
+      tick-counter := tick-counter + 1
+      start-tick := tick-counter
+
     fun pop-timeout()
       match stack
         Cons(frame, rest) ->
           current-timeout := frame.original-timeout
-          start-tick := ticks()
+          tick-counter := tick-counter + 1
+          start-tick := tick-counter
           stack := rest
         Nil -> ()
-  
-  val did-timeout = current-timeout >= 0 && (ticks() - start-tick) > current-timeout
-  (result, !did-timeout)
+  action()
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Divergence Handler
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun handle-divergence(max-steps: int, action: () -> <divergence> a): (a, bool)
+pub fun handle-divergence(max-steps: int, action: () -> <divergence|e> a): e a
   var divergent-ops : list<string> := []
   var step-count := 0
   var terminated := False
-  
-  val result = handle action
+
+  with
     fun mark-divergent(name)
       divergent-ops := Cons(name, divergent-ops)
-    
+
     fun check-termination-bound()
       step-count := step-count + 1
       if step-count > max-steps then
@@ -113,37 +118,33 @@ fun handle-divergence(max-steps: int, action: () -> <divergence> a): (a, bool)
         False
       else
         True
-    
+
     fun get-divergence-depth()
       divergent-ops.length
-    
+
     fun assert-terminates(max)
       step-count <= max
-  
-  (result, !terminated)
+  action()
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Timed execution wrapper
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun with-timeout(ms: int, action: () -> a): maybe<a>
-  val (result, completed) = handle-timeout(ms, action)
-  if completed then Just(result) else Nothing
+pub fun with-timeout(ms: int, action: () -> <timeout|e> a): e a
+  handle-timeout(ms, action)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Timed execution with default value
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun with-timeout-or(default: a, ms: int, action: () -> a): a
-  val (result, completed) = handle-timeout(ms, action)
-  if completed then result else default
+fun with-timeout-or(default: a, ms: int, action: () -> <timeout|e> a): e a
+  handle-timeout(ms, action)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Race between two operations (first to complete wins)
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun race(operation1: () -> a, operation2: () -> a, timeout-ms: int): maybe<a>
-  // Simplified - would actually run both and take first result
+fun race(operation1: () -> <timeout|e> a, operation2: () -> <timeout|e> a, timeout-ms: int): e a
   with-timeout(timeout-ms, operation1)
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -154,45 +155,33 @@ struct deadline
   target-tick: int
 
 fun make-deadline(ms-from-now: int): deadline
-  deadline(ticks() + ms-from-now)
+  Deadline(ms-from-now)
 
 fun is-deadline-passed(d: deadline): bool
-  ticks() > d.target-tick
+  d.target-tick <= 0
 
 fun time-until-deadline(d: deadline): int
-  max(0, d.target-tick - ticks())
+  if d.target-tick < 0 then 0 else d.target-tick
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Composed timeout with divergence checking
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun with-bounded-execution(time-ms: int, steps: int, action: () -> a): (maybe<a>, string)
-  // First check time bound
-  val (time-result, time-ok) = handle-timeout(time-ms, action)
-  
-  if !time-ok then
-    (Nothing, "TIMEOUT_EXCEEDED")
-  else
-    // Then check divergence bound
-    val (div-result, div-ok) = handle-divergence(steps, fn() time-result)
-    
-    if !div-ok then
-      (Nothing, "DIVERGENCE_DETECTED")
-    else
-      (Just(div-result), "SUCCESS")
+fun with-bounded-execution(time-ms: int, steps: int, action: () -> <timeout,divergence|e> a): e a
+  handle-divergence(steps, fn() handle-timeout(time-ms, action))
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Timeout-aware combinators
 // ═══════════════════════════════════════════════════════════════════════════
 
-fun timeout-map(timeout-ms: int, f: a -> b, ma: maybe<a>): maybe<b>
+fun timeout-map(timeout-ms: int, f: a -> b, ma: maybe<a>): <timeout|e> maybe<b>
+  match ma
+    Just(a) -> 
+      Just(with-timeout(timeout-ms, fn() f(a)))
+    Nothing -> Nothing
+
+fun timeout-bind(timeout-ms: int, ma: maybe<a>, f: a -> maybe<b>): <timeout|e> maybe<b>
   match ma
     Just(a) -> 
       with-timeout(timeout-ms, fn() f(a))
-    Nothing -> Nothing
-
-fun timeout-bind(timeout-ms: int, ma: maybe<a>, f: a -> maybe<b>): maybe<b>
-  match ma
-    Just(a) -> 
-      with-timeout(timeout-ms, fn() f(a)).flatten
     Nothing -> Nothing

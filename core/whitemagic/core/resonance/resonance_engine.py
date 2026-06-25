@@ -123,7 +123,7 @@ class ResonanceEngine:
 
                 resonant.append(pattern)
 
-        logger.info(f"Detected {len(resonant)} resonant patterns from {len(patterns)} inputs")
+        logger.info("Detected %s resonant patterns from %s inputs", len(resonant), len(patterns))
         return resonant
 
     def amplify_signal(
@@ -202,6 +202,79 @@ class ResonanceEngine:
             key=lambda p: p.resonance_score,
             reverse=True,
         )[:n]
+
+    # ------------------------------------------------------------------
+    # Julia Resonance facade (fused from JuliaResonanceEngine)
+    # ------------------------------------------------------------------
+
+    _julia_engine_instance: Any = None
+    _transfer_engine_instance: Any = None
+
+    def _get_julia_engine(self):
+        """Lazy accessor for the Julia-inspired resonance engine."""
+        if self._julia_engine_instance is None:
+            from whitemagic.core.resonance.julia_resonance import ResonanceEngine as JuliaRE
+            self._julia_engine_instance = JuliaRE()
+        return self._julia_engine_instance
+
+    def calculate_resonance(self, memory_id: str, **kwargs: Any):
+        """Calculate damped harmonic oscillator resonance for a memory."""
+        return self._get_julia_engine().calculate_resonance(memory_id, **kwargs)
+
+    def calculate_batch_resonance(self, memory_ids: list[str], **kwargs: Any):
+        """Calculate resonance for multiple memories in batch."""
+        return self._get_julia_engine().calculate_batch_resonance(memory_ids, **kwargs)
+
+    def verify_causal_resonance(self, nodes: list[str], edges: list[tuple[str, str]], **kwargs: Any):
+        """Verify causal links via coupled oscillator energy transfer."""
+        return self._get_julia_engine().verify_causal_resonance(nodes, edges, **kwargs)
+
+    def find_neighbors(self, memory_id: str, radius: float = 0.3):
+        """Find spatial neighbors in 5D holographic space."""
+        return self._get_julia_engine().find_neighbors(memory_id, radius=radius)
+
+    def build_holographic_associations(self, **kwargs: Any) -> dict[str, Any]:
+        """Build associations based on holographic proximity."""
+        return self._get_julia_engine().build_holographic_associations(**kwargs)
+
+    def julia_get_stats(self) -> dict[str, Any]:
+        """Get Julia resonance engine statistics."""
+        return self._get_julia_engine().get_stats()
+
+    # ------------------------------------------------------------------
+    # Resonance Transfer facade (fused from ResonanceTransferEngine)
+    # ------------------------------------------------------------------
+
+    def _get_transfer_engine(self):
+        """Lazy accessor for the ResonanceTransferEngine."""
+        if self._transfer_engine_instance is None:
+            from whitemagic.core.evolution.resonance_transfer import ResonanceTransferEngine
+            self._transfer_engine_instance = ResonanceTransferEngine()
+        return self._transfer_engine_instance
+
+    def register_resonance_signature(self, signature: Any) -> None:
+        """Register a subsystem's resonance signature."""
+        self._get_transfer_engine().register_signature(signature)
+
+    def compute_subsystem_resonance(self, id_a: str, id_b: str) -> float:
+        """Compute resonance score between two subsystems."""
+        return self._get_transfer_engine().compute_resonance(id_a, id_b)
+
+    def find_resonant_subsystems(self, source_id: str) -> list[tuple[str, float]]:
+        """Find subsystems resonant with the given source."""
+        return self._get_transfer_engine().find_resonant_subsystems(source_id)
+
+    def propose_transfer(self, source_id: str, improvement_id: str, **kwargs: Any):
+        """Propose transferring an improvement to resonant subsystems."""
+        return self._get_transfer_engine().propose_transfer(source_id, improvement_id, **kwargs)
+
+    def get_transfers(self, subsystem_id: str | None = None) -> list:
+        """Get transfer proposals, optionally filtered by subsystem."""
+        return self._get_transfer_engine().get_transfers(subsystem_id)
+
+    def transfer_get_stats(self) -> dict[str, Any]:
+        """Get resonance transfer engine statistics."""
+        return self._get_transfer_engine().get_stats()
 
 
 # === Convenience Functions ===

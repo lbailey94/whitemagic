@@ -25,7 +25,6 @@ import math
 import os
 import sqlite3
 import sys
-import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -289,7 +288,7 @@ def build_resonance_diversity(limit: int = 0, dry_run: bool = False) -> dict:
     memories = conn.execute(query).fetchall()
     total = len(memories)
 
-    log.info(f"═══ Resonance Diversity Build: {total} memories ═══")
+    log.info("═══ Resonance Diversity Build: %s memories ═══", total)
 
     # Stats tracking
     damping_values = []
@@ -345,7 +344,7 @@ def build_resonance_diversity(limit: int = 0, dry_run: bool = False) -> dict:
         avg = sum(values) / len(values) if values else 0
         min_v = min(values) if values else 0
         max_v = max(values) if values else 0
-        log.info(f"  {name}: min={min_v:.4f}, max={max_v:.4f}, avg={avg:.4f}")
+        log.info("  %s: min=%s, max=%s, avg=%s", name, min_v, max_v, avg)
 
     log.info(f"\n📊 Resonance Statistics:")
     stats(damping_values, "Damping")
@@ -354,11 +353,11 @@ def build_resonance_diversity(limit: int = 0, dry_run: bool = False) -> dict:
 
     log.info(f"\n🌿 Garden Distribution:")
     for garden, count in sorted(garden_counts.items(), key=lambda x: -x[1]):
-        log.info(f"  {garden}: {count}")
+        log.info("  %s: %s", garden, count)
 
     log.info(f"\n🔥 Gana Distribution:")
     for gana, count in sorted(gana_counts.items(), key=lambda x: -x[1]):
-        log.info(f"  {gana}: {count}")
+        log.info("  %s: %s", gana, count)
 
     return {
         "updated": updated,

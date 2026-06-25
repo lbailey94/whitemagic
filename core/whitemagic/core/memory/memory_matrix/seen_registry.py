@@ -11,7 +11,7 @@ Usage:
 
     if registry.have_seen("/path/to/file.md"):
         last_seen = registry.when_seen("/path/to/file.md")
-        logger.info(f"Already seen on {last_seen}")
+        logger.info("Already seen on %s", last_seen)
 """
 
 from __future__ import annotations

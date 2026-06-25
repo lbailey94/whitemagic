@@ -154,8 +154,8 @@ class BridgeSynthesizer:
         elapsed = (time.perf_counter() - start) * 1000
         if insights:
             logger.info(
-                f"🌉 Bridge synthesis: {len(insights)} insights generated ({elapsed:.0f}ms)",
-            )
+                "🌉 Bridge synthesis: %s insights generated (%sms)",
+             len(insights), format(elapsed, ".0f"))
         return insights
 
     def _find_connected_communities(

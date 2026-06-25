@@ -124,7 +124,7 @@ class Vault:
             if stored:
                 return base64.b64decode(stored)
         except (ImportError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to read vault master key from OS keychain: {e}", exc_info=True)
+            logger.debug("Failed to read vault master key from OS keychain: %s", e, exc_info=True)
 
         # Priority 3: Passphrase
         if passphrase:

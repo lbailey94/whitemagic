@@ -4,7 +4,6 @@
 Identifies patterns that can be safely narrowed based on context.
 """
 
-import re
 from pathlib import Path
 from collections import defaultdict
 

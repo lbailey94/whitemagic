@@ -12,7 +12,9 @@
 
 // Active sub-modules
 pub mod convergence_detector;
+pub mod dir_walker;
 pub mod keyword_extract;
+pub mod strata_accel;
 pub mod hybrid_rrf;
 
 // Sub-modules pending dependency resolution (not yet compiled)

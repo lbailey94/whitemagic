@@ -65,8 +65,8 @@ class EnhancedPatternEngine:
     def scan_continuously(self) -> None:
         """Run in background, always learning."""
         logger.info("🧠 Pattern Engine scanning continuously...")
-        logger.info(f"   ML features: {'enabled' if self._scipy_available else 'disabled'}")
-        logger.info(f"   Rust backend: {'enabled' if self._rust_available else 'disabled'}")
+        logger.info("   ML features: %s", 'enabled' if self._scipy_available else 'disabled')
+        logger.info("   Rust backend: %s", 'enabled' if self._rust_available else 'disabled')
 
     def extract_patterns(self, content: str) -> list[dict[str, Any]]:
         """Extract patterns from any content using Rust or ML when available."""
@@ -253,9 +253,9 @@ class EnhancedPatternEngine:
                 timestamp=datetime.now(),
             )
             bus.emit(event)
-            logger.info(f"📡 Pattern emitted to Gan Ying: {pattern['pattern']}")
+            logger.info("📡 Pattern emitted to Gan Ying: %s", pattern['pattern'])
         except ImportError:
-            logger.info(f"�� Emitting pattern (Gan Ying not available): {pattern['pattern']}")
+            logger.info("�� Emitting pattern (Gan Ying not available): %s", pattern['pattern'])
 
     def synthesize_creative(self, patterns: list[dict[str, Any]]) -> str:
         """Creative synthesis of multiple patterns."""

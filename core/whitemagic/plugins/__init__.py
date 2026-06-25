@@ -105,7 +105,7 @@ def _load_plugin_file(plugin_path: Path) -> PluginBase | None:
             plugin_path.stem, plugin_path,
         )
         if spec is None or spec.loader is None:
-            logger.info(f"Failed to create import spec for plugin {plugin_path}")
+            logger.info("Failed to create import spec for plugin %s", plugin_path)
             return None
         module = importlib.util.module_from_spec(spec)
         sys.modules[plugin_path.stem] = module
@@ -204,7 +204,7 @@ def register_commands(cli_group: Any) -> None:
 
                     cli_group.add_command(wrapper)
                 else:
-                    logger.info(f"Warning: Skipping invalid command format in plugin {getattr(plugin, 'name', 'unknown')}: {cmd}")
+                    logger.info("Warning: Skipping invalid command format in plugin %s: %s", getattr(plugin, 'name', 'unknown'), cmd)
 
 
 def register_gardens(garden_manager: Any) -> None:

@@ -79,7 +79,7 @@ class MemoryConsolidator:
             Consolidation report with stats
 
         """
-        logger.info(f"Starting consolidation for session: {session_id or 'recent'}")
+        logger.info("Starting consolidation for session: %s", session_id or 'recent')
 
         # Get episodic memories to consolidate
         episodic = self._get_episodic_memories(session_id, minutes)
@@ -102,9 +102,9 @@ class MemoryConsolidator:
         archived_count = self._archive_episodic(episodic)
 
         logger.info(
-            f"Consolidation complete: {len(created)} semantic memories created, "
-            f"{archived_count} episodic archived",
-        )
+            "Consolidation complete: %s semantic memories created, "
+            "%s episodic archived",
+         len(created), archived_count)
 
         return {
             "status": "success",

@@ -474,6 +474,28 @@ class MemoryLifecycleManager:
         return summary
 
 
+    # ------------------------------------------------------------------
+    # DGA facade methods (fused from DGAEngine)
+    # ------------------------------------------------------------------
+
+    _dga_engine_instance: Any = None
+
+    def _get_dga_engine(self):
+        """Lazy accessor for the DGAEngine."""
+        if self._dga_engine_instance is None:
+            from whitemagic.core.intelligence.hologram.dga_engine import get_dga_engine
+            self._dga_engine_instance = get_dga_engine()
+        return self._dga_engine_instance
+
+    def dga_generate_signature(self, parent_sig: str | None = None) -> str:
+        """Generate a 512-bit DGA signature for this instance."""
+        return self._get_dga_engine().generate_signature(parent_sig=parent_sig)
+
+    def dga_calculate_distance(self, sig_a: str, sig_b: str) -> float:
+        """Calculate evolutionary distance between two DGA signatures."""
+        return self._get_dga_engine().calculate_distance(sig_a, sig_b)
+
+
 # ---------------------------------------------------------------------------
 # Singleton
 # ---------------------------------------------------------------------------

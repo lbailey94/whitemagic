@@ -275,9 +275,9 @@ class OMSManager:
             self._total_exports += 1
 
         logger.info(
-            f"📦 OMS export: {len(memory_lines)} memories + {len(assoc_lines)} associations "
-            f"→ {output.name} ({file_size / 1024:.0f}KB, {elapsed:.0f}ms)"
-        )
+            "📦 OMS export: %s memories + %s associations "
+            "→ %s (%.0fKB, %.0fms)"
+        , len(memory_lines), len(assoc_lines), output.name, file_size / 1024, elapsed)
 
         return {
             "status": "ok",
@@ -508,9 +508,9 @@ class OMSManager:
             self._total_imports += 1
 
         logger.info(
-            f"📥 OMS import: {imported_memories} memories + {imported_associations} associations "
-            f"from {mem_path.name} → galaxy '{galaxy}' ({elapsed:.0f}ms)"
-        )
+            "📥 OMS import: %s memories + %s associations "
+            "from %s → galaxy '%s' (%.0fms)"
+        , imported_memories, imported_associations, mem_path.name, galaxy, elapsed)
 
         return {
             "status": "ok",

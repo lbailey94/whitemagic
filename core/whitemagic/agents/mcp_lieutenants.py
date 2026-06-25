@@ -168,8 +168,8 @@ class LieutenantWithMCP(Lieutenant):
         """Make an MCP tool call with authority checking and logging."""
         if not self.can_use_tool(tool_name):
             logger.warning(
-                f"Lieutenant {self.name} attempted unauthorized tool call: {tool_name}"
-            )
+                "Lieutenant %s attempted unauthorized tool call: %s"
+            , self.name, tool_name)
             return {
                 "status": "error",
                 "message": f"Unauthorized: {tool_name} not in lieutenant's authority",
@@ -190,9 +190,9 @@ class LieutenantWithMCP(Lieutenant):
             })
 
             logger.info(
-                f"Lieutenant {self.name} called {tool_name} "
-                f"(call #{self.mcp_calls_made}): {result.get('status', 'unknown')}"
-            )
+                "Lieutenant %s called %s "
+                "(call #%s): %s"
+            , self.name, tool_name, self.mcp_calls_made, result.get('status', 'unknown'))
 
             return result
 
@@ -435,7 +435,7 @@ class MCPLieutenantCorps(LieutenantCorps):
             ]
         )
 
-        logger.info(f"MCP Lieutenant Corps initialized: {len(self.lieutenants)} lieutenants with MCP authority")
+        logger.info("MCP Lieutenant Corps initialized: %s lieutenants with MCP authority", len(self.lieutenants))
 
     def get_lieutenant_for_gana(self, gana_name: str) -> LieutenantWithMCP | None:
         """Get the lieutenant responsible for a specific Gana."""

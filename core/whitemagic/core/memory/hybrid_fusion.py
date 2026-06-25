@@ -261,8 +261,27 @@ class OptimalHybridSearcher:
         return fused
 
     def _get_graph_results(self, query: str, limit: int) -> list[dict]:
-        """Get graph-based results (PageRank-boosted neighbors)."""
-        raise NotImplementedError("Graph result fusion is not yet implemented.")
+        """Get graph-based results (association-boosted neighbors).
+
+        Uses the memory graph engine to find memories connected via typed edges
+        to the top BM25/vector hits, boosting their fusion score.
+        """
+        try:
+            from whitemagic.core.memory.neural.graph_engine import GraphEngine
+            engine = GraphEngine()
+            # Query associations for the search term
+            neighbors = engine.find_neighbors(query, max_results=limit)
+            results = []
+            for n in neighbors:
+                results.append({
+                    'id': n.get('memory_id', ''),
+                    'title': n.get('title', ''),
+                    'content': n.get('content', '')[:200],
+                    'score': n.get('weight', 0.5),
+                })
+            return results
+        except Exception:
+            return []
 
 
 def demo_hybrid_fusion():

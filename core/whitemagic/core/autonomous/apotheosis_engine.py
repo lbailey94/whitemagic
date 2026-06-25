@@ -519,7 +519,7 @@ class ApotheosisEngine:
 
     def _on_health_degrade(self, status: HealthStatus, diagnosis: str) -> None:
         """Callback when health degrades."""
-        logger.warning(f"🩺 Health degraded to {status.value}: {diagnosis}")
+        logger.warning("🩺 Health degraded to %s: %s", status.value, diagnosis)
 
         if status == HealthStatus.CRITICAL:
             logger.error("🚨 CRITICAL HEALTH - Triggering emergency dream cycle")

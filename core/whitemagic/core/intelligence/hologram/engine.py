@@ -78,7 +78,7 @@ class HologramEngine:
             coords = self.memory_index.index_memory(str(mem_id), memory_data)
 
             if coords:
-                logger.debug(f"Encoded memory {mem_id} to {coords}")
+                logger.debug("Encoded memory %s to %s", mem_id, coords)
 
         except Exception as e:
             logger.error("Error processing memory event in Hologram: %s", e, exc_info=True)

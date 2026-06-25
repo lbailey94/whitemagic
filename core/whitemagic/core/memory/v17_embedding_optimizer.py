@@ -279,9 +279,9 @@ class V17EmbeddingOptimizer:
                 elapsed = time.perf_counter() - t0
                 current_rate = len(all_tasks) / elapsed if elapsed > 0 else 0
                 logger.info(
-                    f"V17 Progress: {len(all_tasks)}/{total_to_index} "
-                    f"({progress:.1f}%) | Rate: {current_rate:.0f} embeds/sec"
-                )
+                    "V17 Progress: %s/%s "
+                    "(%.1f%%) | Rate: %.0f embeds/sec"
+                , len(all_tasks), total_to_index, progress, current_rate)
 
         # Step 3: Final bulk insert for any remaining
         final_inserted = await self._bulk_insert_embeddings(

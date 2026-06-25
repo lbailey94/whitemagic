@@ -395,6 +395,7 @@ class NarrativeCompressor:
                         "time_range": list(cluster.time_range),
                         "compressed_at": datetime.now().isoformat(),
                     },
+                    galaxy="creative_solutions",
                 )
                 narrative_id = getattr(stored, "id", None) if stored else None
             except Exception as e:

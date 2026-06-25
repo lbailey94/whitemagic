@@ -45,7 +45,7 @@ def track_metric(category: str, metric: str | None = None, value: float = 1.0, c
     with file_path.open("a", encoding="utf-8") as handle:
         handle.write(_json_dumps(entry) + "\n")
 
-    logger.info(f"METRIC: {category}.{metric}={value} @ {timestamp}")
+    logger.info("METRIC: %s.%s=%s @ %s", category, metric, value, timestamp)
     return {"success": True}
 
 __all__ = ['MetricsCollector', 'track_metric', 'get_tracker']

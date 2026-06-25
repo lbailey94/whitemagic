@@ -236,7 +236,7 @@ class GraphEngine:
             logger.debug("Noise exclusion set build failed: %s", e, exc_info=True)
 
         if noise_ids:
-            logger.info(f"Graph quality filter: excluding {len(noise_ids)} noise memories")
+            logger.info("Graph quality filter: excluding %s noise memories", len(noise_ids))
         return noise_ids
 
     def rebuild(self, sample_limit: int = 50000, quality_filter: bool = True) -> dict[str, Any]:
@@ -345,8 +345,8 @@ class GraphEngine:
         }
 
         logger.info(
-            f"🕸️ Graph rebuilt: {stats['nodes']} nodes, {stats['edges']} edges ({elapsed:.0f}ms)",
-        )
+            "🕸️ Graph rebuilt: %s nodes, %s edges (%sms)",
+         stats['nodes'], stats['edges'], format(elapsed, ".0f"))
         return stats
 
     # ------------------------------------------------------------------

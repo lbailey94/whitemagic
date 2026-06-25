@@ -418,14 +418,14 @@ class TestCircuitBreakerOverrides:
         assert "ollama.generate" in _TOOL_BREAKER_OVERRIDES
         cfg = _TOOL_BREAKER_OVERRIDES["ollama.models"]
         assert cfg.failure_threshold == 2
-        assert cfg.cooldown_seconds == 10.0
+        assert cfg.cooldown_seconds == 1.0  # Reduced from 10s for fast recovery
 
     def test_broker_tools_have_custom_config(self):
         from whitemagic.tools.circuit_breaker import _TOOL_BREAKER_OVERRIDES
         assert "broker.publish" in _TOOL_BREAKER_OVERRIDES
         cfg = _TOOL_BREAKER_OVERRIDES["broker.publish"]
         assert cfg.failure_threshold == 3
-        assert cfg.cooldown_seconds == 15.0
+        assert cfg.cooldown_seconds == 1.0  # Reduced from 15s for fast recovery
 
     def test_registry_uses_overrides(self):
         from whitemagic.tools.circuit_breaker import BreakerRegistry

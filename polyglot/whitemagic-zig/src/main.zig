@@ -3,6 +3,8 @@ pub const memory = struct {
     pub const unified = @import("memory/unified.zig");
     pub const transient = @import("memory/transient.zig");
     pub const arena = @import("memory/arena.zig");
+    pub const galaxy_manager = @import("memory/galaxy_manager.zig");
+    pub const galaxy_storage = @import("memory/galaxy_storage.zig");
 };
 pub const compute = struct {
     pub const holographic = @import("compute/holographic.zig");

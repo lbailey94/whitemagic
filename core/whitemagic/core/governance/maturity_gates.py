@@ -392,11 +392,11 @@ class MaturityEngine:
             self._assessment_count += 1
 
         logger.info(
-            f"🌱 Maturity Assessment #{self._assessment_count}: "
-            f"Stage={current_stage.name} ({current_stage.value}/6), "
-            f"Capabilities={len(unlocked)}"
-            + (f", Next gate: {next_gate}" if next_gate else " — FULLY MATURE"),
-        )
+            "🌱 Maturity Assessment #%s: "
+            "Stage=%s (%s/6), "
+            "Capabilities=%s"
+            + (", Next gate: %s" if next_gate else " — FULLY MATURE"),
+         self._assessment_count, current_stage.name, current_stage.value, len(unlocked), next_gate)
 
         return report
 

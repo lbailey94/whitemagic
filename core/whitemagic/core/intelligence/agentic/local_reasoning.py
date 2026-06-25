@@ -117,6 +117,10 @@ class LocalReasoningEngine:
                     ready_for_ai=False,
                 )
 
+        # 2.5. Compositional reasoning (HRR projection for relation queries)
+        comp_insights = self._compositional_search(query, max_results)
+        insights.extend(comp_insights)
+
         # 3. Clone army search (parallel, thorough)
         clone_insights = self._clone_search(query, max_results)
         insights.extend(clone_insights)
@@ -227,6 +231,36 @@ class LocalReasoningEngine:
             return insights
         except Exception as e:
             logger.debug("Operation failed: %s", e)
+            return []
+
+    def _compositional_search(self, query: str, max_results: int) -> list[LocalInsight]:
+        """Use HRR compositional reasoning for relation-based queries.
+
+        Resolves queries like 'what caused X?' or 'what uses X?' using
+        HRR vector projection instead of sending them to an LLM.
+        """
+        try:
+            from whitemagic.core.intelligence.agentic.compositional_reasoning import (
+                reason_compositionally,
+            )
+
+            result = reason_compositionally(query, max_results=max_results)
+            if not result.resolved:
+                return []
+
+            insights = []
+            for match in result.matches:
+                insights.append(LocalInsight(
+                    source=match.get("memory_id", "unknown"),
+                    content=match.get("content", str(match)),
+                    relevance=match.get("similarity", result.confidence),
+                    method=f"compositional:{result.relation}",
+                    tokens_saved=result.tokens_saved // max(1, len(result.matches)),
+                ))
+
+            return insights
+        except Exception as e:
+            logger.debug("Compositional search failed: %s", e)
             return []
 
     def _generate_summary(self, query: str, insights: list[LocalInsight]) -> str:
@@ -354,10 +388,10 @@ def command_reason_local(manager: Any, args: Any) -> Any:
 
     logger.info("\n🧠 LOCAL REASONING RESULT")
     logger.info("=" * 50)
-    logger.info(f"Query: {query}")
-    logger.info(f"Duration: {result.duration_ms:.1f}ms")
-    logger.info(f"Tokens saved: {result.total_tokens_saved}")
-    logger.info(f"AI needed: {'Yes' if result.ready_for_ai else 'No (fully resolved locally)'}")
+    logger.info("Query: %s", query)
+    logger.info("Duration: %sms", result.duration_ms)
+    logger.info("Tokens saved: %s", result.total_tokens_saved)
+    logger.info("AI needed: %s", 'Yes' if result.ready_for_ai else 'No (fully resolved locally)')
     logger.info("")
     logger.info(result.summary)
 
@@ -374,17 +408,17 @@ if __name__ == "__main__":
     # Test 1: Version question (should resolve locally)
     result = engine.reason_locally("What version is WhiteMagic?")
     logger.info("\nQ: What version is WhiteMagic?")
-    logger.info(f"A: {result.insights[0].content if result.insights else 'Not found'}")
-    logger.info(f"Tokens saved: {result.total_tokens_saved}")
+    logger.info("A: %s", result.insights[0].content if result.insights else 'Not found')
+    logger.info("Tokens saved: %s", result.total_tokens_saved)
 
     # Test 2: Garden count (should resolve locally)
     result = engine.reason_locally("How many gardens does WhiteMagic have?")
     logger.info("\nQ: How many gardens?")
-    logger.info(f"A: {result.insights[0].content if result.insights else 'Not found'}")
+    logger.info("A: %s", result.insights[0].content if result.insights else 'Not found')
 
     # Test 3: Search query (uses clone army)
     result = engine.reason_locally("parallel processing capabilities")
     logger.info("\nQ: parallel processing capabilities")
-    logger.info(f"Found: {len(result.insights)} insights")
-    logger.info(f"Tokens saved: {result.total_tokens_saved}")
-    logger.info(f"Duration: {result.duration_ms:.1f}ms")
+    logger.info("Found: %s insights", len(result.insights))
+    logger.info("Tokens saved: %s", result.total_tokens_saved)
+    logger.info("Duration: %sms", result.duration_ms)

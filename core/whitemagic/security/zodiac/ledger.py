@@ -126,7 +126,7 @@ class ZodiacLedger:
                         ))
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).error(f"Failed to persist zodiac entry: {e}")
+                logging.getLogger(__name__).error("Failed to persist zodiac entry: %s", e)
 
             return entry
 

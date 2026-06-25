@@ -294,10 +294,14 @@ _engine_lock = threading.Lock()
 
 
 def get_hrr_engine(dim: int = 384, **kwargs: Any) -> HRREngine:
-    """Get the global HRREngine singleton."""
+    """Get the global HRREngine singleton.
+
+    If the requested dimension differs from the cached engine's dimension,
+    a new engine is created to avoid dimension mismatch errors.
+    """
     global _engine
-    if _engine is None:
+    if _engine is None or _engine.dim != dim:
         with _engine_lock:
-            if _engine is None:
+            if _engine is None or _engine.dim != dim:
                 _engine = HRREngine(dim=dim, **kwargs)
     return _engine

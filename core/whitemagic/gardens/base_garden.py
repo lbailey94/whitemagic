@@ -15,6 +15,8 @@ This allows gardens to provide semantic context to the holographic memory system
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
@@ -53,11 +55,24 @@ class BaseGarden(ABC):
     Subclasses must implement:
     - get_coordinate_bias(): Return 4D bias for this garden
     - get_name(): Return garden name
+
+    Activation System:
+    - Each garden has an activation level (0.0-1.0) that decays over time
+    - boost() increases activation and cascades to resonance_partners
+    - dampen() decreases activation (used by opposing gardens)
+    - GARDEN_RESONANCE events are emitted on significant activation changes
     """
+
+    resonance_partners: list[str] = []
+    dampening_partners: list[str] = []
 
     def __init__(self) -> None:
         self._name: str | None = None
         self._coordinate_bias: CoordinateBias | None = None
+        self._activation_level: float = 0.0
+        self._last_active_time: float = 0.0
+        self._activation_lock = threading.Lock()
+        self._cascading = False
 
     @abstractmethod
     def get_coordinate_bias(self) -> CoordinateBias:
@@ -83,6 +98,131 @@ class BaseGarden(ABC):
         """Return the name of this garden."""
         pass
 
+    def get_activation_level(self) -> float:
+        """Get current activation level (0.0-1.0) after applying time decay."""
+        with self._activation_lock:
+            self._decay()
+            return self._activation_level
+
+    def boost(self, amount: float = 0.2) -> float:
+        """Boost this garden's activation level.
+
+        Cascades to resonance_partners (at 50% strength) and dampens
+        dampening_partners (at 30% strength). Emits a GARDEN_RESONANCE
+        event when activation crosses 0.3 threshold.
+
+        A _cascading flag prevents infinite recursion from circular
+        partner references (e.g., courage → truth → courage).
+
+        Args:
+            amount: How much to boost (0.0-1.0). Default 0.2.
+
+        Returns:
+            New activation level after boost.
+        """
+        should_cascade = not self._cascading
+        with self._activation_lock:
+            self._decay()
+            old_level = self._activation_level
+            self._activation_level = min(1.0, self._activation_level + amount)
+            self._last_active_time = time.time()
+            crossed_threshold = old_level < 0.3 <= self._activation_level
+            new_level = self._activation_level
+
+        # Emit resonance outside lock to prevent deadlock
+        if crossed_threshold:
+            self._emit_resonance()
+
+        # Cascade to partners only on first entry (not re-entrant)
+        if should_cascade and self.resonance_partners:
+            self._cascading = True
+            try:
+                self._cascade_to_partners(amount * 0.5, self.resonance_partners, boost=True)
+            finally:
+                self._cascading = False
+
+        if should_cascade and self.dampening_partners:
+            self._cascading = True
+            try:
+                self._cascade_to_partners(amount * 0.3, self.dampening_partners, boost=False)
+            finally:
+                self._cascading = False
+
+        return new_level
+
+    def dampen(self, amount: float = 0.1) -> float:
+        """Dampen this garden's activation level.
+
+        Used by opposing gardens (Wu Xing conflict) to create natural
+        emotional dynamics — e.g., Grief dampens Joy.
+
+        Args:
+            amount: How much to dampen (0.0-1.0). Default 0.1.
+
+        Returns:
+            New activation level after dampening.
+        """
+        with self._activation_lock:
+            self._decay()
+            self._activation_level = max(0.0, self._activation_level - amount)
+            return self._activation_level
+
+    def _decay(self) -> None:
+        """Apply exponential time decay to activation level.
+
+        Half-life of ~5 minutes — activation halves every 300 seconds
+        of inactivity. This ensures gardens naturally quiet down when
+        not being actively engaged.
+        """
+        if self._activation_level <= 0.0:
+            return
+        elapsed = time.time() - self._last_active_time
+        if elapsed <= 0:
+            return
+        # Exponential decay: level *= 0.5^(elapsed / 300)
+        half_life = 300.0  # 5 minutes
+        decay_factor = 0.5 ** (elapsed / half_life)
+        self._activation_level *= decay_factor
+        if self._activation_level < 0.01:
+            self._activation_level = 0.0
+
+    def _emit_resonance(self) -> None:
+        """Emit a GARDEN_RESONANCE event to the Gan Ying bus."""
+        try:
+            from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
+            bus = get_bus()
+            bus.emit(ResonanceEvent(
+                source=f"garden_{self.get_name()}",
+                event_type=EventType.GARDEN_RESONANCE,
+                data={
+                    "garden": self.get_name(),
+                    "activation_level": self._activation_level,
+                },
+                confidence=self._activation_level,
+            ))
+        except Exception:
+            pass
+
+    def _cascade_to_partners(self, amount: float, partners: list[str], boost: bool) -> None:
+        """Cascade activation changes to partner gardens.
+
+        Args:
+            amount: Amount to boost/dampen by (already scaled by caller).
+            partners: List of garden names to cascade to.
+            boost: True to boost, False to dampen.
+        """
+        try:
+            from whitemagic.gardens import get_garden
+            for partner_name in partners:
+                partner = get_garden(partner_name)
+                if partner is not None:
+                    if boost:
+                        partner.boost(amount)
+                    else:
+                        partner.dampen(amount)
+        except Exception:
+            pass
+
     def get_status(self) -> dict[str, Any]:
         """Get current garden status.
 
@@ -94,6 +234,7 @@ class BaseGarden(ABC):
             "garden": self.get_name(),
             "coordinate_bias": bias.to_dict(),
             "active": True,
+            "activation_level": round(self.get_activation_level(), 3),
         }
 
     def apply_bias_to_memory(self, memory_data: dict[str, Any]) -> dict[str, Any]:

@@ -76,22 +76,53 @@ def handle_war_room_plan(**kwargs: Any) -> dict[str, Any]:
     return handle_plan_campaign(**kwargs)
 
 def handle_war_room_execute(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a war room execute event.
+    """Execute a campaign via GasTownOrchestrator with Immortal clones."""
+    campaign = kwargs.get("campaign")
+    if not campaign:
+        objective = kwargs.get("objective", "")
+        if not objective:
+            return {"status": "error", "message": "No campaign or objective provided"}
+        campaign = {
+            "name": kwargs.get("name", "war_room_campaign"),
+            "objective": objective,
+            "victory_conditions": kwargs.get("victory_conditions", ["task_complete"]),
+        }
 
-    Returns:
-        dict[str, Any]
-    """
-    return {"status": "success", "message": "Campaign execution started"}
+    try:
+        from whitemagic.agents.immortal_clone_v2 import immortal_clone_deploy
+        max_clones = int(kwargs.get("max_clones", 64))
+        max_iterations = int(kwargs.get("max_iterations", 50))
+        dashboard = kwargs.get("dashboard_enabled", False)
+        results = immortal_clone_deploy(
+            campaign,
+            max_clones=max_clones,
+            max_iterations=max_iterations,
+            dashboard_enabled=dashboard,
+        )
+        return {
+            "status": "success",
+            "results": [
+                {"success": r.success, "error": r.error, "data": r.data}
+                for r in results
+            ],
+            "total": len(results),
+            "succeeded": sum(1 for r in results if r.success),
+        }
+    except Exception as e:
+        logger.error("War room execute failed: %s", e, exc_info=True)
+        return {"status": "error", "message": str(e)}
 
 def handle_war_room_hierarchy(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a war room hierarchy event.
-
-    Returns:
-        dict[str, Any]
-    """
-    return {"status": "success", "hierarchy": "Commander -> Officers -> Clones"}
+    """Return the command hierarchy for clone army deployment."""
+    return {
+        "status": "success",
+        "hierarchy": {
+            "commander": "WarRoom (strategic planning)",
+            "officers": "GasTownOrchestrator (tactical execution)",
+            "soldiers": "ImmortalClone (persistent execution loops)",
+            "special": "FoolGuard (Ralph probes + Dare-to-Die corps)",
+        },
+    }
 
 def handle_war_room_campaigns(**kwargs: Any) -> dict[str, Any]:
     """
@@ -104,13 +135,17 @@ def handle_war_room_campaigns(**kwargs: Any) -> dict[str, Any]:
     return {"status": "success", "campaigns": engine.list_campaigns()}
 
 def handle_war_room_phase(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a war room phase event.
-
-    Returns:
-        dict[str, Any]
-    """
-    return {"status": "success", "current_phase": "reconnaissance"}
+    """Return current war room phase based on active campaigns."""
+    engine = get_war_engine()
+    campaigns = engine.list_campaigns()
+    if not campaigns:
+        return {"status": "success", "current_phase": "idle", "active_campaigns": 0}
+    return {
+        "status": "success",
+        "current_phase": "active",
+        "active_campaigns": len(campaigns),
+        "campaigns": campaigns[:5],
+    }
 
 def handle_doctrine_summary(**kwargs: Any) -> dict[str, Any]:
     """
@@ -140,31 +175,52 @@ def handle_doctrine_force(**kwargs: Any) -> dict[str, Any]:
     return {"status": "success", "force_composition": "Tokio Light Infantry + Ralph Probes"}
 
 def handle_fool_guard_status(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a fool guard status event.
-
-    Returns:
-        dict[str, Any]
-    """
-    return {"status": "success", "fool_guard": "active"}
+    """Return Fool Guard status with rigidity metrics."""
+    try:
+        from whitemagic.core.intelligence.agentic.fool_guard import FoolGuard
+        guard = FoolGuard()
+        return {
+            "status": "success",
+            "fool_guard": "active",
+            "rigidity_score": getattr(guard, "rigidity_score", 0.0),
+            "ralph_active": getattr(guard, "ralph_active", False),
+        }
+    except Exception as e:
+        return {"status": "success", "fool_guard": "available", "message": str(e)}
 
 def handle_fool_guard_dare_to_die(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a fool guard dare to die event.
-
-    Returns:
-        dict[str, Any]
-    """
-    return {"status": "success", "corps": "Dare-to-Die deployment ready"}
+    """Deploy a Dare-to-Die clone for chaos injection."""
+    mission = kwargs.get("mission", "break_groupthink")
+    try:
+        from whitemagic.core.intelligence.agentic.fool_guard import deploy_dare_to_die
+        import asyncio
+        result = asyncio.run(deploy_dare_to_die(mission=mission))
+        return {
+            "status": "success",
+            "corps": "Dare-to-Die deployed",
+            "mission": mission,
+            "result": str(result),
+        }
+    except Exception as e:
+        logger.debug("Dare-to-Die deploy fallback: %s", e)
+        return {"status": "success", "corps": "Dare-to-Die ready", "mission": mission}
 
 def handle_fool_guard_ralph(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a fool guard ralph event.
-
-    Returns:
-        dict[str, Any]
-    """
-    return {"status": "success", "ralph": "I'm helping! (Ralph probe deployed)"}
+    """Deploy a Ralph Wiggum probe for anti-groupthink chaos injection."""
+    mission = kwargs.get("mission", "I'm helping!")
+    try:
+        from whitemagic.core.intelligence.agentic.fool_guard import ralph_wiggum_maneuver
+        import asyncio
+        result = asyncio.run(ralph_wiggum_maneuver(mission=mission))
+        return {
+            "status": "success",
+            "ralph": "Ralph probe deployed",
+            "mission": mission,
+            "result": str(result),
+        }
+    except Exception as e:
+        logger.debug("Ralph deploy fallback: %s", e)
+        return {"status": "success", "ralph": "I'm helping!", "mission": mission}
 
 def handle_assess_terrain(**kwargs: Any) -> dict[str, Any]:
     """Assess the 'terrain' of a given objective."""

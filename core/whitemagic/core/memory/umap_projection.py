@@ -267,9 +267,9 @@ class UMAPProjector:
             self._cached_vec_count = len(ids)
 
         logger.info(
-            f"🗺️ UMAP projection: {len(points)} memories → {n_components}D, "
-            f"{n_clusters} clusters ({elapsed:.0f}ms)",
-        )
+            "🗺️ UMAP projection: %s memories → %sD, "
+            "%s clusters (%.0fms)",
+         len(points), n_components, n_clusters, elapsed)
         return result
 
     @staticmethod

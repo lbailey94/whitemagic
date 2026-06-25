@@ -13,7 +13,6 @@ Exit 0 if no stubs found, exit 1 if any detected.
 from __future__ import annotations
 
 import ast
-import os
 import sys
 from pathlib import Path
 

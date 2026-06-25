@@ -1,5 +1,4 @@
 import sqlite3
-from pathlib import Path
 
 from whitemagic.config.paths import DB_PATH
 
