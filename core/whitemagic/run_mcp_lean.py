@@ -225,6 +225,25 @@ def _ensure_init() -> None:
         except (ImportError, ModuleNotFoundError) as e:
             import logging
             logging.getLogger(__name__).debug("Exception silenced: %s", e)
+
+        # --- UNIFIED CACHE (v23 token reduction) ---
+        try:
+            from whitemagic.core.cache import get_unified_cache, is_rust_cache_available
+            cache = get_unified_cache()
+            rust_cache = is_rust_cache_available()
+            stats = cache.stats()
+            logger.info(
+                "UnifiedCache ready (backend=%s, size=%d, hits=%d, misses=%d)",
+                stats.get("backend", "unknown"),
+                stats.get("size", 0),
+                stats.get("hits", 0),
+                stats.get("misses", 0),
+            )
+            if rust_cache:
+                logger.info("Rust UnifiedCache active — sub-microsecond cache reads")
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.debug("UnifiedCache init failed: %s", e)
+
         _INITIALISED = True
 
 
@@ -938,6 +957,14 @@ async def main_stdio() -> None:
             stdin_task, stdout_task, shutdown_task,
             return_exceptions=True
         )
+        # Persist unified cache for cross-session cache hits
+        try:
+            from whitemagic.core.cache import get_unified_cache
+            cache = get_unified_cache()
+            count = cache.persist()
+            logger.info("UnifiedCache persisted %d entries", count)
+        except Exception as e:
+            logger.debug("Cache persist failed: %s", e)
         logger.info("MCP server shutdown complete")
 
 

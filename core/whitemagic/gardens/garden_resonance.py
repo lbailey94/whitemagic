@@ -41,6 +41,10 @@ GARDEN_EVENTS = {
 
 def setup_garden_resonance() -> None:
     """Set up resonance integration for all gardens."""
+    import os
+    if os.environ.get("WM_SILENT_INIT") == "1":
+        return
+
     bus = get_bus()
 
     # Set up cross-garden cascade listeners

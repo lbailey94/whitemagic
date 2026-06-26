@@ -720,7 +720,7 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                 try:
                     from whitemagic.core.intelligence.working_memory import get_working_memory
                     _wm = get_working_memory()
-                    _wm_context = _wm.get_context(max_tokens=500)
+                    _wm_context = _wm.get_context(max_tokens=500, dense=True)
                     if _wm_context and "_working_memory_context" not in dispatch_kwargs:
                         dispatch_kwargs["_working_memory_context"] = _wm_context
                 except Exception:

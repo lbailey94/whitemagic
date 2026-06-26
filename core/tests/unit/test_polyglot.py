@@ -68,6 +68,7 @@ class TestPolyglotMemoryQueryJulia:
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     @pytest.mark.flaky(max_runs=3, min_passes=1)
     def test_julia_encode(self):
+        """Test Julia encode operation. Flaky due to Julia subprocess startup timing."""
         result = handle_polyglot_memory_query(
             operation="encode",
             text="hello world",
@@ -87,6 +88,7 @@ class TestPolyglotMemoryQueryJulia:
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     @pytest.mark.flaky(max_runs=3, min_passes=1)
     def test_julia_nearest_neighbors(self):
+        """Test Julia nearest_neighbors. Flaky due to Julia subprocess startup timing."""
         result = handle_polyglot_memory_query(
             operation="nearest_neighbors",
             query="hello",
@@ -104,6 +106,7 @@ class TestPolyglotMemoryQueryJulia:
     @pytest.mark.skipif(not HAS_POLYGOLOT, reason="polyglot handler unavailable")
     @pytest.mark.flaky(max_runs=3, min_passes=1)
     def test_julia_encode_deterministic(self):
+        """Test Julia encode determinism. Flaky due to Julia subprocess startup timing."""
         r1 = handle_polyglot_memory_query(
             operation="encode", text="same text", backend="julia"
         )

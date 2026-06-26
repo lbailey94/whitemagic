@@ -200,6 +200,11 @@ class SpeculativePrefetcher:
         if not self._enabled:
             return
 
+        # Skip prefetch in test environments to prevent thread accumulation
+        import os
+        if os.environ.get("WM_SILENT_INIT") == "1":
+            return
+
         # Record transition
         if self._last_gana is not None:
             self._tracker.record(self._last_gana, gana_name)
@@ -211,12 +216,53 @@ class SpeculativePrefetcher:
             # Only prefetch if prediction confidence > 30%
             top_predictions = [(g, p) for g, p in predictions if p > 0.3]
             if top_predictions:
-                thread = threading.Thread(
-                    target=self._prefetch_for_predictions,
-                    args=(top_predictions,),
-                    daemon=True,
-                )
-                thread.start()
+                # Try Go concurrent prefetch first (goroutine-per-prefetch)
+                if not self._try_go_prefetch(top_predictions):
+                    # Fallback: Python threading
+                    thread = threading.Thread(
+                        target=self._prefetch_for_predictions,
+                        args=(top_predictions,),
+                        daemon=True,
+                    )
+                    thread.start()
+
+    def _try_go_prefetch(self, predictions: list[tuple[str, float]]) -> bool:
+        """Try Go concurrent prefetch. Returns True if Go handled it."""
+        try:
+            from whitemagic.core.acceleration.go_mesh_bridge import go_concurrent_prefetch
+            gana_tools = _get_gana_tools()
+            tools_to_prefetch = []
+            for gana_name, prob in predictions:
+                for tool_name in gana_tools.get(gana_name, [])[:self._max_prefetch]:
+                    tools_to_prefetch.append({
+                        "name": tool_name,
+                        "gana": gana_name,
+                        "probability": round(prob, 3),
+                    })
+            if tools_to_prefetch:
+                result = go_concurrent_prefetch(tools_to_prefetch)
+                if result and result.get("status") == "ok":
+                    for r in result.get("results", []):
+                        if r.get("prefetched"):
+                            self._cache.put(f"prefetch:{r['tool']}", {
+                                "prefetched": True,
+                                "gana": r.get("gana"),
+                                "tool": r.get("tool"),
+                                "probability": r.get("probability"),
+                                "timestamp": time.time(),
+                                "backend": "go_goroutine",
+                            })
+                            self._prefetch_count += 1
+                    logger.debug(
+                        "Go prefetch: %d tools in %.2fms (%d goroutines)",
+                        len(tools_to_prefetch),
+                        result.get("total_ms", 0),
+                        result.get("goroutines", 0),
+                    )
+                    return True
+        except (ImportError, OSError, ValueError, RuntimeError):
+            pass
+        return False
 
     def _prefetch_for_predictions(self, predictions: list[tuple[str, float]]) -> None:
         """Background thread: pre-warm retrieval pipeline for predicted Ganas."""

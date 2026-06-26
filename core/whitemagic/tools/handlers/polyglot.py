@@ -7,6 +7,7 @@ POLYGLOT_ROOT so the bridge resolves files correctly regardless of import contex
 
 import logging
 import sys
+import time as _time
 from pathlib import Path
 from typing import Any
 
@@ -148,8 +149,16 @@ def handle_polyglot_search(**kwargs: Any) -> dict[str, Any]:
             return {"status": "error", "error": str(e), "error_code": "polyglot_execution_error"}
 
 
+_status_cache: dict[str, Any] = {"result": None, "time": 0.0}
+
+
 def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
     """Check availability of all polyglot backends."""
+    # Cache status for 60s to avoid spawning 5 subprocesses on every call
+    now = _time.monotonic()
+    if _status_cache["result"] is not None and (now - _status_cache["time"]) < 60.0:
+        return _status_cache["result"]
+
     if _wp is None:
         return {
             "status": "error",
@@ -184,10 +193,13 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
     total = len(backends)
     health = available_count / total if total > 0 else 0.0
 
-    return {
+    result = {
         "status": "success",
         "backends": results,
         "health_score": round(health, 2),
         "available": available_count,
         "total": total,
     }
+    _status_cache["result"] = result
+    _status_cache["time"] = _time.monotonic()
+    return result

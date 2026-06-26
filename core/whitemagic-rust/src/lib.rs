@@ -23,6 +23,8 @@ pub mod graph;
 #[cfg(feature = "python")]
 pub mod math;
 #[cfg(feature = "python")]
+pub mod cache;
+#[cfg(feature = "python")]
 pub mod memory;
 #[cfg(feature = "python")]
 pub mod pipeline;
@@ -298,6 +300,9 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // StateBoard — mmap-backed shared-memory blackboard for system vital signs
     pipeline::state_board::register_state_board(m)?;
+
+    // Unified Cache — sub-microsecond LRU+TTL cache for all cache layers
+    cache::unified_cache::register_cache(m)?;
 
     // Monte Carlo forecasting calibration (Sprint F)
     m.add_class::<monte_carlo::PercentileSummary>()?;

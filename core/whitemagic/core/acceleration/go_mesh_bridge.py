@@ -198,3 +198,117 @@ def go_mesh_status() -> dict[str, Any]:
         },
         "backend": "go_mesh" if _HAS_GO_MESH else "python_fallback",
     }
+
+
+# ---------------------------------------------------------------------------
+# Go Concurrent Prefetch — goroutine-per-prefetch parallel pipeline warming
+# ---------------------------------------------------------------------------
+
+_go_prefetch_bin: str | None = None
+_go_prefetch_lock = threading.Lock()
+_go_prefetch_checked = False
+
+
+def _find_go_prefetch() -> str | None:
+    """Locate the Go prefetch_service binary."""
+    global _go_prefetch_bin, _go_prefetch_checked
+    if _go_prefetch_checked:
+        return _go_prefetch_bin
+    with _go_prefetch_lock:
+        if _go_prefetch_checked:
+            return _go_prefetch_bin
+        _go_prefetch_checked = True
+        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))))))
+        candidates = [
+            os.path.join(base, "polyglot", "whitemagic-go", "prefetch_service"),
+            os.environ.get("WM_GO_PREFETCH_BIN", ""),
+        ]
+        for path in candidates:
+            if path and os.path.isfile(path) and os.access(path, os.X_OK):
+                _go_prefetch_bin = path
+                logger.info("Go prefetch service found: %s", path)
+                return path
+    return None
+
+
+def go_concurrent_prefetch(
+    tools: list[dict[str, Any]],
+    max_workers: int = 0,
+) -> dict[str, Any] | None:
+    """Prefetch multiple tools concurrently using Go goroutines.
+
+    Each tool gets its own goroutine, coordinated by a semaphore to limit
+    concurrency to max_workers (defaults to NumCPU).
+
+    Args:
+        tools: List of dicts with "name", "gana", "probability" keys.
+        max_workers: Max concurrent goroutines (0 = NumCPU).
+
+    Returns:
+        Dict with results, total_ms, workers, goroutines, or None if Go unavailable.
+    """
+    binary = _find_go_prefetch()
+    if binary is None:
+        return None
+
+    import subprocess
+
+    request = {
+        "command": "prefetch",
+        "tools": tools,
+        "max_workers": max_workers,
+    }
+
+    try:
+        proc = subprocess.run(
+            [binary],
+            input=_json_dumps(request),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            result = _json_loads(proc.stdout.strip())
+            if isinstance(result, dict):
+                return result
+    except subprocess.TimeoutExpired:
+        logger.warning("Go prefetch service timed out after 10s")
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.debug("Go prefetch call failed: %s", e)
+
+    return None
+
+
+def go_prefetch_status() -> dict[str, Any]:
+    """Get Go prefetch service status."""
+    binary = _find_go_prefetch()
+    if binary is None:
+        return {
+            "has_go_prefetch": False,
+            "backend": "python_fallback",
+        }
+
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            [binary],
+            input=_json_dumps({"command": "status"}),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            result = _json_loads(proc.stdout.strip())
+            if isinstance(result, dict):
+                result["has_go_prefetch"] = True
+                return result
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as e:
+        logger.debug("Go prefetch status failed: %s", e)
+
+    return {
+        "has_go_prefetch": True,
+        "binary": binary,
+        "backend": "go_goroutine",
+    }

@@ -340,6 +340,7 @@ pub fn arrow_roundtrip_bench(n: usize) -> PyResult<(u64, u64, usize)> {
             w: 0.4,
             v: 0.5,
             tags: vec!["bench".to_string(), format!("tag_{}", i % 10)],
+            galaxy: "universal".to_string(),
         })
         .collect();
 
@@ -388,6 +389,7 @@ mod tests {
             w: 0.4,
             v: 0.5,
             tags: vec!["test".to_string()],
+            galaxy: "universal".to_string(),
         }];
 
         let batch = memories_to_arrow(&records).unwrap();
@@ -419,6 +421,7 @@ mod tests {
                 w: 0.0,
                 v: 0.0,
                 tags: vec![],
+                galaxy: "universal".to_string(),
             })
             .collect();
 

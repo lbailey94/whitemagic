@@ -186,11 +186,37 @@ T = TypeVar("T")
 
 
 def _run(coro: Coroutine[Any, Any, T]) -> T:
-    """Run an async coroutine from a sync handler context."""
+    """Run an async coroutine from a sync handler context.
+
+    Properly cleans up the event loop to prevent unraisable exceptions
+    from leaked tasks and event loop objects.
+    """
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(coro)
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(coro)
+            # Cancel any pending tasks before closing the loop
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            return result
+        finally:
+            # Temporarily suppress unraisable exceptions during loop cleanup
+            # to prevent pytest's unraisable_hook from triggering recursive
+            # traceback formatting (RecursionError) when event loop objects
+            # are GC'd with missing attributes.
+            import sys as _sys
+            _orig_hook = _sys.unraisablehook
+            _sys.unraisablehook = lambda *a, **kw: None
+            try:
+                loop.close()
+            finally:
+                _sys.unraisablehook = _orig_hook
+            asyncio.set_event_loop(None)
     # If we're already in an event loop (e.g. MCP stdio), use a thread.
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=1) as pool:

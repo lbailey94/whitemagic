@@ -1,5 +1,6 @@
 import importlib
 import os
+import queue
 import sys
 import tempfile
 
@@ -54,12 +55,65 @@ from whitemagic.config.paths import ensure_paths  # noqa: E402
 ensure_paths()
 
 
+def _stop_background_daemons():
+    """Stop any running background daemon threads before resetting singletons.
+
+    Without this, daemon threads (EmbeddingDaemon, DecayDaemon, RapidCognition,
+    GanYingBus global worker) accumulate across tests and eventually cause
+    hangs when the thread pool or event loop is saturated.
+    """
+    _daemon_specs = [
+        ("whitemagic.core.memory.embedding_daemon", "get_embedding_daemon"),
+        ("whitemagic.core.memory.neural.decay_daemon", "get_daemon"),
+        ("whitemagic.core.intelligence.learning.rapid_cognition", "get_rapid_learner"),
+    ]
+    for mod_name, func_name in _daemon_specs:
+        mod = sys.modules.get(mod_name)
+        if mod is None:
+            continue
+        try:
+            getter = getattr(mod, func_name, None)
+            if getter is None:
+                continue
+            daemon = getter()
+            if hasattr(daemon, "stop"):
+                daemon.stop()
+            elif hasattr(daemon, "running"):
+                daemon.running = False
+        except Exception:  # noqa: BLE001
+            pass
+
+    # Stop the GanYingBus global async worker thread
+    try:
+        import whitemagic.core.resonance._consolidated as _cons
+        _cons._GLOBAL_WORKER_THREAD = None
+        # Drain the queue to prevent stale events from being processed
+        while not _cons._GLOBAL_ASYNC_QUEUE.empty():
+            try:
+                _cons._GLOBAL_ASYNC_QUEUE.get_nowait()
+            except queue.Empty:
+                break
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Reset the MCP server _INITIALISED flag so it re-initializes cleanly
+    try:
+        import whitemagic.run_mcp_lean as _mcp
+        if hasattr(_mcp, "_INITIALISED"):
+            _mcp._INITIALISED = False
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _reset_singletons():
     """Reset all known singletons so each test session starts clean.
 
     Now uses the centralized singleton registry from whitemagic.utils.singleton
     for automated tracking. Manual list is kept as fallback for legacy singletons.
     """
+    # Stop background daemon threads BEFORE nulling references
+    _stop_background_daemons()
+
     # Try the new centralized registry first
     try:
         from whitemagic.utils.singleton import reset_all_singletons
@@ -84,9 +138,13 @@ def _reset_singletons():
         ("whitemagic.core.memory.graph_engine", "_engine"),
         ("whitemagic.core.memory.surprise_gate", "_gate"),
         ("whitemagic.core.memory.bridge_synthesizer", "_synthesizer"),
+        # --- Background daemons (stop called above, now null the refs) ---
+        ("whitemagic.core.memory.neural.decay_daemon", "_daemon"),
+        ("whitemagic.core.intelligence.learning.rapid_cognition", "_instance"),
         # --- Resonance / scheduling ---
         ("whitemagic.core.resonance.salience_arbiter", "_arbiter"),
         ("whitemagic.core.resonance.temporal_scheduler", "_scheduler"),
+        ("whitemagic.core.resonance._consolidated", "_bus"),
         ("whitemagic.core.resonance.gan_ying_enhanced", "_bus"),
         # --- Harmony / governance ---
         ("whitemagic.harmony.vector", "_harmony_vector"),
@@ -99,6 +157,7 @@ def _reset_singletons():
         ("whitemagic.tools.rate_limiter", "_instance"),
         ("whitemagic.tools.tool_permissions", "_registry_instance"),
         ("whitemagic.tools.sandbox", "_sandbox"),
+        ("whitemagic.tools.speculative_prefetch", "_prefetcher"),
         # --- Intelligence ---
         ("whitemagic.core.intelligence.knowledge_graph", "_kg"),
         ("whitemagic.core.intelligence.bicameral", "_reasoner"),
@@ -106,6 +165,8 @@ def _reset_singletons():
         ("whitemagic.core.intelligence.self_model", "_model"),
         # --- Dreaming ---
         ("whitemagic.core.dreaming.dream_cycle", "_dream_cycle"),
+        # --- Pattern Consciousness ---
+        ("whitemagic.core.patterns.pattern_consciousness.resonance_cascade", "_orchestrator"),
         # --- Mesh ---
         ("whitemagic.mesh.awareness", "_awareness"),
     ]

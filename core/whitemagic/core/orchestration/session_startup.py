@@ -779,7 +779,13 @@ class SessionStartupOrchestrator:
                     """
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    loop.run_until_complete(swarm.breathe())
+                    try:
+                        if os.environ.get("WM_SILENT_INIT") == "1":
+                            loop.run_until_complete(asyncio.sleep(0.1))
+                        else:
+                            loop.run_until_complete(swarm.breathe())
+                    finally:
+                        loop.close()
 
                 thread = threading.Thread(target=run_swarm_breath, daemon=True)
                 thread.start()

@@ -33,11 +33,18 @@ class ResonanceOrchestrator:
         self.dharma = get_dharma() # Added
 
         # Catch-all listener for the Gan Ying bus # Modified comment
-        self.bus.listen_all(self._on_bus_event) # Changed from _bus to bus
-        logger.info("📡 ResonanceOrchestrator ONLINE. (Coherent Overclock Ready)") # Added
+        # Skip in test environments to prevent DB connection pool exhaustion
+        import os
+        if os.environ.get("WM_SILENT_INIT") != "1":
+            self.bus.listen_all(self._on_bus_event) # Changed from _bus to bus
+            logger.info("📡 ResonanceOrchestrator ONLINE. (Coherent Overclock Ready)") # Added
 
     def _on_bus_event(self, event: ResonanceEvent) -> None:
         """React to any bus event by checking for registered actions."""
+        import os
+        if os.environ.get("WM_SILENT_INIT") == "1":
+            return
+
         # Check for High-Coherence Alignment (Internal Overclock)
         self._check_coherent_overclock(event)
 

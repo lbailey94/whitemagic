@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 23.0.0
-**Last Updated**: 2026-06-20
+**Version**: 23.0.0 (AGENTS.md revision 23.1)
+**Last Updated**: 2026-06-26
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -15,8 +15,9 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
-- Current local audit baseline: 1,470 passing tests, 0 failures, 2 skipped (as of 2026-06-19)
-- v22.3.0: bridge surface documented to 143 functions (full mcp_api_bridge public surface); 6 IPC + polyglot tests marked flaky for CI; site catalog 30→143
+- Current local audit baseline: 2,260 passing tests, 0 failures, 2 skipped (as of 2026-06-26)
+- v22.3.0: bridge surface documented to 143 functions (full mcp_api_bridge public surface); site catalog 30→143
+- v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -29,8 +30,8 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (release: 2216 passed; current audit: 1470 passed, 2 skipped, 0 failed)
-cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
+# 2. Verify test baseline (current audit: 2260 passed, 2 skipped, 0 failed)
+cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift
 python scripts/check_doc_drift.py
@@ -53,7 +54,7 @@ WHITEMAGIC/
 │   │   ├── core/            # Memory, intelligence, resonance
 │   │   ├── interfaces/      # API, dashboard, CLI
 │   │   └── config/          # Path resolution, settings
-│   ├── tests/               # 1,470 active tests (full suite minus archives)
+│   ├── tests/               # 2,260 active tests (full suite minus archives)
 │   ├── scripts/             # Audit, drift-check, stress-test
 │   └── docs/                # Core-specific docs
 ├── grimoire/                # Canonical 28 Gana chapters (.md)
@@ -103,14 +104,22 @@ Run `python core/scripts/check_doc_drift.py` after any doc change. It validates:
 ## 5. Testing Protocol
 
 ### The Golden Rule
-**Run the full test suite after every change.** The project went from 783 passing → 1,470 passing by fixing wiring, not by skipping tests.
+**Run the full test suite after every change.** The project went from 783 passing → 2,260 passing by fixing wiring, not by skipping tests. When the suite is fast enough, this rule is enforceable rather than aspirational.
 
-### Test Commands
+### Test Speed Stratification
+
+Use the appropriate tier for your current activity:
 
 ```bash
-# Full suite (from core/)
+# Tier 1: Fast feedback (<30s) — during active development
 cd core
-python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q
+python -m pytest tests/unit/ -q --timeout=5 -x --tb=short
+
+# Tier 2: Medium validation (<3min) — before commit
+python -m pytest tests/unit/ tests/integration/ -q --timeout=15 --tb=short
+
+# Tier 3: Full suite — release verification
+python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # Specific module
 python -m pytest tests/unit/test_path_hygiene.py -v
@@ -119,12 +128,54 @@ python -m pytest tests/unit/test_path_hygiene.py -v
 python -m pytest tests/ --cov=whitemagic --cov-report=term-missing -q
 ```
 
+### Performance Regression Detection
+
+Always run with `--durations` to catch slow tests before they become the new normal:
+
+```bash
+# Show slowest 10 tests taking >1s
+python -m pytest tests/unit/ -q --durations=10 --durations-min=1.0 --timeout=30
+```
+
+**Rules**:
+- No individual unit test should exceed **5s** without an explicit `@pytest.mark.skip` reason.
+- No individual integration test should exceed **15s** without an explicit skip reason.
+- If suite runtime grows >10% without explanation, investigate before merging.
+- Track suite runtime in `SESSION_SUMMARY.md` to spot trends across sessions.
+
+### Test Purity
+
+Unit tests should be **fast and isolated**. They must never:
+- Spawn subprocesses (Julia, Elixir, Go, etc.) — mock at the class boundary instead.
+- Load ML models (MiniLM, sentence-transformers) — patch `get_hrr_engine` / `get_embedding_engine`.
+- Make network or socket calls (Redis probes, HTTP requests) — mock or skip in test envs.
+- Start asyncio event loops in sync context — use `WM_SILENT_INIT=1` to skip broker forwarding.
+- Load production SQLite databases — use `WM_STATE_ROOT` pointing to a temp directory.
+
+Integration tests are for testing real subsystem interaction. They may use subprocesses and real databases, but must still respect timeout limits.
+
+If a unit test needs heavy infrastructure, **mock it at the class boundary** — not at the individual call site. See `test_recursive_loop.py` for a reference implementation of `_patch_engines()`.
+
+### Flaky Test Policy
+
+`@pytest.mark.flaky` is **banned** unless accompanied by:
+1. A documented reason in the test docstring.
+2. A tracking issue reference (or inline comment explaining why it cannot be fixed).
+
+Flaky tests are either:
+- **Fixable** — fix the root cause (usually state leakage or race condition).
+- **Order-dependent** — fix the singleton reset in `conftest.py`.
+- **Timing-dependent** — add proper waits/locks, not retries.
+
+Silent retries mask real bugs. The 3 `test_recursive_loop` failures that were marked flaky for months were actually fixable by mocking heavy engines — the flaky marker hid the real problem.
+
 ### What to Do If Tests Fail
 
 1. Read the failure message carefully.
 2. Check if the failure is in code you touched.
 3. If not, check `docs/message_board/SESSION_SUMMARY.md` for known issues.
 4. If the failure is new, **revert your change** and investigate.
+5. If a test hangs (no output for >30s), check for event loop leaks or subprocess waits — see §8 Hot Path Review.
 
 ---
 
@@ -134,6 +185,16 @@ python -m pytest tests/ --cov=whitemagic --cov-report=term-missing -q
 - **Python**: PEP 8, type hints required for public functions.
 - **Rust**: `cargo fmt`, `cargo clippy`.
 - **Module imports**: Use absolute imports (`from whitemagic.core.memory...`).
+
+### Linting
+Run `ruff check` before commit. Key rules that catch real bugs:
+- `logging-f-string` — f-strings in logging calls (causes lazy formatting to break)
+- `logging-format-interpolation` — `.format()` in logging (same issue)
+- `PLE1205` — logging format string argument count mismatch
+- `F841` — unused local variables
+- `F401` — unused imports
+
+**Historical note**: Four logging calls in `homeostatic_loop.py` used f-string syntax (`{snap.value:.3f}`) inside `%s`-style format strings, combined with `exc_info=True`. This caused pytest's unraisable exception hook to trigger recursive traceback formatting → `RecursionError`. Ruff's `logging-f-string` rule catches this class of bug.
 
 ### Path Hygiene
 - **Never** use `Path.home()` or `.expanduser()` outside `core/whitemagic/config/paths.py`.
@@ -171,6 +232,7 @@ This codebase has essentially **zero TODO comments** but had 41 **structural stu
 1. If you add a placeholder, mark it explicitly: `raise NotImplementedError("Reason + planned implementation date")`.
 2. If you recover code from `<path-to-your-archive>`, diff it against the current version before copying.
 3. If a module shrinks by >50% in a refactor, flag it for review.
+4. Add an entry to `STUB_REGISTRY.md` (repo root) tracking every `NotImplementedError` and placeholder. Each entry: module, reason, planned implementation date. This makes technical debt visible and trackable, rather than hidden in code.
 
 ### How to Detect Stubs
 
@@ -189,7 +251,8 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 3. Register in `core/whitemagic/tools/dispatch_table.py`.
 4. Add tests in `core/tests/unit/test_<domain>.py`.
 5. Update `grimoire/TRUTH_TABLE.md` if the tool belongs to a Gana.
-6. Run the full test suite.
+6. Run `ruff check` on changed files.
+7. Run the full test suite with `--durations=10` to verify no performance regression.
 
 ### Adding a New Document
 1. Choose the correct folder based on audience and topic.
@@ -218,6 +281,20 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 2. Check `<path-to-your-archive>whitemagic0.2/` for more complete historical implementations.
 3. Verify galactic zone boundaries match `grimoire/TRUTH_TABLE.md`.
 
+### Hot Path Review
+
+Code that runs during `call_tool` dispatch, event emission, or per-test setup is on a **hot path**. Changes to hot paths must be reviewed for:
+
+- **Network/subprocess calls** — even "quick" ones (0.5s socket probes, `subprocess.run`) compound when called 25× per dispatch.
+- **Object creation that triggers GC pressure** — asyncio event loops, Redis connections, and ML model loads create objects whose `__del__` methods fire during GC, potentially triggering unraisable exceptions.
+- **Import cascades** — `from X import Y` inside a function body loads the module on first call. If the module loads a 90MB ML model, every test pays that cost on the first invocation.
+- **Uncached availability checks** — probing Redis, checking for binaries, or testing socket connections should be cached with a TTL, not performed on every invocation.
+
+**Historical note**: The integration test suite went from 642s → 23s by fixing three hot-path issues:
+1. Redis socket probe on every event emission (0.5s × 25 events × 259 tests = ~54 min wasted)
+2. Asyncio event loop leak from broker forwarding (caused `RecursionError` via pytest's unraisable hook)
+3. ActorSupervisor spawning an Elixir subprocess inside `run_cycle()` (1s per test × 30 tests = 30s wasted)
+
 ---
 
 ## 9. Key Files to Memorize
@@ -233,6 +310,9 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 | `core/whitemagic/config/paths.py` | Path resolution | State root changes |
 | `core/pyproject.toml` | Package config | Dependency changes |
 | `docs/message_board/SESSION_SUMMARY.md` | Latest session log | Handoff/context |
+| `STUB_REGISTRY.md` | Technical debt tracker | Before/after adding placeholders |
+| `core/tests/conftest.py` | Test fixtures & singleton resets | Test failures, state leakage |
+| `core/tests/unit/test_recursive_loop.py` | Reference test mocking | Writing unit tests for heavy modules |
 | `<path-to-your-archive>whitemagic0.2/` | Primary code archive | Before writing new code |
 
 ---
@@ -245,6 +325,9 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 4. **Duplicating `.md` files** in `core/whitemagic/grimoire/`. The canonical source is `grimoire/` (root).
 5. **Skipping tests** after "trivial" changes. The 1,280-test improvement came from fixing wiring, not from heroic test-writing.
 6. **Using `Path.home()` outside `core/whitemagic/config/paths.py`**. The path hygiene test will flag this.
+7. **Using f-string syntax in logging calls** with `%s`-style format strings. This silently breaks lazy formatting and can cause `RecursionError` when combined with `exc_info=True`. Use `ruff check` to catch.
+8. **Marking tests `@pytest.mark.flaky` instead of fixing them**. Flaky markers mask real bugs (state leakage, race conditions, missing mocks). Fix the root cause.
+9. **Adding subprocess calls or network probes to hot paths**. Code that runs during `call_tool` dispatch or event emission executes 25+ times per test. Even 0.5s overhead compounds to minutes across the suite.
 
 ---
 
@@ -252,12 +335,18 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 
 Before declaring any task complete:
 
-- [ ] `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q` → release baseline 2,216 passed; current audit baseline 1,470 passed, 2 skipped, 0 failed (v22.2.1)
+- [ ] `python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30` → all tests pass, 0 failures
+- [ ] `python -m pytest tests/unit/ -q --durations=10 --durations-min=1.0` → no test >5s without skip reason
+- [ ] `ruff check core/whitemagic/ core/tests/` → no new warnings
 - [ ] `python scripts/check_doc_drift.py` → All checks pass
 - [ ] `python scripts/check_versions.py` → Version consistent
 - [ ] `git status` → Only intended files modified
 - [ ] No new `Path.home()` or `.expanduser()` outside `core/whitemagic/config/paths.py`
+- [ ] No new `@pytest.mark.flaky` without documented reason + tracking issue
+- [ ] No new subprocess calls in unit tests
+- [ ] No new network/socket calls in event emission or `call_tool` dispatch paths
 - [ ] `INDEX.md` updated if docs added/moved
+- [ ] `STUB_REGISTRY.md` updated if placeholders added
 
 ---
 
@@ -278,17 +367,19 @@ date '+%H:%M:%S'
 
 Record end time and note:
 - **Duration** (actual vs expected)
-- **Test run time** (how long did the 1,470 tests take?)
+- **Test run time** (how long did the test suite take? Track in `SESSION_SUMMARY.md` to spot trends.)
 - **What was surprising** (unexpected friction, archive recovery needed, etc.)
 - **What took longer than expected and why**
-- **Technical debt created** (stubs, TODOs, deferred refactors)
+- **Technical debt created** (stubs, TODOs, deferred refactors — add to `STUB_REGISTRY.md`)
+- **Hot path impact** (did the change affect `call_tool` dispatch or event emission? Run `--durations` before and after.)
 
 ### Why This Matters for WhiteMagic
 
 - **Archive reconnaissance** can take 5-15 minutes per module. Timing reveals which modules need upstream recovery.
-- **Test suite runtime** (~30-60s for full suite) is a metric. If it grows, investigate parallelization.
+- **Test suite runtime** is a metric. If it grows, investigate before merging. Track it in `SESSION_SUMMARY.md` to spot trends across sessions.
 - **Doc drift checks** (~5s) should never be skipped. If they fail, fix before commit.
 - **Memory subsystem changes** require stress tests. Timing these helps estimate risk for future memory work.
+- **Session timing data accumulates**. After 10 sessions, patterns emerge: "memory subsystem changes always take 2x estimated" → adjust estimates. "Archive recovery for module X takes 15 min" → budget for it.
 
 ### Phase-Based Execution Protocol
 
@@ -322,7 +413,9 @@ date '+%H:%M:%S'
 | Recover from archive | 10-20 min | >30 min = merge conflicts / API drift |
 | Refactor memory code | 20-40 min | >60 min = run stress tests, check galactic zones |
 | Documentation update | 5-10 min | >20 min = INDEX.md or drift issues |
-| Full test suite | 30-60s | >2 min = investigate slow tests |
+| Full test suite (unit) | <2 min | >3 min = investigate slow tests with `--durations` |
+| Full test suite (integration) | <30s | >60s = investigate hot path overhead |
+| Full test suite (combined) | <2 min | >3 min = investigate with `--durations` |
 | Single immediate objective | 5-10 min | >10 min = summarize and reassess |
 | Immediate batch (4 objectives) | 20-40 min | >40 min = escalate or stop |
 
@@ -358,10 +451,12 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 
 ## 14. Contact & Context
 
-- **Project**: WhiteMagic v22.2.1
+- **Project**: WhiteMagic v23.0.0
 - **Repository**: `<path-to-whitemagic>/`
 - **Virtual Environment**: `.venv/` (source before any Python work)
-- **Test Command**: `cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q`
+- **Test Command (Tier 1)**: `cd core && python -m pytest tests/unit/ -q --timeout=5 -x`
+- **Test Command (Tier 3)**: `cd core && python -m pytest tests/ --ignore=tests/archive* --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30`
+- **Linting**: `ruff check core/whitemagic/ core/tests/`
 - **Doc Drift Check**: `python core/scripts/check_doc_drift.py`
 - **Memory Stress Test**: `python core/scripts/stress_test_memory.py`
 - **Archive**: `<path-to-your-archive>whitemagic0.2/`

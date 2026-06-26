@@ -82,6 +82,17 @@ const MAX_BREAKER_SLOTS: usize = 64;
 const OFF_COUNTERS: usize = 1280;
 const MAX_COUNTER_SLOTS: usize = 64;
 
+// Cache metrics region (in reserved space)
+const OFF_CACHE_HITS: usize = 1792;
+const OFF_CACHE_MISSES: usize = 1800;
+const OFF_CACHE_SIZE: usize = 1808;
+const OFF_CACHE_EVICTIONS: usize = 1816;
+const OFF_CACHE_HIT_RATE: usize = 1824; // f64
+const OFF_CACHE_SETS: usize = 1832;
+const OFF_CACHE_BACKEND: usize = 1840; // 0=python, 1=rust
+const OFF_CACHE_EXPIRATIONS: usize = 1848;
+const OFF_CACHE_TOTAL_REQS: usize = 1856;
+
 static INIT: Once = Once::new();
 static mut MMAP_PTR: *mut u8 = std::ptr::null_mut();
 
@@ -446,6 +457,49 @@ mod tests {
     }
 }
 
+/// Write cache metrics to the shared board (cross-process visibility).
+#[pyfunction]
+pub fn board_write_cache_stats(
+    hits: u64,
+    misses: u64,
+    size: u64,
+    evictions: u64,
+    hit_rate: f64,
+    sets: u64,
+    backend: u64, // 0=python, 1=rust
+    expirations: u64,
+    total_requests: u64,
+) -> PyResult<()> {
+    init_board();
+    write_u64(OFF_CACHE_HITS, hits);
+    write_u64(OFF_CACHE_MISSES, misses);
+    write_u64(OFF_CACHE_SIZE, size);
+    write_u64(OFF_CACHE_EVICTIONS, evictions);
+    write_f64(OFF_CACHE_HIT_RATE, hit_rate);
+    write_u64(OFF_CACHE_SETS, sets);
+    write_u64(OFF_CACHE_BACKEND, backend);
+    write_u64(OFF_CACHE_EXPIRATIONS, expirations);
+    write_u64(OFF_CACHE_TOTAL_REQS, total_requests);
+    Ok(())
+}
+
+/// Read cache metrics from the shared board.
+#[pyfunction]
+pub fn board_read_cache_stats() -> PyResult<HashMap<String, f64>> {
+    init_board();
+    let mut stats = HashMap::new();
+    stats.insert("hits".to_string(), read_u64(OFF_CACHE_HITS) as f64);
+    stats.insert("misses".to_string(), read_u64(OFF_CACHE_MISSES) as f64);
+    stats.insert("size".to_string(), read_u64(OFF_CACHE_SIZE) as f64);
+    stats.insert("evictions".to_string(), read_u64(OFF_CACHE_EVICTIONS) as f64);
+    stats.insert("hit_rate".to_string(), read_f64(OFF_CACHE_HIT_RATE));
+    stats.insert("sets".to_string(), read_u64(OFF_CACHE_SETS) as f64);
+    stats.insert("backend".to_string(), read_u64(OFF_CACHE_BACKEND) as f64);
+    stats.insert("expirations".to_string(), read_u64(OFF_CACHE_EXPIRATIONS) as f64);
+    stats.insert("total_requests".to_string(), read_u64(OFF_CACHE_TOTAL_REQS) as f64);
+    Ok(stats)
+}
+
 /// Register all StateBoard pyfunctions into the given PyModule.
 /// Called from lib.rs pymodule init.
 #[cfg(feature = "python")]
@@ -461,5 +515,7 @@ pub fn register_state_board(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> pyo3:
     m.add_function(wrap_pyfunction!(board_set_active_engines, m)?)?;
     m.add_function(wrap_pyfunction!(board_get_path, m)?)?;
     m.add_function(wrap_pyfunction!(board_reset, m)?)?;
+    m.add_function(wrap_pyfunction!(board_write_cache_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(board_read_cache_stats, m)?)?;
     Ok(())
 }

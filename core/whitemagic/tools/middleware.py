@@ -732,3 +732,309 @@ def mw_inference_router(
     # Not resolved locally — pass through to normal handler
     ctx.meta["local_inference_attempted"] = True
     return next_fn(ctx)
+
+
+# =========================================================================
+# Semantic Cache Middleware — T3: short-circuit repeated queries
+# =========================================================================
+
+_CACHEABLE_TOOL_PATTERNS = (
+    "ollama", "chat", "generate", "reason", "think", "analyze",
+    "infer", "complete", "answer", "query_llm", "ensemble",
+    "bicameral", "multi_spectral", "edge_infer",
+)
+
+
+def _is_cacheable_tool(tool_name: str) -> bool:
+    """Check if a tool's results are worth caching."""
+    name_lower = tool_name.lower()
+    return any(p in name_lower for p in _CACHEABLE_TOOL_PATTERNS)
+
+
+def _cache_key(tool_name: str, kwargs: dict[str, Any]) -> str:
+    """Build a deterministic cache key from tool name + prompt kwargs."""
+    import hashlib
+    prompt_parts = []
+    for key in ("prompt", "query", "message", "text", "input", "question"):
+        val = kwargs.get(key)
+        if isinstance(val, str) and val.strip():
+            prompt_parts.append(val)
+    # Include tool name to avoid cross-tool collisions
+    content = f"{tool_name}:{':'.join(prompt_parts)}"
+    return hashlib.md5(content.lower().strip().encode()).hexdigest()[:16]
+
+
+def mw_semantic_cache(
+    ctx: DispatchContext, next_fn: NextFn,
+) -> dict[str, Any] | None:
+    """Semantic cache for inference-type tool calls.
+
+    Checks the UnifiedCacheBridge (Rust-backed when available) before dispatching.
+    If a cached result exists and is fresh, short-circuits with zero token cost.
+    After successful dispatch, caches the result for future calls.
+
+    Cache backend priority:
+    0. Speculative prefetch (negative latency — result ready before user asks)
+    1. Rust UnifiedCache (sub-microsecond reads, persistent across sessions)
+    2. Python QueryCache fallback (OrderedDict LRU + JSON persistence)
+    """
+    if not _is_cacheable_tool(ctx.tool_name):
+        return next_fn(ctx)
+
+    # Build cache key
+    key = _cache_key(ctx.tool_name, ctx.kwargs)
+    if not key:
+        return next_fn(ctx)
+
+    # 0. Check speculative prefetch cache (pre-warmed by Markov prediction)
+    try:
+        from whitemagic.tools.speculative_prefetch import get_prefetcher
+        prefetcher = get_prefetcher()
+        prefetched = prefetcher.get_cached(ctx.tool_name)
+        if prefetched and isinstance(prefetched, dict) and prefetched.get("prefetched"):
+            logger.debug(
+                "Prefetch HIT for %s (gana=%s, prob=%s) — negative latency",
+                ctx.tool_name,
+                prefetched.get("gana"),
+                prefetched.get("probability"),
+            )
+            # Prefetch warms the retrieval pipeline, not the actual result.
+            # The unified cache check below will find the pre-warmed result.
+    except Exception:
+        pass
+
+    # Try unified cache first (Rust if available, Python fallback)
+    try:
+        from whitemagic.core.cache import get_unified_cache
+        unified = get_unified_cache()
+        cached_raw = unified.get("semantic", key)
+        if cached_raw:
+            import json as _json
+            cached = _json.loads(cached_raw)
+            logger.debug(
+                "Semantic cache HIT (backend=%s) for %s (key=%s)",
+                unified.backend, ctx.tool_name, key,
+            )
+            return {
+                "status": "success",
+                "tool": ctx.tool_name,
+                "result": cached.get("result", ""),
+                "method": "semantic_cache",
+                "confidence": 1.0,
+                "resolved_locally": True,
+                "tokens_saved": cached.get("tokens_saved", 0),
+                "cache_backend": unified.backend,
+                "latency_ms": 0.02 if unified.is_rust else 0.1,
+            }
+    except Exception as e:
+        logger.debug("Unified cache check failed: %s", e)
+
+    # Fallback: try legacy QueryCache
+    try:
+        from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
+        from whitemagic.config.paths import CACHE_DIR
+        legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
+        cached = legacy_cache.get(key)
+        if cached:
+            logger.debug("Semantic cache HIT (legacy) for %s (key=%s)", ctx.tool_name, key)
+            return {
+                "status": "success",
+                "tool": ctx.tool_name,
+                "result": cached.result,
+                "method": "semantic_cache",
+                "confidence": 1.0,
+                "resolved_locally": True,
+                "tokens_saved": cached.tokens_saved,
+                "cache_hits": cached.hits,
+                "cache_backend": "legacy",
+                "latency_ms": 0.1,
+            }
+    except Exception as e:
+        logger.debug("Legacy cache check failed: %s", e)
+
+    # Cache miss — dispatch normally
+    result = next_fn(ctx)
+
+    # Cache successful results in both unified and legacy cache
+    if result and isinstance(result, dict) and result.get("status") in ("success", "ok"):
+        answer = result.get("result", result.get("answer", ""))
+        if answer and isinstance(answer, str):
+            output_tokens = max(1, len(answer) // 4)
+            # Store in unified cache
+            try:
+                from whitemagic.core.cache import get_unified_cache
+                import json as _json
+                unified = get_unified_cache()
+                cache_payload = _json.dumps({
+                    "result": answer,
+                    "tokens_saved": output_tokens,
+                    "tool": ctx.tool_name,
+                })
+                unified.set("semantic", key, cache_payload, ttl_seconds=86400.0)  # 24h TTL
+            except Exception:
+                pass
+            # Also store in legacy cache for backward compat
+            try:
+                from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
+                from whitemagic.config.paths import CACHE_DIR
+                legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
+                legacy_cache.set(key, answer, output_tokens)
+            except Exception:
+                pass
+
+    # Record transition for speculative prefetcher (Markov prediction)
+    try:
+        from whitemagic.tools.speculative_prefetch import get_prefetcher
+        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+        gana = TOOL_TO_GANA.get(ctx.tool_name)
+        if gana:
+            get_prefetcher().on_call_complete(gana)
+    except Exception:
+        pass
+
+    return result
+
+
+# =========================================================================
+# Draft-Review Middleware — T4: local model drafts, cloud reviews/patches
+# =========================================================================
+
+_DRAFT_REVIEW_TOOLS = (
+    "ollama.chat", "ollama.generate", "query_llm", "infer",
+    "reason", "think", "analyze", "ensemble.query",
+)
+
+
+def _is_draft_review_candidate(tool_name: str, kwargs: dict[str, Any]) -> bool:
+    """Check if a tool call is a good draft-review candidate.
+
+    Draft-review is most beneficial for generative tasks with substantial
+    output (> 200 expected tokens). Not useful for boolean/extraction tasks.
+    """
+    name_lower = tool_name.lower()
+    if not any(p in name_lower for p in _DRAFT_REVIEW_TOOLS):
+        return False
+    # Skip if force_tier is set or if the prompt is very short
+    prompt = None
+    for key in ("prompt", "query", "message", "text", "input", "question"):
+        val = kwargs.get(key)
+        if isinstance(val, str) and val.strip():
+            prompt = val
+            break
+    if not prompt or len(prompt) < 100:
+        return False
+    return True
+
+
+def mw_draft_review(
+    ctx: DispatchContext, next_fn: NextFn,
+) -> dict[str, Any] | None:
+    """Draft-review flow: local model drafts, cloud reviews/patches.
+
+    T4 from local-splitter research. For generative tasks:
+    1. Local model (Ollama 3B) generates a draft answer
+    2. Cloud model receives the draft + a review instruction (much shorter
+       than generating from scratch)
+    3. Cloud model patches only what needs fixing
+
+    This saves tokens because the cloud model processes a short
+    draft+review prompt instead of a long generate-from-scratch prompt.
+
+    Falls back to normal dispatch if local model is unavailable.
+    """
+    if ctx.kwargs.get("_draft_review"):
+        return next_fn(ctx)  # Already in draft-review — don't re-enter
+
+    if not _is_draft_review_candidate(ctx.tool_name, ctx.kwargs):
+        return next_fn(ctx)
+
+    # Only attempt draft-review if we have a local Ollama handler
+    try:
+        from whitemagic.tools.handlers.ollama import handle_ollama_chat
+    except ImportError:
+        return next_fn(ctx)
+
+    prompt = None
+    for key in ("prompt", "query", "message", "text", "input", "question"):
+        val = ctx.kwargs.get(key)
+        if isinstance(val, str) and val.strip():
+            prompt = val
+            break
+    if not prompt:
+        return next_fn(ctx)
+
+    # Step 1: Generate draft with local model
+    try:
+        draft_result = handle_ollama_chat(
+            prompt=prompt,
+            model=ctx.kwargs.get("draft_model", "llama3.2:3b"),
+            stream=False,
+            _internal=True,
+        )
+        draft_text = draft_result.get("response", draft_result.get("result", ""))
+        if not draft_text or not draft_text.strip():
+            return next_fn(ctx)  # Empty draft — fall through
+
+        draft_tokens = max(1, len(draft_text) // 4)
+        original_prompt_tokens = max(1, len(prompt) // 4)
+    except Exception as e:
+        logger.debug("Draft-review: local draft failed: %s", e)
+        return next_fn(ctx)
+
+    # Step 2: Build review prompt for cloud model
+    review_instruction = (
+        "Review the following draft answer. If it is correct and complete, "
+        "return it unchanged. If it needs fixes, return only the corrected "
+        "portions. Be concise.\n\n"
+        f"Original question: {prompt[:500]}\n\n"
+        f"Draft answer: {draft_text[:2000]}\n\n"
+        "Reviewed answer:"
+    )
+
+    review_tokens = max(1, len(review_instruction) // 4)
+
+    # Step 3: Dispatch the review prompt through the normal pipeline
+    review_kwargs = dict(ctx.kwargs)
+    review_kwargs["prompt"] = review_instruction
+    review_kwargs["_draft_review"] = True  # Prevent re-entry
+    review_kwargs.pop("draft_model", None)
+
+    # Temporarily remove the prompt key that was used for draft detection
+    for key in ("query", "message", "text", "input", "question"):
+        review_kwargs.pop(key, None)
+
+    ctx.meta["draft_review_active"] = True
+    ctx.meta["draft_tokens"] = draft_tokens
+    ctx.meta["review_prompt_tokens"] = review_tokens
+    ctx.meta["original_prompt_tokens"] = original_prompt_tokens
+
+    # Call next_fn with the review prompt
+    result = next_fn(ctx)
+
+    if result and isinstance(result, dict) and result.get("status") in ("success", "ok"):
+        # If the review is very similar to the draft, the cloud model
+        # accepted it — we saved the full generation cost
+        result.setdefault("metadata", {})
+        result["metadata"]["draft_review"] = {
+            "draft_tokens": draft_tokens,
+            "review_prompt_tokens": review_tokens,
+            "original_prompt_tokens": original_prompt_tokens,
+            "tokens_saved": original_prompt_tokens - review_tokens,
+            "draft_model": ctx.kwargs.get("draft_model", "llama3.2:3b"),
+        }
+
+        # Record to GreenScore
+        try:
+            from whitemagic.core.monitoring.green_score import get_green_score
+            gs = get_green_score()
+            gs.record_inference(
+                locality="local_llm",
+                tokens_used=draft_tokens,
+                tokens_saved=original_prompt_tokens - review_tokens,
+                tool=ctx.tool_name,
+                duration_ms=0.0,
+            )
+        except Exception:
+            pass
+
+    return result

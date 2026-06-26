@@ -205,7 +205,11 @@ class WorkingMemory:
             return True
         return False
 
-    def get_context(self, max_tokens: int | None = None) -> list[dict[str, Any]]:
+    def get_context(
+        self,
+        max_tokens: int | None = None,
+        dense: bool = False,
+    ) -> list[dict[str, Any]]:
         """Get current working memory contents, sorted by activation.
 
         This is the primary method for injecting working memory into
@@ -213,6 +217,8 @@ class WorkingMemory:
 
         Args:
             max_tokens: Optional approximate token budget (chars / 4)
+            dense: If True, encode chunk content using Chinese-dense
+                representation for token reduction (2-3x fewer tokens).
 
         Returns:
             List of chunk dicts sorted by activation (highest first)
@@ -221,12 +227,28 @@ class WorkingMemory:
         self._apply_decay()
         chunks = sorted(self._chunks.values(), key=lambda c: c.effective_activation, reverse=True)
 
+        # Lazy import dense encoding
+        _encode_dense = None
+        if dense:
+            try:
+                from whitemagic.ai.dense_encoding import encode_dense as _enc
+                _encode_dense = _enc
+            except ImportError:
+                logger.debug("Dense encoding unavailable, falling back to raw text")
+
         result = []
         token_count = 0
         for chunk in chunks:
             chunk_dict = chunk.to_dict()
-            if max_tokens is not None:
+            if dense and _encode_dense is not None:
+                encoded = _encode_dense(chunk.content)
+                chunk_dict["content_dense"] = encoded.encoded
+                chunk_dict["compression_ratio"] = encoded.compression_ratio
+                est_tokens = encoded.encoded_tokens
+            else:
                 est_tokens = len(chunk.content) // 4
+
+            if max_tokens is not None:
                 if token_count + est_tokens > max_tokens:
                     break
                 token_count += est_tokens

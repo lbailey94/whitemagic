@@ -453,3 +453,101 @@ def jl_spatial_status() -> dict[str, Any]:
         "backend": "julia_pyjulia" if _jl is not None else "unavailable",
         "note": "Install PyJulia and Julia to enable spatial computing bridge",
     }
+
+
+# ---------------------------------------------------------------------------
+# Cache Analytics — KS tests, TTL auto-tuning, efficiency scoring
+# ---------------------------------------------------------------------------
+
+
+def julia_cache_ks_test(x: list[float], y: list[float]) -> dict[str, Any] | None:
+    """Two-sample KS test on cache access distributions.
+
+    Compares two distributions (e.g., hit times vs miss times) to detect
+    when access patterns have shifted and TTLs need re-tuning.
+
+    Returns (d_statistic, p_value, same_distribution) or None if Julia unavailable.
+    """
+    return _call_julia("cache_analytics.jl", {
+        "command": "ks_test",
+        "x": x,
+        "y": y,
+    })
+
+
+def julia_auto_tune_ttl(
+    access_times: list[float],
+    current_ttl: float = 3600.0,
+) -> dict[str, Any] | None:
+    """Auto-tune TTL based on access time patterns.
+
+    Uses inter-arrival time distribution to recommend an optimal TTL
+    that covers 95% of access intervals.
+
+    Returns recommended_ttl, confidence, direction, and statistics.
+    """
+    return _call_julia("cache_analytics.jl", {
+        "command": "auto_tune_ttl",
+        "access_times": access_times,
+        "current_ttl": current_ttl,
+    })
+
+
+def julia_cache_efficiency(
+    hits: int,
+    misses: int,
+    evictions: int,
+    expirations: int,
+    size: int,
+    max_size: int = 10000,
+) -> dict[str, Any] | None:
+    """Compute composite cache efficiency score (0-1).
+
+    Factors: hit rate (0.5), eviction penalty (0.2), expiration penalty (0.15),
+    capacity utilization (0.15).
+
+    Returns score, individual metrics, and recommendation (healthy/monitor/tune).
+    """
+    return _call_julia("cache_analytics.jl", {
+        "command": "cache_efficiency",
+        "hits": hits,
+        "misses": misses,
+        "evictions": evictions,
+        "expirations": expirations,
+        "size": size,
+        "max_size": max_size,
+    })
+
+
+def julia_fit_decay_model(
+    access_ages: list[float],
+    hit_counts: list[int],
+) -> dict[str, Any] | None:
+    """Fit exponential decay model to cache hit patterns.
+
+    Models hit_count ≈ A * exp(-λ * age) to determine the decay rate
+    and optimal TTL (3 half-lives).
+
+    Returns lambda, amplitude, half_life, r_squared, recommended_ttl.
+    """
+    return _call_julia("cache_analytics.jl", {
+        "command": "fit_decay",
+        "access_ages": access_ages,
+        "hit_counts": hit_counts,
+    })
+
+
+def julia_recommend_ttl_adjustments(
+    namespaces: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Batch TTL recommendations for multiple cache namespaces.
+
+    Each namespace dict should have: name, hits, misses, evictions,
+    expirations, size, max_size, current_ttl, and optionally access_times.
+
+    Returns per-namespace efficiency scores, TTL tuning results, and actions.
+    """
+    return _call_julia("cache_analytics.jl", {
+        "command": "recommend_ttl_adjustments",
+        "namespaces": namespaces,
+    })

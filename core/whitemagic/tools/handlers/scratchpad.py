@@ -255,4 +255,26 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         result["working_memory_attended"] = False
 
+    # v23.3: VSA context compression — pack scratchpad entries into HRR vector
+    try:
+        from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
+        compressor = get_vsa_context_compressor()
+        vsa_items = [
+            {"content": e.get("content", ""), "source": "scratchpad", "id": e.get("tag", "")}
+            for e in pad.entries if e.get("content")
+        ]
+        if vsa_items:
+            vsa_result = compressor.compress(vsa_items, max_text_items=3)
+            result["vsa_compression"] = {
+                "item_count": vsa_result.item_count,
+                "original_tokens": vsa_result.original_tokens,
+                "compressed_tokens": vsa_result.compressed_tokens,
+                "compression_ratio": vsa_result.compression_ratio,
+                "method": vsa_result.method,
+                "summary": vsa_result.summary,
+                "latency_ms": round(vsa_result.latency_ms, 2),
+            }
+    except Exception:
+        pass  # VSA compression is best-effort
+
     return result

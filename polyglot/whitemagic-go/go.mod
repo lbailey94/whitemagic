@@ -1,6 +1,6 @@
 module github.com/whitemagic-ai/whitemagic-go
 
-go 1.25.8
+go 1.26.4
 
 require (
 	github.com/bytedance/sonic v1.15.0

@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 
 def setup_dharma_gan_ying() -> Any:
     """Set up Dharma System integration with Gan Ying."""
+    import os
+    if os.environ.get("WM_SILENT_INIT") == "1":
+        return
+
     bus = get_bus()
 
     # Listen for all events to evaluate ethically
@@ -28,6 +32,11 @@ def setup_dharma_gan_ying() -> Any:
 
 def _evaluate_event_ethically(event: Any) -> Any:
     """Evaluate incoming events for ethical considerations."""
+    import os
+
+    if os.environ.get("WM_SILENT_INIT") == "1":
+        return
+
     from whitemagic.core.resonance.gan_ying import get_bus
 
     dharma = get_dharma_system()

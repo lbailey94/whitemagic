@@ -349,6 +349,7 @@ def _build_pipeline() -> Any:
         DispatchPipeline,
         mw_circuit_breaker,
         mw_cognitive_mode,
+        mw_draft_review,
         mw_governor,
         mw_inference_router,
         mw_input_sanitizer,
@@ -356,6 +357,7 @@ def _build_pipeline() -> Any:
         mw_observability,
         mw_rate_limiter,
         mw_security_monitor,
+        mw_semantic_cache,
         mw_tool_permissions,
         mw_zodiac_resonance,
     )
@@ -369,7 +371,9 @@ def _build_pipeline() -> Any:
     p.use("maturity_gate",   mw_maturity_gate)
     p.use("zodiac_resonance", mw_zodiac_resonance)
     p.use("governor",        mw_governor)
+    p.use("semantic_cache",  mw_semantic_cache)
     p.use("inference_router", mw_inference_router)
+    p.use("draft_review",    mw_draft_review)
     p.use("token_tracker",   mw_token_tracker)
     p.use("observability",   mw_observability)
     p.use("core_router",     _mw_core_router)
@@ -387,13 +391,17 @@ def dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
       2. Circuit breaker   — fast-fail on cooldown + post-feedback
       3. Rate limiter      — per-agent, per-tool throttling
       4. Security monitor  — anomaly detection
-      5. Tool permissions  — per-agent RBAC
-      6. Maturity gate     — developmental stage gating
-      7. Governor          — ethical validation
-      8. Inference router  — try edge/local resolution before LLM
-      9. Token tracker     — universal token tracking via GreenScore
-     10. Observability     — Prometheus + OTel metrics
-     11. Core router       — Gana prefix → dispatch table → bridge fallback
+      5. Cognitive mode    — enforce mode-based tool restrictions
+      6. Tool permissions  — per-agent RBAC
+      7. Maturity gate     — developmental stage gating
+      8. Zodiac resonance  — semantic boost for aligned Ganas
+      9. Governor          — ethical validation
+     10. Semantic cache    — T3: short-circuit repeated inference queries
+     11. Inference router  — try edge/local resolution before LLM
+     12. Draft-review      — T4: local model drafts, cloud reviews/patches
+     13. Token tracker     — universal token tracking via GreenScore
+     14. Observability     — Prometheus + OTel metrics
+     15. Core router       — Gana prefix → dispatch table → bridge fallback
 
     Returns:
         The handler result, or an error dict if no handler matched.

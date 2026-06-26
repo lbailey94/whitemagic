@@ -22,6 +22,7 @@ Consolidated from resonance/ sub-package. Part of Milestone 4.3 Singleton Reduct
 from __future__ import annotations
 
 import logging
+import os
 import queue
 import threading
 import uuid
@@ -978,8 +979,14 @@ def get_bus() -> GanYingBus:
         except Exception as e:
             logger.debug("Cascade protocols initialization deferred: %s", e)
         # Set up Redis broker forwarding for distributed event propagation
-        _setup_broker_forwarding(_bus)
+        # Skip in test environments to prevent DB connection pool exhaustion
+        if os.environ.get("WM_SILENT_INIT") != "1":
+            _setup_broker_forwarding(_bus)
     return _bus
+
+
+_redis_available: bool | None = None
+_redis_check_time: float = 0.0
 
 
 def _setup_broker_forwarding(bus: GanYingBus) -> None:
@@ -989,18 +996,34 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
     propagate across distributed instances. Falls back gracefully when
     Redis is unavailable.
     """
+    import time as _time
+
     def _forward_to_broker(event: ResonanceEvent) -> None:
+        global _redis_available, _redis_check_time
         try:
-            import socket
-            host = "localhost"
-            port = 6379
-            probe_timeout = 0.5
-            try:
-                socket.create_connection((host, port), timeout=probe_timeout).close()
-            except OSError:
+            # Skip broker forwarding in test environments to prevent
+            # event loop leaks that cause RecursionError in pytest
+            if os.environ.get("WM_SILENT_INIT") == "1":
+                return
+
+            # Cache Redis availability — check at most once per 30s
+            now = _time.monotonic()
+            if _redis_available is None or (now - _redis_check_time) > 30.0:
+                import socket
+                host = "localhost"
+                port = 6379
+                probe_timeout = 0.5
+                try:
+                    socket.create_connection((host, port), timeout=probe_timeout).close()
+                    _redis_available = True
+                except OSError:
+                    _redis_available = False
+                _redis_check_time = now
+
+            if not _redis_available:
                 return  # Redis unavailable — silent fallback
 
-            from whitemagic.tools.handlers.broker import _run, _get_broker
+            from whitemagic.tools.handlers.broker import _get_broker, _run
 
             async def _publish() -> None:
                 broker = await _get_broker(host=host, port=port)
@@ -1011,7 +1034,12 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
                     "data": event.data,
                 })
 
-            _run(_publish())
+            coro = _publish()
+            try:
+                _run(coro)
+            except Exception:
+                # Ensure coroutine is closed to prevent 'never awaited' warnings
+                coro.close()
         except Exception:
             pass  # Broker forwarding is best-effort
 
