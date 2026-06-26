@@ -104,6 +104,20 @@ def _stop_background_daemons():
     except Exception:  # noqa: BLE001
         pass
 
+    # Clean up Redis broker to prevent __del__ warnings at process exit
+    try:
+        from whitemagic.tools.handlers.broker import cleanup_broker
+        cleanup_broker()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Clean up Redis cache connection pools
+    try:
+        from whitemagic.cache.redis import clear_redis_cache
+        clear_redis_cache()
+    except Exception:  # noqa: BLE001
+        pass
+
 
 def _reset_singletons():
     """Reset all known singletons so each test session starts clean.
@@ -158,6 +172,9 @@ def _reset_singletons():
         ("whitemagic.tools.tool_permissions", "_registry_instance"),
         ("whitemagic.tools.sandbox", "_sandbox"),
         ("whitemagic.tools.speculative_prefetch", "_prefetcher"),
+        ("whitemagic.tools.handlers.broker", "_BROKER_INSTANCE"),
+        # --- Cache ---
+        ("whitemagic.cache.redis", "_redis_cache"),
         # --- Intelligence ---
         ("whitemagic.core.intelligence.knowledge_graph", "_kg"),
         ("whitemagic.core.intelligence.bicameral", "_reasoner"),

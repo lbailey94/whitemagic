@@ -53,6 +53,32 @@ _BROKER_INSTANCE: Optional["_AsyncBroker"] = None
 _BROKER_LOCK = asyncio.Lock() if hasattr(asyncio, "Lock") else None
 
 
+def cleanup_broker() -> None:
+    """Disconnect the broker singleton and close its Redis connection pool.
+
+    Called at process exit (via atexit) and from test teardown to prevent
+    ``redis.asyncio.connection.AbstractConnection.__del__`` from raising
+    ``AttributeError: 'NoneType' object has no attribute 'get_running_loop'``
+    during interpreter shutdown.
+    """
+    global _BROKER_INSTANCE
+    if _BROKER_INSTANCE is not None:
+        broker = _BROKER_INSTANCE
+        _BROKER_INSTANCE = None
+        if broker.redis is not None:
+            try:
+                pool = broker.redis.connection_pool
+                # Disconnect all connections synchronously
+                pool.disconnect()
+            except Exception:  # noqa: BLE001
+                pass
+            broker.redis = None
+
+
+import atexit
+atexit.register(cleanup_broker)
+
+
 class _AsyncBroker:
     """Lightweight async Redis broker used by handler functions."""
 

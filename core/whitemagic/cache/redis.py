@@ -368,8 +368,17 @@ def get_redis_cache(config: CacheConfig | None = None) -> RedisCache:
 
 
 def clear_redis_cache() -> None:
-    """Clear the global Redis cache instance."""
+    """Clear the global Redis cache instance and disconnect connection pools."""
     global _redis_cache
     if _redis_cache:
         _redis_cache.clear()
+        # Disconnect connection pools to prevent __del__ warnings at exit
+        if _redis_cache._connection_pool is not None:
+            try:
+                _redis_cache._connection_pool.disconnect()
+            except Exception:  # noqa: BLE001
+                pass
+        _redis_cache._client = None
+        _redis_cache._async_client = None
+        _redis_cache._connection_pool = None
         _redis_cache = None
