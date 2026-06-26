@@ -39,7 +39,7 @@ const CATEGORY_DESCRIPTIONS: Record<
   gana: {
     name: "Gana meta-tools (28 mansions)",
     description:
-      "28 Gana wrappers collapse 490 dispatch tools into named personas. gana_horn (session), gana_neck (memory), gana_root (system), ..., gana_wall (ethics boundary). Per-Gana details in /.well-known/agents.json.",
+      "28 Gana wrappers collapse 488 dispatch tools into named personas. gana_horn (session), gana_neck (memory), gana_root (system), ..., gana_wall (ethics boundary). Per-Gana details in /.well-known/agents.json.",
     tags: ["gana", "meta-tool", "prat", "router"],
   },
   dharma: {

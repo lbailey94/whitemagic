@@ -34,7 +34,7 @@ export async function GET() {
     url: BASE,
     // protocolVersion follows A2A spec; agent app version is independent.
     protocolVersion: "1.2",
-    version: "23.0.0",
+    version: "23.1.0",
 
     provider: {
       organization: "WhiteMagic Labs",
@@ -112,7 +112,7 @@ export async function GET() {
         id: "gana-tool-routing",
         name: "Gana meta-tool routing (28 mansions)",
         description:
-          "28 Gana meta-tools collapse 490 dispatch tools into 28 named " +
+          "28 Gana meta-tools collapse 488 dispatch tools into 28 named " +
           "personas (PRAT compression). Each Gana is a coordinate-aware " +
           "router: invoke with {operation, task} and the Gana picks the " +
           "right tool. Per-Gana details in /.well-known/agents/<gana>.json; " +

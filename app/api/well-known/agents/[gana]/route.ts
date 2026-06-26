@@ -422,7 +422,7 @@ export async function GET(
       gana_id: agent.id,
       description: agent.description,
       url: `${BASE}/.well-known/agents/${agent.id}.json`,
-      version: "23.0.0",
+      version: "23.1.0",
       protocolVersion: "1.2",
 
       provider: {

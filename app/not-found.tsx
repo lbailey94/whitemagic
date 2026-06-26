@@ -104,7 +104,7 @@ export default function NotFound() {
           >
             /api/manifest.json
           </a>{" "}
-          for the live tool surface (490 tools, 28 Ganas).
+          for the live tool surface (516 tools, 28 Ganas).
         </p>
       </div>
     </section>

@@ -236,7 +236,7 @@ export function check_system_health(payload: Payload) {
     status: "healthy",
     details: {
       memory: { memories: 1247, status: "ok" },
-      intelligence: { tools: 490, status: "ok" },
+      intelligence: { tools: 516, status: "ok" },
       garden: { gardens: 28, status: "ok" },
       governance: { dharma: "ok" },
     },
