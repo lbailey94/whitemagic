@@ -686,7 +686,7 @@ Canonical `grimoire/TRUTH_TABLE.md` established as the single source of truth fo
 
 ### Updated Counts
 - **516 callable tools** across **488 dispatch entries** + **28 Gana meta-tools**
-- **Current local audit baseline:** 2,260 tests passing, 0 failures, 2 skipped (as of 2026-06-26)
+- **Current local audit baseline:** 2,526 tests passing, 0 failures, 2 skipped (as of 2026-06-26)
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped
 - **28 active cross-system fusions** (matching the 28 Ganas)
 - **0 unexplored synthesis opportunities**

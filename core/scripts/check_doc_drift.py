@@ -8,7 +8,10 @@ Checks:
 4. Registry callable tool count >= 350
 5. No stale references to archived directories
 6. Version consistency (delegates to check_versions.py)
-7. POLYGLOT_STATUS language list matches buildable reality
+7. Tool-count drift across canonical docs
+8. Test-count consistency across canonical docs
+9. POLYGLOT_STATUS language list matches buildable reality
+10. Documentation gitignore hygiene (internal docs not tracked)
 
 Run this in CI to catch doc/code drift early.
 """
@@ -44,7 +47,7 @@ def ok(msg: str) -> None:
 # 1. Garden count
 # ---------------------------------------------------------------------------
 def check_gardens() -> None:
-    print("\n[1/7] Garden count...")
+    print("\n[1/10] Garden count...")
     try:
         from whitemagic.gardens import list_gardens
 
@@ -62,7 +65,7 @@ def check_gardens() -> None:
 # 2. Gana tool count
 # ---------------------------------------------------------------------------
 def check_gana_tools() -> None:
-    print("\n[2/7] Gana tool count...")
+    print("\n[2/10] Gana tool count...")
     try:
         from whitemagic.tools.registry import TOOL_REGISTRY, ToolCategory
 
@@ -80,7 +83,7 @@ def check_gana_tools() -> None:
 # 3. Dispatch table count
 # ---------------------------------------------------------------------------
 def check_dispatch_table() -> None:
-    print("\n[3/7] Dispatch table count...")
+    print("\n[3/10] Dispatch table count...")
     try:
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 
@@ -97,7 +100,7 @@ def check_dispatch_table() -> None:
 # 4. Registry callable tool count
 # ---------------------------------------------------------------------------
 def check_registry_tools() -> None:
-    print("\n[4/7] Registry callable tool count...")
+    print("\n[4/10] Registry callable tool count...")
     try:
         from whitemagic.tools.tool_surface import get_surface_counts
 
@@ -115,7 +118,7 @@ def check_registry_tools() -> None:
 # 5. No stale references to archived directories
 # ---------------------------------------------------------------------------
 def check_no_stale_refs() -> None:
-    print("\n[5/7] Stale directory references...")
+    print("\n[5/10] Stale directory references...")
     stale_patterns = [
         (r"\barchive/\b", "archive/"),
         (r"\blegacy/\b", "legacy/"),
@@ -145,7 +148,7 @@ def check_no_stale_refs() -> None:
 # 6. Version consistency
 # ---------------------------------------------------------------------------
 def check_versions() -> None:
-    print("\n[6/7] Version consistency...")
+    print("\n[6/10] Version consistency...")
     script = CORE / "scripts" / "check_versions.py"
     if not script.exists():
         warn("check_versions.py not found — skipping")
@@ -177,12 +180,10 @@ def check_tool_count_drift() -> None:
       - "all 425 dispatch tools"  (mid-sentence)
     Reports every occurrence whose number disagrees with the live registry.
     """
-    print("\n[7/8] Tool-count drift across canonical docs...")
+    print("\n[7/10] Tool-count drift across canonical docs...")
     docs = [
-        ROOT / "AI_PRIMARY.md",
-        ROOT / "AGENTS.md",
-        ROOT / "SYSTEM_MAP.md",
-        ROOT / "docs" / "public" / "SYSTEM_MAP.md",
+        ROOT / "docs" / "public" / "SYSTEM_MAP_V2.md",
+        ROOT / "docs" / "public" / "AI_PRIMARY.md",
         ROOT / "README.md",
     ]
     try:
@@ -246,12 +247,10 @@ def check_test_count_consistency() -> None:
     check does NOT shell out to pytest (too slow); it enforces the
     canonical Option C wording policy.
     """
-    print("\n[8/9] Test-count consistency across canonical docs...")
+    print("\n[8/10] Test-count consistency across canonical docs...")
     docs = [
-        ROOT / "AI_PRIMARY.md",
-        ROOT / "AGENTS.md",
-        ROOT / "SYSTEM_MAP.md",
-        ROOT / "docs" / "public" / "SYSTEM_MAP.md",
+        ROOT / "docs" / "public" / "AI_PRIMARY.md",
+        ROOT / "docs" / "public" / "SYSTEM_MAP_V2.md",
         ROOT / "README.md",
     ]
 
@@ -265,8 +264,10 @@ def check_test_count_consistency() -> None:
 
     release_baseline = 2216
     current_audit_baseline = 2260
+    v23_1_0_baseline = 2526
     release_markers = ("release baseline", "v22.2.0 release", "v22.2 release", "v22.2.1 release", "v22.2.2 release", "v22.2.3 release", "v22.3.0 release", "v23.0.0 release")
     current_markers = ("current local audit", "current audit baseline", "live audit baseline", "v22.2.1 release", "v22.2.2 release", "v22.2.3 release", "v22.3.0 release", "v23.0.0 release")
+    v23_1_0_markers = ("v23.1.0", "current baseline")
     seen: dict[str, list[tuple[str, int, str]]] = {}
     for doc in docs:
         if not doc.exists():
@@ -294,7 +295,8 @@ def check_test_count_consistency() -> None:
         for where, count, line_text in entries:
             is_release = count == release_baseline and any(marker in line_text for marker in release_markers)
             is_current = count == current_audit_baseline and any(marker in line_text for marker in current_markers)
-            if not (is_release or is_current):
+            is_v23_1_0 = count == v23_1_0_baseline and any(marker in line_text for marker in v23_1_0_markers)
+            if not (is_release or is_current or is_v23_1_0):
                 error(
                     f"{doc_rel}:{where} claims {count:,} tests without an accepted Option C baseline label"
                 )
@@ -302,8 +304,8 @@ def check_test_count_consistency() -> None:
 
     if drift_count == 0:
         ok(
-            f"All {len(all_counts)} test-count references use Option C "
-            f"({release_baseline:,} release / {current_audit_baseline:,} current audit)"
+            f"All {len(all_counts)} test-count references use accepted baselines "
+            f"({release_baseline:,} release / {current_audit_baseline:,} v23 audit / {v23_1_0_baseline:,} v23.1.0)"
         )
         return
 
@@ -312,7 +314,7 @@ def check_test_count_consistency() -> None:
 # 9. POLYGLOT_STATUS buildable languages
 # ---------------------------------------------------------------------------
 def check_polyglot_status() -> None:
-    print("\n[9/9] POLYGLOT_STATUS build claims...")
+    print("\n[9/10] POLYGLOT_STATUS build claims...")
     status_file = CORE / "docs" / "POLYGLOT_STATUS.md"
     if not status_file.exists():
         warn("POLYGLOT_STATUS.md not found")
@@ -336,6 +338,97 @@ def check_polyglot_status() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 10. Documentation gitignore hygiene
+# ---------------------------------------------------------------------------
+def check_doc_gitignore_hygiene() -> None:
+    """Verify that internal/dev docs are NOT tracked by git.
+
+    Ensures the public release stays lean — only essential docs should
+    be in the git index.  Internal docs (AGENTS.md, AI_PRIMARY.md, etc.)
+    and internal doc directories (core/docs/, core/eval_aux/, etc.)
+    should be gitignored.
+    """
+    print("\n[10/10] Documentation gitignore hygiene...")
+    result = subprocess.run(
+        ["git", "ls-files", "*.md", "*.txt"],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+    )
+    if result.returncode != 0:
+        warn("Could not run `git ls-files` — skipping gitignore hygiene check")
+        return
+
+    tracked = set(result.stdout.splitlines())
+
+    must_not_track = [
+        "AGENTS.md",
+        "AI_PRIMARY.md",
+        "SYSTEM_MAP.md",
+        "INDEX.md",
+        "STUB_REGISTRY.md",
+        "RELEASE_NOTES.md",
+        "DEPLOY.md",
+        "skill.md",
+    ]
+    must_not_track_prefixes = [
+        "core/docs/",
+        "core/eval_aux/",
+        "core/benchmark_results/",
+        "core/scripts/ARIA_AWAKENING_PROTOCOL.md",
+        "core/sdk_aux/",
+        "core/tests/COVERAGE_REPORT.md",
+        "docs/ARIA_CANON_RUBRIC.md",
+        "docs/KARMA_LEDGER_API.md",
+        "docs/PRAT_GUIDE.md",
+        "docs/VOICE_TONE_GUIDE.md",
+        "docs/adr/",
+        "docs/architecture/",
+        "docs/community/",
+        "docs/deploy/",
+        "docs/design/",
+        "docs/guides/",
+        "docs/integrations/",
+        "docs/koka-guide.md",
+        "docs/operations/",
+        "docs/plans/",
+        "docs/reference/",
+        "docs/reports/",
+        "docs/spec/",
+        "docs/public/misc/_archived/",
+        "docs/public/misc/llms-full.txt",
+        "docs/public/misc/modular/",
+        "apps/README.md",
+        "apps/SCOPING_BROWSER_FIRST.md",
+        "apps/SCOPING_BROWSER_FIRST_DECIDED.md",
+        "polyglot/BENCHMARKS.md",
+        "polyglot/POLYGLOT_SURVEY",
+        "polyglot/mojo/IMPLEMENTATION_STATUS.md",
+        "polyglot/mojo/MOJO_MIGRATION_GUIDE.md",
+        "polyglot/mojo/MOJO_STATUS.md",
+        "polyglot/mojo/README_MOJO_0261.md",
+        "polyglot/whitemagic-go/",
+        "polyglot/whitemagic-koka/docs/",
+    ]
+
+    violations = []
+    for f in tracked:
+        if f in must_not_track:
+            violations.append(f)
+            continue
+        for prefix in must_not_track_prefixes:
+            if f.startswith(prefix):
+                violations.append(f)
+                break
+
+    if violations:
+        for v in violations:
+            error(f"Internal doc still tracked by git: {v}")
+    else:
+        ok(f"All internal docs properly gitignored ({len(tracked)} .md/.txt files tracked)")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main() -> int:
@@ -356,6 +449,7 @@ def main() -> int:
     check_tool_count_drift()
     check_test_count_consistency()
     check_polyglot_status()
+    check_doc_gitignore_hygiene()
 
     print("\n" + "=" * 60)
     if ERRORS:

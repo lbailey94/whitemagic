@@ -2,7 +2,7 @@
 
 **Effective Date**: November 2, 2025  
 **Last Updated**: February 9, 2026  
-**Version**: 23.0.0
+**Version**: 23.1.0
 
 ---
 

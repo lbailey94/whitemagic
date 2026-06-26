@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 23.0.0
-**Last Updated**: June 18, 2026 (documentation sweep — 888 docstrings + polyglot survey + standalone paper)
+**Version**: 23.1.0
+**Last Updated**: June 26, 2026 (v23.1.0 — test suite stabilization, gitignore cleanup, binary removal)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 

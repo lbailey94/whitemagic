@@ -250,8 +250,18 @@ polyglot/codex/
 polyglot/codex/00_source/
 .koka/
 
-# === Recovered polyglot build artifacts ===
+# === Go compiled binaries ===
+polyglot/whitemagic-go/prefetch_service
+polyglot/whitemagic-go/test_runner
 polyglot/whitemagic-go/whitemagic-go-mesh
+
+# === Polyglot bridge binaries ===
+polyglot/bridges/koka/bridge
+polyglot/bridges/haskell/bridge
+polyglot/bridges/haskell/bridge.o
+polyglot/bridges/haskell/bridge.hi
+
+# === Recovered polyglot build artifacts ===
 polyglot/whitemagic-rust-archive/target/
 polyglot/whitemagic-rust-archive/libwhitemagic_rs.so
 polyglot/whitemagic-rust-archive/wm-seed
@@ -284,3 +294,60 @@ whitemagic-app/
 # Build artifacts
 core/dist/
 core/build/
+
+# === Internal docs (not for public release) ===
+# Root-level internal docs — dev-only, not needed by end users or AI agents
+/skill.md
+
+# core/ internal docs — architecture, strategy, post-mortems, etc.
+core/docs/
+core/eval_aux/
+core/benchmark_results/
+core/scripts/ARIA_AWAKENING_PROTOCOL.md
+core/sdk_aux/
+core/tests/COVERAGE_REPORT.md
+
+# docs/ internal — ARIA, PRAT, voice guides, architecture, plans, reports
+docs/ARIA_CANON_RUBRIC.md
+docs/KARMA_LEDGER_API.md
+docs/PRAT_GUIDE.md
+docs/VOICE_TONE_GUIDE.md
+docs/koka-guide.md
+docs/adr/
+docs/architecture/
+docs/community/
+docs/deploy/
+docs/design/
+docs/guides/
+docs/integrations/
+docs/operations/
+docs/plans/
+docs/reference/
+docs/reports/
+docs/spec/
+
+# docs/public/ — trim archived and bulky files
+docs/public/misc/_archived/
+docs/public/misc/llms-full.txt
+docs/public/misc/modular/
+
+# apps/ internal scoping docs
+apps/README.md
+apps/SCOPING_BROWSER_FIRST.md
+apps/SCOPING_BROWSER_FIRST_DECIDED.md
+
+# polyglot internal docs
+polyglot/BENCHMARKS.md
+polyglot/POLYGLOT_SURVEY*
+polyglot/mojo/IMPLEMENTATION_STATUS.md
+polyglot/mojo/MOJO_MIGRATION_GUIDE.md
+polyglot/mojo/MOJO_STATUS.md
+polyglot/mojo/README_MOJO_0261.md
+polyglot/whitemagic-go/
+polyglot/whitemagic-koka/docs/
+
+# Elixir deps (should never be tracked)
+polyglot/elixir/deps/
+
+# Rust pkg (build artifact, was tracked before gitignore)
+core/whitemagic-rust/pkg/

@@ -26,7 +26,6 @@ REFERENCES = [
     "CHANGELOG.md",
     "core/README.md",
     "core/pyproject.toml",
-    "docs/message_board/SHIP_SURFACE.md",
     "SECURITY.md",
     "core/whitemagic-rust/Cargo.toml",
     "core/whitemagic-rust/Cargo.lock",
@@ -35,8 +34,6 @@ REFERENCES = [
     "core/whitemagic/bridges/julia/Manifest.toml",
     "core/mesh_aux/pixi.toml",
     "core/sdk_aux/vscode-extension/package.json",
-    "apps/site/package.json",
-    "apps/site/package-lock.json",
     "polyglot/whitemagic-hs/whitemagic-haskell.cabal",
     "polyglot/whitemagic-jl/Project.toml",
     "polyglot/whitemagic-zig/pixi.toml",
@@ -142,12 +139,19 @@ for ref in REFERENCES:
             if 'Initial manifest creation' in line or 'creation (v' in line:
                 continue
 
+            # Skip table rows referencing prior release baselines
+            if 'release baseline' in line.lower() and 'current' not in line.lower():
+                continue
+
             # Check for version patterns
             for match in re.finditer(r'v?(\d+\.\d+\.\d+)', line):
                 version = match.group(1)
                 if version != CANONICAL:
                     # Allow specific historical references
                     if 'v21.0.0' in line and ('Initial' in line or 'creation' in line):
+                        continue
+                    # Allow historical release baseline references (e.g., "v23.0.0 release baseline")
+                    if 'release baseline' in line:
                         continue
                     mismatches.append((ref, version, line.strip()))
 

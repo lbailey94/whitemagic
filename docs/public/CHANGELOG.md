@@ -5,6 +5,57 @@
 
 ---
 
+## [23.1.0] - 2026-06-26 — Test Suite Stabilization
+
+Test suite stabilization and infrastructure cleanup. Full suite (2,526 tests)
+runs cleanly in ~105s with zero hangs or failures across consecutive runs.
+
+### Fixed
+- Integration test hangs caused by stale GanYingBus singleton not being reset
+  between tests (root cause: conftest reset deprecated module instead of actual)
+- DB connection pool exhaustion from catch-all event listeners in test env
+- Background thread accumulation (EmbeddingDaemon, DecayDaemon, prefetch)
+- Infinite `swarm.breathe()` loop and garden resonance cascade loops in tests
+
+### Added
+- Dense encoding for token compression
+- Unified cache bridge with semantic cache middleware
+- Draft-review middleware (local draft, cloud review, graceful fallback)
+- Speculative prefetch for predicted tool pre-warming
+- Go prefetch service, Julia cache analytics, Rust cache backend
+- STUB_REGISTRY.md for tracking NotImplementedError placeholders
+
+### Changed
+- Test suite: 2,260 → 2,526 passing tests, runtime 823s → 105s (7.8x)
+- Integration suite: 642s → 23s (27.9x)
+- AGENTS.md updated with test purity rules and flaky test ban
+
+### Removed
+- 4 compiled binaries (~20MB) from git tracking
+- Duplicate llms-full.txt in archived docs
+
+---
+
+## [23.0.0] - 2026-06-25 — Cognitive OS Release
+
+Major release: unified read/write APIs, 6D galaxy substrate, evolution layer,
+STRATA integration, Fragment search, and polyglot expansion across 7 languages.
+
+### Added
+- 10 new dispatch tools (478 → 488)
+- 6D Holographic Galaxy for cognitively specialized memory partitioning
+- Evolution layer (10,184 lines): recursive improvement, Bayesian dream cycle
+- STRATA integration — 80+ codebase checkers
+- Fragment search — Rust-accelerated semantic + BM25 with tree-sitter chunking
+- Unified read/write APIs (`wm_read`, `wm_write`)
+- Polyglot expansion: Rust, Elixir, Go, Julia, Haskell, Zig, Koka
+
+### Changed
+- Tool counts: 516 callable, 488 dispatch
+- Polyglot: 7 active languages (Mojo deprioritized)
+
+---
+
 ## [22.2.0] - 2026-04-26 — Cognitive Differentiation Release
 
 ### Cognitive Architecture (5 Wild Ideas)

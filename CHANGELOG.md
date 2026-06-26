@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [23.1.0] - 2026-06-26
+
+Test suite stabilization and infrastructure cleanup. The full test suite
+(2,526 tests) now runs cleanly in ~105s with zero hangs, timeouts, or failures
+across consecutive runs.
+
+### Fixed
+- **Integration test hangs** — root cause: `conftest.py` reset
+  `gan_ying_enhanced._bus` (deprecated re-export) instead of
+  `_consolidated._bus` (actual singleton). The stale bus persisted across
+  tests with garden resonance listeners creating infinite cascade loops
+  (`on_joy` → `PLAY_INITIATED` → `JOY_TRIGGERED` → `on_joy` → ...)
+- **DB connection pool exhaustion** — GanYingBus catch-all listeners
+  (broker forwarding, dharma evaluation, ResonanceOrchestrator) now skip
+  registration in test environments (`WM_SILENT_INIT=1`)
+- **Background thread accumulation** — EmbeddingDaemon, DecayDaemon,
+  RapidCognition, and speculative prefetch threads now stopped/reset
+  between tests via `_stop_background_daemons()` in conftest.py
+- **Infinite swarm.breathe() loop** — skipped in test environments,
+  event loop properly closed after use
+- **MCP server _INITIALISED flag** — reset between tests to prevent
+  stale initialization state from integration tests affecting unit tests
+- **Ruff logging-f-string issues** in `homeostatic_loop.py` that caused
+  `RecursionError` in pytest's unraisable exception hook
+
+### Added
+- **Dense encoding** (`ai/dense_encoding.py`) — token compression for
+  context-efficient memory representation
+- **Unified cache bridge** (`core/cache/unified_cache_bridge.py`) —
+  semantic cache middleware for inference tool calls
+- **Draft-review middleware** — local model generates drafts, cloud model
+  reviews, with graceful fallback
+- **Speculative prefetch** — background pre-warming of predicted tool
+  retrieval pipelines (skipped in tests)
+- **Go prefetch service** and **Julia cache analytics** polyglot modules
+- **Rust unified cache backend** (`whitemagic-rust/src/cache/`)
+- **STUB_REGISTRY.md** — tracks all `NotImplementedError` placeholders
+
+### Changed
+- Test suite: 2,260 → 2,526 passing tests (266 new tests)
+- Test suite runtime: 823s → 105s (7.8x speedup)
+- Integration suite runtime: 642s → 23s (27.9x speedup)
+- `AGENTS.md` updated to v23.1 with test purity rules, flaky test ban,
+  hot path review, and ruff linting guidelines
+
+### Removed
+- 4 compiled binaries (~20MB) from git tracking: Go `prefetch_service`,
+  `test_runner`, Haskell/Koka bridge executables and build artifacts
+- Duplicate `docs/public/misc/_archived/llms-full.txt`
+
 ## [23.0.0] - 2026-06-25
 
 Major release: unified read/write APIs, 6D galaxy substrate, evolution layer,

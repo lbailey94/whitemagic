@@ -1,6 +1,6 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 23.0.0 (AGENTS.md revision 23.1)
+**Version**: 23.1.0 (AGENTS.md revision 23.2)
 **Last Updated**: 2026-06-26
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
@@ -15,9 +15,8 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
-- Current local audit baseline: 2,260 passing tests, 0 failures, 2 skipped (as of 2026-06-26)
-- v22.3.0: bridge surface documented to 143 functions (full mcp_api_bridge public surface); site catalog 30→143
 - v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
+- v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -451,7 +450,7 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 
 ## 14. Contact & Context
 
-- **Project**: WhiteMagic v23.0.0
+- **Project**: WhiteMagic v23.1.0
 - **Repository**: `<path-to-whitemagic>/`
 - **Virtual Environment**: `.venv/` (source before any Python work)
 - **Test Command (Tier 1)**: `cd core && python -m pytest tests/unit/ -q --timeout=5 -x`
