@@ -93,6 +93,7 @@ Private filenames are intentionally not enumerated in this public index.
 | File | What It Is | Date |
 |------|-----------|------|
 | `STRATEGIC_ROADMAP_V23.md` | v23 roadmap — multi-user + WASM runtime | Jun 3 |
+| `V23_2_ROADMAP.md` | v23.2 roadmap — local-first multi-user, real-time sync, WASM, Rust SIMD, Mojo removal | Jun 26 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective plan — 6 phased objectives | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | External Fragment + STRATA audit findings | May 15 |
 | `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all systems | May 29 |
