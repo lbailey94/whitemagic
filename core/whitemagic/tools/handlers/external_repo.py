@@ -8,11 +8,13 @@ Designed for Gana Chariot (codebase navigation).
 """
 
 import logging
+import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -61,43 +63,89 @@ def handle_external_wiki_query(**kwargs: Any) -> dict[str, Any]:
     }
 
 
+_ALLOWED_HOSTS = {"github.com", "gitlab.com", "bitbucket.org"}
+
+
+def _validate_repo_input(repo: str) -> tuple[str, str] | None:
+    """Validate and normalize repo input. Return (url, repo_name) or None."""
+    repo = repo.strip()
+    if not repo or "\n" in repo or "\r" in repo:
+        return None
+    if repo.startswith("http://") or repo.startswith("https://"):
+        parsed = urlparse(repo)
+        if parsed.hostname not in _ALLOWED_HOSTS:
+            return None
+        repo_name = Path(parsed.path).name.replace(".git", "")
+        return repo, repo_name
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+        repo_name = repo.split("/")[-1]
+        return f"https://github.com/{repo}.git", repo_name
+    return None
+
+
+def _scan_modules_at_path(root: Path) -> list[dict[str, Any]]:
+    """Extract Python module structure from a local directory."""
+    modules: list[dict[str, Any]] = []
+    if not root.exists():
+        return modules
+    py_files = list(root.rglob("*.py"))
+    exclude = {".git", ".venv", "__pycache__", "node_modules", "tests"}
+    for py_file in py_files:
+        if set(py_file.parts) & exclude:
+            continue
+        try:
+            content = py_file.read_text(errors="ignore")
+            if not content.strip():
+                continue
+            rel = py_file.relative_to(root)
+            docstring = ""
+            m = re.match(r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')', content)
+            if m:
+                docstring = m.group(0).strip("\"'").strip()[:200]
+            classes = re.findall(r'^class\s+(\w+)', content, re.MULTILINE)
+            modules.append({
+                "path": str(rel),
+                "docstring": docstring,
+                "classes": classes[:10],
+                "line_count": content.count("\n") + 1,
+            })
+        except Exception:
+            pass
+    return modules
+
+
 def handle_external_repo_scan(**kwargs: Any) -> dict[str, Any]:
     """Clone and scan an external repository using archaeology tools.
 
-    Clones a GitHub repo to a temp directory and runs WhiteMagic's
-    archaeology scanner to extract structure, docstrings, and patterns.
+    Clones an allowed git host repo to a temp directory and extracts
+    Python module structure, docstrings, and basic statistics.
 
     Args:
         repo: GitHub repo in owner/repo format or full URL
-        depth: Scan depth (default 3)
+              (allowed hosts: github.com, gitlab.com, bitbucket.org)
         cleanup: Remove clone after scan (default True)
     """
     repo = kwargs.get("repo", "")
     if not repo:
         return {"status": "error", "error_code": "missing_params",
                 "message": "repo is required"}
-
     cleanup = kwargs.get("cleanup", True)
 
-    # Normalize repo to URL
-    if repo.startswith("http"):
-        url = repo
-        repo_name = repo.rstrip("/").split("/")[-1].replace(".git", "")
-    elif "/" in repo and not repo.startswith("/"):
-        url = f"https://github.com/{repo}.git"
-        repo_name = repo.split("/")[-1]
-    else:
+    validated = _validate_repo_input(repo)
+    if not validated:
         return {"status": "error", "error_code": "invalid_repo",
-                "message": "Expected owner/repo format or full URL"}
+                "message": ("Expected owner/repo format or full URL from "
+                            "allowed hosts: github.com, gitlab.com, bitbucket.org")}
+    url, repo_name = validated
 
     tmpdir = None
     try:
         tmpdir = tempfile.mkdtemp(prefix="wm_ext_scan_")
         clone_path = Path(tmpdir) / repo_name
 
-        # Shallow clone for speed
+        # Shallow clone for speed — arguments are passed as a list, no shell
         result = subprocess.run(
-            ["git", "clone", "--depth", "1", url, str(clone_path)],
+            ["git", "clone", "--depth", "1", "--", url, str(clone_path)],
             capture_output=True, text=True, timeout=60,
         )
         if result.returncode != 0:
@@ -108,54 +156,31 @@ def handle_external_repo_scan(**kwargs: Any) -> dict[str, Any]:
                 "repo": repo,
             }
 
-        # Run archaeology scan
-        from whitemagic.archaeology import get_archaeologist
-        arch = get_archaeologist()
+        if not clone_path.exists():
+            return {
+                "status": "error",
+                "error_code": "clone_failed",
+                "message": "Clone succeeded but target directory is missing",
+                "repo": repo,
+            }
 
-        # Temporarily point archaeologist at the cloned repo
-        original_root = arch.root_path
-        arch.root_path = clone_path
-        try:
-            arch.find_unread(str(clone_path))
-            stats = arch.stats(scan_disk=True)
-        finally:
-            arch.root_path = original_root
+        # Avoid mutating the global archaeologist singleton by scanning locally
+        modules = _scan_modules_at_path(clone_path)
 
-        # Extract module structure
-        modules: list[dict[str, Any]] = []
-        py_files = list(clone_path.rglob("*.py"))
-        exclude = {".git", ".venv", "__pycache__", "node_modules", "tests"}
-        for py_file in py_files:
-            if set(py_file.parts) & exclude:
-                continue
-            try:
-                content = py_file.read_text(errors="ignore")
-                if not content.strip():
-                    continue
-                rel = py_file.relative_to(clone_path)
-                import re
-                docstring = ""
-                m = re.match(r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')', content)
-                if m:
-                    docstring = m.group(0).strip("\"'").strip()[:200]
-                classes = re.findall(r'^class\s+(\w+)', content, re.MULTILINE)
-                modules.append({
-                    "path": str(rel),
-                    "docstring": docstring,
-                    "classes": classes[:10],
-                    "line_count": content.count("\n") + 1,
-                })
-            except Exception:
-                pass
+        # Calculate disk usage locally
+        total_size = sum(
+            f.stat().st_size for f in clone_path.rglob("*") if f.is_file()
+        )
+        disk_usage_mb = round(total_size / (1024 * 1024), 2)
 
         return {
             "status": "success",
             "repo": repo,
             "repo_name": repo_name,
-            "files_scanned": len(py_files),
+            "files_scanned": len(list(clone_path.rglob("*.py"))),
             "modules_found": len(modules),
             "modules": modules[:50],
-            "disk_usage_mb": round(stats.get("disk_usage_mb", 0), 2),
+            "disk_usage_mb": disk_usage_mb,
             "clone_path": str(clone_path) if not cleanup else None,
         }
     except subprocess.TimeoutExpired:
@@ -186,10 +211,7 @@ def handle_external_repo_compare(**kwargs: Any) -> dict[str, Any]:
                 "message": "repo and local_module are required"}
 
     # Scan external repo
-    ext_result = handle_external_repo_scan(
-        repo=repo, cleanup=True, **{k: v for k, v in kwargs.items()
-                                     if k in ("depth",)}
-    )
+    ext_result = handle_external_repo_scan(repo=repo, cleanup=True)
 
     # Scan local module
     from whitemagic.config import PROJECT_ROOT

@@ -51,7 +51,7 @@ def _get_db() -> sqlite3.Connection:
 
 
 def _wiki_id(title: str, category: str) -> str:
-    return f"wiki_{hashlib.md5(f'{category}:{title}'.encode()).hexdigest()[:12]}"
+    return f"wiki_{hashlib.sha256(f'{category}:{title}'.encode()).hexdigest()[:16]}"
 
 
 def _now() -> str:
@@ -93,6 +93,9 @@ def _upsert_entry(conn, entry_id, title, content, category,
 def _scan_python_modules(root: Path, max_depth: int = 4) -> list[dict[str, Any]]:
     """Scan Python modules and extract docstrings + structure."""
     results: list[dict[str, Any]] = []
+    if not root.exists():
+        logger.warning("Wiki module scanner root does not exist: %s", root)
+        return results
     exclude = {".git", ".venv", "__pycache__", "node_modules",
                ".hypothesis", "tests", "target", "build", "dist"}
     for py_file in root.rglob("*.py"):
@@ -357,6 +360,11 @@ def handle_wiki_generate(**kwargs: Any) -> dict[str, Any]:
         conn.close()
 
 
+def _escape_like(value: str) -> str:
+    """Escape SQLite LIKE wildcards in a user-supplied string."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def handle_wiki_query(**kwargs: Any) -> dict[str, Any]:
     """Query the internal wiki.
 
@@ -376,8 +384,9 @@ def handle_wiki_query(**kwargs: Any) -> dict[str, Any]:
         sql = "SELECT * FROM internal_wiki WHERE 1=1"
         params: list[Any] = []
         if query:
-            sql += " AND (title LIKE ? OR content LIKE ?)"
-            params.extend([f"%{query}%", f"%{query}%"])
+            sql += " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"
+            escaped = _escape_like(query)
+            params.extend([f"%{escaped}%", f"%{escaped}%"])
         if category:
             sql += " AND category = ?"
             params.append(category)
@@ -385,8 +394,12 @@ def handle_wiki_query(**kwargs: Any) -> dict[str, Any]:
             for tag in tags.split(","):
                 tag = tag.strip()
                 if tag:
-                    sql += " AND tags LIKE ?"
-                    params.append(f"%{tag}%")
+                    # Tags are stored as JSON arrays; search for the tag
+                    # as a JSON string element (e.g. "tag" or "tag", ...).
+                    # We escape the literal then wrap it in double quotes.
+                    escaped = _escape_like(tag)
+                    sql += " AND tags LIKE ? ESCAPE '\\'"
+                    params.append(f'%"{escaped}"%')
         sql += " ORDER BY confidence DESC, updated_at DESC LIMIT ?"
         params.append(limit)
 
@@ -477,6 +490,9 @@ def handle_wiki_scan(**kwargs: Any) -> dict[str, Any]:
     root = Path(kwargs.get("root", str(PROJECT_ROOT)))
     conn = _get_db()
     try:
+        total_entries = conn.execute(
+            "SELECT COUNT(*) FROM internal_wiki"
+        ).fetchone()[0]
         rows = conn.execute(
             "SELECT id, title, source_files, updated_at FROM internal_wiki "
             "WHERE source_files IS NOT NULL AND source_files != '[]'"
@@ -484,11 +500,13 @@ def handle_wiki_scan(**kwargs: Any) -> dict[str, Any]:
 
         stale: list[dict[str, Any]] = []
         fresh = 0
+        checked = 0
 
         for row in rows:
             source_files = json.loads(row["source_files"] or "[]")
             if not source_files:
                 continue
+            checked += 1
             entry_updated = row["updated_at"]
             is_stale = False
             modified_files: list[str] = []
@@ -519,7 +537,8 @@ def handle_wiki_scan(**kwargs: Any) -> dict[str, Any]:
 
         return {
             "status": "success",
-            "total_entries": len(rows),
+            "total_entries": total_entries,
+            "checked_entries": checked,
             "fresh": fresh,
             "stale": len(stale),
             "stale_entries": stale,

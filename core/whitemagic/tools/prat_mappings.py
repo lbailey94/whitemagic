@@ -108,6 +108,15 @@ TOOL_TO_GANA: dict[str, str] = {
     "list_ganas":              "gana_ghost",
     "vitality":                "gana_ghost",
     "discover":                "gana_ghost",
+    # Consciousness (Citta Architecture) — self-model & introspection
+    "consciousness.depth":          "gana_ghost",
+    "consciousness.coherence":      "gana_ghost",
+    "consciousness.awaken":         "gana_ghost",
+    "consciousness.reflect":        "gana_ghost",
+    "consciousness.token_report":   "gana_ghost",
+    "consciousness.narrative":      "gana_ghost",
+    "consciousness.unified_field":  "gana_ghost",
+    "consciousness.status":         "gana_ghost",
 
     # ═══ WILLOW — Resilience & Flexibility ═══
     "rate_limiter.stats":      "gana_willow",

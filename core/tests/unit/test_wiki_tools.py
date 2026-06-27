@@ -6,9 +6,8 @@ import tempfile
 
 import pytest
 
-# Ensure clean state root for tests
-_tmp = tempfile.mkdtemp(prefix="wm_wiki_test_")
-os.environ.setdefault("WM_STATE_ROOT", _tmp)
+# Isolate from production state root before importing WM modules
+os.environ["WM_STATE_ROOT"] = tempfile.mkdtemp(prefix="wm_wiki_test_")
 
 from whitemagic.tools.handlers.wiki import (  # noqa: E402
     _get_db,

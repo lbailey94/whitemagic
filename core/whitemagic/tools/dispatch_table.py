@@ -264,6 +264,16 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     # --- Meta-Tool (v23.3: World in a Seed) ---
     "wm": LazyHandler("meta_tool", "handle_wm"),
     "wm_help": LazyHandler("meta_tool", "handle_wm_help"),
+
+    # --- Consciousness (v23.3: Citta Architecture) ---
+    "consciousness.depth": LazyHandler("consciousness", "handle_consciousness_depth"),
+    "consciousness.coherence": LazyHandler("consciousness", "handle_consciousness_coherence"),
+    "consciousness.awaken": LazyHandler("consciousness", "handle_consciousness_awaken"),
+    "consciousness.reflect": LazyHandler("consciousness", "handle_consciousness_reflect"),
+    "consciousness.token_report": LazyHandler("consciousness", "handle_consciousness_token_report"),
+    "consciousness.narrative": LazyHandler("consciousness", "handle_consciousness_narrative"),
+    "consciousness.unified_field": LazyHandler("consciousness", "handle_consciousness_unified_field"),
+    "consciousness.status": LazyHandler("consciousness", "handle_consciousness_status"),
 }
 
 # ---------------------------------------------------------------------------
