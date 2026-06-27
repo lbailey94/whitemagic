@@ -33,21 +33,8 @@ def test_rust_bridge():
         logger.info("ℹ️ Note: This is expected if binaries are missing. Fallbacks should handle this.")
 
 def test_mojo_bridge():
-    logger.info("\n--- Testing Mojo Bridge ---")
-    try:
-        from whitemagic.core.intelligence.hologram.mojo_bridge import get_mojo_encoder
-        encoder = get_mojo_encoder()
-        logger.info("✅ MojoEncoderBridge initialized.")
-        logger.info(f"   Mojo available: {encoder.mojo_available}")
-        logger.info(f"   Mojo binary: {encoder.mojo_bin}")
-        
-        # Test encoding (will use fallback if mojo missing)
-        dummy_mem = {"id": "test", "content": "Hello World", "tags": ["test"]}
-        coords = encoder.encode(dummy_mem)
-        logger.info(f"✅ Encoding test result: {coords}")
-        
-    except Exception as e:
-        logger.error(f"❌ Mojo Bridge test failed: {e}")
+    """Mojo bridge removed in v23.2 — kept as no-op for backward compat."""
+    logger.info("\n--- Mojo Bridge: skipped (removed in v23.2) ---")
 
 async def test_parallel_executor():
     logger.info("\n--- Testing AdaptiveParallelExecutor ---")
@@ -87,7 +74,7 @@ if __name__ == "__main__":
         pass
         
     test_rust_bridge()
-    test_mojo_bridge()
+    test_mojo_bridge()  # no-op since v23.2
     
     # Add timeout to async execution
     try:
