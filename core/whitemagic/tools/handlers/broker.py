@@ -68,8 +68,16 @@ def cleanup_broker() -> None:
         if broker.redis is not None:
             try:
                 pool = broker.redis.connection_pool
-                # Disconnect all connections synchronously
-                pool.disconnect()
+                # Disconnect all connections — redis.asyncio pool.disconnect() is a coroutine
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        loop.create_task(pool.disconnect())
+                    else:
+                        loop.run_until_complete(pool.disconnect())
+                except RuntimeError:
+                    asyncio.new_event_loop().run_until_complete(pool.disconnect())
             except Exception:  # noqa: BLE001
                 pass
             broker.redis = None
@@ -79,46 +87,76 @@ import atexit
 atexit.register(cleanup_broker)
 
 
+def _resolve_redis_url() -> str | None:
+    """Resolve Redis URL from env vars (Railway compat).
+
+    Checks WHITEMAGIC_REDIS_URL, REDIS_URL, REDISCLOUD_URL in order.
+    Returns None if no URL env var is set.
+    """
+    for var in ("WHITEMAGIC_REDIS_URL", "REDIS_URL", "REDISCLOUD_URL"):
+        url = os.environ.get(var)
+        if url:
+            return url
+    return None
+
+
 class _AsyncBroker:
     """Lightweight async Redis broker used by handler functions."""
 
-    def __init__(self, host: str = "localhost", port: int = 6379, pool_size: int = 50) -> None:
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 6379,
+        pool_size: int = 50,
+        url: str | None = None,
+    ) -> None:
         self.host = host
         self.port = port
         self.pool_size = pool_size
+        self._url = url
         self.redis: Any = None
+        self._pubsub: Any = None
         self._connect_lock = asyncio.Lock()
 
     async def connect(self) -> None:
-        """
-        Perform the connect operation.
-
-        Returns:
-            None
-        """
+        """Connect to Redis via URL or host/port."""
         async with self._connect_lock:
             if self.redis is None:
                 aioredis = _require_redis()
                 connect_timeout = float(os.getenv("WHITEMAGIC_REDIS_CONNECT_TIMEOUT", "1.0"))
                 socket_timeout = float(os.getenv("WHITEMAGIC_REDIS_SOCKET_TIMEOUT", "1.0"))
-                pool = aioredis.ConnectionPool(
-                    host=self.host,
-                    port=self.port,
-                    decode_responses=True,
-                    max_connections=self.pool_size,
-                    socket_connect_timeout=connect_timeout,
-                    socket_timeout=socket_timeout,
-                    retry_on_timeout=False,
-                )
+
+                # Resolve URL: explicit param > env var > None (use host/port)
+                redis_url = self._url or _resolve_redis_url()
+                if redis_url:
+                    pool = aioredis.ConnectionPool.from_url(
+                        redis_url,
+                        decode_responses=True,
+                        max_connections=self.pool_size,
+                        socket_connect_timeout=connect_timeout,
+                        socket_timeout=socket_timeout,
+                        retry_on_timeout=False,
+                    )
+                else:
+                    pool = aioredis.ConnectionPool(
+                        host=self.host,
+                        port=self.port,
+                        decode_responses=True,
+                        max_connections=self.pool_size,
+                        socket_connect_timeout=connect_timeout,
+                        socket_timeout=socket_timeout,
+                        retry_on_timeout=False,
+                    )
                 self.redis = aioredis.Redis(connection_pool=pool)
 
     async def disconnect(self) -> None:
-        """
-        Perform the disconnect operation.
-
-        Returns:
-            None
-        """
+        """Disconnect from Redis and clean up pubsub."""
+        if self._pubsub is not None:
+            try:
+                await self._pubsub.close()
+            except Exception:
+                pass
+            self._pubsub = None
         if self.redis:
             await self.redis.close()
             self.redis = None
@@ -177,12 +215,7 @@ class _AsyncBroker:
 
 
     async def status(self) -> dict[str, Any]:
-        """
-        Perform the status operation.
-
-        Returns:
-            dict[str, Any]
-        """
+        """Return Redis server status."""
         if not self.redis:
             await self.connect()
         redis = self.redis
@@ -199,11 +232,29 @@ class _AsyncBroker:
             "uptime_seconds": info.get("uptime_in_seconds", 0),
         }
 
+    async def subscribe(self, channel: str) -> Any:
+        """Subscribe to a Redis channel and return the pubsub object."""
+        if not self.redis:
+            await self.connect()
+        redis = self.redis
+        if redis is None:
+            raise RuntimeError("Redis client unavailable after connect")
+        if self._pubsub is None:
+            self._pubsub = redis.pubsub()
+        await self._pubsub.subscribe(channel)
+        return self._pubsub
+
+    async def unsubscribe(self, channel: str) -> None:
+        """Unsubscribe from a Redis channel."""
+        if self._pubsub is not None:
+            await self._pubsub.unsubscribe(channel)
+
 
 async def _get_broker(host: str = "localhost", port: int = 6379) -> _AsyncBroker:
     global _BROKER_INSTANCE
     if _BROKER_INSTANCE is None:
-        _BROKER_INSTANCE = _AsyncBroker(host=host, port=port)
+        redis_url = _resolve_redis_url()
+        _BROKER_INSTANCE = _AsyncBroker(host=host, port=port, url=redis_url)
         await _BROKER_INSTANCE.connect()
     return _BROKER_INSTANCE
 
@@ -262,17 +313,20 @@ def handle_broker_publish(**kwargs: Any) -> dict[str, Any]:
     port = int(kwargs.get("port", 6379))
     probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
 
-    try:
-        socket.create_connection((host, port), timeout=probe_timeout).close()
-    except OSError:
-        return {
-            "status": "error",
-            "error": f"Redis {host}:{port} is unreachable",
-            "error_code": "unreachable",
-            "connected": False,
-            "host": host,
-            "port": port,
-        }
+    # Skip socket probe when using URL-based connection (Railway / cloud)
+    redis_url = _resolve_redis_url()
+    if not redis_url:
+        try:
+            socket.create_connection((host, port), timeout=probe_timeout).close()
+        except OSError:
+            return {
+                "status": "error",
+                "error": f"Redis {host}:{port} is unreachable",
+                "error_code": "unreachable",
+                "connected": False,
+                "host": host,
+                "port": port,
+            }
 
     message: dict[str, Any] = kwargs.get("message", {})
     if isinstance(message, str):
@@ -314,18 +368,20 @@ def handle_broker_history(**kwargs: Any) -> dict[str, Any]:
     port = int(kwargs.get("port", 6379))
     probe_timeout = float(kwargs.get("probe_timeout", os.getenv("WHITEMAGIC_REDIS_PROBE_TIMEOUT", "0.5")))
 
-    try:
-        socket.create_connection((host, port), timeout=probe_timeout).close()
-    except OSError:
-        return {
-            "status": "error",
-            "error": f"Redis {host}:{port} is unreachable",
-            "error_code": "unreachable",
-            "connected": False,
-            "host": host,
-            "port": port,
-            "channel": channel,
-        }
+    redis_url = _resolve_redis_url()
+    if not redis_url:
+        try:
+            socket.create_connection((host, port), timeout=probe_timeout).close()
+        except OSError:
+            return {
+                "status": "error",
+                "error": f"Redis {host}:{port} is unreachable",
+                "error_code": "unreachable",
+                "connected": False,
+                "host": host,
+                "port": port,
+                "channel": channel,
+            }
 
     async def _do() -> list[dict[str, Any]]:
         broker = await _get_broker(host=host, port=port)
@@ -356,17 +412,19 @@ def handle_broker_status(**kwargs: Any) -> dict[str, Any]:
         broker = await asyncio.wait_for(_get_broker(host=host, port=port), timeout=timeout)
         return await asyncio.wait_for(broker.status(), timeout=timeout)
 
-    try:
-        socket.create_connection((host, port), timeout=probe_timeout).close()
-    except OSError:
-        return {
-            "status": "error",
-            "error": f"Redis {host}:{port} is unreachable",
-            "error_code": "unreachable",
-            "connected": False,
-            "host": host,
-            "port": port,
-        }
+    redis_url = _resolve_redis_url()
+    if not redis_url:
+        try:
+            socket.create_connection((host, port), timeout=probe_timeout).close()
+        except OSError:
+            return {
+                "status": "error",
+                "error": f"Redis {host}:{port} is unreachable",
+                "error_code": "unreachable",
+                "connected": False,
+                "host": host,
+                "port": port,
+            }
 
     try:
         info = _run(_do())

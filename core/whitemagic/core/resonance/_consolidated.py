@@ -416,6 +416,7 @@ class GanYingBus:
     # Class-level availability caches — avoid re-discovering unavailable backends
     _haskell_available: bool | None = None
     _koka_available: bool | None = None
+    _rust_cascade_available: bool | None = None
 
     def __init__(self):
         self._listeners: dict[EventType, list[Callable]] = {}
@@ -434,6 +435,7 @@ class GanYingBus:
         self._pyo3_triggers_cache: list | None = None  # Cached PyO3 trigger objects
         self._haskell_backend = None  # Lazy-loaded Haskell cascade verifier
         self._koka_backend = None  # Lazy-loaded Koka garden resonance backend
+        self._rust_cascade_backend = None  # Lazy-loaded Rust cascade backend (JSON stdio)
         _ensure_global_worker()
 
     @property
@@ -499,11 +501,15 @@ class GanYingBus:
         except Exception:
             pass
 
-        # Tier 2: Haskell cascade bridge (secondary verification)
+        # Tier 2: Rust cascade bridge (JSON stdio, faster than Haskell)
+        if self._try_rust_cascade_cycle_check():
+            return self._cycle_check_cache
+
+        # Tier 3: Haskell cascade bridge (secondary verification)
         if self._try_haskell_cycle_check():
             return self._cycle_check_cache
 
-        # Tier 3: Python DFS fallback
+        # Tier 4: Python DFS fallback
         graph: dict[str, list[str]] = {}
         for t in self._cascade_triggers:
             if t.condition is not None:
@@ -531,6 +537,54 @@ class GanYingBus:
         safe = all(_dfs(n) for n in list(graph.keys()))
         self._cycle_check_cache = safe
         return safe
+
+    def _try_rust_cascade_cycle_check(self) -> bool:
+        """Try Rust cascade bridge for cycle detection.
+
+        Returns True if the check was performed (cache updated), False if
+        the Rust cascade backend is unavailable.
+        """
+        if GanYingBus._rust_cascade_available is False:
+            return False
+
+        if self._rust_cascade_backend is False:
+            return False
+
+        if self._rust_cascade_backend is None:
+            try:
+                import sys
+                from pathlib import Path
+                _bridge_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "bridges" / "python"
+                if str(_bridge_path) not in sys.path:
+                    sys.path.insert(0, str(_bridge_path))
+                from whitemagic_polyglot import RustCascadeBackend
+                backend = RustCascadeBackend()
+                backend.call("ping", timeout=0.5)
+                self._rust_cascade_backend = backend
+                GanYingBus._rust_cascade_available = True
+            except Exception:
+                self._rust_cascade_backend = False
+                GanYingBus._rust_cascade_available = False
+                return False
+
+        try:
+            triggers_json = [
+                {
+                    "trigger_event": t.trigger_event.value,
+                    "target_events": [e.value for e in t.target_events],
+                    "amplification": t.amplification,
+                    "max_cascade_depth": t.max_cascade_depth,
+                }
+                for t in self._cascade_triggers
+                if t.condition is None
+            ]
+            result = self._rust_cascade_backend.call("is_safe", timeout=5.0, triggers=triggers_json)
+            safe = result.get("result", {}).get("safe", True)
+            self._cycle_check_cache = safe
+            return True
+        except Exception:
+            self._rust_cascade_backend = False
+            return False
 
     def _try_haskell_cycle_check(self) -> bool:
         """Try Haskell cascade bridge for cycle detection.
@@ -1009,15 +1063,21 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
             # Cache Redis availability — check at most once per 30s
             now = _time.monotonic()
             if _redis_available is None or (now - _redis_check_time) > 30.0:
-                import socket
-                host = "localhost"
-                port = 6379
-                probe_timeout = 0.5
-                try:
-                    socket.create_connection((host, port), timeout=probe_timeout).close()
+                from whitemagic.tools.handlers.broker import _resolve_redis_url
+                redis_url = _resolve_redis_url()
+                if redis_url:
+                    # URL-based (Railway / cloud) — skip socket probe, just try connecting
                     _redis_available = True
-                except OSError:
-                    _redis_available = False
+                else:
+                    import socket
+                    host = "localhost"
+                    port = 6379
+                    probe_timeout = 0.5
+                    try:
+                        socket.create_connection((host, port), timeout=probe_timeout).close()
+                        _redis_available = True
+                    except OSError:
+                        _redis_available = False
                 _redis_check_time = now
 
             if not _redis_available:
@@ -1026,7 +1086,7 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
             from whitemagic.tools.handlers.broker import _get_broker, _run
 
             async def _publish() -> None:
-                broker = await _get_broker(host=host, port=port)
+                broker = await _get_broker()
                 await broker.publish("ganying", {
                     "event_type": event.event_type.value,
                     "source": event.source,
