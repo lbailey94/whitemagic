@@ -100,6 +100,8 @@ class HomeostaticConfig:
     battery_low_correct: float = 15.0  # % — correct
     memory_high_advise: float = 75.0   # % — advise
     memory_high_correct: float = 90.0  # % — correct
+    workspace_index_advise: float = 0.9
+    workspace_index_correct: float = 0.75
 
 
 class HomeostaticLoop:
@@ -233,6 +235,9 @@ class HomeostaticLoop:
         # --- Physical metrics (laptop-optimizer integration) ---
         physical_actions = self._check_physical()
         actions.extend(physical_actions)
+
+        workspace_index_actions = self._check_workspace_indexes()
+        actions.extend(workspace_index_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -534,6 +539,35 @@ class HomeostaticLoop:
         except Exception as e:
             logger.debug("Physical metrics check skipped: %s", e)
             return []
+
+    def _check_workspace_indexes(self) -> list[HomeostaticAction]:
+        try:
+            from whitemagic.harmony.workspace_index_health import (
+                evaluate_workspace_index_health,
+            )
+            report = evaluate_workspace_index_health()
+            if report.health_score < self._config.workspace_index_correct:
+                return [HomeostaticAction(
+                    dimension="workspace_indexes",
+                    level=ActionLevel.CORRECT,
+                    value=report.health_score,
+                    threshold=self._config.workspace_index_correct,
+                    action_taken=(
+                        f"Workspace index health degraded: {report.status} "
+                        f"({report.indexes_present}/{report.total_workspaces} indexes present, "
+                        f"{report.total_errors} errors). Run core/scripts/workspace_index_health.py."
+                    ),
+                )]
+            if report.health_score < self._config.workspace_index_advise:
+                return [self._advise(
+                    "workspace_indexes",
+                    report.health_score,
+                    self._config.workspace_index_advise,
+                    f"Workspace index health advisory: {report.status}.",
+                )]
+        except Exception as e:
+            logger.debug("Workspace index health check skipped: %s", e)
+        return []
 
     # ------------------------------------------------------------------
     # Introspection

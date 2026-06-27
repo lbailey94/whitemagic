@@ -15,11 +15,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import shutil
 import sys
-import tempfile
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
 
@@ -109,6 +107,9 @@ async def mcp_session(
     *, init: bool = True,
 ) -> AsyncGenerator[_ExternalAgentClient, None]:
     """Start an in-process MCP server session."""
+    old_prat = os.environ.get("WM_MCP_PRAT")
+    os.environ["WM_MCP_PRAT"] = "1"
+
     from whitemagic.run_mcp_lean import server
 
     to_server_tx, to_server_rx = anyio.create_memory_object_stream(16)
@@ -129,10 +130,12 @@ async def mcp_session(
     finally:
         await to_server_tx.aclose()
         server_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await server_task
-        except (asyncio.CancelledError, Exception):
-            pass
+        if old_prat is None:
+            os.environ.pop("WM_MCP_PRAT", None)
+        else:
+            os.environ["WM_MCP_PRAT"] = old_prat
 
 
 # ── Test Suites ─────────────────────────────────────────────────────────

@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
+import os
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import pytest
 
@@ -108,6 +110,9 @@ async def mcp_session(
     task, optionally performs the initialize handshake, then yields a
     client for sending further requests.
     """
+    old_prat = os.environ.get("WM_MCP_PRAT")
+    os.environ["WM_MCP_PRAT"] = "1"
+
     from whitemagic.run_mcp_lean import server
 
     to_server_tx, to_server_rx = anyio.create_memory_object_stream(16)
@@ -128,10 +133,12 @@ async def mcp_session(
     finally:
         await to_server_tx.aclose()
         server_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await server_task
-        except (asyncio.CancelledError, Exception):
-            pass
+        if old_prat is None:
+            os.environ.pop("WM_MCP_PRAT", None)
+        else:
+            os.environ["WM_MCP_PRAT"] = old_prat
 
 
 # ── Tests ────────────────────────────────────────────────────────────────
