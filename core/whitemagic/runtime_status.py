@@ -23,14 +23,24 @@ def get_runtime_status() -> dict[str, Any]:
         dict[str, Any]
     """
     version = _VERSION_FILE.read_text().strip() if _VERSION_FILE.exists() else 'unknown'
-    prat_mode = _env_flag('WM_MCP_PRAT')
+    prat_val = os.getenv('WM_MCP_PRAT', '2').strip()
+    prat_mode = prat_val in ('1', 'true', 'yes', 'on')
+    prat2_mode = prat_val in ('2', '2.0', '')
     lite_mode = _env_flag('WM_MCP_LITE')
     debug_enabled = _env_flag('WM_DEBUG')
     silent_init = _env_flag('WM_SILENT_INIT')
 
-    mode = 'classic'
-    if prat_mode:
+    # Seed mode is the default (WM_MCP_PRAT unset or =2)
+    mode = 'seed'
+    if prat_val in ('0', 'false', 'no', 'off'):
+        if lite_mode:
+            mode = 'lite'
+        else:
+            mode = 'classic'
+    elif prat_mode:
         mode = 'prat'
+    elif prat2_mode:
+        mode = 'seed'
     elif lite_mode:
         mode = 'lite'
 

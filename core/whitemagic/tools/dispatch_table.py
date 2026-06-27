@@ -248,6 +248,10 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "prat_list_morphologies": LazyHandler("adaptive", "prat_list_morphologies"),
     "prat_invoke": LazyHandler("adaptive", "prat_invoke"),
     "prat_status": LazyHandler("adaptive", "prat_status"),
+
+    # --- Meta-Tool (v23.3: World in a Seed) ---
+    "wm": LazyHandler("meta_tool", "handle_wm"),
+    "wm_help": LazyHandler("meta_tool", "handle_wm_help"),
 }
 
 # ---------------------------------------------------------------------------

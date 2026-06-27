@@ -118,6 +118,9 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
     from whitemagic.cli.commands.scratchpad_commands import scratchpad
     main_group.add_command(scratchpad)
 
+    from whitemagic.cli.commands.wm_commands import wm_command
+    main_group.add_command(wm_command)
+
     from whitemagic.cli.commands.session_matrix_commands import (
         register_session_matrix_commands,
     )
