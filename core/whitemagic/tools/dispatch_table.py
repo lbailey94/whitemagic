@@ -120,6 +120,18 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "archaeology_process_wisdom": LazyHandler("archaeology", "handle_archaeology_process_wisdom"),
     "archaeology_daily_digest": LazyHandler("archaeology", "handle_archaeology_daily_digest"),
 
+    # --- Internal Wiki (self-knowledge substrate) ---
+    "wiki.generate": LazyHandler("wiki", "handle_wiki_generate"),
+    "wiki.query": LazyHandler("wiki", "handle_wiki_query"),
+    "wiki.update": LazyHandler("wiki", "handle_wiki_update"),
+    "wiki.scan": LazyHandler("wiki", "handle_wiki_scan"),
+    "wiki.stats": LazyHandler("wiki", "handle_wiki_stats"),
+
+    # --- External Repository Tools ---
+    "external.wiki_query": LazyHandler("external_repo", "handle_external_wiki_query"),
+    "external.repo_scan": LazyHandler("external_repo", "handle_external_repo_scan"),
+    "external.repo_compare": LazyHandler("external_repo", "handle_external_repo_compare"),
+
     # --- STRATA (codebase static analysis + archaeology) ---
     "strata.analyze": LazyHandler("strata", "handle_strata_analyze"),
     "strata.survey": LazyHandler("strata", "handle_strata_survey"),

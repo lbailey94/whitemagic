@@ -647,6 +647,16 @@ TOOL_TO_GANA: dict[str, str] = {
     "strata.archaeology":          "gana_chariot",
     "strata.list_checks":          "gana_chariot",
 
+    # ── v23.4: Internal Wiki + External Repo (Chariot — self-knowledge + external scan) ──
+    "wiki.generate":               "gana_chariot",
+    "wiki.query":                  "gana_chariot",
+    "wiki.update":                 "gana_chariot",
+    "wiki.scan":                   "gana_chariot",
+    "wiki.stats":                  "gana_chariot",
+    "external.wiki_query":         "gana_chariot",
+    "external.repo_scan":          "gana_chariot",
+    "external.repo_compare":       "gana_chariot",
+
     # ── v23.1: Unified Read API — Winnowing Basket (unified search/recall) ──
     "wm_read":                     "gana_winnowing_basket",
     "wm_read.status":              "gana_winnowing_basket",
