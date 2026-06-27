@@ -102,6 +102,8 @@ class HomeostaticConfig:
     memory_high_correct: float = 90.0  # % — correct
     workspace_index_advise: float = 0.9
     workspace_index_correct: float = 0.75
+    git_hygiene_advise: float = 0.9
+    git_hygiene_correct: float = 0.75
 
 
 class HomeostaticLoop:
@@ -238,6 +240,9 @@ class HomeostaticLoop:
 
         workspace_index_actions = self._check_workspace_indexes()
         actions.extend(workspace_index_actions)
+
+        git_hygiene_actions = self._check_git_hygiene()
+        actions.extend(git_hygiene_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -567,6 +572,29 @@ class HomeostaticLoop:
                 )]
         except Exception as e:
             logger.debug("Workspace index health check skipped: %s", e)
+        return []
+
+    def _check_git_hygiene(self) -> list[HomeostaticAction]:
+        try:
+            from whitemagic.harmony.git_hygiene import evaluate_git_hygiene
+            report = evaluate_git_hygiene()
+            if report.health_score < self._config.git_hygiene_correct:
+                return [HomeostaticAction(
+                    dimension="git_hygiene",
+                    level=ActionLevel.CORRECT,
+                    value=report.health_score,
+                    threshold=self._config.git_hygiene_correct,
+                    action_taken=report.action_summary(),
+                )]
+            if report.health_score < self._config.git_hygiene_advise:
+                return [self._advise(
+                    "git_hygiene",
+                    report.health_score,
+                    self._config.git_hygiene_advise,
+                    report.action_summary(),
+                )]
+        except Exception as e:
+            logger.debug("Git hygiene check skipped: %s", e)
         return []
 
     # ------------------------------------------------------------------
