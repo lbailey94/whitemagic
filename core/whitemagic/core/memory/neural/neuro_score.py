@@ -35,7 +35,7 @@ class ScoreBreakdown:
     connection_component: float
     final_score: float
     is_protected: bool
-    is_mojo_optimized: bool
+    is_accelerated: bool
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -154,45 +154,9 @@ def calculate_neuro_score(memory: NeuralMemory, detailed: bool = False) -> float
                 connection_component=1.0,
                 final_score=1.0,
                 is_protected=True,
-                is_mojo_optimized=False,
+                is_accelerated=False,
             )
         return 1.0
-
-    # Try polyglot routing (Mojo optimized)
-    try:
-        from whitemagic.optimization.polyglot_router import get_router
-        router = get_router()
-
-        # We need total_memories for novelty - assuming 1000 as normalization baseline if unknown
-        # In a real system, this would be passed from the engine context
-        total_mems = 1000
-
-        mojo_result = router.calculate_neuro_score(
-            current_score=memory.neuro_score,
-            access_count=memory.recall_count,
-            total_memories=total_mems,
-            days_since_access=memory.days_since_recall,
-            importance=memory.importance,
-        )
-
-        if mojo_result and "score" in mojo_result:
-            final_score = max(memory.min_score, min(1.0, mojo_result["score"]))
-            if detailed:
-                # Mock breakdown for Mojo result since it returns aggregate
-                return ScoreBreakdown(
-                    recency_component=0.0, # Aggregate in Mojo
-                    frequency_component=0.0,
-                    novelty_component=0.0,
-                    emotional_component=0.0,
-                    connection_component=0.0,
-                    final_score=final_score,
-                    is_protected=False,
-                    is_mojo_optimized=True,
-                )
-            return final_score
-    except Exception as e:
-        logger.debug("Operation failed: %s", e)
-        pass
 
     # Legacy Python Fallback
     # Calculate each component
@@ -223,7 +187,7 @@ def calculate_neuro_score(memory: NeuralMemory, detailed: bool = False) -> float
             connection_component=connections,
             final_score=final_score,
             is_protected=False,
-            is_mojo_optimized=False,
+            is_accelerated=False,
         )
 
     return final_score
