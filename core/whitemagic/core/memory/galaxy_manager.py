@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.config.paths import MEMORY_DIR, WM_ROOT
+from whitemagic.core.user_profile import get_user_dir, resolve_user_id
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
@@ -59,6 +60,7 @@ class GalaxyInfo:
     last_accessed: float = field(default_factory=time.time)
     tags: list[str] = field(default_factory=list)
     is_core: bool = False
+    user_id: str = "local"
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -96,7 +98,7 @@ class GalaxyManager:
 
     def __init__(self) -> None:
         self._galaxies: dict[str, GalaxyInfo] = {}
-        self._active_galaxy: str = "default"
+        self._active_galaxy: str = "local/default"
         self._memory_instances: dict[str, Any] = {}  # Lazy UnifiedMemory per galaxy
         self._load_registry()
 
@@ -125,19 +127,34 @@ class GalaxyManager:
             try:
                 data = _json_loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
                 for name, info_dict in data.get("galaxies", {}).items():
-                    self._galaxies[name] = GalaxyInfo.from_dict(info_dict)
-                self._active_galaxy = data.get("active", "default")
+                    info = GalaxyInfo.from_dict(info_dict)
+                    # Migrate old entries: if key has no "/", prefix with "local/"
+                    if "/" not in name:
+                        registry_key = f"local/{name}"
+                    else:
+                        registry_key = name
+                    # Ensure user_id is set (backward compat with old registries)
+                    if not info.user_id:
+                        info.user_id = "local"
+                    self._galaxies[registry_key] = info
+                # Migrate active_galaxy key
+                active = data.get("active", "default")
+                if "/" not in active:
+                    self._active_galaxy = f"local/{active}"
+                else:
+                    self._active_galaxy = active
             except Exception as e:
                 logger.warning("Failed to load galaxy registry: %s", e, exc_info=True)
 
-        # Ensure "default" galaxy always exists
-        if "default" not in self._galaxies:
+        # Ensure "local/default" galaxy always exists
+        if "local/default" not in self._galaxies:
             default_db = str(MEMORY_DIR / "whitemagic.db")
-            self._galaxies["default"] = GalaxyInfo(
+            self._galaxies["local/default"] = GalaxyInfo(
                 name="default",
                 db_path=default_db,
                 description="Primary WhiteMagic galaxy — system knowledge and personal memories",
                 is_core=False,
+                user_id="local",
             )
             self._save_registry()
 
@@ -161,18 +178,29 @@ class GalaxyManager:
         project_path: str | None = None,
         description: str = "",
         tags: list[str] | None = None,
+        user_id: str | None = None,
     ) -> GalaxyInfo:
-        """Create a new galaxy with its own database."""
-        if name in self._galaxies:
-            raise ValueError(f"Galaxy '{name}' already exists")
+        """Create a new galaxy with its own database.
+
+        Args:
+            name: Galaxy name (unique within the user's namespace).
+            project_path: Optional project path this galaxy is associated with.
+            description: Human-readable description.
+            tags: Optional tags for the galaxy.
+            user_id: Owner user ID. Defaults to ``"local"``.
+        """
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{name}"
+        if registry_key in self._galaxies:
+            raise ValueError(f"Galaxy '{name}' already exists for user '{uid}'")
 
         # Sanitize name for filesystem
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
 
-        # Galaxy DB lives in its own subdirectory
-        galaxy_dir = MEMORY_DIR / "galaxies" / safe_name
-        galaxy_dir.mkdir(parents=True, exist_ok=True)
-        db_path = str(galaxy_dir / "whitemagic.db")
+        # Galaxy DB lives in user's namespace directory
+        user_galaxies_dir = get_user_dir(uid) / "galaxies" / safe_name
+        user_galaxies_dir.mkdir(parents=True, exist_ok=True)
+        db_path = str(user_galaxies_dir / "whitemagic.db")
 
         info = GalaxyInfo(
             name=name,
@@ -180,72 +208,120 @@ class GalaxyManager:
             description=description or f"Galaxy for {project_path or name}",
             project_path=project_path,
             tags=tags or [],
+            user_id=uid,
         )
 
-        self._galaxies[name] = info
+        self._galaxies[registry_key] = info
         self._save_registry()
 
         # Pre-initialize the database
-        self._get_memory(name)
+        self._get_memory(registry_key)
         info.memory_count = 0
 
-        logger.info("Created galaxy '%s' at %s", name, db_path, exc_info=True)
+        logger.info("Created galaxy '%s' for user '%s' at %s", name, uid, db_path)
+
+        # Publish sync event (best-effort, non-blocking)
+        try:
+            from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
+            publish_galaxy_event("galaxy.created", uid, name, {"db_path": db_path})
+        except Exception:
+            pass
+
         return info
 
-    def delete_galaxy(self, name: str) -> bool:
+    def delete_galaxy(self, name: str, user_id: str | None = None) -> bool:
         """Remove a galaxy from the registry (does NOT delete the database file)."""
-        if name == "default":
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{name}"
+        if name == "default" and uid == "local":
             raise ValueError("Cannot delete the default galaxy")
-        if name not in self._galaxies:
-            raise ValueError(f"Galaxy '{name}' not found")
-        if self._active_galaxy == name:
-            self._active_galaxy = "default"
+        if registry_key not in self._galaxies:
+            raise ValueError(f"Galaxy '{name}' not found for user '{uid}'")
+        if self._active_galaxy == registry_key:
+            self._active_galaxy = "local/default"
 
         # Remove from memory cache
-        self._memory_instances.pop(name, None)
-        del self._galaxies[name]
+        self._memory_instances.pop(registry_key, None)
+        del self._galaxies[registry_key]
         self._save_registry()
+
+        # Publish sync event (best-effort, non-blocking)
+        try:
+            from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
+            publish_galaxy_event("galaxy.deleted", uid, name)
+        except Exception:
+            pass
+
         return True
 
-    def list_galaxies(self) -> list[dict[str, Any]]:
-        """List all known galaxies with their metadata."""
+    def list_galaxies(self, user_id: str | None = None) -> list[dict[str, Any]]:
+        """List all known galaxies with their metadata.
+
+        Args:
+            user_id: If provided, only list galaxies for this user.
+        """
+        uid = resolve_user_id(user_id) if user_id else None
         result = []
-        for name, info in sorted(self._galaxies.items()):
+        for registry_key, info in sorted(self._galaxies.items()):
+            if uid is not None and info.user_id != uid:
+                continue
             d = info.to_dict()
-            d["is_active"] = name == self._active_galaxy
+            d["is_active"] = registry_key == self._active_galaxy
             # Try to get live memory count
             try:
-                um = self._get_memory(name)
+                um = self._get_memory(registry_key)
                 stats = um.backend.get_stats()
                 d["memory_count"] = stats.get("total_memories", 0)
                 info.memory_count = d["memory_count"]
             except Exception as e:
-                logger.debug("Galaxy stats lookup failed for %s: %s", name, e, exc_info=True)
+                logger.debug("Galaxy stats lookup failed for %s: %s", registry_key, e, exc_info=True)
             result.append(d)
         return result
 
-    def switch_galaxy(self, name: str) -> GalaxyInfo:
-        """Switch the active galaxy."""
-        if name not in self._galaxies:
-            raise ValueError(f"Galaxy '{name}' not found. Available: {list(self._galaxies.keys())}")
+    def switch_galaxy(self, name: str, user_id: str | None = None) -> GalaxyInfo:
+        """Switch the active galaxy.
 
-        self._active_galaxy = name
-        self._galaxies[name].last_accessed = time.time()
+        Args:
+            name: Galaxy name to switch to.
+            user_id: Owner user ID. Defaults to ``"local"``.
+        """
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{name}"
+        if registry_key not in self._galaxies:
+            available = [k for k in self._galaxies if k.startswith(f"{uid}/")]
+            raise ValueError(f"Galaxy '{name}' not found for user '{uid}'. Available: {available}")
+
+        self._active_galaxy = registry_key
+        self._galaxies[registry_key].last_accessed = time.time()
         self._save_registry()
 
         # Reset the global singleton so next get_unified_memory() uses the new galaxy
-        self._reset_global_memory(name)
+        self._reset_global_memory(registry_key)
 
-        logger.info("Switched to galaxy '%s'", name, exc_info=True)
-        return self._galaxies[name]
+        logger.info("Switched to galaxy '%s' for user '%s'", name, uid)
+
+        # Publish sync event (best-effort, non-blocking)
+        try:
+            from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
+            publish_galaxy_event("galaxy.switched", uid, name)
+        except Exception:
+            pass
+
+        return self._galaxies[registry_key]
 
     def get_active(self) -> GalaxyInfo:
         """Get the currently active galaxy."""
-        return self._galaxies.get(self._active_galaxy, self._galaxies["default"])
+        return self._galaxies.get(self._active_galaxy, self._galaxies["local/default"])
 
-    def get_galaxy(self, name: str) -> GalaxyInfo | None:
-        """Get galaxy info by name."""
-        return self._galaxies.get(name)
+    def get_galaxy(self, name: str, user_id: str | None = None) -> GalaxyInfo | None:
+        """Get galaxy info by name.
+
+        Args:
+            name: Galaxy name.
+            user_id: Owner user ID. Defaults to ``"local"``.
+        """
+        uid = resolve_user_id(user_id)
+        return self._galaxies.get(f"{uid}/{name}")
 
     # ── Galactic Telepathy (v15.3) ─────────────────────────────────
 
@@ -422,7 +498,7 @@ class GalaxyManager:
     def merge_galaxy(
         self,
         source_galaxy: str,
-        target_galaxy: str = "default",
+        target_galaxy: str = "local/default",
         delete_after: bool = False,
     ) -> dict[str, Any]:
         """Merge all memories from source galaxy into target galaxy.
@@ -432,19 +508,21 @@ class GalaxyManager:
         """
         if source_galaxy not in self._galaxies:
             raise ValueError(f"Source galaxy '{source_galaxy}' not found")
-        if source_galaxy == "default":
+        if source_galaxy == "local/default":
             raise ValueError("Cannot merge the default galaxy into another")
 
         result = self.transfer_memories(
             source_galaxy=source_galaxy,
-            target_galaxy=target_galaxy,
+            target_galaxy=target_galaxy or "local/default",
             limit=10000,
             copy=True,
         )
 
         if delete_after:
             try:
-                self.delete_galaxy(source_galaxy)
+                # source_galaxy is a registry key (user_id/name)
+                parts = source_galaxy.split("/", 1)
+                self.delete_galaxy(parts[1] if len(parts) > 1 else source_galaxy, parts[0] if len(parts) > 1 else None)
                 result["source_deleted"] = True
             except Exception as e:
                 result["source_deleted"] = False
@@ -537,9 +615,13 @@ class GalaxyManager:
 
     # ── Galaxy status ───────────────────────────────────────────────
 
-    def status(self) -> dict[str, Any]:
-        """Get overall galaxy manager status."""
-        galaxies = self.list_galaxies()
+    def status(self, user_id: str | None = None) -> dict[str, Any]:
+        """Get overall galaxy manager status.
+
+        Args:
+            user_id: If provided, filter galaxies to this user.
+        """
+        galaxies = self.list_galaxies(user_id)
         return {
             "active_galaxy": self._active_galaxy,
             "total_galaxies": len(self._galaxies),
@@ -556,15 +638,18 @@ class GalaxyManager:
         pattern: str = "**/*.md",
         max_files: int = 500,
         tags: list[str] | None = None,
+        user_id: str | None = None,
     ) -> dict[str, Any]:
         """Ingest files from a directory into a galaxy's memory store.
 
         Reads text files matching the glob pattern and stores each as a memory.
         """
-        if galaxy_name not in self._galaxies:
-            raise ValueError(f"Galaxy '{galaxy_name}' not found")
+        uid = resolve_user_id(user_id)
+        registry_key = f"{uid}/{galaxy_name}"
+        if registry_key not in self._galaxies:
+            raise ValueError(f"Galaxy '{galaxy_name}' not found for user '{uid}'")
 
-        um = self._get_memory(galaxy_name)
+        um = self._get_memory(registry_key)
         # Path hygiene: Use WM_ROOT for relative paths, validate absolute paths
         source = Path(source_path)
         if not source.is_absolute():
@@ -640,13 +725,14 @@ class GalaxyManager:
         # Update memory count
         try:
             stats = um.backend.get_stats()
-            self._galaxies[galaxy_name].memory_count = stats.get("total_memories", 0)
+            self._galaxies[registry_key].memory_count = stats.get("total_memories", 0)
             self._save_registry()
         except Exception as e:
             logger.debug("Ingest stats update failed: %s", e)
 
-        return {
+        result = {
             "galaxy": galaxy_name,
+            "user_id": uid,
             "source_path": str(source),
             "pattern": pattern,
             "files_found": len(files),
@@ -654,6 +740,19 @@ class GalaxyManager:
             "skipped": skipped,
             "errors": errors,
         }
+
+        # Publish sync event (best-effort, non-blocking)
+        try:
+            from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
+            publish_galaxy_event("galaxy.ingested", uid, galaxy_name, {
+                "ingested": ingested,
+                "errors": errors,
+                "files_found": len(files),
+            })
+        except Exception:
+            pass
+
+        return result
 
 
 def get_galaxy_manager() -> GalaxyManager:

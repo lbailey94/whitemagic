@@ -1,31 +1,29 @@
-"""Tests for galaxy_api route."""
+"""Tests for galaxy_api route — multi-user isolation (v23.2)."""
 
-import pytest
-
-from whitemagic.interfaces.api.routes.galaxy_api import _require_api_key
+from whitemagic.interfaces.api.routes.galaxy_api import _resolve_user_id
 
 
-def test_require_api_key_open_when_not_required(monkeypatch):
-    monkeypatch.setenv("WM_GALAXY_REQUIRE_KEY", "false")
-    assert _require_api_key(None) is None
-    assert _require_api_key("any") is None
+def test_resolve_user_id_defaults_to_local():
+    """When no header is provided, user ID defaults to 'local'."""
+    assert _resolve_user_id(None) == "local"
+    assert _resolve_user_id("") == "local"
 
 
-def test_require_api_key_blocks_missing(monkeypatch):
-    monkeypatch.setenv("WM_GALAXY_REQUIRE_KEY", "true")
-    with pytest.raises(Exception) as exc:
-        _require_api_key(None)
-    assert "401" in str(exc.value) or "required" in str(exc.value)
+def test_resolve_user_id_uses_provided_id():
+    """When a valid user ID is provided, it is used (sanitized)."""
+    assert _resolve_user_id("alice") == "alice"
+    assert _resolve_user_id("bob-123") == "bob-123"
+    assert _resolve_user_id("user_test") == "user_test"
 
 
-def test_require_api_key_accepts_valid_format(monkeypatch):
-    monkeypatch.setenv("WM_GALAXY_REQUIRE_KEY", "true")
-    key = "wm_test_key_1234567890abcdef"
-    assert _require_api_key(key) == key
+def test_resolve_user_id_sanitizes_unsafe_chars():
+    """Unsafe characters in user IDs are replaced with underscores."""
+    assert _resolve_user_id("alice/../../../etc") == "alice__________etc"
+    assert _resolve_user_id("user@domain") == "user_domain"
 
 
-def test_require_api_key_rejects_invalid(monkeypatch):
-    monkeypatch.setenv("WM_GALAXY_REQUIRE_KEY", "true")
-    with pytest.raises(Exception) as exc:
-        _require_api_key("bad")
-    assert "403" in str(exc.value) or "Invalid" in str(exc.value)
+def test_resolve_user_id_truncates_long_ids():
+    """User IDs longer than 64 chars are truncated."""
+    long_id = "a" * 100
+    result = _resolve_user_id(long_id)
+    assert len(result) == 64
