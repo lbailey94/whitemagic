@@ -351,3 +351,4 @@ polyglot/elixir/deps/
 
 # Rust pkg (build artifact, was tracked before gitignore)
 core/whitemagic-rust/pkg/
+.codeiumignore
