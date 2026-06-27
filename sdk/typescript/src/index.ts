@@ -19,6 +19,7 @@
  */
 
 export { WhiteMagicClient } from "./client.js";
+export { LocalTransport } from "./local_transport.js";
 export { MemoryClient } from "./memory.js";
 export { sanitizeContext } from "./sanitizer.js";
 export type {
