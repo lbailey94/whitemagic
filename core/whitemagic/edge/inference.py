@@ -295,8 +295,6 @@ class EdgeInference:
                 response="Run tests: 'python3 -m pytest tests/ -q'. 1,060+ unit tests available.", confidence=0.95),
             CompiledRule(id="build_rust", pattern="build rust|maturin",
                 response="Build Rust: 'cd whitemagic-rs && maturin develop --release'", confidence=0.95),
-            CompiledRule(id="mojo_status", pattern="mojo status|mojo ready",
-                response="Mojo 0.26: All 16 source files build clean. Advisory layer alongside Rust. 9-language polyglot system.", confidence=0.9),
 
             # === 4.2 Programming Rules ===
             CompiledRule(id="python_venv", pattern="venv|virtual env|activate",

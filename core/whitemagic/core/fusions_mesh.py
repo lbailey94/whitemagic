@@ -147,7 +147,7 @@ def get_fusion_status() -> dict[str, Any]:
             "knowledge_graph": "active",
             "gana_chain_harmony": "active",
             "prat_auto_chain": "active",
-            "mojo_holographic": "active",
+            "holographic_encode": "active",
             "elixir_event": "active",
             "mesh_memory_sync": "active",
         },

@@ -715,19 +715,14 @@ def prat_auto_chain_detect(
 
 
 # ---------------------------------------------------------------------------
-# Fusion 12: Mojo SIMD → Holographic Encoding Bridge
+# Fusion 12: Holographic Encoding Bridge (Python CoordinateEncoder)
 # ---------------------------------------------------------------------------
 
-def mojo_holographic_batch_encode(
+def holographic_batch_encode(
     memories: list,
 ) -> dict[str, Any]:
-    """Attempt to batch-encode memories into 5D holographic coordinates
-    using the Mojo SIMD coordinate encoder.  Falls back to the Python
-    ``CoordinateEncoder`` if Mojo is unavailable.
-
-    The Mojo encoder (``whitemagic-mojo/src/coordinate_encoder.mojo``)
-    uses SIMD vectorization for parallel encoding of the 5 coordinate
-    dimensions across batches.
+    """Batch-encode memories into 5D holographic coordinates using the
+    Python ``CoordinateEncoder``.
 
     Args:
         memories: List of memory dicts with content/tags/importance fields.
@@ -739,62 +734,26 @@ def mojo_holographic_batch_encode(
     coordinates: list[list[float]] = []
     backend = "python"
 
-    # Try Mojo subprocess bridge
     try:
-        import shutil
-
-        mojo_bin = shutil.which("mojo")
-        if mojo_bin is None:
-            # Check common local paths
-            import os
-            for candidate in [
-                # Tool discovery: Mojo compiler path (legitimate expanduser)
-                os.path.expanduser("~/.modular/bin/mojo"),
-                os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../.venv/bin/mojo"),
-            ]:
-                if os.path.isfile(candidate):
-                    mojo_bin = candidate
-                    break
-
-        if mojo_bin and len(memories) >= 10:
-            # Mojo batch encoding is worthwhile for ≥10 memories
-            # Prepare lightweight input (content hashes + importance)
-            batch_input = []
-            for m in memories:
-                batch_input.append({
-                    "content_hash": hash(m.get("content", "")) % (2**32),
-                    "importance": m.get("importance", 0.5),
-                    "tags": m.get("tags", [])[:5],
-                    "memory_type": m.get("memory_type", "short_term"),
-                })
-            backend = "mojo"
-            logger.info("Mojo holographic batch encode: %d memories", len(memories))
+        from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
+        encoder = CoordinateEncoder()
+        for m in memories:
+            coord = encoder.encode(m)
+            coordinates.append(coord.to_vector())
+        backend = "python"
     except Exception as e:
-        logger.debug("Mojo bridge probe failed: %s", e)
-
-    # Fallback (or primary if Mojo unavailable / small batch): Python encoder
-    if backend == "python" or not coordinates:
-        try:
-            from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder
-            encoder = CoordinateEncoder()
-            for m in memories:
-                coord = encoder.encode(m)
-                coordinates.append(coord.to_vector())
-            backend = "python"
-        except Exception as e:
-            logger.debug("Python holographic encode fallback failed: %s", e)
-            # Ultra-fallback: generate default coordinates
-            for m in memories:
-                imp = m.get("importance", 0.5)
-                coordinates.append([0.0, 0.0, 0.0, imp, 0.5])
-            backend = "fallback"
+        logger.debug("Python holographic encode fallback failed: %s", e)
+        # Ultra-fallback: generate default coordinates
+        for m in memories:
+            imp = m.get("importance", 0.5)
+            coordinates.append([0.0, 0.0, 0.0, imp, 0.5])
+        backend = "fallback"
 
     return {
         "count": len(coordinates),
         "coordinates": coordinates[:100],  # Cap output size
         "backend": backend,
         "batch_size": len(memories),
-        "mojo_available": backend == "mojo",
     }
 
 

@@ -140,8 +140,6 @@ class TestPathHygiene:
             "tools/unified_api.py",
             # External app data discovery (Windsurf/Codeium)
             "archaeology/windsurf_reader.py",
-            # Labs-tier binary discovery (user-configured MOJO_BIN)
-            "core/intelligence/hologram/mojo_bridge.py",
             # Labs-tier scratchpad analysis (user-provided base_dir)
             "core/intelligence/multi_spectral_scratchpad.py",
             # Labs-tier synthesis engines (user-provided db_path)

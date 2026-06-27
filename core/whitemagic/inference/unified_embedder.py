@@ -1,12 +1,11 @@
 # ruff: noqa: BLE001
-"""Unified Polyglot Embedder - Routes to Rust ONNX or Mojo GPU
+"""Unified Polyglot Embedder - Routes to Rust ONNX or Python FastEmbed
 
 This module provides a zero-copy Arrow-based embedding pipeline that routes
 to the fastest available backend:
-1. Mojo GPU (via Iceoryx2 shared memory)
-2. Rust ONNX GPU
-3. Rust ONNX CPU
-4. Python FastEmbed (fallback)
+1. Rust ONNX GPU
+2. Rust ONNX CPU
+3. Python FastEmbed (fallback)
 
 Usage:
     embedder = UnifiedEmbedder()
@@ -45,11 +44,9 @@ class UnifiedEmbedder:
             model_path: Path to ONNX model. If None, uses default.
         """
         self.model_path = model_path or self._get_default_model_path()
-        self.mojo_available = self._check_mojo_gpu()
         self.rust_onnx_available = self._check_rust_onnx()
 
         logger.info("UnifiedEmbedder initialized")
-        logger.info("  Mojo GPU: %s", '✓' if self.mojo_available else '✗')
         logger.info("  Rust ONNX: %s", '✓' if self.rust_onnx_available else '✗')
 
     def _get_default_model_path(self) -> str:
@@ -67,31 +64,6 @@ class UnifiedEmbedder:
 
         # Default fallback
         return "models/all-MiniLM-L6-v2.onnx"
-
-    def _check_mojo_gpu(self) -> bool:
-        """Check if Mojo GPU is available."""
-        try:
-            # Check for Mojo runtime
-            import subprocess
-            result = subprocess.run(
-                ["mojo", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode != 0:
-                return False
-
-            # Check for GPU batch embedder module
-            mojo_path = os.path.join(
-                os.path.dirname(__file__),
-                "..", "..", "..",
-                "whitemagic-mojo", "src", "gpu_batch_embedder.mojo"
-            )
-            return os.path.exists(mojo_path)
-
-        except OSError:
-            return False
 
     def _check_rust_onnx(self) -> bool:
         """Check if Rust ONNX is available."""
@@ -135,31 +107,15 @@ class UnifiedEmbedder:
     def _encode_single_batch(self, texts: list[str]) -> np.ndarray:
         """Encode a single batch using the best available backend."""
 
-        # Route 1: Mojo GPU via Iceoryx2 (fastest)
-        if self.mojo_available:
-            try:
-                return self._encode_mojo_gpu(texts)
-            except Exception as e:
-                logger.warning("Mojo GPU failed, falling back: %s", e, exc_info=True)
-
-        # Route 2: Rust ONNX (fast)
+        # Route 1: Rust ONNX (fast)
         if self.rust_onnx_available:
             try:
                 return self._encode_rust_onnx(texts)
             except Exception as e:
                 logger.warning("Rust ONNX failed, falling back: %s", e, exc_info=True)
 
-        # Route 3: Python FastEmbed (slow but reliable)
+        # Route 2: Python FastEmbed (slow but reliable)
         return self._encode_python_fastembed(texts)
-
-    def _encode_mojo_gpu(self, texts: list[str]) -> np.ndarray:
-        """Encode using Mojo GPU via Iceoryx2 shared memory.
-
-        Not yet implemented — requires Iceoryx2 IPC channel to Mojo GPU process.
-        Falls back to Python FastEmbed.
-        """
-        logger.debug("Mojo GPU path unavailable, falling back to Python")
-        return self._encode_python(texts)
 
     def _encode_rust_onnx(self, texts: list[str]) -> np.ndarray:
         """Encode using Rust ONNX with Arrow."""

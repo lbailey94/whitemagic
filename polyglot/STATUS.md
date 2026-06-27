@@ -1,4 +1,4 @@
-# Polyglot Build Status — WhiteMagic v23.1.0
+# Polyglot Build Status — WhiteMagic v23.3.0
 
 **Last verified**: 2026-06-04  
 **Method**: Direct compilation + archive excavation + source recovery + SD card CODEX migration + JSON stdio bridge wiring
@@ -16,7 +16,6 @@
 | **Zig** | Zig 0.16.0 | 11,387 | ✅ Builds | `libwhitemagic.so` (12MB) + `libwhitemagic-zig.a` (10MB) |
 | **Julia** | Julia 1.12.5 | 698 | ✅ Loads | Recovered `self_model_forecast.jl`, `memory_stats.jl` |
 | **Haskell** | GHC 9.6.6 | 2,670 | ✅ Builds | `libHSwhitemagic-haskell.a` + `.so` (35 object files, 13 modules) |
-| **Mojo** | — | 3,644 | ❌ Compiler unavailable | Source ready; Modular CLI needs auth token |
 
 ---
 
@@ -55,11 +54,11 @@ Recovered from SD card on 2026-05-16. Extracted to standalone project at `~/Desk
 
 ## What "All Languages Build" Now Means
 
-**7 of 8 polyglot languages verified** — up from 2 when this session began:
+**7 of 7 polyglot languages verified** — up from 2 when this session began:
 - 5 build to native artifacts (Rust, Go, Zig, Koka, Haskell)
 - 1 loads as interpreted modules (Julia)
 - 1 builds to BEAM bytecode (Elixir)
-- 1 blocked on auth-gated compiler (Mojo — 3,644 lines of source ready)
+- Mojo removed in v23.2 (compiler unavailable, 3,644 lines archived)
 
 **Rust total**: 50,488+ lines across WhiteMagic core + CODEX pipeline + archive.
 
@@ -124,11 +123,11 @@ The Rust `wm-core` crate implements joint symbolic-spatial queries:
 
 ## Built-but-Unwired Backends (2026-06-25 Audit)
 
-The following backend classes exist in `bridges/python/whitemagic_polyglot/__init__.py` with compiled binaries, but are **not imported or called** from any core handler:
+The following backend classes exist in `bridges/python/whitemagic_polyglot/__init__.py` with compiled binaries:
 
-| Backend Class | Binary | Gap |
-|---------------|--------|-----|
-| `RustCascadeBackend` | `cascade_bridge` (695KB) | Not imported in any handler. GanYingBus uses Haskell/Koka cascade backends instead. |
+| Backend Class | Binary | Status |
+|---------------|--------|--------|
+| `RustCascadeBackend` | `cascade_bridge` (695KB) | ✅ **Wired** (v23.2 Phase 4) — Tier 1.5 cascade cycle check in GanYingBus |
 | `RustEvolutionBackend` | `evolution_bridge` (641KB) | Not imported in core. Tests exist in archive only. |
 | `JuliaYieldBackend` | `yield_bridge.jl` | Not imported in core. Tests exist in archive only. |
 | `ElixirActorBackend` | `actor_bridge.exs` | Not imported in core. Tests exist in archive only. |
@@ -136,9 +135,9 @@ The following backend classes exist in `bridges/python/whitemagic_polyglot/__ini
 **Missing bridges**: No `bridges/zig/` or `bridges/go/` directories exist. Zig and Go build successfully but have no JSON stdio bridge for Python dispatch.
 
 **Action items**:
-1. Wire `RustCascadeBackend` into GanYingBus as fallback when Haskell/Koka unavailable
+1. ~~Wire `RustCascadeBackend` into GanYingBus as fallback when Haskell/Koka unavailable~~ ✅ Done (v23.2 Phase 4)
 2. Expose `RustEvolutionBackend` methods as dispatch tools (info_theory, thermodynamic, HRR, MC integration)
 3. Create `bridges/zig/` with JSON stdio protocol for storage acceleration
 4. Create `bridges/go/` with JSON stdio protocol for transfer/streaming ops
 
-*Last updated: 2026-06-25 — polyglot bridge audit: Rust bridge marked operational, Koka added to handler enum, unwired backends documented.*
+*Last updated: 2026-06-26 — RustCascadeBackend wired into GanYingBus as Tier 1.5 cycle check. New SIMD ops: batch_euclidean_distance, batch_dot_product, batch_topk.*
