@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 23.1.0 (AGENTS.md revision 23.2)
-**Last Updated**: 2026-06-26
+**Version**: 23.3.0 (AGENTS.md revision 23.3)
+**Last Updated**: 2026-06-27
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -11,12 +11,14 @@
 WhiteMagic is a **cognitive operating system** for agentic AI — not merely a memory tool. It provides:
 
 - Persistent memory with 5D holographic coordinates and galactic lifecycle
-- 516 callable tools across 488 dispatch entries + 28 Gana meta-tools (PRAT)
+- 518 callable tools across 490 dispatch entries + 28 Gana meta-tools (PRAT)
 - 8-stage dispatch pipeline with Dharma ethical governance
-- Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Mojo)
+- Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig)
 - v22.2.0 release baseline: 2,216 passing tests, 0 failures
 - v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
 - v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup
+- v23.2.0: Mojo removed (8→7 polyglot languages); multi-user galaxy isolation (per-user SQLite namespaces, local profiles, X-User-Id header); real-time sync via Redis (galaxy lifecycle events on user-scoped channels, REDIS_URL env var support); Rust SIMD expansion (batch Euclidean distance, batch dot product, batch top-k) + RustCascadeBackend wired into GanYingBus; browser-first PWA substrate (MemoryStore, DharmaEngine, KarmaLedger, GnosisSnapshot in WASM, LocalTransport in TypeScript SDK, PWA shell with service worker); full suite 2,589 passed, 0 failed, ~110s
+- v23.3.0: `wm` meta-tool ('world in a seed') — single facade tool with sub-millisecond regex NLU routing to all 490 tools; `WM_MCP_PRAT=2` Seed mode (1 tool exposed to MCP); PRAT mode now exposes 29 tools (28 Ganas + `wm`); CLI `wm` command; full suite passing
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -25,11 +27,11 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 ## 2. First Actions on Entering the Repo
 
 ```bash
-# 1. Activate the venv (all deps + Mojo 0.26.1)
+# 1. Activate the venv (all deps)
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (current audit: 2260 passed, 2 skipped, 0 failed)
+# 2. Verify test baseline (current: 2589 passed, 2 skipped, 0 failed)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift
@@ -53,7 +55,7 @@ WHITEMAGIC/
 │   │   ├── core/            # Memory, intelligence, resonance
 │   │   ├── interfaces/      # API, dashboard, CLI
 │   │   └── config/          # Path resolution, settings
-│   ├── tests/               # 2,260 active tests (full suite minus archives)
+│   ├── tests/               # 2,589 active tests (full suite minus archives)
 │   ├── scripts/             # Audit, drift-check, stress-test
 │   └── docs/                # Core-specific docs
 ├── grimoire/                # Canonical 28 Gana chapters (.md)
@@ -103,7 +105,7 @@ Run `python core/scripts/check_doc_drift.py` after any doc change. It validates:
 ## 5. Testing Protocol
 
 ### The Golden Rule
-**Run the full test suite after every change.** The project went from 783 passing → 2,260 passing by fixing wiring, not by skipping tests. When the suite is fast enough, this rule is enforceable rather than aspirational.
+**Run the full test suite after every change.** The project went from 783 passing → 2,589 passing by fixing wiring, not by skipping tests. When the suite is fast enough, this rule is enforceable rather than aspirational.
 
 ### Test Speed Stratification
 
@@ -218,7 +220,7 @@ All tools return a **stable JSON envelope**:
 Every optional feature must fail safely:
 - Rust extension missing? Python fallback runs transparently.
 - FastAPI not installed? Webhook routes return `missing_dependency` envelope.
-- Mojo compiler absent? GPU path falls back to Python embedding.
+- Mojo compiler absent? GPU path falls back to Python embedding. (Mojo removed in v23.2)
 
 ---
 
@@ -450,7 +452,7 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 
 ## 14. Contact & Context
 
-- **Project**: WhiteMagic v23.1.0
+- **Project**: WhiteMagic v23.2.0
 - **Repository**: `<path-to-whitemagic>/`
 - **Virtual Environment**: `.venv/` (source before any Python work)
 - **Test Command (Tier 1)**: `cd core && python -m pytest tests/unit/ -q --timeout=5 -x`

@@ -48,7 +48,6 @@ whitemagic/                  # Core library (this repo)
 │   ├── tests/               # current local audit baseline: 2,379 passed, 67 skipped
 │   └── docs/                # Package documentation
 ├── polyglot/                # Language accelerators (minus CODEX)
-│   ├── mojo/                # GPU/SIMD kernels
 │   ├── whitemagic-koka/     # Effect handler orchestration
 │   ├── whitemagic-zig/      # FFI bridge
 │   └── whitemagic-go/       # Concurrent services

@@ -1,4 +1,4 @@
-# Whitemagic v22.2.0 System Map
+# Whitemagic v23.3.0 System Map
 
 This file is the **canonical repo map** for humans and AIs.
 
@@ -10,7 +10,7 @@ Goals:
 ## Quick Start
 
 ```bash
-# Activate the pre-configured venv (all Python deps + Mojo 0.26.1)
+# Activate the pre-configured venv (all Python deps)
 cd "$(git rev-parse --show-toplevel)"
 source .venv/bin/activate
 
@@ -22,11 +22,14 @@ wm status
 wm remember "Hello world" --title "Test" --tags smoke --type short_term
 wm recall "hello" --limit 5
 
-# MCP server — PRAT mode (recommended: 28 Gana meta-tools)
+# MCP server — Seed mode (default: 1 tool: wm meta-tool, minimal token surface)
+WM_MCP_PRAT=2 python -m whitemagic.run_mcp
+
+# MCP server — PRAT mode (29 tools = 28 Ganas + wm, for explicit Gana schemas)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
-# MCP server — classic mode (488 dispatch tools)
-python -m whitemagic.run_mcp
+# MCP server — classic mode (490 dispatch tools)
+WM_MCP_PRAT=0 python -m whitemagic.run_mcp
 
 # MCP server — lean mode (28 Gana meta-tools, recommended for new clients)
 python -m whitemagic.run_mcp_lean
@@ -115,7 +118,7 @@ WHITEMAGIC/
 │   └── templates/
 │
 ├── polyglot/                           # 8-language acceleration cores
-│   ├── mojo/                           # Mojo 0.26.1 kernels
+│   ├── zig/                            # Zig 0.16 FFI bridge
 │   ├── whitemagic-koka/                # Koka effect handlers
 │   ├── whitemagic-zig/                 # Zig SIMD
 │   └── ...
@@ -335,7 +338,7 @@ Three identical ~700-LOC copies → single canonical at `whitemagic/zodiac/zodia
 ### Intelligence Parallel Trees (Analyzed, Retained)
 Both `intelligence/` (51 files, 86 import sites) and `core/intelligence/` (32 files, 54 import sites) are actively used for complementary concerns. No merge — low ROI, high breakage risk.
 
-Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Mojo ~1.2K, Go ~913, Zig ~795, Koka ~800.
+Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Go ~913, Zig ~795, Koka ~800.
 
 ### Polyglot Status (v22.2 — verified 2026-05-01)
 
@@ -348,7 +351,8 @@ Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Mojo ~1.2K,
 | **Elixir** | ✅ Builds | 19+lib | `mix compile` succeeds on 1.14.0/OTP 25 |
 | **Haskell** | ✅ Builds | 2,670 | GHC 9.6.6; 13 recovered modules; `.a` + `.so` artifacts |
 | **Julia** | ✅ Loads | 698 | Julia 1.12.5; recovered modules load with `JULIA_NUM_THREADS=1` |
-| **Mojo** | ❌ Compiler unavailable | 3,644 | Source ready; Modular CLI requires auth token |
+
+> **Mojo** removed in v23.2 — compiler was auth-gated and unavailable. 3,644 lines archived.
 
 ## Public Interfaces
 
@@ -457,7 +461,7 @@ All old tool names preserved as backward-compat aliases in `dispatch_table.py`.
 
 ---
 
-## v12.5+ — PRAT Router, Mojo 0.26, Nexus API & Dream Cycle E2E
+## v12.5+ — PRAT Router, Nexus API & Dream Cycle E2E
 
 ### PRAT Router — 175 Tools → 28 Gana Meta-Tools
 The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 147 non-Gana tools to 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana lists its nested sub-tools and supports 4 polymorphic operations (search/analyze/transform/consolidate).
@@ -566,7 +570,7 @@ Grimoire suggest handler (`tools/handlers/grimoire.py`) wired to apply zodiac bo
 
 ### Capability Matrix Updated
 - `whitemagic/tools/capability_matrix.py`: 25 subsystems (added Zig SIMD), 23 active fusions (was 15), 5 unexplored (was 13)
-- Remaining unexplored: Gana Chain→Harmony, PRAT→Gana Chain, Mojo→Holographic, Elixir→Event Bus, Go→Mesh Sync
+- Remaining unexplored: Gana Chain→Harmony, PRAT→Gana Chain, Holographic Encoding, Elixir→Event Bus, Go→Mesh Sync
 
 ### Tests
 - **NEW** `tests/unit/test_v12_7_fusions.py`: 46 tests covering all new fusions, polyglot bridges, capability matrix, and fusion status
@@ -586,7 +590,7 @@ All cross-system fusions are now wired — **28 active fusions matching the 28 G
 |--------|-------------|-------------|
 | **Gana Chain → Harmony Vector** | Chains adapt length based on system health: Tamas→truncate, Rajasic→0.7×, Sattva→full+bonus | `gana_chain_harmony_adapt()` |
 | **PRAT Router → Gana Chain** | Detects ≥3 consecutive same-Gana PRAT calls and recommends quadrant sweep chain | `prat_auto_chain_detect()` |
-| **Mojo SIMD → Holographic Encoding** | Batch 5D coordinate encoding via Mojo with Python CoordinateEncoder fallback | `mojo_holographic_batch_encode()` |
+| **Holographic Encoding** | Batch 5D coordinate encoding via Python CoordinateEncoder | `holographic_batch_encode()` |
 | **Elixir Event Bus → Python Gan Ying** | Bridges Elixir OTP 3-lane temporal routing with Python Gan Ying; probes for compiled BEAM | `elixir_event_bridge()` |
 | **Go Mesh → Memory Sync** | Memory announce/request/status operations propagated across libp2p peers via MeshAwareness | `mesh_memory_sync()` |
 
@@ -685,7 +689,7 @@ Canonical `grimoire/TRUTH_TABLE.md` established as the single source of truth fo
 - LRU cache for read-only Ganas (64 entries)
 
 ### Updated Counts
-- **516 callable tools** across **488 dispatch entries** + **28 Gana meta-tools**
+- **518 callable tools** across **490 dispatch entries** + **28 Gana meta-tools**
 - **Current local audit baseline:** 2,526 tests passing, 0 failures, 2 skipped (as of 2026-06-26)
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped
 - **28 active cross-system fusions** (matching the 28 Ganas)

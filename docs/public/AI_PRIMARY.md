@@ -1,10 +1,10 @@
-# AI Primary Spec — Whitemagic v23.1.0
+# AI Primary Spec — Whitemagic v23.3.0
 
 **The tool contract for AI agents using Whitemagic.**
 
-Whitemagic is a governance and metacognition substrate for AI agents. It provides 516 callable tools across 488 dispatch entries (28 in PRAT mode), tiered persistent memory, ethical governance, and polyglot accelerators. Agents bring reasoning; Whitemagic provides Hands, Memory, and Conscience.
+Whitemagic is a governance and metacognition substrate for AI agents. It provides 518 callable tools across 490 dispatch entries (28 in PRAT mode), tiered persistent memory, ethical governance, and polyglot accelerators. Agents bring reasoning; Whitemagic provides Hands, Memory, and Conscience.
 
-- **Hands** — 516 callable tools across 488 dispatch entries
+- **Hands** — 518 callable tools across 490 dispatch entries
 - **Memory** — Tiered, persistent, semantic, no-delete galactic lifecycle
 - **Conscience** — Dharma rules, Karma ledger, Harmony Vector, Homeostatic Loop
 
@@ -30,14 +30,17 @@ Non-goals:
 cd "$(git rev-parse --show-toplevel)"
 source .venv/bin/activate
 
-# Run MCP server in PRAT mode (recommended — 28 Gana meta-tools)
+# Run MCP server in Seed mode (recommended — 1 tool: wm meta-tool)
+WM_MCP_PRAT=2 python -m whitemagic.run_mcp
+
+# Or PRAT mode (29 tools = 28 Ganas + wm, for explicit Gana schemas)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
 # Or lean mode (28 Gana meta-tools, recommended for new clients)
 python -m whitemagic.run_mcp_lean
 
-# Or classic mode (488 dispatch tools)
-python -m whitemagic.run_mcp
+# Or classic mode (490 dispatch tools)
+WM_MCP_PRAT=0 python -m whitemagic.run_mcp
 
 # Or lite mode (92 core tools)
 WM_MCP_LITE=1 python -m whitemagic.run_mcp
@@ -71,15 +74,16 @@ cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — batch e
 ## Canonical Interfaces
 
 Primary:
-- **MCP server (stdio):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (28 Gana meta-tools)
-- **MCP server (classic):** `python -m whitemagic.run_mcp` (488 dispatch tools)
+- **MCP server (Seed):** `WM_MCP_PRAT=2 python -m whitemagic.run_mcp` (1 tool: `wm` — recommended, minimal token surface)
+- **MCP server (PRAT):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (29 tools: 28 Ganas + `wm`)
+- **MCP server (classic):** `WM_MCP_PRAT=0 python -m whitemagic.run_mcp` (490 dispatch tools)
 
 Secondary:
 - **In-process Python:** `from whitemagic.tools.unified_api import call_tool`
 - **CLI adapter:** `wm …` (wraps `call_tool`, supports `--json`)
 - **Nexus API:** `python -m whitemagic.interfaces.nexus_api --port 8765` (REST + WebSocket)
 
-If you are an AI runtime integrating Whitemagic, prefer **MCP with PRAT mode** (portable, 28 tools) or **call_tool** (in-process).
+If you are an AI runtime integrating Whitemagic, prefer **MCP with Seed mode** (1 tool, minimal tokens) or **call_tool** (in-process). Use `wm(thought='help')` to discover all capabilities.
 
 ### MCP Orientation Resources
 
@@ -89,7 +93,7 @@ On first connection, read these resources before tool calls:
 
 ## PRAT Mode — 28 Gana Meta-Tools
 
-The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 488 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
+The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 490 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
 
 1. **Has a domain** — a specific operational concern (session, memory, health, ethics, etc.)
 2. **Supports 4 polymorphic operations** — search / analyze / transform / consolidate

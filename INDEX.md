@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 23.1.0
-**Last Updated**: June 26, 2026 (v23.1.0 — test suite stabilization, gitignore cleanup, binary removal)
+**Version**: 23.3.0
+**Last Updated**: June 27, 2026 (v23.3.0 — `wm` meta-tool, Seed MCP mode, PRAT mode now 29 tools)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -50,6 +50,22 @@ These files live at the repository root. They are the **public face** of the pro
 | `ARCHITECTURE_MANIFEST_2026-06-04.md` | **Post-extraction architecture clarity** — what this repo is, sibling repos, directory map | — |
 | `COMPETITIVE_POSITIONING_2026-06-05.md` | **Competitive analysis** — WhiteMagic vs Osabio, CogOS, Kumiho, MnemoCore, SARC, AI-CONSTITUTION, Microsoft ACS/AGT, ArbiterOS | — |
 | `skill.md` | MCP skill definition for agent registries | `version_bump.py` |
+
+---
+
+## Desktop Workspace Map
+
+This repository is one of several primary local WhiteMagic workspaces. The sibling roots below now have or already had root-level indexes.
+
+| Workspace | Role | Index |
+|-----------|------|-------|
+| `WHITEMAGIC/` | Private/active WhiteMagic development repository | `INDEX.md` |
+| `whitemagic-public/` | Public sanitized WhiteMagic repository | `../whitemagic-public/INDEX.md` |
+| `Agent-SafetyBench/` | External agent-safety benchmark corpus | `../Agent-SafetyBench/INDEX.md` |
+| `reports/` | Cross-project reports, audits, handoffs, funding drafts | `../reports/INDEX.md` |
+| `archives/` | Laptop exports and historical archive material | `../archives/INDEX.md` |
+| `vercel-deploy/` | Deployment and MCP submission operations notes | `../vercel-deploy/INDEX.md` |
+| `WHITEMAGIC-aux/` | Auxiliary WhiteMagic archives, site, experiments, browser extension, CODEX artifacts | `../WHITEMAGIC-aux/INDEX.md` |
 
 ---
 
@@ -725,4 +741,4 @@ local-first browsing memory capture tool. Not yet vendored into this repo.
 
 ---
 
-*This index is a living document. Last updated: 2026-06-18 by session agent.*
+*This index is a living document. Last updated: 2026-06-27 by workspace inventory pass.*
