@@ -7,6 +7,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [23.3.0] - 2026-06-27
+
+### Added
+- `wm` meta-tool ("world in a seed") — single facade tool that auto-routes natural language to any of the 488 underlying tools via sub-millisecond regex classification
+- `WM_MCP_PRAT=2` Seed mode — exposes only the `wm` tool to MCP clients (1 tool definition instead of 28 or 488), minimizing token surface
+- PRAT mode (`WM_MCP_PRAT=1`) now exposes 29 tools (28 Ganas + `wm`)
+- CLI `wm` command — natural language tool routing from the command line
+- `wm_help` tool — returns routing patterns and usage info
+- `runtime_status.py` updated to report `seed` mode for `WM_MCP_PRAT=2`
+- `run.sh` `--seed` flag for Seed mode launch
+- `.env` template updated with Seed mode option
+
+### Changed
+- `init_command.py` — Server Modes table updated with Seed mode and `wm` meta-tool description
+- `AI_PRIMARY.md` — Added `wm` meta-tool as item 7 in the competitive moat list
+- `SYSTEM_MAP.md` — Updated version to v23.3.0, added Seed mode quick start
+- `INDEX.md` — Updated version and last-updated date
+- `AGENTS.md` — Updated version, added v23.3.0 changelog entry
+
+## [23.2.0] - 2026-06-26
+
+Phase 1: Mojo removal — polyglot languages reduced from 8 to 7. All Mojo
+backend code, bridges, and references removed. Python CoordinateEncoder
+is now the primary holographic encoding path, with Rust ONNX for embedding.
+
+Phase 2: Multi-user galaxy isolation — each user now gets their own
+namespace for galaxies, memory databases, and profiles. No API key
+required; local profile identification via X-User-Id header.
+
+Phase 3: Real-time sync via Redis — galaxy lifecycle events (create,
+delete, switch, ingest) are now published on user-scoped Redis channels
+for distributed instance synchronization. REDIS_URL env var support for
+Railway/cloud deployments.
+
+### Added (Phase 2)
+- `core/user_profile.py` — `LocalProfileManager`, `UserProfile` dataclass
+  for per-user identity without external authentication
+- `GalaxyManager` methods now accept optional `user_id` parameter:
+  `create_galaxy`, `delete_galaxy`, `list_galaxies`, `switch_galaxy`,
+  `get_galaxy`, `status`, `ingest_files`
+- `GalaxyInfo` has new `user_id` field (default `"local"`)
+- Galaxy DB paths are now per-user: `WM_ROOT/users/<user_id>/galaxies/<name>/`
+- Galaxy API endpoints accept `X-User-Id` header for per-user isolation
+- 18 new tests in `test_multi_user_galaxy.py` covering profile management,
+  galaxy isolation, cross-user access prevention, and backward compat
+
+### Changed (Phase 2)
+- Galaxy registry keys are now `user_id/galaxy_name` format
+- `_load_registry` migrates old entries (no `/`) to `local/` prefix
+- Galaxy API: replaced `X-API-Key` / `_require_api_key` with `X-User-Id` /
+  `_resolve_user_id` (no API key needed — local profiles only)
+- Galaxy tool handlers pass `user_id` from kwargs to GalaxyManager
+
+### Added (Phase 3)
+- `core/memory/galaxy_sync.py` — Galaxy sync module for real-time Redis pub/sub
+- `publish_galaxy_event()` — publishes galaxy lifecycle events on `galaxy:<user_id>:<name>` channels
+- `start_galaxy_sync_listener()` / `stop_galaxy_sync_listener()` — subscribe/unsubscribe to sync channels
+- `_AsyncBroker.subscribe()` / `_AsyncBroker.unsubscribe()` — Redis pubsub support
+- `_AsyncBroker` now accepts `url` parameter for `REDIS_URL` env var (Railway compat)
+- `_resolve_redis_url()` checks `WHITEMAGIC_REDIS_URL`, `REDIS_URL`, `REDISCLOUD_URL` env vars
+- 11 new tests in `test_galaxy_sync.py` covering channel naming, graceful degradation, and publish logic
+
+### Changed (Phase 3)
+- `_setup_broker_forwarding` in `_consolidated.py` — uses `_resolve_redis_url()` for URL-based Redis connections
+- Broker handler functions (`handle_broker_publish`, `handle_broker_history`, `handle_broker_status`) — skip socket probe when `REDIS_URL` is set
+- `GalaxyManager.create_galaxy`, `delete_galaxy`, `switch_galaxy`, `ingest_files` — publish sync events (best-effort, non-blocking)
+
+### Added (Phase 4)
+- Rust SIMD: `batch_euclidean_distance_simd`, `batch_dot_product_simd`, `batch_topk_simd` in `embedding_simd.rs`
+- Rust SIMD tests: 5 new tests for Euclidean distance, dot product, top-k, edge cases
+- Python bridge: `batch_euclidean_distance`, `batch_dot_product` in `simd_unified.py`
+- 9 new tests in `test_simd_expanded.py` covering Python fallback paths for all new SIMD ops
+- `RustCascadeBackend` wired into `GanYingBus` as Tier 1.5 cascade cycle check (between PyO3 and Haskell)
+
+### Changed (Phase 4)
+- `_check_cascade_safety` in `GanYingBus` — now 4-tier: PyO3 → Rust JSON stdio → Haskell → Python DFS
+- `simd_status()` operations list updated to include `batch_euclidean_distance` and `batch_dot_product`
+- `polyglot/STATUS.md` — RustCascadeBackend marked as wired
+
+### Added (Phase 5)
+- WASM `MemoryStore` — in-browser memory CRUD with full-text search, tag search, export/import (in `wasm.rs`)
+- WASM `DharmaEngine` — browser-local governance with default safety rules (block/warn actions)
+- WASM `KarmaLedger` — append-only karma tracking with balance, recent history, export
+- WASM `GnosisSnapshot` — system self-awareness summary (memory count, karma balance, maturity stage)
+- 16 new Rust tests for WASM substrate components (MemoryStore, DharmaEngine, KarmaLedger, Gnosis)
+- `LocalTransport` class in TypeScript SDK — routes tool calls to WASM module (zero network calls)
+- PWA shell: `manifest.json`, `sw.js` service worker, `app/index.html` with full UI
+- 25 new Python tests verifying WASM module structure, LocalTransport, and PWA shell assets
+- Updated `wasm_version()` to 23.2.0, EdgeEngine default rules updated
+
+### Changed (Phase 5)
+- `sdk/typescript/src/index.ts` — exports `LocalTransport`
+- EdgeEngine default rules updated to v23.2.0 and 2,564 tests
+- `wasm.rs` — expanded from ~430 lines to ~1200+ lines with full substrate bindings
+
+### Removed (Phase 1)
+- Mojo backend from `polyglot_router.py` (Backend enum, PerformanceMetrics, _call_mojo, _check_mojo, _get_mojo_env)
+- Mojo subprocess bridge from `core/acceleration/mojo_bridge.py` (replaced with Python-only wrapper)
+- Mojo GPU path from `inference/unified_embedder.py` (Rust ONNX → Python FastEmbed)
+- Mojo SIMD from `core/fusions.py` — `mojo_holographic_batch_encode()` → `holographic_batch_encode()`
+- Mojo from `core/garden_directory.py` language mappings and file extensions
+- Mojo from `core/memory/neural/neuro_score.py` — `is_mojo_optimized` → `is_accelerated`
+- Mojo from `optimization/polyglot_specialists.py` and `polyglot_pipelines.py`
+- Mojo status rule from `edge/inference.py`
+- Mojo from `tools/capability_matrix.py` ACTIVE_FUSIONS
+- Mojo from `core/fusions_mesh.py` fusion status
+
+### Changed
+- `core/intelligence/hologram/mojo_bridge.py` — now a thin Python-only wrapper (kept for engine.py import compat)
+- `AGENTS.md`, `README.md`, `AI_PRIMARY.md`, `SYSTEM_MAP.md`, `polyglot/STATUS.md` — updated to reflect 7-language polyglot system
+
 ## [23.1.0] - 2026-06-26
 
 Test suite stabilization and infrastructure cleanup. The full test suite

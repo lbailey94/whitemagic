@@ -312,6 +312,40 @@ def batch_topk_cosine(query: list[float], vectors: list[list[float]], k: int = 1
     return top_k_nearest(query, vectors, k)
 
 
+def batch_euclidean_distance(query: list[float], vectors: list[list[float]]) -> list[float]:
+    """Compute Euclidean distance between query and multiple vectors.
+
+    Rust: SIMD-accelerated batch Euclidean distance
+    Python fallback: Sequential computation
+    """
+    import math
+
+    rust = _init_rust()
+    if rust and hasattr(rust, 'batch_euclidean_distance'):
+        return cast(list[float], rust.batch_euclidean_distance(query, vectors))
+
+    return [
+        math.sqrt(sum((a - b) ** 2 for a, b in zip(query, vec)))
+        for vec in vectors
+    ]
+
+
+def batch_dot_product(query: list[float], vectors: list[list[float]]) -> list[float]:
+    """Compute dot product between query and multiple vectors.
+
+    Rust: SIMD-accelerated batch dot product
+    Python fallback: Sequential computation
+    """
+    rust = _init_rust()
+    if rust and hasattr(rust, 'batch_dot_product'):
+        return cast(list[float], rust.batch_dot_product(query, vectors))
+
+    return [
+        sum(a * b for a, b in zip(query, vec))
+        for vec in vectors
+    ]
+
+
 # ============================================================================
 # STATUS FUNCTIONS
 # ============================================================================
@@ -326,7 +360,8 @@ def simd_status() -> dict[str, Any]:
             "pairwise_distance_matrix", "top_k_nearest",
             "holographic_5d_distance", "holographic_5d_knn", "holographic_5d_centroid",
             "grid_density_scan", "extract_keywords",
-            "batch_normalize", "batch_centroid", "batch_topk_cosine"
+            "batch_normalize", "batch_centroid", "batch_topk_cosine",
+            "batch_euclidean_distance", "batch_dot_product"
         ],
         "modules_unified": 6,
         "loc_saved": "~800 LOC"
@@ -402,6 +437,7 @@ __all__ = [
     "extract_keywords",
     # Vector batch operations
     "batch_normalize", "batch_centroid", "batch_topk_cosine",
+    "batch_euclidean_distance", "batch_dot_product",
     # Status functions
     "simd_status",
     "simd_cosine_status", "simd_distance_status", "simd_holographic_status",

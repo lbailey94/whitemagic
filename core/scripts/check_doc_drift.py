@@ -265,9 +265,11 @@ def check_test_count_consistency() -> None:
     release_baseline = 2216
     current_audit_baseline = 2260
     v23_1_0_baseline = 2526
+    v23_2_0_baseline = 2589
     release_markers = ("release baseline", "v22.2.0 release", "v22.2 release", "v22.2.1 release", "v22.2.2 release", "v22.2.3 release", "v22.3.0 release", "v23.0.0 release")
     current_markers = ("current local audit", "current audit baseline", "live audit baseline", "v22.2.1 release", "v22.2.2 release", "v22.2.3 release", "v22.3.0 release", "v23.0.0 release")
     v23_1_0_markers = ("v23.1.0", "current baseline")
+    v23_2_0_markers = ("v23.2.0",)
     seen: dict[str, list[tuple[str, int, str]]] = {}
     for doc in docs:
         if not doc.exists():
@@ -296,7 +298,8 @@ def check_test_count_consistency() -> None:
             is_release = count == release_baseline and any(marker in line_text for marker in release_markers)
             is_current = count == current_audit_baseline and any(marker in line_text for marker in current_markers)
             is_v23_1_0 = count == v23_1_0_baseline and any(marker in line_text for marker in v23_1_0_markers)
-            if not (is_release or is_current or is_v23_1_0):
+            is_v23_2_0 = count == v23_2_0_baseline and any(marker in line_text for marker in v23_2_0_markers)
+            if not (is_release or is_current or is_v23_1_0 or is_v23_2_0):
                 error(
                     f"{doc_rel}:{where} claims {count:,} tests without an accepted Option C baseline label"
                 )
@@ -305,7 +308,7 @@ def check_test_count_consistency() -> None:
     if drift_count == 0:
         ok(
             f"All {len(all_counts)} test-count references use accepted baselines "
-            f"({release_baseline:,} release / {current_audit_baseline:,} v23 audit / {v23_1_0_baseline:,} v23.1.0)"
+            f"({release_baseline:,} release / {current_audit_baseline:,} v23 audit / {v23_1_0_baseline:,} v23.1.0 / {v23_2_0_baseline:,} v23.2.0)"
         )
         return
 

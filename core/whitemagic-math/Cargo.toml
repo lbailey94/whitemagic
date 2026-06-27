@@ -1,6 +1,6 @@
 [package]
 name = "whitemagic-math"
-version = "23.1.0"
+version = "23.3.0"
 edition = "2021"
 
 [lib]

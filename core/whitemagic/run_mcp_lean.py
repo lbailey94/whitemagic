@@ -389,15 +389,82 @@ except FileNotFoundError:
 # Register handlers on the lazy server proxy
 # ══════════════════════════════════════════════════════════════════════
 
+def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
+    """Build the 'wm' meta-tool definition — world in a seed."""
+    # Build a compact grimoire inline so the AI client sees everything in one tool def
+    from whitemagic.tools.tool_catalog import (
+        GANA_NAMES,
+        GANA_SHORT_DESC,
+        get_gana_nested_tools,
+    )
+
+    nested = get_gana_nested_tools()
+    gana_lines = []
+    for gana in GANA_NAMES:
+        desc = GANA_SHORT_DESC.get(gana, f"Gana {gana}")
+        tools = nested.get(gana, [])
+        tool_sample = ", ".join(tools[:4])
+        if len(tools) > 4:
+            tool_sample += f", ... ({len(tools)} total)"
+        gana_lines.append(f"  • {gana}: {desc} [{tool_sample}]")
+    grimoire_block = "\n".join(gana_lines)
+
+    desc = (
+        "[WM] WhiteMagic meta-tool — single entry point that auto-routes "
+        "natural language to 28 Ganas / 490 tools. 'World in a seed'.\n\n"
+        "Usage:\n"
+        "  wm(thought='remember that the API uses X-User-Id headers')  # auto-route\n"
+        "  wm(thought='search for memories', args={'limit': 10})       # with args\n"
+        "  wm(route='gana_neck.create_memory')                         # explicit route\n"
+        "  wm(thought='help')  or wm(route='discover')                 # discover all Ganas\n"
+        "  wm(route='schema:gana_neck')                                # get Gana's nested tools\n\n"
+        "28 Ganas (Lunar Mansions):\n" + grimoire_block + "\n\n"
+        "If unsure, just describe what you want in natural language. "
+        "The classifier routes to the right Gana automatically."
+    )
+
+    return types.Tool(
+        name="wm",
+        description=desc,
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "thought": {
+                    "type": "string",
+                    "description": "Natural language describing what you want to do. Use 'help' to discover all capabilities.",
+                },
+                "route": {
+                    "type": "string",
+                    "description": "Explicit route: 'gana_name.sub_tool', 'discover', or 'schema:gana_name'.",
+                },
+                "args": {
+                    "type": "object",
+                    "description": "Args dict to pass through to the target tool.",
+                    "default": {},
+                },
+            },
+        },
+    )
+
+
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:  # type: ignore[name-defined]
-    """Return the 28 Gana meta-tools with per-Gana tool enums, icons, and execution modes."""
+    """Return the 28 Gana meta-tools (plus 'wm' meta-tool) with per-Gana tool enums, icons, and execution modes."""
+    import os
+
     from whitemagic.tools.tool_surface import (
         GANA_NAMES as _GANA_NAMES,
     )
     from whitemagic.tools.tool_surface import (
         GANA_SHORT_DESC as _GANA_SHORT_DESC,
     )
+
+    # Seed mode is the default (WM_MCP_PRAT=2 or unset).
+    # Set WM_MCP_PRAT=1 for PRAT mode (29 tools), WM_MCP_PRAT=0 for classic (490 tools).
+    prat_val = os.environ.get("WM_MCP_PRAT", "2").strip()
+    prat2 = prat_val in ("2", "2.0", "")
+    if prat2:
+        return [_wm_tool_def()]
 
     tools: list[types.Tool] = []  # type: ignore[name-defined]
     for name in _GANA_NAMES:
@@ -413,6 +480,9 @@ async def list_tools() -> list[types.Tool]:  # type: ignore[name-defined]
         if name in _SLOW_GANAS:
             kwargs["execution"] = types.ToolExecution(taskSupport=types.TASK_OPTIONAL)
         tools.append(types.Tool(**kwargs))
+
+    # Add 'wm' meta-tool as 29th tool (world in a seed)
+    tools.append(_wm_tool_def())
     return tools
 
 
@@ -530,10 +600,26 @@ def _sync_dispatch(gana: str, tool_name: str | None, tool_args: dict[str, Any], 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[types.TextContent]:  # type: ignore[name-defined]
-    """Dispatch a PRAT Gana call through the full WhiteMagic pipeline."""
+    """Dispatch a PRAT Gana call or 'wm' meta-tool call through the full WhiteMagic pipeline."""
     from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
     args = arguments or {}
+
+    # ── 'wm' meta-tool: direct dispatch, bypasses Gana routing ──
+    if name == "wm":
+        _ensure_init()
+        from whitemagic.tools.handlers.meta_tool import handle_wm
+        wm_kwargs: dict[str, Any] = {}
+        if "thought" in args:
+            wm_kwargs["thought"] = args["thought"]
+        if "route" in args:
+            wm_kwargs["route"] = args["route"]
+        if "args" in args and isinstance(args["args"], dict):
+            wm_kwargs["args"] = args["args"]
+        result = handle_wm(**wm_kwargs)
+        text = _json_dumps(result, indent=2, default=str)
+        return [types.TextContent(type="text", text=text)]
+
     tool_name = args.get("tool")
     tool_args = args.get("args") or {}
     operation = args.get("operation")

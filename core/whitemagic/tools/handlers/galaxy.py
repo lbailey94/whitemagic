@@ -26,6 +26,7 @@ def handle_galaxy_create(**kwargs: Any) -> dict[str, Any]:
             project_path=kwargs.get("path"),
             description=kwargs.get("description", ""),
             tags=kwargs.get("tags", []),
+            user_id=kwargs.get("user_id"),
         )
         return {
             "status": "success",
@@ -46,7 +47,7 @@ def handle_galaxy_switch(**kwargs: Any) -> dict[str, Any]:
 
     try:
         gm = get_galaxy_manager()
-        info = gm.switch_galaxy(name)
+        info = gm.switch_galaxy(name, user_id=kwargs.get("user_id"))
         return {
             "status": "success",
             "message": f"Switched to galaxy '{name}'",
@@ -71,7 +72,7 @@ def handle_galaxy_list(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
 
     gm = get_galaxy_manager()
-    galaxies = gm.list_galaxies()
+    galaxies = gm.list_galaxies(user_id=kwargs.get("user_id"))
     result = {
         "status": "success",
         "active": gm.get_active().name,
@@ -103,7 +104,7 @@ def handle_galaxy_status(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
 
     gm = get_galaxy_manager()
-    result = {"status": "success", **gm.status()}
+    result = {"status": "success", **gm.status(user_id=kwargs.get("user_id"))}
 
     # Cache the result
     try:
@@ -134,6 +135,7 @@ def handle_galaxy_ingest(**kwargs: Any) -> dict[str, Any]:
             pattern=kwargs.get("pattern", "**/*.md"),
             max_files=kwargs.get("max_files", 500),
             tags=kwargs.get("tags", []),
+            user_id=kwargs.get("user_id"),
         )
         return {"status": "success", **result}
     except (ValueError, FileNotFoundError) as e:
@@ -150,7 +152,7 @@ def handle_galaxy_delete(**kwargs: Any) -> dict[str, Any]:
 
     try:
         gm = get_galaxy_manager()
-        gm.delete_galaxy(name)
+        gm.delete_galaxy(name, user_id=kwargs.get("user_id"))
         return {"status": "success", "message": f"Galaxy '{name}' removed from registry"}
     except ValueError as e:
         return {"status": "error", "error": str(e)}
@@ -191,7 +193,7 @@ def handle_galaxy_transfer(**kwargs: Any) -> dict[str, Any]:
 def handle_galaxy_merge(**kwargs: Any) -> dict[str, Any]:
     """Merge all memories from a source galaxy into a target galaxy."""
     source = kwargs.get("source") or kwargs.get("source_galaxy")
-    target = kwargs.get("target") or kwargs.get("target_galaxy") or "default"
+    target = kwargs.get("target") or kwargs.get("target_galaxy") or "local/default"
 
     if not source:
         return {"status": "error", "error": "source galaxy name is required"}

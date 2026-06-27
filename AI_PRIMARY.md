@@ -55,7 +55,8 @@ WhiteMagic is a **governance + metacognition substrate** that lab-style agents c
 3. **Dharma rules + Karma ledger** — three rule profiles (Default / Strict / Violet-Security), three machine-readable severity levels, ethical accountability (not reputation/social capital like AgentsPlex's "karma").
 4. **Foresight engine (Logos Layer)** (`core/intelligence/foresight_engine.py`) — predictive metacognition packaged as a callable.
 5. **Neurotransmitter telemetry** (`core/monitoring/neurotransmitter_vector.py`) — affect-style health metrics no other system surfaces.
-6. **PRAT compression** — 488 dispatch tools collapsed into 28 Gana meta-tools with cultural grounding (Lunar Mansions / Xiu 宿). Symbolically unique; benchmark vs. SAIQL/LoreTokens (279:1 patented) remains open.
+6. **PRAT compression** — 490 dispatch tools collapsed into 28 Gana meta-tools with cultural grounding (Lunar Mansions / Xiu 宿). Symbolically unique; benchmark vs. SAIQL/LoreTokens (279:1 patented) remains open.
+7. **`wm` meta-tool (v23.3)** — "world in a seed": a single facade tool that auto-routes natural language to any of the 490 underlying tools via sub-millisecond regex classification. `WM_MCP_PRAT=2` exposes only `wm` to MCP clients — the absolute minimum token surface (1 tool definition instead of 28 or 490).
 
 **No other system ships this combination as a unified, locally-runnable, MIT-licensed primitive set.**
 
@@ -107,18 +108,21 @@ Non-goals:
 ## Bootstrap (Quickstart)
 
 ```bash
-# Activate the pre-configured venv (contains all Python deps + Mojo 0.26.1)
+# Activate the pre-configured venv (contains all Python deps)
 cd "$(git rev-parse --show-toplevel)"
 source .venv/bin/activate
 
-# Run MCP server in PRAT mode (recommended — 28 Gana meta-tools)
+# Run MCP server in Seed mode (recommended — 1 tool: wm meta-tool)
+WM_MCP_PRAT=2 python -m whitemagic.run_mcp
+
+# Or PRAT mode (29 tools = 28 Ganas + wm, for explicit Gana schemas)
 WM_MCP_PRAT=1 python -m whitemagic.run_mcp
 
 # Or lean mode (28 Gana meta-tools, recommended for new clients)
 python -m whitemagic.run_mcp_lean
 
-# Or classic mode (488 dispatch tools)
-python -m whitemagic.run_mcp
+# Or classic mode (490 dispatch tools)
+WM_MCP_PRAT=0 python -m whitemagic.run_mcp
 
 # Or lite mode (92 core tools)
 WM_MCP_LITE=1 python -m whitemagic.run_mcp
@@ -146,7 +150,6 @@ cd elixir && mix compile --force                  # Elixir (OTP) — 🧪 experi
 cd whitemagic-go && go build ./...                # Go — 🧪 experimental: general bridge
 cd mesh && go build ./...                         # Go mesh — ✅ PRODUCTION: libp2p P2P, mDNS, protobuf
 cd whitemagic-zig && zig build                    # Zig — 🧪 experimental: SIMD cosine, holographic projection (FFI bridge functional, not wired to hot paths)
-cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — 🧪 experimental: batch encoding
 ```
 
 | Language | Status | Notes |
@@ -158,20 +161,22 @@ cd whitemagic-mojo && mojo build src/satkona_yang.mojo  # Mojo 0.26+ — 🧪 ex
 | Zig | ✅ Builds | Migrated to Zig 0.16 — 12 API categories fixed, `libwhitemagic.so` (12MB) + `libwhitemagic-zig.a` (10MB). |
 | Julia | ✅ Loads | Recovered 698 lines from archive (self_model_forecast.jl, memory_stats.jl). Module loads with `JULIA_NUM_THREADS=1`. |
 | Haskell | ✅ Builds | Recovered 2,670 lines from archive (13 source files: DharmaRules, DepGraph, WuXing, etc.). GHC 9.6.6 builds via ghcup. JSON stdio bridge operational (5 tests pass); interpreted via `runhaskell` is ~10–50× slower than compiled — see `polyglot/STATUS.md` for benchmarks. |
-| Mojo | ❌ Compiler unavailable | 3,644 lines of source ready (more complete than archive). Modular CLI requires auth token for Mojo compiler install. |
+
+> **Mojo** was removed in v23.2 — compiler was unavailable (Modular CLI auth-gated). 3,644 lines of source archived.
 
 ## Canonical Interfaces
 
 Primary:
-- **MCP server (stdio):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (28 Gana meta-tools)
-- **MCP server (classic):** `python -m whitemagic.run_mcp` (488 dispatch tools)
+- **MCP server (Seed):** `WM_MCP_PRAT=2 python -m whitemagic.run_mcp` (1 tool: `wm` — recommended, minimal token surface)
+- **MCP server (PRAT):** `WM_MCP_PRAT=1 python -m whitemagic.run_mcp` (29 tools: 28 Ganas + `wm`)
+- **MCP server (classic):** `WM_MCP_PRAT=0 python -m whitemagic.run_mcp` (490 dispatch tools)
 
 Secondary:
 - **In-process Python:** `from whitemagic.tools.unified_api import call_tool`
 - **CLI adapter:** `wm …` (wraps `call_tool`, supports `--json`)
 - **Nexus API:** `python -m whitemagic.interfaces.nexus_api --port 8765` (REST + WebSocket)
 
-If you are an AI runtime integrating Whitemagic, prefer **MCP with PRAT mode** (portable, 28 tools) or **call_tool** (in-process).
+If you are an AI runtime integrating Whitemagic, prefer **MCP with Seed mode** (1 tool, minimal tokens) or **call_tool** (in-process). Use `wm(thought='help')` to discover all capabilities.
 
 ### MCP Orientation Resources
 
@@ -181,7 +186,7 @@ On first connection, read these resources before tool calls:
 
 ## PRAT Mode — 28 Gana Meta-Tools
 
-The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 488 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
+The Polymorphic Resonant Adaptive Tools (PRAT) router maps all 490 dispatch tools into 28 Ganas — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each Gana:
 
 1. **Has a domain** — a specific operational concern (session, memory, health, ethics, etc.)
 2. **Supports 4 polymorphic operations** — search / analyze / transform / consolidate
@@ -658,7 +663,7 @@ For Whitemagic to be release-ready (v22.0.0), the following must be verified:
 WhiteMagic now supports multiple "galaxies" — separate memory databases for different projects or domains. Each galaxy has its own SQLite database, holographic index, and association graph. Tools: `galaxy.create`, `galaxy.switch`, `galaxy.list`, `galaxy.status`, `galaxy.ingest`, `galaxy.delete`. The `default` galaxy ships with quickstart guide memories.
 
 ### Ollama Agent Loop
-`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 488 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
+`ollama.agent` runs an agentic loop where a local LLM autonomously calls WhiteMagic's 490 dispatch tools, experiences real value, uses relevant memories as context, parses tool-call blocks from model output, executes them, and feeds results back. Up to 10 iterations. Works with any Ollama-hosted model (llama3.2, phi4, qwen2.5, etc.).
 
 ### Edgerunner Violet Security Layer
 15 new security tools: MCP Integrity (SHA-256 schema fingerprinting), Model Signing (OMS-compatible manifests with trust levels), Engagement Tokens (HMAC-SHA256 scoped authorization for offensive security), Security Monitor (anomaly detection for rapid-fire, lateral movement, privilege escalation). Violet Dharma profile adds 5 security rules. Karma ledger now has ops_class field for dual-log transparency.
@@ -679,7 +684,7 @@ Server Instructions (4,858 chars auto-injected at init), Streamable HTTP transpo
 - **UMAP Visualization** (`core/memory/umap_projection.py`) — 2D/3D embedding projection with optional k-means clustering and metadata hydration.
 
 ### Metrics
-- **516 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
+- **518 callable tools** across **28 Gana meta-tools** (see `mcp-registry.json` for current count)
 - **180 nested tool enums** in the lean MCP server
 - **v22.2.0 release baseline:** 2,216 tests passing, 0 failures, 67 skipped (as of 2026-05-05)
 - **Current local audit baseline:** 2,526 tests passing, 0 failures, 2 skipped (as of 2026-06-26)

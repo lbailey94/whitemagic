@@ -180,9 +180,12 @@ Or add manually to any MCP client config:
 
 | Mode | Env Var | Tools | Best For |
 |------|---------|-------|----------|
-| **PRAT** | `WM_MCP_PRAT=1` | 28 Gana meta-tools | Advanced agents (recommended) |
+| **Seed** (default) | `WM_MCP_PRAT=2` or unset | 1 tool (`wm`) | Minimal token surface — recommended |
+| **PRAT** | `WM_MCP_PRAT=1` | 29 tools (28 Ganas + `wm`) | When you need explicit Gana schemas |
 | **Lite** | `WM_MCP_LITE=1` | ~92 core tools | Simple integrations |
-| **Full** | *(default)* | Legacy broad-surface registration | Maximum capability |
+| **Full** | `WM_MCP_PRAT=0` | Legacy broad-surface registration | Maximum capability |
+
+> **The `wm` meta-tool ('world in a seed')** auto-routes natural language to any of the 490 underlying tools. In Seed mode, the entire WhiteMagic surface is collapsed into a single tool definition — the absolute minimum token cost. Use `wm(thought='help')` to discover all 28 Ganas and their tools.
 
 ## Starter Packs
 
@@ -218,7 +221,7 @@ See `.env` for all configurable options. Key ones:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `WM_STATE_ROOT` | `~/.whitemagic` | Where runtime data lives |
-| `WM_MCP_PRAT` | `0` | Enable PRAT mode (28 Gana tools) |
+| `WM_MCP_PRAT` | `2` (Seed) | `2`=Seed (1 tool: `wm`), `1`=PRAT (29 tools), `0`=Full (490 tools) |
 | `WM_SILENT_INIT` | `0` | Suppress startup logging |
 | `WM_DB_PATH` | `$WM_STATE_ROOT/memory/whitemagic.db` | Database location |
 
@@ -237,7 +240,8 @@ _RUN_SH = """\
 # Usage: ./run.sh [--full|--lite|--prat]
 #
 # Modes:
-#   --prat  (default) 28 Gana meta-tools — recommended for advanced agents
+#   --seed  (default) 1 tool (wm meta-tool) — minimal token surface, recommended
+#   --prat  29 tools (28 Ganas + wm) — when you need explicit Gana schemas
 #   --lite  ~92 core tools — simpler integration
 #   --full  Legacy broad-surface registration — maximum capability
 
@@ -253,20 +257,24 @@ if [ -z "${VIRTUAL_ENV:-}" ]; then
     fi
 fi
 
-MODE="${1:---prat}"
+MODE="${1:---seed}"
 
 case "$MODE" in
     --full)
         echo "Starting WhiteMagic MCP Server (full mode — legacy broad-surface registration)..."
-        exec python -m whitemagic.run_mcp
+        WM_MCP_PRAT=0 exec python -m whitemagic.run_mcp
         ;;
     --lite)
         echo "Starting WhiteMagic MCP Server (lite mode — ~92 tools)..."
         WM_MCP_LITE=1 exec python -m whitemagic.run_mcp
         ;;
-    --prat|*)
-        echo "Starting WhiteMagic MCP Server (PRAT mode — 28 Gana tools)..."
+    --prat)
+        echo "Starting WhiteMagic MCP Server (PRAT mode — 29 tools: 28 Ganas + wm)..."
         WM_MCP_PRAT=1 exec python -m whitemagic.run_mcp
+        ;;
+    --seed|*)
+        echo "Starting WhiteMagic MCP Server (seed mode — 1 tool: wm)..."
+        WM_MCP_PRAT=2 exec python -m whitemagic.run_mcp
         ;;
 esac
 """
@@ -469,9 +477,10 @@ WM_STATE_ROOT=./.whitemagic
 # WM_DB_PATH=
 
 # MCP Server Mode (set ONE of these)
-# WM_MCP_PRAT=1       # 28 Gana meta-tools (recommended)
+# WM_MCP_PRAT=2       # Seed mode — 1 tool (wm meta-tool) — DEFAULT, minimal token surface
+# WM_MCP_PRAT=1       # PRAT mode — 29 tools (28 Ganas + wm)
+# WM_MCP_PRAT=0       # Full mode — 490 dispatch tools (legacy broad-surface)
 # WM_MCP_LITE=1       # ~92 core tools
-# (neither)            # Full mode — legacy broad-surface registration
 
 # MCP Client Adapter (adjusts schema for specific AI clients)
 # WM_MCP_CLIENT=gemini   # Options: gemini, deepseek, qwen, kimi

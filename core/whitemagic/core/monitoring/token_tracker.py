@@ -87,6 +87,9 @@ def mw_token_tracker(
     Records input tokens (from kwargs), output tokens (from result),
     and saved tokens (from local resolution) to GreenScore telemetry.
     """
+    if ctx.meta.get("quiet_internal_benchmark"):
+        return next_fn(ctx)
+
     start = time.time()
 
     # Estimate input tokens from kwargs
@@ -122,7 +125,7 @@ def mw_token_tracker(
             tool=ctx.tool_name,
             duration_ms=duration_ms,
         )
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, AttributeError) as e:
         logger.debug("Token tracker: GreenScore recording failed: %s", e)
 
     # Inject token metadata into result

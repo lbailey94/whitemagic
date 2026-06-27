@@ -153,6 +153,9 @@ for ref in REFERENCES:
                     # Allow historical release baseline references (e.g., "v23.0.0 release baseline")
                     if 'release baseline' in line:
                         continue
+                    # Allow historical changelog entries (e.g., "## [23.1.0]")
+                    if version == "23.1.0" and ('## [' in line or 'v23.1.0' in line):
+                        continue
                     mismatches.append((ref, version, line.strip()))
 
 if mismatches:

@@ -6,7 +6,6 @@ with holographic coordinates from the active galaxy.
 """
 
 import logging
-import os
 import sqlite3
 import time
 from concurrent.futures import Future
@@ -145,15 +144,16 @@ def _memory_type_to_zone(mem_type: str | None) -> str:
     return "active"
 
 
-def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _build_nodes_from_galaxy(limit: int = 500, galaxy_name: str | None = None, user_id: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Query a galaxy for real memory nodes and edges.
 
     Args:
         limit: Maximum nodes to return.
         galaxy_name: Optional galaxy to query; uses active galaxy if None.
+        user_id: Optional user ID for per-user galaxy isolation.
     """
     try:
-        _, um = _resolve_galaxy(galaxy_name)
+        _, um = _resolve_galaxy(galaxy_name, x_user_id=user_id)
     except HTTPException:
         return [], []
 
@@ -233,6 +233,7 @@ def _build_constellations_from_galaxy(
     galaxy_name: str | None = None,
     min_members: int = 3,
     max_radius: float = 0.5,
+    user_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Detect constellations in a galaxy using the Rust KD-tree fast path.
 
@@ -241,9 +242,10 @@ def _build_constellations_from_galaxy(
         galaxy_name: Optional galaxy to query.
         min_members: Minimum points per constellation.
         max_radius: Spatial radius for cluster membership.
+        user_id: Optional user ID for per-user galaxy isolation.
     """
     try:
-        _, um = _resolve_galaxy(galaxy_name)
+        _, um = _resolve_galaxy(galaxy_name, x_user_id=user_id)
     except HTTPException:
         return []
 
@@ -367,6 +369,7 @@ def _build_semantic_constellations_from_galaxy(
     galaxy_name: str | None = None,
     similarity_threshold: float = 0.75,
     min_members: int = 3,
+    user_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Detect semantic constellations via embedding similarity clustering.
 
@@ -375,9 +378,10 @@ def _build_semantic_constellations_from_galaxy(
         galaxy_name: Optional galaxy to query.
         similarity_threshold: Cosine similarity threshold for graph edges.
         min_members: Minimum points per constellation.
+        user_id: Optional user ID for per-user galaxy isolation.
     """
     try:
-        _, um = _resolve_galaxy(galaxy_name)
+        _, um = _resolve_galaxy(galaxy_name, x_user_id=user_id)
     except HTTPException:
         return []
 
@@ -485,49 +489,50 @@ def _build_semantic_constellations_from_galaxy(
     return constellations
 
 
-def _require_api_key(x_api_key: str | None) -> str | None:
-    """Validate API key if WM_GALAXY_REQUIRE_KEY is set."""
-    require = os.environ.get("WM_GALAXY_REQUIRE_KEY", "").lower() in ("1", "true", "yes")
-    if not require:
-        return None  # open
-    if not x_api_key:
-        raise HTTPException(status_code=401, detail="X-API-Key header required")
-    if x_api_key.startswith("wm_") and len(x_api_key) >= 20:
-        return x_api_key
-    raise HTTPException(status_code=403, detail="Invalid API key")
+def _resolve_user_id(x_user_id: str | None) -> str:
+    """Resolve user ID from header, defaulting to 'local'.
+
+    No API key required — purely local identification.
+    """
+    from whitemagic.core.user_profile import resolve_user_id as _resolve
+    return _resolve(x_user_id)
 
 
-def _resolve_galaxy(x_galaxy_name: str | None) -> tuple[Any, Any]:
+def _resolve_galaxy(x_galaxy_name: str | None, x_user_id: str | None = None) -> tuple[Any, Any]:
     """Resolve galaxy from header or active default.
 
     Returns (galaxy_info, unified_memory) or raises HTTPException.
     """
+    uid = _resolve_user_id(x_user_id)
     gm = get_galaxy_manager()
     if x_galaxy_name:
-        info = gm.get_galaxy(x_galaxy_name)
+        info = gm.get_galaxy(x_galaxy_name, user_id=uid)
         if not info:
-            raise HTTPException(status_code=404, detail=f"Galaxy '{x_galaxy_name}' not found")
+            raise HTTPException(status_code=404, detail=f"Galaxy '{x_galaxy_name}' not found for user '{uid}'")
         try:
-            um = gm._get_memory(x_galaxy_name)
+            registry_key = f"{uid}/{x_galaxy_name}"
+            um = gm._get_memory(registry_key)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Galaxy unavailable: {exc}") from exc
         return info, um
-    return gm.get_active(), gm._get_memory(gm.get_active().name)
+    active = gm.get_active()
+    return active, gm._get_memory(gm._active_galaxy)
 
 
 if router is not None:
     @router.get("/")
     async def list_galaxies(
         request: Request,
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
     ) -> dict[str, Any]:
-        """List all available galaxies."""
-        _require_api_key(x_api_key)
+        """List all available galaxies for the requesting user."""
+        uid = _resolve_user_id(x_user_id)
         gm = get_galaxy_manager()
         return {
             "active": gm._active_galaxy,
-            "galaxies": gm.list_galaxies(),
-            "total": len(gm._galaxies),
+            "user_id": uid,
+            "galaxies": gm.list_galaxies(user_id=uid),
+            "total": len([g for g in gm._galaxies.values() if g.user_id == uid]),
         }
 
     @router.get("/nodes")
@@ -536,17 +541,17 @@ if router is not None:
         limit: int = 500,
         zone: str | None = None,
         include_content: bool = False,
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
         """Return holographic galaxy nodes for 3D visualization.
 
-        Supports per-user galaxy isolation via X-Galaxy-Name header.
-        If omitted, returns the globally active galaxy.
+        Supports per-user galaxy isolation via X-User-Id and X-Galaxy-Name headers.
+        If omitted, returns the globally active galaxy for the default user.
         """
-        _require_api_key(x_api_key)
+        uid = _resolve_user_id(x_user_id)
 
-        nodes, edges = _build_nodes_from_galaxy(limit=limit, galaxy_name=x_galaxy_name)
+        nodes, edges = _build_nodes_from_galaxy(limit=limit, galaxy_name=x_galaxy_name, user_id=uid)
 
         # Fallback to demo data if galaxy is empty
         if not nodes:
@@ -570,6 +575,7 @@ if router is not None:
             "total": len(nodes),
             "has_coords": len([n for n in nodes if "x" in n]),
             "source": "galaxy_manager" if nodes is not _DEMO_NODES else "demo",
+            "user_id": uid,
         }
 
     @router.post("/nodes")
@@ -579,14 +585,14 @@ if router is not None:
         content: str = Body(""),
         zone: str = Body("active"),
         importance: float = Body(0.5),
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
         """Create a new memory node in the specified galaxy (or active)."""
-        _require_api_key(x_api_key)
+        uid = _resolve_user_id(x_user_id)
 
         try:
-            active, um = _resolve_galaxy(x_galaxy_name)
+            active, um = _resolve_galaxy(x_galaxy_name, x_user_id=uid)
         except HTTPException:
             raise
 
@@ -635,14 +641,14 @@ if router is not None:
     async def get_galaxy_constellations(
         request: Request,
         limit: int = 500,
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
         """Return detected constellations from the galaxy (cached, auto-detect).
 
         On cache miss triggers a background refresh so the next request is instant.
         """
-        _require_api_key(x_api_key)
+        uid = _resolve_user_id(x_user_id)
 
         cache_key = f"{x_galaxy_name or 'active'}:{limit}"
         now = time.time()
@@ -655,6 +661,7 @@ if router is not None:
                 "total": len(cached[1]),
                 "source": "cache",
                 "cached_at": cached[0],
+                "user_id": uid,
             }
 
         # Cache miss: compute synchronously (first call) but also schedule
@@ -662,7 +669,7 @@ if router is not None:
         _trigger_background_refresh(galaxy_name=x_galaxy_name, limit=limit)
 
         constellations = _build_constellations_from_galaxy(
-            limit=limit, galaxy_name=x_galaxy_name
+            limit=limit, galaxy_name=x_galaxy_name, user_id=uid
         )
 
         # Populate cache
@@ -680,14 +687,14 @@ if router is not None:
         min_members: int = Body(3),
         max_radius: float = Body(0.5),
         limit: int = Body(500),
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
         """Trigger a background refresh of the constellation cache.
 
         Returns immediately; detection runs in a background thread.
         """
-        _require_api_key(x_api_key)
+        uid = _resolve_user_id(x_user_id)
 
         cache_key = f"{x_galaxy_name or 'active'}:{limit}"
         _CONSTELLATION_CACHE.pop(cache_key, None)
@@ -701,6 +708,7 @@ if router is not None:
         return {
             "status": "refreshing",
             "cache_key": cache_key,
+            "user_id": uid,
             "message": "Constellation detection running in background",
         }
 
@@ -710,14 +718,14 @@ if router is not None:
         min_members: int = Body(3),
         max_radius: float = Body(0.5),
         limit: int = Body(500),
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
         """Trigger fresh constellation detection with tunable parameters.
 
         Invalidates the read cache for this galaxy.
         """
-        _require_api_key(x_api_key)
+        uid = _resolve_user_id(x_user_id)
 
         cache_key = f"{x_galaxy_name or 'active'}:{limit}"
         _CONSTELLATION_CACHE.pop(cache_key, None)
@@ -728,6 +736,7 @@ if router is not None:
             galaxy_name=x_galaxy_name,
             min_members=min_members,
             max_radius=max_radius,
+            user_id=uid,
         )
         elapsed = time.time() - t0
 
@@ -739,6 +748,7 @@ if router is not None:
             "total": len(constellations),
             "source": "galaxy_manager",
             "elapsed_ms": round(elapsed * 1000, 2),
+            "user_id": uid,
             "params": {"min_members": min_members, "max_radius": max_radius, "limit": limit},
         }
 
@@ -748,7 +758,7 @@ if router is not None:
         similarity_threshold: float = Body(0.75),
         min_members: int = Body(3),
         limit: int = Body(500),
-        x_api_key: str | None = Header(None, alias="X-API-Key"),
+        x_user_id: str | None = Header(None, alias="X-User-Id"),
         x_galaxy_name: str | None = Header(None, alias="X-Galaxy-Name"),
     ) -> dict[str, Any]:
         """Detect semantic constellations using embedding similarity clustering.
@@ -756,7 +766,7 @@ if router is not None:
         Clusters memories by cosine similarity of their semantic embeddings
         rather than spatial holographic coordinates.
         """
-        _require_api_key(x_api_key)
+        uid = _resolve_user_id(x_user_id)
 
         t0 = time.time()
         constellations = _build_semantic_constellations_from_galaxy(
@@ -764,6 +774,7 @@ if router is not None:
             galaxy_name=x_galaxy_name,
             similarity_threshold=similarity_threshold,
             min_members=min_members,
+            user_id=uid,
         )
         elapsed = time.time() - t0
 
@@ -772,6 +783,7 @@ if router is not None:
             "total": len(constellations),
             "source": "semantic_embeddings",
             "elapsed_ms": round(elapsed * 1000, 2),
+            "user_id": uid,
             "params": {
                 "similarity_threshold": similarity_threshold,
                 "min_members": min_members,

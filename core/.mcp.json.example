@@ -1,11 +1,26 @@
 {
   "mcpServers": {
+    "whitemagic-seed": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "-m",
+        "whitemagic.run_mcp_lean"
+      ],
+      "cwd": ".",
+      "env": {
+        "PYTHONPATH": ".",
+        "WM_MCP_PRAT": "2",
+        "WM_SILENT_INIT": "1",
+        "WM_STATE_ROOT": "/tmp/whitemagic_state"
+      }
+    },
     "whitemagic-prat": {
       "type": "stdio",
       "command": "python3",
       "args": [
         "-m",
-        "whitemagic.run_mcp"
+        "whitemagic.run_mcp_lean"
       ],
       "cwd": ".",
       "env": {
@@ -26,6 +41,7 @@
       "cwd": ".",
       "env": {
         "PYTHONPATH": ".",
+        "WM_MCP_PRAT": "0",
         "WM_SILENT_INIT": "1",
         "WM_STATE_ROOT": "/tmp/whitemagic_state"
       }

@@ -13,7 +13,7 @@ class PolyglotPipeline:
         self.specialists = PolyglotSpecialists()
 
     def memory_analysis_pipeline(self, memory_id: str, content: str) -> dict[str, Any]:
-        """Pipeline: Python → Rust → Zig → Mojo → Julia → Python"""
+        """Pipeline: Python → Rust → Zig → Julia → Python"""
         start = time.time()
         results = {"pipeline": "memory_analysis", "stages": []}
 
@@ -38,11 +38,11 @@ class PolyglotPipeline:
         return results
 
     def batch_processing_pipeline(self, memories: list[dict]) -> dict[str, Any]:
-        """Pipeline: Python → Mojo → Haskell → Python"""
+        """Pipeline: Python → Haskell → Python"""
         start = time.time()
         results = {"pipeline": "batch_processing", "stages": []}
 
-        # Stage 1: Mojo batch encoding
+        # Stage 1: Python batch encoding
         r1 = self.specialists.batch_encode(memories, int(time.time()))
         results["stages"].append({"stage": 1, "language": r1.language, "time_ms": r1.execution_time_ms})
 

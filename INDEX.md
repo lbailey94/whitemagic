@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 23.1.0
-**Last Updated**: June 26, 2026 (v23.1.0 — test suite stabilization, gitignore cleanup, binary removal)
+**Version**: 23.3.0
+**Last Updated**: June 27, 2026 (v23.3.0 — `wm` meta-tool, Seed MCP mode, PRAT mode now 29 tools)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -53,6 +53,22 @@ These files live at the repository root. They are the **public face** of the pro
 
 ---
 
+## Desktop Workspace Map
+
+This repository is one of several primary local WhiteMagic workspaces. The sibling roots below now have or already had root-level indexes.
+
+| Workspace | Role | Index |
+|-----------|------|-------|
+| `WHITEMAGIC/` | Private/active WhiteMagic development repository | `INDEX.md` |
+| `whitemagic-public/` | Public sanitized WhiteMagic repository | `../whitemagic-public/INDEX.md` |
+| `Agent-SafetyBench/` | External agent-safety benchmark corpus | `../Agent-SafetyBench/INDEX.md` |
+| `reports/` | Cross-project reports, audits, handoffs, funding drafts | `../reports/INDEX.md` |
+| `archives/` | Laptop exports and historical archive material | `../archives/INDEX.md` |
+| `vercel-deploy/` | Deployment and MCP submission operations notes | `../vercel-deploy/INDEX.md` |
+| `WHITEMAGIC-aux/` | Auxiliary WhiteMagic archives, site, experiments, browser extension, CODEX artifacts | `../WHITEMAGIC-aux/INDEX.md` |
+
+---
+
 ## Local Private Workspace: `docs/private/`
 
 > **Rule**: Private, local-only, or password-protected garden material belongs here. This folder is ignored by git and should not be uploaded in public releases.
@@ -93,6 +109,7 @@ Private filenames are intentionally not enumerated in this public index.
 | File | What It Is | Date |
 |------|-----------|------|
 | `STRATEGIC_ROADMAP_V23.md` | v23 roadmap — multi-user + WASM runtime | Jun 3 |
+| `V23_2_ROADMAP.md` | v23.2 roadmap — local-first multi-user, real-time sync, WASM, Rust SIMD, Mojo removal | Jun 26 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective plan — 6 phased objectives | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | External Fragment + STRATA audit findings | May 15 |
 | `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all systems | May 29 |
@@ -724,4 +741,4 @@ local-first browsing memory capture tool. Not yet vendored into this repo.
 
 ---
 
-*This index is a living document. Last updated: 2026-06-18 by session agent.*
+*This index is a living document. Last updated: 2026-06-27 by workspace inventory pass.*

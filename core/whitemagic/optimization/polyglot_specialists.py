@@ -94,7 +94,7 @@ class PolyglotSpecialists:
             return SpecialistResult("SIMDProcessor", "python", True, matrix_fallback,
                                    (time.time() - start) * 1000, True)
 
-    # Specialist 3: Tensor Operations (Mojo)
+    # Specialist 3: Tensor Operations (Python)
     def batch_encode(self, memories: list[dict], current_time: int) -> SpecialistResult:
         """
         Perform the batch encode operation.
@@ -108,7 +108,7 @@ class PolyglotSpecialists:
         """
         start = time.time()
         coords = self.router.encode_holographic_batch(memories, current_time)
-        lang = "mojo" if self.router.metrics.mojo_calls > 0 else "python"
+        lang = "python"
         self.stats[lang] += 1
         return SpecialistResult("TensorProcessor", lang, True, coords,
                                (time.time() - start) * 1000, lang == "python")
