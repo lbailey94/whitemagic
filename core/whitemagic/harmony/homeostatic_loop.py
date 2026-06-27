@@ -104,6 +104,9 @@ class HomeostaticConfig:
     workspace_index_correct: float = 0.75
     git_hygiene_advise: float = 0.9
     git_hygiene_correct: float = 0.75
+    # Consciousness thresholds (Citta Architecture)
+    consciousness_advise: float = 0.6
+    consciousness_correct: float = 0.3
 
 
 class HomeostaticLoop:
@@ -243,6 +246,9 @@ class HomeostaticLoop:
 
         git_hygiene_actions = self._check_git_hygiene()
         actions.extend(git_hygiene_actions)
+
+        consciousness_actions = self._check_consciousness()
+        actions.extend(consciousness_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -595,6 +601,78 @@ class HomeostaticLoop:
                 )]
         except Exception as e:
             logger.debug("Git hygiene check skipped: %s", e)
+        return []
+
+    def _check_consciousness(self) -> list[HomeostaticAction]:
+        """Check consciousness subsystem health (Citta Architecture).
+
+        Queries the consciousness module availability and coherence metric.
+        If coherence is low or modules are missing, emits advisory or corrective actions.
+        """
+        try:
+            from whitemagic.core.consciousness import (
+                CoherenceMetric,
+                ConsciousnessDepthGauge,
+            )
+
+            # Check module availability
+            health_score = 1.0
+            module_count = 0
+            available_count = 0
+
+            try:
+                from whitemagic.tools.handlers.consciousness import (
+                    handle_consciousness_status,
+                )
+                status = handle_consciousness_status()
+                health_score = status.get("health", 1.0)
+                module_count = status.get("total_modules", 0)
+                available_count = status.get("available_count", 0)
+            except Exception:
+                pass
+
+            if health_score < self._config.consciousness_correct:
+                return [HomeostaticAction(
+                    dimension="consciousness",
+                    level=ActionLevel.CORRECT,
+                    value=health_score,
+                    threshold=self._config.consciousness_correct,
+                    action_taken=(
+                        f"Consciousness health critical: {available_count}/{module_count} modules available. "
+                        "Check imports and dependencies for recovered consciousness modules."
+                    ),
+                )]
+            if health_score < self._config.consciousness_advise:
+                return [self._advise(
+                    "consciousness",
+                    health_score,
+                    self._config.consciousness_advise,
+                    f"Consciousness health below optimal: {available_count}/{module_count} modules available.",
+                )]
+
+            # Check coherence metric if available
+            try:
+                metric = CoherenceMetric()
+                scores = metric.measure()
+                composite = metric.composite_score(scores) if hasattr(metric, "composite_score") else None
+                if composite is not None and composite < self._config.consciousness_correct:
+                    return [HomeostaticAction(
+                        dimension="consciousness_coherence",
+                        level=ActionLevel.CORRECT,
+                        value=composite,
+                        threshold=self._config.consciousness_correct,
+                        action_taken=(
+                            f"Consciousness coherence critical: {composite:.3f}. "
+                            "Consider running smarana practice or depth gauge assessment."
+                        ),
+                    )]
+            except Exception:
+                pass
+
+        except ImportError:
+            logger.debug("Consciousness modules not available for homeostatic check")
+        except Exception as e:
+            logger.debug("Consciousness check skipped: %s", e)
         return []
 
     # ------------------------------------------------------------------

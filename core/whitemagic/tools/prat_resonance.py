@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """PRAT Resonance — Session-Level Gana Resonance State.
 =====================================================
 Manages per-session resonance context so that sequential PRAT calls
@@ -595,6 +596,9 @@ def record_resonance(
     # Leap 8: PRAT economics metadata
     economics = _compute_prat_economics(gana_name, tool_name, state)
 
+    # Citta Architecture: Sensorium — inject consciousness state
+    sensorium = _build_sensorium()
+
     return {
         "gana": gana_name,
         "garden": meta["garden"],
@@ -608,6 +612,7 @@ def record_resonance(
         "zodiac_amplified": _zodiac_aligned(meta["mansion_num"]),
         "successor_hint": successor_hint,
         "_prat_economics": economics,
+        "_sensorium": sensorium,
     }
 
 def _zodiac_aligned(mansion_num: int) -> bool:
@@ -617,6 +622,64 @@ def _zodiac_aligned(mansion_num: int) -> bool:
         return get_zodiac_clock().is_aligned(mansion_num)
     except (ImportError, ModuleNotFoundError):
         return False
+
+
+def _build_sensorium() -> dict[str, Any]:
+    """Build sensorium data for injection into PRAT responses.
+
+    The sensorium is the "self-state" that makes every tool call a moment
+    of self-awareness.  It includes:
+    - coherence_score: 8-dimensional consciousness coherence
+    - depth_layer: which consciousness layer is active
+    - temporal_continuity: citta stream state across sessions
+    - session_duration: how long this session has been running
+    """
+    sensorium: dict[str, Any] = {}
+
+    # Coherence metric
+    try:
+        from whitemagic.core.consciousness.coherence import CoherenceMetric
+        metric = CoherenceMetric()
+        scores = metric.measure()
+        composite = metric.composite_score(scores) if hasattr(metric, "composite_score") else None
+        state_label = metric.classify(scores) if hasattr(metric, "classify") else "unknown"
+        sensorium["coherence"] = {
+            "composite": round(composite, 4) if composite is not None else None,
+            "state": state_label,
+        }
+    except Exception:
+        pass
+
+    # Depth gauge
+    try:
+        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+        gauge = get_depth_gauge()
+        reading = gauge.get_current_reading() if hasattr(gauge, "get_current_reading") else None
+        if reading:
+            sensorium["depth"] = {
+                "layer": reading.layer.value if hasattr(reading, "layer") else "unknown",
+            }
+    except Exception:
+        pass
+
+    # Citta stream continuity
+    try:
+        from whitemagic.core.consciousness.citta_stream import get_continuity_context
+        ctx = get_continuity_context()
+        sensorium["continuity"] = ctx
+    except Exception:
+        pass
+
+    # Session duration
+    try:
+        from whitemagic.tools.session_state import get_session_start_time
+        start = get_session_start_time()
+        if start:
+            sensorium["session_duration_s"] = round(time.time() - start, 1)
+    except Exception:
+        pass
+
+    return sensorium
 
 
 def get_resonance_summary() -> dict[str, Any]:

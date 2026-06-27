@@ -62,7 +62,7 @@ def _is_quiet_internal_benchmark(kwargs: dict[str, Any] | None = None, args: dic
 #   "compact" (default) — only navigation-relevant keys
 #   "full" / "verbose"  — the complete resonance block
 #   "off" / "none" / "0" — omit the _resonance block entirely
-_RESONANCE_COMPACT_KEYS = ("gana", "chain_position", "successor_hint", "vitality_warning")
+_RESONANCE_COMPACT_KEYS = ("gana", "chain_position", "successor_hint", "vitality_warning", "_sensorium")
 
 
 def _resonance_verbosity() -> str:
