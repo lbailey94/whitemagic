@@ -108,6 +108,15 @@ TOOL_TO_GANA: dict[str, str] = {
     "list_ganas":              "gana_ghost",
     "vitality":                "gana_ghost",
     "discover":                "gana_ghost",
+    # Consciousness (Citta Architecture) — self-model & introspection
+    "consciousness.depth":          "gana_ghost",
+    "consciousness.coherence":      "gana_ghost",
+    "consciousness.awaken":         "gana_ghost",
+    "consciousness.reflect":        "gana_ghost",
+    "consciousness.token_report":   "gana_ghost",
+    "consciousness.narrative":      "gana_ghost",
+    "consciousness.unified_field":  "gana_ghost",
+    "consciousness.status":         "gana_ghost",
 
     # ═══ WILLOW — Resilience & Flexibility ═══
     "rate_limiter.stats":      "gana_willow",
@@ -646,6 +655,16 @@ TOOL_TO_GANA: dict[str, str] = {
     "strata.survey":               "gana_chariot",
     "strata.archaeology":          "gana_chariot",
     "strata.list_checks":          "gana_chariot",
+
+    # ── v23.4: Internal Wiki + External Repo (Chariot — self-knowledge + external scan) ──
+    "wiki.generate":               "gana_chariot",
+    "wiki.query":                  "gana_chariot",
+    "wiki.update":                 "gana_chariot",
+    "wiki.scan":                   "gana_chariot",
+    "wiki.stats":                  "gana_chariot",
+    "external.wiki_query":         "gana_chariot",
+    "external.repo_scan":          "gana_chariot",
+    "external.repo_compare":       "gana_chariot",
 
     # ── v23.1: Unified Read API — Winnowing Basket (unified search/recall) ──
     "wm_read":                     "gana_winnowing_basket",

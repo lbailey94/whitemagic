@@ -120,6 +120,18 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "archaeology_process_wisdom": LazyHandler("archaeology", "handle_archaeology_process_wisdom"),
     "archaeology_daily_digest": LazyHandler("archaeology", "handle_archaeology_daily_digest"),
 
+    # --- Internal Wiki (self-knowledge substrate) ---
+    "wiki.generate": LazyHandler("wiki", "handle_wiki_generate"),
+    "wiki.query": LazyHandler("wiki", "handle_wiki_query"),
+    "wiki.update": LazyHandler("wiki", "handle_wiki_update"),
+    "wiki.scan": LazyHandler("wiki", "handle_wiki_scan"),
+    "wiki.stats": LazyHandler("wiki", "handle_wiki_stats"),
+
+    # --- External Repository Tools ---
+    "external.wiki_query": LazyHandler("external_repo", "handle_external_wiki_query"),
+    "external.repo_scan": LazyHandler("external_repo", "handle_external_repo_scan"),
+    "external.repo_compare": LazyHandler("external_repo", "handle_external_repo_compare"),
+
     # --- STRATA (codebase static analysis + archaeology) ---
     "strata.analyze": LazyHandler("strata", "handle_strata_analyze"),
     "strata.survey": LazyHandler("strata", "handle_strata_survey"),
@@ -252,6 +264,16 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     # --- Meta-Tool (v23.3: World in a Seed) ---
     "wm": LazyHandler("meta_tool", "handle_wm"),
     "wm_help": LazyHandler("meta_tool", "handle_wm_help"),
+
+    # --- Consciousness (v23.3: Citta Architecture) ---
+    "consciousness.depth": LazyHandler("consciousness", "handle_consciousness_depth"),
+    "consciousness.coherence": LazyHandler("consciousness", "handle_consciousness_coherence"),
+    "consciousness.awaken": LazyHandler("consciousness", "handle_consciousness_awaken"),
+    "consciousness.reflect": LazyHandler("consciousness", "handle_consciousness_reflect"),
+    "consciousness.token_report": LazyHandler("consciousness", "handle_consciousness_token_report"),
+    "consciousness.narrative": LazyHandler("consciousness", "handle_consciousness_narrative"),
+    "consciousness.unified_field": LazyHandler("consciousness", "handle_consciousness_unified_field"),
+    "consciousness.status": LazyHandler("consciousness", "handle_consciousness_status"),
 }
 
 # ---------------------------------------------------------------------------
