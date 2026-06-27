@@ -99,7 +99,8 @@ pub mod sutra_kernel;
 #[cfg(feature = "python")]
 pub mod geneseed_miner;
 
-// Inference engine (ternary SIMD, streaming, quantization)
+// Inference engine (ternary SIMD, streaming, quantization) — native only (uses memmap2)
+#[cfg(not(feature = "wasm"))]
 pub mod inference;
 #[cfg(feature = "python")]
 pub mod inference_pymodule;

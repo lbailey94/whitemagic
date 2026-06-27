@@ -337,6 +337,262 @@ fn circular_conv_scalar(a: &[f32], b: &[f32], dim: usize, out: &mut [f32]) {
     }
 }
 
+/// Batch Euclidean distance between a query vector and a matrix of vectors using SIMD.
+///
+/// # Arguments
+/// * `query` - Query vector (dim floats)
+/// * `matrix` - Matrix of vectors (row-major, num_vectors * dim floats)
+/// * `dim` - Dimension of vectors
+/// * `results` - Output buffer for distances (num_vectors floats)
+///
+/// # Returns
+/// Number of distances computed
+#[inline]
+pub fn batch_euclidean_distance_simd(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    results: &mut [f32],
+) -> usize {
+    let num_vectors = matrix.len() / dim;
+
+    if num_vectors == 0 || dim == 0 || query.len() != dim {
+        return 0;
+    }
+
+    if is_x86_feature_detected!("avx2") {
+        unsafe {
+            batch_euclidean_avx2(query, matrix, dim, num_vectors, results)
+        }
+    } else {
+        batch_euclidean_scalar(query, matrix, dim, num_vectors, results)
+    }
+}
+
+/// AVX2-accelerated batch Euclidean distance
+#[target_feature(enable = "avx2")]
+unsafe fn batch_euclidean_avx2(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    num_vectors: usize,
+    results: &mut [f32],
+) -> usize {
+    for i in 0..num_vectors {
+        let offset = i * dim;
+        let vec = &matrix[offset..offset + dim];
+
+        let mut sum = _mm256_setzero_ps();
+        let mut j = 0;
+
+        while j + 8 <= dim {
+            let q = _mm256_loadu_ps(query.as_ptr().add(j));
+            let v = _mm256_loadu_ps(vec.as_ptr().add(j));
+            let diff = _mm256_sub_ps(q, v);
+            let squared = _mm256_mul_ps(diff, diff);
+            sum = _mm256_add_ps(sum, squared);
+            j += 8;
+        }
+
+        let mut dist_sq = 0.0f32;
+        let sum_array: [f32; 8] = std::mem::transmute(sum);
+        for &val in &sum_array {
+            dist_sq += val;
+        }
+
+        while j < dim {
+            let d = query[j] - vec[j];
+            dist_sq += d * d;
+            j += 1;
+        }
+
+        results[i] = dist_sq.sqrt();
+    }
+
+    num_vectors
+}
+
+/// Scalar fallback for batch Euclidean distance
+fn batch_euclidean_scalar(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    num_vectors: usize,
+    results: &mut [f32],
+) -> usize {
+    for i in 0..num_vectors {
+        let offset = i * dim;
+        let vec = &matrix[offset..offset + dim];
+
+        let dist_sq: f32 = query.iter()
+            .zip(vec.iter())
+            .map(|(&q, &v)| {
+                let d = q - v;
+                d * d
+            })
+            .sum();
+
+        results[i] = dist_sq.sqrt();
+    }
+
+    num_vectors
+}
+
+/// Batch dot product between a query vector and a matrix of vectors using SIMD.
+///
+/// # Arguments
+/// * `query` - Query vector (dim floats)
+/// * `matrix` - Matrix of vectors (row-major, num_vectors * dim floats)
+/// * `dim` - Dimension of vectors
+/// * `results` - Output buffer for dot products (num_vectors floats)
+///
+/// # Returns
+/// Number of dot products computed
+#[inline]
+pub fn batch_dot_product_simd(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    results: &mut [f32],
+) -> usize {
+    let num_vectors = matrix.len() / dim;
+
+    if num_vectors == 0 || dim == 0 || query.len() != dim {
+        return 0;
+    }
+
+    if is_x86_feature_detected!("avx2") {
+        unsafe {
+            batch_dot_avx2(query, matrix, dim, num_vectors, results)
+        }
+    } else {
+        batch_dot_scalar(query, matrix, dim, num_vectors, results)
+    }
+}
+
+/// AVX2-accelerated batch dot product
+#[target_feature(enable = "avx2")]
+unsafe fn batch_dot_avx2(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    num_vectors: usize,
+    results: &mut [f32],
+) -> usize {
+    for i in 0..num_vectors {
+        let offset = i * dim;
+        let vec = &matrix[offset..offset + dim];
+
+        let mut sum = _mm256_setzero_ps();
+        let mut j = 0;
+
+        while j + 8 <= dim {
+            let q = _mm256_loadu_ps(query.as_ptr().add(j));
+            let v = _mm256_loadu_ps(vec.as_ptr().add(j));
+            let prod = _mm256_mul_ps(q, v);
+            sum = _mm256_add_ps(sum, prod);
+            j += 8;
+        }
+
+        let mut dot = 0.0f32;
+        let sum_array: [f32; 8] = std::mem::transmute(sum);
+        for &val in &sum_array {
+            dot += val;
+        }
+
+        while j < dim {
+            dot += query[j] * vec[j];
+            j += 1;
+        }
+
+        results[i] = dot;
+    }
+
+    num_vectors
+}
+
+/// Scalar fallback for batch dot product
+fn batch_dot_scalar(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    num_vectors: usize,
+    results: &mut [f32],
+) -> usize {
+    for i in 0..num_vectors {
+        let offset = i * dim;
+        let vec = &matrix[offset..offset + dim];
+
+        let dot: f32 = query.iter()
+            .zip(vec.iter())
+            .map(|(&q, &v)| q * v)
+            .sum();
+
+        results[i] = dot;
+    }
+
+    num_vectors
+}
+
+/// Batch top-k selection: find k vectors with highest cosine similarity to query.
+///
+/// Uses a simple partial selection sort approach. For large k, a heap would
+/// be more efficient, but for typical k < 100 this is faster due to cache locality.
+///
+/// # Arguments
+/// * `query` - Query vector (dim floats, should be normalized)
+/// * `matrix` - Matrix of vectors (row-major, num_vectors * dim floats, should be normalized)
+/// * `dim` - Dimension of vectors
+/// * `num_vectors` - Number of vectors in matrix
+/// * `k` - Number of top results to return
+/// * `out_indices` - Output buffer for indices (k ints)
+/// * `out_scores` - Output buffer for scores (k floats)
+///
+/// # Returns
+/// Number of results written (min(k, num_vectors))
+#[inline]
+pub fn batch_topk_simd(
+    query: &[f32],
+    matrix: &[f32],
+    dim: usize,
+    num_vectors: usize,
+    k: usize,
+    out_indices: &mut [usize],
+    out_scores: &mut [f32],
+) -> usize {
+    if num_vectors == 0 || dim == 0 || query.len() != dim || k == 0 {
+        return 0;
+    }
+
+    let actual_k = k.min(num_vectors);
+
+    // Compute all cosine similarities
+    let mut scores = vec![0.0f32; num_vectors];
+    batch_cosine_similarity_simd(query, matrix, dim, &mut scores);
+
+    // Partial selection sort for top-k
+    let mut indices: Vec<usize> = (0..num_vectors).collect();
+
+    for i in 0..actual_k {
+        let mut best_idx = i;
+        let mut best_score = scores[indices[i]];
+
+        for j in (i + 1)..num_vectors {
+            let score = scores[indices[j]];
+            if score > best_score {
+                best_score = score;
+                best_idx = j;
+            }
+        }
+
+        indices.swap(i, best_idx);
+        out_indices[i] = indices[i];
+        out_scores[i] = best_score;
+    }
+
+    actual_k
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -407,5 +663,85 @@ mod tests {
         assert!((results[3] - 0.0).abs() < 1e-5);
         assert!((results[4] - 0.0).abs() < 1e-5);
         assert!((results[5] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_batch_euclidean_distance() {
+        let query = vec![0.0, 0.0, 0.0];
+        let matrix = vec![
+            3.0, 4.0, 0.0,  // dist = 5.0
+            0.0, 0.0, 0.0,  // dist = 0.0
+            1.0, 0.0, 0.0,  // dist = 1.0
+        ];
+        let mut results = vec![0.0; 3];
+
+        let count = batch_euclidean_distance_simd(&query, &matrix, 3, &mut results);
+        assert_eq!(count, 3);
+
+        assert!((results[0] - 5.0).abs() < 1e-5);
+        assert!((results[1] - 0.0).abs() < 1e-5);
+        assert!((results[2] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_batch_dot_product() {
+        let query = vec![1.0, 2.0, 3.0];
+        let matrix = vec![
+            1.0, 0.0, 0.0,  // dot = 1.0
+            0.0, 1.0, 0.0,  // dot = 2.0
+            1.0, 1.0, 1.0,  // dot = 6.0
+        ];
+        let mut results = vec![0.0; 3];
+
+        let count = batch_dot_product_simd(&query, &matrix, 3, &mut results);
+        assert_eq!(count, 3);
+
+        assert!((results[0] - 1.0).abs() < 1e-5);
+        assert!((results[1] - 2.0).abs() < 1e-5);
+        assert!((results[2] - 6.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_batch_topk() {
+        let query = vec![1.0, 0.0, 0.0];
+        let matrix = vec![
+            0.0, 1.0, 0.0,  // cosine = 0.0
+            1.0, 0.0, 0.0,  // cosine = 1.0
+            0.5, 0.5, 0.0,  // cosine = 0.5
+            0.0, 0.0, 1.0,  // cosine = 0.0
+        ];
+        let mut indices = vec![0usize; 2];
+        let mut scores = vec![0.0f32; 2];
+
+        let count = batch_topk_simd(&query, &matrix, 3, 4, 2, &mut indices, &mut scores);
+        assert_eq!(count, 2);
+
+        // Top result should be index 1 (cosine = 1.0)
+        assert_eq!(indices[0], 1);
+        assert!((scores[0] - 1.0).abs() < 1e-5);
+
+        // Second result should be index 2 (cosine = 0.5)
+        assert_eq!(indices[1], 2);
+        assert!((scores[1] - 0.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_batch_euclidean_empty() {
+        let query: Vec<f32> = vec![];
+        let matrix: Vec<f32> = vec![];
+        let mut results: Vec<f32> = vec![];
+
+        let count = batch_euclidean_distance_simd(&query, &matrix, 0, &mut results);
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_batch_dot_product_mismatched_dim() {
+        let query = vec![1.0, 0.0];
+        let matrix = vec![1.0, 0.0, 0.0];  // dim=3 but query is dim=2
+        let mut results = vec![0.0; 1];
+
+        let count = batch_dot_product_simd(&query, &matrix, 3, &mut results);
+        assert_eq!(count, 0);
     }
 }
