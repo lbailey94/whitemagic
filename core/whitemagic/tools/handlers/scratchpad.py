@@ -89,11 +89,26 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
     content = kwargs.get("content", "Continuing thought...")
     section = kwargs.get("section", "current_focus")
     if scratchpad_id not in manager.scratchpads:
-        # If ID was provided but not found, try to find by name or create
         pad = manager.create(scratchpad_id)
         scratchpad_id = pad.name
 
-    manager.write_to(scratchpad_id, content, tag=section)
+    # Chain state params (sequential-thinking compatibility)
+    thought_number = kwargs.get("thought_number")
+    total_thoughts = kwargs.get("total_thoughts")
+    branch_id = kwargs.get("branch_id")
+    branch_from = kwargs.get("branch_from")
+    is_revision = kwargs.get("is_revision", False)
+    revises_entry = kwargs.get("revises_entry")
+
+    entry = manager.write_to(
+        scratchpad_id, content, tag=section,
+        thought_number=thought_number,
+        total_thoughts=total_thoughts,
+        branch_id=branch_id,
+        branch_from=branch_from,
+        is_revision=is_revision,
+        revises_entry=revises_entry,
+    )
 
     # v23.1: Bridge scratchpad writes into WorkingMemory
     try:
@@ -107,10 +122,21 @@ def handle_scratchpad_update(**kwargs: Any) -> dict[str, Any]:
             tags=["scratchpad", section or "notes"],
         )
     except Exception:
-        pass  # WorkingMemory unavailable — scratchpad still works
+        pass
 
+    chain_status = manager.get_chain_status(scratchpad_id)
     _emit("WORKING_MEMORY_UPDATED", {"action": "update", "scratchpad_id": scratchpad_id, "section": section})
-    return {"status": "success", "scratchpad_id": scratchpad_id, "section": section}
+    return {
+        "status": "success",
+        "scratchpad_id": scratchpad_id,
+        "section": section,
+        "thought_number": entry.get("thought_number"),
+        "total_thoughts": entry.get("total_thoughts"),
+        "thought_history_length": chain_status.get("thought_history_length", 0),
+        "branches": chain_status.get("branches", []),
+        "branch_count": chain_status.get("branch_count", 0),
+        "is_revision": entry.get("is_revision", False),
+    }
 
 
 def handle_analyze_scratchpad(**kwargs: Any) -> dict[str, Any]:

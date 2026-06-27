@@ -15,7 +15,11 @@ from whitemagic.utils.fileio import atomic_write, file_lock
 
 
 class Scratchpad:
-    """A single working memory scratchpad."""
+    """A single working memory scratchpad with chain-of-thought state tracking.
+
+    Supports sequential-thinking-style chain state (thought_number, total_thoughts),
+    branching (branch_id, branch_from), and revision (is_revision, revises_entry).
+    """
 
     def __init__(self, name: str, focus: str | None = None):
         self.name = name
@@ -23,15 +27,64 @@ class Scratchpad:
         self.entries: list[dict[str, Any]] = []
         self.created = datetime.now()
         self.last_active = datetime.now()
+        self._main_chain_length = 0
+        self._branch_counter = 0
 
-    def write(self, content: str, tag: str | None = None) -> None:
-        """Write to scratchpad."""
-        self.entries.append({
+    def write(
+        self,
+        content: str,
+        tag: str | None = None,
+        thought_number: int | None = None,
+        total_thoughts: int | None = None,
+        branch_id: str | None = None,
+        branch_from: int | None = None,
+        is_revision: bool = False,
+        revises_entry: int | None = None,
+    ) -> dict[str, Any]:
+        """Write to scratchpad with optional chain state metadata.
+
+        Args:
+            content: The thought content.
+            tag: Section tag (current_focus, decisions, questions, next_steps, ideas).
+            thought_number: Position in the chain (auto-incremented if None).
+            total_thoughts: Estimated total thoughts in this chain.
+            branch_id: Branch identifier for forked chains.
+            branch_from: Thought number to branch from.
+            is_revision: Whether this entry revises an earlier one.
+            revises_entry: Entry index being revised.
+
+        Returns:
+            The entry dict that was appended.
+        """
+        if thought_number is None:
+            if branch_id:
+                branch_entries = [e for e in self.entries if e.get("branch_id") == branch_id]
+                thought_number = len(branch_entries) + 1
+            else:
+                self._main_chain_length += 1
+                thought_number = self._main_chain_length
+
+        if total_thoughts is None:
+            total_thoughts = thought_number
+
+        if branch_id and branch_id not in {e.get("branch_id") for e in self.entries if e.get("branch_id")}:
+            self._branch_counter += 1
+
+        entry = {
             "content": content,
             "tag": tag,
             "timestamp": datetime.now().isoformat(),
-        })
+            "thought_number": thought_number,
+            "total_thoughts": total_thoughts,
+            "branch_id": branch_id,
+            "branch_from": branch_from,
+            "is_revision": is_revision,
+            "revises_entry": revises_entry,
+            "entry_index": len(self.entries),
+        }
+        self.entries.append(entry)
         self.last_active = datetime.now()
+        return entry
 
     def read_recent(self, count: int = 5) -> list[str]:
         """Read recent entries."""
@@ -40,6 +93,25 @@ class Scratchpad:
     def clear(self) -> None:
         """Clear scratchpad."""
         self.entries = []
+
+    def get_chain_status(self) -> dict[str, Any]:
+        """Return chain-of-thought state for sequential-thinking compatibility."""
+        main_entries = [e for e in self.entries if not e.get("branch_id")]
+        branches: dict[str, list[dict[str, Any]]] = {}
+        for e in self.entries:
+            bid = e.get("branch_id")
+            if bid:
+                branches.setdefault(bid, []).append(e)
+        last_entry = self.entries[-1] if self.entries else None
+        return {
+            "thought_number": last_entry.get("thought_number", 0) if last_entry else 0,
+            "total_thoughts": last_entry.get("total_thoughts", 0) if last_entry else 0,
+            "thought_history_length": len(self.entries),
+            "branches": list(branches.keys()),
+            "branch_count": len(branches),
+            "main_chain_length": len(main_entries),
+            "is_revision": last_entry.get("is_revision", False) if last_entry else False,
+        }
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -54,6 +126,8 @@ class Scratchpad:
             "entries": self.entries,
             "created": self.created.isoformat(),
             "last_active": self.last_active.isoformat(),
+            "main_chain_length": self._main_chain_length,
+            "branch_count": self._branch_counter,
         }
 
 
@@ -77,6 +151,12 @@ class ScratchpadManager:
                     data: dict[str, Any] = _json_loads(pad_file.read_text())
                 pad = Scratchpad(data["name"], data.get("focus"))
                 pad.entries = data.get("entries", [])
+                pad._main_chain_length = data.get("main_chain_length", len([
+                    e for e in pad.entries if not e.get("branch_id")
+                ]))
+                pad._branch_counter = data.get("branch_count", len({
+                    e.get("branch_id") for e in pad.entries if e.get("branch_id")
+                }))
                 self.scratchpads[data["name"]] = pad
             except (ValueError, OSError):
                 pass
@@ -100,12 +180,35 @@ class ScratchpadManager:
         self._save_scratchpad(name)
         return pad
 
-    def write_to(self, name: str, content: str, tag: str | None = None) -> None:
-        """Write to a specific scratchpad."""
+    def write_to(
+        self,
+        name: str,
+        content: str,
+        tag: str | None = None,
+        thought_number: int | None = None,
+        total_thoughts: int | None = None,
+        branch_id: str | None = None,
+        branch_from: int | None = None,
+        is_revision: bool = False,
+        revises_entry: int | None = None,
+    ) -> dict[str, Any]:
+        """Write to a specific scratchpad with chain state support.
+
+        Returns the entry dict with chain state metadata.
+        """
         if name not in self.scratchpads:
             self.create(name)
-        self.scratchpads[name].write(content, tag)
+        entry = self.scratchpads[name].write(
+            content, tag,
+            thought_number=thought_number,
+            total_thoughts=total_thoughts,
+            branch_id=branch_id,
+            branch_from=branch_from,
+            is_revision=is_revision,
+            revises_entry=revises_entry,
+        )
         self._save_scratchpad(name)
+        return entry
 
     def interleave(self, pad_names: list[str] | None = None) -> dict[str, Any]:
         """Interleave scratchpads - merge insights at phase boundary.
@@ -137,6 +240,16 @@ class ScratchpadManager:
 
         self.interleave_history.append(synthesis)
         return synthesis
+
+    def get_chain_status(self, name: str) -> dict[str, Any]:
+        """Get chain-of-thought status for a scratchpad.
+
+        Returns thought_number, total_thoughts, thought_history_length,
+        branches, and revision state — compatible with sequential-thinking.
+        """
+        if name not in self.scratchpads:
+            return {"error": f"Scratchpad not found: {name}"}
+        return self.scratchpads[name].get_chain_status()
 
     def get_active_pads(self) -> list[str]:
         """Get names of active scratchpads."""
