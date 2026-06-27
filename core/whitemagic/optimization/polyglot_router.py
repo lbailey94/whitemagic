@@ -3,25 +3,21 @@
 """WhiteMagic v5.1 "Polyglot Performance" - Smart Performance Router
 
 Routes operations to fastest available implementation:
-1. Mojo (Tier 1, 2, 4) - Tensor/Logic performance
-2. Rust (Tier 3) - Pattern matching performance
-3. Zig (Tier 5) - Deterministic/Low-level performance
-4. Python (Baseline) - Fallback
+1. Rust (Tier 3) - Pattern matching performance
+2. Zig (Tier 5) - Deterministic/Low-level performance
+3. Python (Baseline) - Fallback
 """
 
 import ctypes
 import logging
 import math
 import os
-import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, TypeVar, cast
-
-from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -31,7 +27,6 @@ class Backend(Enum):
     """Available backends for operations."""
 
     RUST = "rust"
-    MOJO = "mojo"
     ZIG = "zig"
     PYTHON = "python"
     AUTO = "auto"
@@ -42,15 +37,12 @@ class PerformanceMetrics:
     """Track backend performance."""
 
     rust_calls: int = 0
-    mojo_calls: int = 0
     zig_calls: int = 0
     python_calls: int = 0
     rust_time_ms: float = 0.0
-    mojo_time_ms: float = 0.0
     zig_time_ms: float = 0.0
     python_time_ms: float = 0.0
     rust_failures: int = 0
-    mojo_failures: int = 0
     zig_failures: int = 0
 
     @property
@@ -61,7 +53,7 @@ class PerformanceMetrics:
         Returns:
             int
         """
-        return self.rust_calls + self.python_calls + self.mojo_calls + self.zig_calls
+        return self.rust_calls + self.python_calls + self.zig_calls
 
     @property
     def native_usage_rate(self) -> float:
@@ -77,11 +69,11 @@ class PerformanceMetrics:
     @property
     def average_speedup(self) -> float:
         """Calculate average speedup factor (Native vs Python)."""
-        total_native_calls = self.rust_calls + self.mojo_calls + self.zig_calls
+        total_native_calls = self.rust_calls + self.zig_calls
         if self.python_calls == 0 or total_native_calls == 0:
             return 1.0
 
-        total_native_time = self.rust_time_ms + self.mojo_time_ms + self.zig_time_ms
+        total_native_time = self.rust_time_ms + self.zig_time_ms
         avg_native = total_native_time / max(total_native_calls, 1)
         avg_python = self.python_time_ms / max(self.python_calls, 1)
 
@@ -102,7 +94,6 @@ class PolyglotRouter:
 
         # Cache availability and handles
         self._rust_available = self._check_rust()
-        self._mojo_available = self._check_mojo()
         self._zig_available = self._check_zig()
         self._lib_cache: dict[str, Any] = {}
 
@@ -113,8 +104,6 @@ class PolyglotRouter:
         if not os.getenv("WM_SILENT_INIT"):
             if self._rust_available:
                 logger.info("🦀 Rust bridge available - 10-100x speedup enabled")
-            if self._mojo_available:
-                logger.info("🔥 Mojo acceleration available - High-performance compute enabled")
             if self._zig_available:
                 logger.info("⚡ Zig determinism available - Low-level systems speedup enabled")
 
@@ -162,22 +151,6 @@ class PolyglotRouter:
             except ImportError:
                 return False
 
-    def _get_mojo_env(self) -> dict[str, str]:
-        """Get environment with Mojo library paths."""
-        env = os.environ.copy()
-        mojo_lib = str(self.base_path / "whitemagic-mojo/mojo-env/.pixi/envs/default/lib")
-
-        current_ld = env.get("LD_LIBRARY_PATH", "")
-        if mojo_lib not in current_ld:
-            env["LD_LIBRARY_PATH"] = f"{mojo_lib}:{current_ld}" if current_ld else mojo_lib
-
-        return env
-
-    def _check_mojo(self) -> bool:
-        """Check if Mojo binaries are available."""
-        mojo_bin = self.base_path / "whitemagic-mojo/bin/coordinate_encoder_mojo"
-        return mojo_bin.exists()
-
     def _check_zig(self) -> bool:
         """Check if Zig shared library is available."""
         lib_path = self.base_path / "whitemagic-zig/zig-out/lib/libwhitemagic.so"
@@ -188,7 +161,6 @@ class PolyglotRouter:
         operation_name: str,
         python_fn: Callable[..., T],
         rust_fn: Callable[..., T] | None = None,
-        mojo_fn: Callable[..., T] | None = None,
         zig_fn: Callable[..., T] | None = None,
         *args: Any,
         **kwargs: Any,
@@ -196,13 +168,6 @@ class PolyglotRouter:
         """Route operation to best backend."""
         if self.prefer_backend == Backend.PYTHON:
             return self._call_python(operation_name, python_fn, *args, **kwargs)
-
-        if mojo_fn is not None and self._mojo_available:
-            try:
-                return self._call_mojo(operation_name, mojo_fn, *args, **kwargs)
-            except Exception as e:
-                self.metrics.mojo_failures += 1
-                logger.warning("Mojo %s failed: %s", operation_name, e, exc_info=True)
 
         if zig_fn is not None and self._zig_available:
             try:
@@ -227,15 +192,6 @@ class PolyglotRouter:
         self.metrics.rust_calls += 1
         self.metrics.rust_time_ms += duration_ms
         logger.debug("🦀 Rust %s: {duration_ms:.2f}ms", operation, exc_info=True)
-        return result
-
-    def _call_mojo(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
-        start = time.time()
-        result = fn(*args, **kwargs)
-        duration_ms = (time.time() - start) * 1000
-        self.metrics.mojo_calls += 1
-        self.metrics.mojo_time_ms += duration_ms
-        logger.debug("🔥 Mojo %s: {duration_ms:.2f}ms", operation, exc_info=True)
         return result
 
     def _call_zig(self, operation: str, fn: Callable[..., T], *args: Any, **kwargs: Any) -> T:
@@ -321,47 +277,7 @@ class PolyglotRouter:
         return self._route_operation("send_sangha_signal", python_impl, rust_fn=rust_impl)
 
     def encode_holographic(self, memory_data: dict[str, Any], current_time: int) -> dict[str, float]:
-        """Tier 1: Holographic Core (Mojo Optimized)"""
-        def mojo_impl() -> dict[str, float]:
-            """
-            Perform the mojo impl operation.
-
-            Returns:
-                dict[str, float]
-            """
-            bin_path = str(self.base_path / "whitemagic-mojo/bin/coordinate_encoder_mojo")
-            tags_str = ",".join(memory_data.get("tags", []))
-            # Avoid OS argument-length blowups; the Mojo encoder should not need the full blob.
-            content = (memory_data.get("content", "") or "")
-            if isinstance(content, str) and len(content) > 4000:
-                content = content[:4000]
-            cmd = [
-                bin_path, memory_data.get("id", "u"), content,
-                memory_data.get("title", ""), tags_str, memory_data.get("memory_type", "short_term"),
-                memory_data.get("garden", ""), str(memory_data.get("importance", 0.5)),
-                str(memory_data.get("neuro_score", 0.5)), str(memory_data.get("emotional_valence", 0.0)),
-                str(memory_data.get("joy_score", 0.0)), str(memory_data.get("resonance_score", 0.0)),
-                str(memory_data.get("created_timestamp", current_time)), str(current_time),
-            ]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-            if res.returncode != 0:
-                raise RuntimeError(res.stderr.strip() or "Mojo encoder failed")
-            coords = {}
-            for line in res.stdout.splitlines():
-                if ":" in line:
-                    parts = line.split(":")
-                    if len(parts) >= 2:
-                        k, v = parts[0], parts[1]
-                        if "X" in k:
-                            coords["x"] = float(v.strip())
-                        elif "Y" in k:
-                            coords["y"] = float(v.strip())
-                        elif "Z" in k:
-                            coords["z"] = float(v.strip())
-                        elif "W" in k:
-                            coords["w"] = float(v.strip())
-            return coords
-
+        """Tier 1: Holographic Core (Python CoordinateEncoder)"""
         def python_impl() -> dict[str, float]:
             """
             Perform the python impl operation.
@@ -374,72 +290,10 @@ class PolyglotRouter:
             return {"x": e._calculate_x(memory_data), "y": e._calculate_y(memory_data),
                     "z": e._calculate_z(memory_data), "w": e._calculate_w(memory_data)}
 
-        return self._route_operation("encode_holographic", python_impl, mojo_fn=mojo_impl)
+        return self._route_operation("encode_holographic", python_impl)
 
     def encode_holographic_batch(self, memories: list[dict[str, Any]], current_time: int) -> list[dict[str, float]]:
-        """Tier 1: Holographic Core (Mojo Optimized - Batch Mode)"""
-        def mojo_impl() -> list[dict[str, float]]:
-            """
-            Perform the mojo impl operation.
-
-            Returns:
-                list[dict[str, float]]
-            """
-            bin_path = str(self.base_path / "whitemagic-mojo/bin/coordinate_encoder_mojo")
-
-            # Prepare batch data
-            items = []
-            for mem in memories:
-                items.append({
-                    "id": mem.get("id", "u"),
-                    "content": mem.get("content", ""),
-                    "title": mem.get("title", ""),
-                    "tags": mem.get("tags", []),
-                    "importance": float(mem.get("importance", 0.5)),
-                    "created_timestamp": int(mem.get("created_timestamp", current_time)),
-                })
-
-            batch_data = _json_dumps({"items": items})
-
-            # Call Mojo with --batch, piping JSON via stdin (avoids E2BIG)
-            res = subprocess.run(
-                [bin_path, "--batch"],
-                input=batch_data,  # Pipe via stdin
-                capture_output=True,
-                text=True,
-                timeout=60,  # 60 second timeout for large batches
-            )
-
-            # Parse results
-            results = []
-            result_map = {}
-
-            for line in res.stdout.splitlines():
-                if "|RES:" in line:
-                    parts = line.split("|RES:")
-                    if len(parts) == 2:
-                        id_part = parts[0]
-                        coords_part = parts[1]
-
-                        mem_id = id_part.replace("ID:", "").strip()
-                        coords_vals = coords_part.split(",")
-
-                        if len(coords_vals) >= 4:
-                            coords = {
-                                "x": float(coords_vals[0]),
-                                "y": float(coords_vals[1]),
-                                "z": float(coords_vals[2]),
-                                "w": float(coords_vals[3]),
-                            }
-                            result_map[mem_id] = coords
-
-            # Maintain order
-            for mem in memories:
-                mid = mem.get("id", "u")
-                results.append(result_map.get(mid, {"x": 0.0, "y": 0.0, "z": 0.0, "w": 0.0}))
-
-            return results
-
+        """Tier 1: Holographic Core (Python Batch Encoder)"""
         def python_impl() -> list[dict[str, float]]:
             # Use optimized batch encoder with null safety
             """
@@ -455,31 +309,10 @@ class PolyglotRouter:
             coords = encoder.encode_batch(memories)
             return [c.to_dict() for c in coords]
 
-        return self._route_operation("encode_holographic_batch", python_impl, mojo_fn=mojo_impl)
+        return self._route_operation("encode_holographic_batch", python_impl)
 
     def process_zodiac(self, name: str, element: str, mode: str, urgency: float = 0.5) -> dict[str, Any]:
-        """Tier 2: Zodiac Core (Mojo Optimized)"""
-        def mojo_impl() -> dict[str, Any]:
-            """
-            Perform the mojo impl operation.
-
-            Returns:
-                dict[str, Any]
-            """
-            bin_path = str(self.base_path / "whitemagic-mojo/bin/zodiac_engine_mojo")
-            res = subprocess.run([bin_path, name, element, mode],
-                                 capture_output=True, text=True, timeout=5,
-                                 env=self._get_mojo_env())
-            if res.returncode != 0:
-                raise RuntimeError(res.stderr.strip() or "Mojo zodiac failed")
-            freq = 0.0
-            for line in res.stdout.splitlines():
-                if "Frequency:" in line:
-                    parts = line.split(":")
-                    if len(parts) >= 2:
-                        freq = float(parts[1].strip())
-            return {"frequency": freq, "resonance": freq * (1.1 if urgency > 0.8 else 1.0)}
-
+        """Tier 2: Zodiac Core (Python)"""
         def python_impl() -> dict[str, Any]:
             """
             Perform the python impl operation.
@@ -500,33 +333,11 @@ class PolyglotRouter:
                 resonance = frequency
             return {"frequency": frequency, "resonance": resonance}
 
-        return self._route_operation("process_zodiac", python_impl, mojo_fn=mojo_impl)
+        return self._route_operation("process_zodiac", python_impl)
 
     def calculate_neuro_score(self, current_score: float, access_count: int, total_memories: int,
                              days_since_access: float, importance: float) -> dict[str, float]:
-        """Tier 4: Neuro Scoring (Mojo Optimized)"""
-        def mojo_impl() -> dict[str, float]:
-            """
-            Perform the mojo impl operation.
-
-            Returns:
-                dict[str, float]
-            """
-            bin_path = str(self.base_path / "whitemagic-mojo/bin/neuro_score_mojo")
-            cmd = [bin_path, str(current_score), str(access_count), str(total_memories),
-                   str(days_since_access), str(importance)]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=5,
-                                 env=self._get_mojo_env())
-            if res.returncode != 0:
-                raise RuntimeError(res.stderr.strip() or "Mojo neuro_score failed")
-            score = current_score
-            for line in res.stdout.splitlines():
-                if "RESULT_SCORE:" in line:
-                    parts = line.split(":")
-                    if len(parts) >= 2:
-                        score = float(parts[1].strip())
-            return {"score": score}
-
+        """Tier 4: Neuro Scoring (Python)"""
         def python_impl() -> dict[str, float]:
             """
             Perform the python impl operation.
@@ -537,7 +348,7 @@ class PolyglotRouter:
             decayed = current_score * math.exp(-0.05 * days_since_access)
             return {"score": min(1.0, decayed + (importance * 0.1))}
 
-        return self._route_operation("neuro_scoring", python_impl, mojo_fn=mojo_impl)
+        return self._route_operation("neuro_scoring", python_impl)
 
     # --- Standard Performance Routing ---
 
@@ -845,11 +656,9 @@ class PolyglotRouter:
         """
         return {
             "rust": self._rust_available,
-            "mojo": self._mojo_available,
             "zig": self._zig_available,
             "calls": {
                 "rust": self.metrics.rust_calls,
-                "mojo": self.metrics.mojo_calls,
                 "zig": self.metrics.zig_calls,
                 "python": self.metrics.python_calls,
             },
