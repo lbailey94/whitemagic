@@ -14,8 +14,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-from whitemagic.utils.core import parse_datetime
-
 logger = logging.getLogger(__name__)
 
 

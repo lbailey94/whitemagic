@@ -205,8 +205,10 @@ class NarrativeEngine:
     def _get_story_engine(self):
         """Lazy accessor for the story-based NarrativeEngine."""
         if self._story_engine_instance is None:
-            from whitemagic.gardens.voice.narrative import NarrativeEngine as StoryNarrativeEngine
             from whitemagic.config.paths import MEMORY_DIR
+            from whitemagic.gardens.voice.narrative import (
+                NarrativeEngine as StoryNarrativeEngine,
+            )
             self._story_engine_instance = StoryNarrativeEngine(base_dir=MEMORY_DIR / "narrative")
         return self._story_engine_instance
 
