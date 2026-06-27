@@ -1,8 +1,8 @@
 {
   "name": "whitemagic",
   "display_name": "WhiteMagic Core",
-  "description": "Cognitive operating system for AI — persistent memory, associative recall, ethical governance, and self-awareness across sessions. 28 Gana meta-tools covering 462 capabilities.",
-  "version": "23.0.0",
+  "description": "Cognitive operating system for AI — persistent memory, associative recall, ethical governance, and self-awareness across sessions. Single 'wm' meta-tool covering 490 dispatch tools across 28 Ganas.",
+  "version": "23.3.0",
   "protocol_version": "2025-11-25",
   "homepage": "https://github.com/whitemagic-ai/whitemagic",
   "license": "MIT",
@@ -36,7 +36,7 @@
       "env": {
         "PYTHONUNBUFFERED": "1",
         "WM_SILENT_INIT": "1",
-        "WM_MCP_PRAT": "1"
+        "WM_MCP_PRAT": "2"
       }
     },
     "http": {
@@ -44,8 +44,8 @@
       "args": ["-m", "whitemagic.run_mcp_lean", "--http", "--port", "8770"]
     }
   },
-  "tool_count": 28,
-  "nested_tool_count": 462,
+  "tool_count": 1,
+  "nested_tool_count": 490,
   "requirements": {
     "python": ">=3.11",
     "optional": {

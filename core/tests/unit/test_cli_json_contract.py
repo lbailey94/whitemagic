@@ -114,7 +114,7 @@ class TestCLIJsonContract:
         result = runner.invoke(cli, ["--version"])
         assert result.exit_code == 0
         # Click outputs "<prog_name>, version <version>"
-        assert "23.1.0" in result.output or "version" in result.output.lower()
+        assert "23.2.0" in result.output or "version" in result.output.lower()
 
     def test_status_json_has_envelope(self, runner, cli):
         """Status command --json should return a tool envelope with status field."""
