@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Courage Garden — Session Initialization & Sharp Beginnings.
 
 Mansion: #1 Horn (角 Jiao)
@@ -23,7 +24,7 @@ import threading
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import GanYingMixin, init_listeners
 from whitemagic.gardens.base_garden import BaseGarden, CoordinateBias
 

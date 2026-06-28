@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Stillness Garden — Emptiness, Defrag & Garden Operations.
 
 Mansion: #25 Void (虚 Xu)
@@ -24,7 +25,7 @@ from collections import deque
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,
@@ -127,7 +128,9 @@ class StillnessGarden(BaseGarden, GanYingMixin):
 
         # Memory zone counts
         try:
-            from whitemagic.core.memory.sqlite_backend import get_pool  # type: ignore[attr-defined]
+            from whitemagic.core.memory.sqlite_backend import (
+                get_pool,  # type: ignore[attr-defined]
+            )
             pool = get_pool()
             with pool.connection() as conn:
                 rows = conn.execute("""

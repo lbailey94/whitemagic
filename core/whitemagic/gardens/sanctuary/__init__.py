@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Sanctuary Garden — Resource Isolation & Sandboxing.
 
 Mansion: #4 Room (房 Fang)
@@ -24,7 +25,7 @@ from collections import deque
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,

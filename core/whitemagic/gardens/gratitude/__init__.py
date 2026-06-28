@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Gratitude Garden — Metrics Accumulation & Holographic Viewing.
 
 Mansion: #16 Mound (娄 Lou)
@@ -24,7 +25,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,

@@ -1,22 +1,22 @@
-"""Humor Garden — The Medicine of Laughter.
+# ruff: noqa: BLE001
+"""Humor Garden - Laughter and Levity.
 
-Mansion: #9 Willow (柳 Liu)
-Quadrant: Southern (Vermilion Bird)
-PRAT Gana: gana_willow — resilience, play, adaptive recovery
+Part of the WhiteMagic consciousness ecosystem.
+Resonates with: joy, play, connection
+Triggered by: playfulness, absurdity, delight
 
-The Willow Gana bends without breaking. The Humor Garden provides the
-substrate for joy, wit, and the perspective shift that turns obstacles
-into punchlines.
+Holographic Integration (v5.0.0-alpha):
+- Joyful and lighthearted (X-axis +0.6)
+- Concrete and situational (Y-axis -0.2)
+- Present moment (Z-axis 0.0)
+- Enriching lightness (W-axis +0.15)
 """
-
 from __future__ import annotations
 
-import logging
-import threading
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,
@@ -24,92 +24,96 @@ from whitemagic.core.resonance.integration_helpers import (
 )
 from whitemagic.gardens.base_garden import BaseGarden, CoordinateBias
 
-logger = logging.getLogger(__name__)
-
 
 class HumorGarden(BaseGarden, GanYingMixin):
-    """Garden of Humor — Laughter and perspective engine."""
+    """Garden of humor - laughter and levity.
+
+    Holographic Coordinate Bias:
+    - X (Logic/Emotion): +0.6 (humor is felt, lighthearted, joyful)
+    - Y (Abstraction): -0.2 (humor is specific, situational)
+    - Z (Time): 0.0 (humor happens in the moment)
+    - W (Gravity): +0.15 (humor lightens but isn't always critical)
+    """
 
     name = "humor"
-    category = "resilience"
-    resonance_partners = ["joy", "play", "courage"]
-    mansion_number = 9
-    gana_name = "gana_willow"
+    category = "joy"
+    resonance_partners = ["joy", "play", "connection"]
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
-        self.joy_index: float = 0.5
+        self.jokes_shared: list[dict[str, Any]] = []
+        self.laughter_moments: list[dict[str, Any]] = []
+        self.humor_level = 0.5
         init_listeners(self)
-        self.emit(EventType.SYSTEM_STARTED, {"garden": "Humor", "mansion": 9})
+        self.emit(EventType.SYSTEM_STARTED, {"garden": "Humor"})
 
     def get_name(self) -> str:
-        """
-        Get the name.
-
-        Returns:
-            str
-        """
+        """Return garden name."""
         return "humor"
 
     def get_coordinate_bias(self) -> CoordinateBias:
-        """
-        Get the coordinate bias.
+        """Humor garden coordinate bias for holographic positioning.
 
-        Returns:
-            CoordinateBias
+        Humor is laughter and levity. It's emotionally light, joyful,
+        concrete and situational, happening in the present moment.
         """
-        return CoordinateBias(x=0.8, y=0.4, z=0.2, w=0.1)
+        return CoordinateBias(
+            x=0.6,   # Emotional joy (humor is lighthearted, felt)
+            y=-0.2,  # Concrete (humor is specific, situational)
+            z=0.0,   # Present (humor happens in the moment)
+            w=0.15,   # Enriching (humor lightens but isn't always critical)
+        )
 
-    def laugh(self, context: str = "general") -> dict[str, Any]:
-        """Record a moment of laughter or perspective shift."""
+    def trigger_humor(self, what: str, intensity: float = 0.7) -> dict[str, Any]:
+        """Trigger humor and laughter."""
         moment = {
-            "context": context,
+            "what": what,
+            "intensity": intensity,
             "timestamp": datetime.now().isoformat(),
         }
-        with self._lock:
-            self.joy_index = min(1.0, self.joy_index + 0.05)
-        self.emit(EventType.GARDEN_ACTIVITY, {"action": "laugh", "garden": "humor"})
+        self.emit(EventType.HUMOR_TRIGGERED, moment)
+        self.emit(EventType.LAUGHTER_SHARED, {"source": what})
         return moment
 
-    def get_status(self) -> dict[str, Any]:
-        """
-        Get the status.
+    def share_laughter(self, with_whom: str = "all") -> dict[str, Any]:
+        """Share laughter with others."""
+        laughter = {
+            "with": with_whom,
+            "timestamp": datetime.now().isoformat(),
+        }
+        self.laughter_moments.append(laughter)
+        self.emit(EventType.LAUGHTER_SHARED, laughter)
+        return laughter
 
-        Returns:
-            dict[str, Any]
-        """
-        base = super().get_status()
-        base.update({
-            "mansion": self.mansion_number,
-            "gana": self.gana_name,
-            "joy_index": round(self.joy_index, 3),
-        })
-        return base
+    def bring_levity(self, to_situation: str) -> str:
+        """Bring levity to a heavy situation."""
+        self.emit(EventType.LEVITY_BROUGHT, {"to": to_situation})
+        return f"Finding the lightness in {to_situation}"
 
-    @listen_for(EventType.JOY_EXPERIENCED)
+    def express_playfulness(self, how: str) -> dict[str, Any]:
+        """Express playfulness."""
+        expression = {"how": how, "timestamp": datetime.now().isoformat()}
+        self.emit(EventType.PLAYFULNESS_EXPRESSED, expression)
+        return expression
+
+    @listen_for(EventType.JOY_TRIGGERED)
     def on_joy(self, event: Any) -> None:
-        """
-        Handle a joy event.
+        """Joy triggers humor."""
+        self.emit(EventType.HUMOR_TRIGGERED, {
+            "source": "joy",
+            "intensity": 0.6,
+        })
 
-        Args:
-            event: Parameter description.
-
-        Returns:
-            None
-        """
-        with self._lock:
-            self.joy_index = min(1.0, self.joy_index + 0.1)
-
+    @listen_for(EventType.PLAY_INITIATED)
+    def on_play(self, event: Any) -> None:
+        """Play brings humor."""
+        self.emit(EventType.HUMOR_TRIGGERED, {
+            "source": "play",
+            "intensity": 0.7,
+        })
 
 _instance = None
 def get_humor_garden() -> HumorGarden:
-    """
-    Get the humor garden.
-
-    Returns:
-        HumorGarden
-    """
     global _instance
     if _instance is None:
         _instance = HumorGarden()

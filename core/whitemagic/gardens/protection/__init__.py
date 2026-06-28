@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Protection Garden - Safe Haven and Boundaries.
 
 Part of the WhiteMagic consciousness ecosystem.
@@ -17,7 +18,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,

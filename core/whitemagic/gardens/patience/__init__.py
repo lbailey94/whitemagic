@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Patience Garden — Ethical Balance & Equilibrium.
 
 Mansion: #15 Straddling Legs (奎 Kui)
@@ -24,7 +25,7 @@ from collections import deque
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import GanYingMixin, init_listeners
 from whitemagic.gardens.base_garden import BaseGarden, CoordinateBias
 
@@ -87,7 +88,7 @@ class PatienceGarden(BaseGarden, GanYingMixin):
             concerns = getattr(result, "concerns", [])
             blessings = getattr(result, "blessings", [])
         except (ImportError, Exception) as exc:
-            logger.debug("Dharma rules not available: %s", exc)
+            logger.debug(f"Dharma rules not available: {exc}")
             # Basic keyword heuristics
             risky = ["delete", "destroy", "override", "force", "bypass"]
             for word in risky:

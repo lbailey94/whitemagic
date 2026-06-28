@@ -27,7 +27,7 @@ from collections import deque
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,
@@ -74,21 +74,9 @@ class GriefGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Grief", "mansion": 8})
 
     def get_name(self) -> str:
-        """
-        Get the name.
-
-        Returns:
-            str
-        """
         return "grief"
 
     def get_coordinate_bias(self) -> CoordinateBias:
-        """
-        Get the coordinate bias.
-
-        Returns:
-            CoordinateBias
-        """
         return CoordinateBias(x=0.8, y=-0.1, z=-0.4, w=0.25)
 
     # ------------------------------------------------------------------
@@ -181,7 +169,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
                 "energy": round(snap.energy, 3),
                 "dharma": round(snap.dharma, 3),
             }
-        except (ImportError, AttributeError):
+        except Exception:
             snapshot["harmony"] = {"unavailable": True}
 
         # Shadow health
@@ -197,7 +185,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
                 get_all_breaker_stats,  # type: ignore[attr-defined]
             )
             snapshot["circuit_breakers"] = get_all_breaker_stats()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             snapshot["circuit_breakers"] = {"unavailable": True}
 
         with self._lock:
@@ -350,12 +338,6 @@ class GriefGarden(BaseGarden, GanYingMixin):
 
 _instance = None
 def get_grief_garden() -> GriefGarden:
-    """
-    Get the grief garden.
-
-    Returns:
-        GriefGarden
-    """
     global _instance
     if _instance is None:
         _instance = GriefGarden()

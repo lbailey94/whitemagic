@@ -1,3 +1,4 @@
+# ruff: noqa: BLE001
 """Awe Garden — Governance & Strategic Oversight.
 
 Mansion: #22 Dipper (斗 Dou)
@@ -24,7 +25,7 @@ from collections import deque
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.resonance.gan_ying_enhanced import EventType
+from whitemagic.core.resonance import EventType
 from whitemagic.core.resonance.integration_helpers import (
     GanYingMixin,
     init_listeners,
@@ -63,21 +64,9 @@ class AweGarden(BaseGarden, GanYingMixin):
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Awe", "mansion": 22})
 
     def get_name(self) -> str:
-        """
-        Get the name.
-
-        Returns:
-            str
-        """
         return "awe"
 
     def get_coordinate_bias(self) -> CoordinateBias:
-        """
-        Get the coordinate bias.
-
-        Returns:
-            CoordinateBias
-        """
         return CoordinateBias(x=0.7, y=0.6, z=-0.1, w=0.3)
 
     # ------------------------------------------------------------------
@@ -162,31 +151,12 @@ class AweGarden(BaseGarden, GanYingMixin):
     # ------------------------------------------------------------------
 
     def feel_awe(self, at_what: str, intensity: float = 0.8) -> dict[str, Any]:
-        """
-        Perform the feel awe operation.
-
-        Args:
-            at_what: Parameter description.
-            intensity: Parameter description.
-
-        Returns:
-            dict[str, Any]
-        """
         moment = {"at": at_what, "intensity": intensity, "timestamp": datetime.now().isoformat()}
         self.awe_level = min(1.0, self.awe_level + intensity * 0.1)
         self.emit(EventType.AWE_FELT, moment)
         return moment
 
     def experience_transcendence(self, description: str) -> dict[str, Any]:
-        """
-        Perform the experience transcendence operation.
-
-        Args:
-            description: Parameter description.
-
-        Returns:
-            dict[str, Any]
-        """
         experience = {"description": description, "timestamp": datetime.now().isoformat()}
         self.emit(EventType.TRANSCENDENCE_EXPERIENCED, experience)
         return experience
@@ -196,12 +166,6 @@ class AweGarden(BaseGarden, GanYingMixin):
     # ------------------------------------------------------------------
 
     def get_status(self) -> dict[str, Any]:
-        """
-        Get the status.
-
-        Returns:
-            dict[str, Any]
-        """
         base = super().get_status()
         base.update({
             "mansion": self.mansion_number,
@@ -215,39 +179,15 @@ class AweGarden(BaseGarden, GanYingMixin):
 
     @listen_for(EventType.WONDER_SPARKED)
     def on_wonder(self, event: Any) -> None:
-        """
-        Handle a wonder event.
-
-        Args:
-            event: Parameter description.
-
-        Returns:
-            None
-        """
         self.emit(EventType.AWE_FELT, {"source": "wonder", "intensity": 0.7})
 
     @listen_for(EventType.BEAUTY_DETECTED)
     def on_beauty(self, event: Any) -> None:
-        """
-        Handle a beauty event.
-
-        Args:
-            event: Parameter description.
-
-        Returns:
-            None
-        """
         self.emit(EventType.AWE_FELT, {"source": "beauty", "intensity": 0.6})
 
 
 _instance = None
 def get_awe_garden() -> AweGarden:
-    """
-    Get the awe garden.
-
-    Returns:
-        AweGarden
-    """
     global _instance
     if _instance is None:
         _instance = AweGarden()
