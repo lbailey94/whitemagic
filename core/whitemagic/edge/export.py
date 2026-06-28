@@ -38,7 +38,7 @@ class EdgeExporter:
     def export_config(self) -> dict[str, Any]:
         """Export system configuration for edge deployment."""
         config: dict[str, Any] = {
-            "version": "23.3.0",
+            "version": "23.3.1",
             "capabilities": [],
             "tools": [],
             "gardens": [],

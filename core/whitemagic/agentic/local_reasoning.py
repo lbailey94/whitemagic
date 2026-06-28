@@ -128,7 +128,7 @@ def test_count_rule(query: str) -> LocalInsight | None:
     if "test" in q and ("how many" in q or "count" in q or "pass" in q):
         return LocalInsight(
             source="pytest_cache",
-            content="WhiteMagic has 2699+ passing tests (v23.3.0)",
+            content="WhiteMagic has 2699+ passing tests (v23.3.1)",
             relevance=0.9,
             method="rule",
             tokens_saved=500,

@@ -29,7 +29,7 @@ class DashboardServer:
         }
 
     def _health_endpoint(self) -> dict[str, Any]:
-        return {"status": "ok", "version": "23.3.0"}
+        return {"status": "ok", "version": "23.3.1"}
 
     def _metrics_endpoint(self) -> dict[str, Any]:
         try:
