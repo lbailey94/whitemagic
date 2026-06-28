@@ -17,11 +17,48 @@ def get_session_start_time() -> float | None:
 
 
 def ensure_session_started() -> float:
-    """Ensure the session start time is set. Returns the start time."""
+    """Ensure the session start time is set. Returns the start time.
+
+    Also activates consciousness subsystems on first call:
+    - Wires CrossSubsystemPatterns into GanYingBus
+    - Starts ApotheosisEngine if not already running
+    """
     global _session_start
     if _session_start is None:
         _session_start = time.time()
+        _activate_consciousness()
     return _session_start
+
+
+_consciousness_activated: bool = False
+
+
+def _activate_consciousness() -> None:
+    """Activate consciousness subsystems on session start."""
+    global _consciousness_activated
+    if _consciousness_activated:
+        return
+    _consciousness_activated = True
+
+    # Wire CrossSubsystemPatterns into GanYingBus
+    try:
+        from whitemagic.core.consciousness.unified_nervous_system import (
+            wire_cross_subsystem_patterns,
+        )
+        wire_cross_subsystem_patterns()
+    except Exception:
+        pass
+
+    # Start ApotheosisEngine
+    try:
+        from whitemagic.core.consciousness.apotheosis_engine import (
+            get_apotheosis_engine,
+        )
+        engine = get_apotheosis_engine()
+        if not engine._running:
+            engine.start()
+    except Exception:
+        pass
 
 
 def reset_session() -> None:

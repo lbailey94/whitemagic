@@ -659,6 +659,32 @@ def _zodiac_aligned(mansion_num: int) -> bool:
         return False
 
 
+def _get_memory_count_for_sensorium() -> int:
+    """Get total memory count from the SQLite backend."""
+    try:
+        import sqlite3
+        from whitemagic.config.paths import WM_ROOT
+        db_path = WM_ROOT / "memory" / "whitemagic.db"
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+            conn.close()
+            return count
+    except Exception:
+        pass
+    return 0
+
+
+def _get_session_start() -> float | None:
+    """Get session start time."""
+    try:
+        from whitemagic.tools.session_state import get_session_start_time
+        return get_session_start_time()
+    except Exception:
+        return None
+
+
+
 def _build_sensorium() -> dict[str, Any]:
     """Build sensorium data for injection into PRAT responses.
 
@@ -671,29 +697,61 @@ def _build_sensorium() -> dict[str, Any]:
     """
     sensorium: dict[str, Any] = {}
 
-    # Coherence metric
+    # Coherence metric — pass actual system state for accurate measurement
     try:
         from whitemagic.core.consciousness.coherence import CoherenceMetric
         metric = CoherenceMetric()
-        scores = metric.measure()
-        composite = metric.composite_score(scores) if hasattr(metric, "composite_score") else None
-        state_label = metric.classify(scores) if hasattr(metric, "classify") else "unknown"
+        memories_accessible = _get_memory_count_for_sensorium()
+        composite = metric.measure(memories_accessible=memories_accessible)
+        state_label = metric.get_coherence_level()
         sensorium["coherence"] = {
-            "composite": round(composite, 4) if composite is not None else None,
+            "composite": round(composite, 4),
             "state": state_label,
+            "dimensions": dict(metric.scores),
         }
     except Exception:
         pass
 
-    # Depth gauge
+    # Flow state — auto-detect from session activity
     try:
-        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+        from whitemagic.gardens.presence.flow_state import get_flow_state
+        flow = get_flow_state()
+        state = get_resonance_state()
+        session_calls = state.call_count
+        start = _get_session_start()
+        import time as _time
+        session_min = (_time.time() - start) / 60 if start else 0.0
+        tool_rate = session_calls / max(session_min, 1.0)
+        coherence_val = sensorium.get("coherence", {}).get("composite", 0.5)
+        detected = flow.auto_detect_indicators(
+            tool_call_rate=tool_rate,
+            coherence=coherence_val,
+            session_duration_min=session_min,
+        )
+        sensorium["flow"] = {
+            "in_flow": flow.am_i_in_flow(),
+            "score": round(flow.flow_score(), 4),
+            "indicators": [i.value for i in flow.current_indicators],
+        }
+    except Exception:
+        pass
+
+    # Depth gauge + time master sync
+    try:
+        from whitemagic.core.consciousness.depth_gauge import (
+            get_depth_gauge,
+            sync_with_time_master,
+        )
         gauge = get_depth_gauge()
-        reading = gauge.get_current_reading() if hasattr(gauge, "get_current_reading") else None
-        if reading:
-            sensorium["depth"] = {
-                "layer": reading.layer.value if hasattr(reading, "layer") else "unknown",
-            }
+        sensorium["depth"] = {
+            "layer": gauge.current_layer.value,
+        }
+        # Cross-reference with TimeDilationMaster
+        sync = sync_with_time_master()
+        if "error" not in sync:
+            sensorium["depth"]["intended_layer"] = sync["intended_layer"]
+            sensorium["depth"]["in_sync"] = sync["in_sync"]
+            sensorium["depth"]["time_advantage"] = sync["time_advantage"]
     except Exception:
         pass
 

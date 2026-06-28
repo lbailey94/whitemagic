@@ -144,6 +144,12 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "fragment.status": LazyHandler("fragment", "handle_fragment_status"),
     "fragment.query": LazyHandler("fragment", "handle_fragment_query"),
 
+    # --- Fast Write (atomic file writing with syntax validation) ---
+    "fast_write.write": LazyHandler("fast_write", "handle_fast_write_write"),
+    "fast_write.append": LazyHandler("fast_write", "handle_fast_write_append"),
+    "fast_write.batch": LazyHandler("fast_write", "handle_fast_write_batch"),
+    "fast_write.validate": LazyHandler("fast_write", "handle_fast_write_validate"),
+
     # --- Polyglot Memory (Julia/Elixir/Haskell/Rust backends) ---
     "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
     "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
@@ -285,6 +291,9 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "consciousness.narrative": LazyHandler("consciousness", "handle_consciousness_narrative"),
     "consciousness.unified_field": LazyHandler("consciousness", "handle_consciousness_unified_field"),
     "consciousness.status": LazyHandler("consciousness", "handle_consciousness_status"),
+    "consciousness.smarana": LazyHandler("consciousness", "handle_consciousness_smarana"),
+    "consciousness.flow": LazyHandler("consciousness", "handle_consciousness_flow"),
+    "consciousness.time_dilation": LazyHandler("consciousness", "handle_consciousness_time_dilation"),
 
     # --- Citta Stream (v23.3.1: Temporal Continuity) ---
     "citta.continuity": LazyHandler("consciousness", "handle_citta_continuity"),

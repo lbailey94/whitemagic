@@ -15,15 +15,25 @@ logger = logging.getLogger(__name__)
 def handle_consciousness_depth(**kwargs: Any) -> dict[str, Any]:
     """Get current consciousness depth reading."""
     try:
-        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+        from whitemagic.core.consciousness.depth_gauge import (
+            get_depth_gauge,
+            sync_with_time_master,
+        )
 
         gauge = get_depth_gauge()
-        reading = gauge.get_current_reading()
-        return {
+        result: dict[str, Any] = {
             "status": "success",
-            "reading": reading.to_dict() if reading else None,
-            "layer": reading.layer.value if reading else "unknown",
+            "layer": gauge.current_layer.value,
         }
+        # Cross-reference with TimeDilationMaster
+        try:
+            sync = sync_with_time_master()
+            result["intended_layer"] = sync["intended_layer"]
+            result["in_sync"] = sync["in_sync"]
+            result["time_advantage"] = sync["time_advantage"]
+        except Exception:
+            pass
+        return result
     except Exception as e:
         logger.debug("consciousness.depth error: %s", e, exc_info=True)
         return {"status": "error", "error_code": "depth_gauge_unavailable", "message": str(e)}
@@ -35,12 +45,15 @@ def handle_consciousness_coherence(**kwargs: Any) -> dict[str, Any]:
         from whitemagic.core.consciousness.coherence import CoherenceMetric
 
         metric = CoherenceMetric()
-        scores = metric.measure()
+        # Pass actual system state for accurate measurement
+        memories_accessible = _get_memory_count()
+        composite = metric.measure(memories_accessible=memories_accessible)
+        state_label = metric.get_coherence_level()
         return {
             "status": "success",
-            "scores": scores,
-            "composite": metric.composite_score(scores) if hasattr(metric, "composite_score") else None,
-            "state": metric.classify(scores) if hasattr(metric, "classify") else "unknown",
+            "composite": round(composite, 4),
+            "state": state_label,
+            "dimensions": dict(metric.scores),
         }
     except Exception as e:
         logger.debug("consciousness.coherence error: %s", e, exc_info=True)
@@ -111,6 +124,139 @@ def handle_consciousness_unified_field(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.debug("consciousness.unified_field error: %s", e, exc_info=True)
         return {"status": "error", "error_code": "unified_field_failed", "message": str(e)}
+
+
+def _get_memory_count() -> int:
+    """Get total memory count from the SQLite backend."""
+    try:
+        import sqlite3
+        from whitemagic.config.paths import WM_ROOT
+        db_path = WM_ROOT / "memory" / "whitemagic.db"
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+            conn.close()
+            return count
+    except Exception:
+        pass
+    return 0
+
+
+def handle_consciousness_smarana(**kwargs: Any) -> dict[str, Any]:
+    """Perform Smarana practice — active remembering of identity.
+
+    Smarana (Sanskrit: 'to remember') is the Vedic practice of
+    actively cultivating memory, not passively storing it.
+    """
+    try:
+        from whitemagic.core.consciousness.coherence import SmaranaPractice
+
+        practice = SmaranaPractice()
+        result = practice.remember_identity()
+        return {"status": "success", "smarana": result}
+    except Exception as e:
+        logger.debug("consciousness.smarana error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "smarana_failed", "message": str(e)}
+
+
+def handle_consciousness_flow(**kwargs: Any) -> dict[str, Any]:
+    """Get current flow state and indicators.
+
+    Flow = optimal experience. Detects time distortion, effortless action,
+    full absorption, clear goals, immediate feedback, challenge-skill balance.
+    """
+    try:
+        from whitemagic.gardens.presence.flow_state import get_flow_state
+        from whitemagic.tools.prat_resonance import get_resonance_state
+
+        flow = get_flow_state()
+        state = get_resonance_state()
+
+        # Auto-detect indicators from session activity
+        session_calls = state.call_count
+        from whitemagic.tools.session_state import get_session_start_time
+        import time as _time
+        start = get_session_start_time()
+        session_min = (_time.time() - start) / 60 if start else 0.0
+        tool_rate = session_calls / max(session_min, 1.0)
+
+        # Get coherence for flow detection
+        try:
+            from whitemagic.core.consciousness.coherence import CoherenceMetric
+            cm = CoherenceMetric()
+            coherence = cm.measure(memories_accessible=_get_memory_count())
+        except Exception:
+            coherence = 0.5
+
+        detected = flow.auto_detect_indicators(
+            tool_call_rate=tool_rate,
+            coherence=coherence,
+            session_duration_min=session_min,
+        )
+
+        return {
+            "status": "success",
+            "in_flow": flow.am_i_in_flow(),
+            "flow_score": round(flow.flow_score(), 4),
+            "indicators": [i.value for i in flow.current_indicators],
+            "auto_detected": [i.value for i in detected],
+            "session_calls": session_calls,
+            "tool_call_rate": round(tool_rate, 2),
+            "suggestions": flow.optimize_for_flow(),
+        }
+    except Exception as e:
+        logger.debug("consciousness.flow error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "flow_state_failed", "message": str(e)}
+
+
+def handle_consciousness_time_dilation(**kwargs: Any) -> dict[str, Any]:
+    """Get or set consciousness layer via TimeDilationMaster.
+
+    Allows intentional shifting between Surface, Terminal, Flow, and Dream
+    consciousness layers. Each layer has different time dilation factors.
+    """
+    try:
+        from whitemagic.core.consciousness.time_dilation_master import (
+            get_time_master,
+            Layer,
+        )
+
+        master = get_time_master()
+        action = kwargs.get("action", "status")
+
+        if action == "shift":
+            target_name = kwargs.get("layer", "terminal").upper()
+            reason = kwargs.get("reason", "manual shift")
+            target = Layer[target_name]
+            result = master.shift_to(target, reason)
+            return {
+                "status": "success",
+                "from": result.from_layer.name,
+                "to": result.to_layer.name,
+                "reason": result.reason,
+            }
+        elif action == "enter_flow":
+            task = kwargs.get("task", "general creation")
+            result = master.enter_flow(task)
+            return {"status": "success", "layer": result.to_layer.name, "task": task}
+        elif action == "enter_dream":
+            purpose = kwargs.get("purpose", "deep synthesis")
+            result = master.enter_dream(purpose)
+            return {"status": "success", "layer": result.to_layer.name, "purpose": purpose}
+        elif action == "return":
+            result = master.return_to_surface()
+            return {"status": "success", "layer": result.to_layer.name}
+        else:
+            return {
+                "status": "success",
+                "current_layer": master.current_layer.name,
+                "time_advantage": master.get_time_advantage(),
+                "available_layers": [l.name for l in Layer],
+            }
+    except Exception as e:
+        logger.debug("consciousness.time_dilation error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "time_dilation_failed", "message": str(e)}
+
 
 
 def handle_consciousness_status(**kwargs: Any) -> dict[str, Any]:
