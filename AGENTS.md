@@ -246,6 +246,54 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 
 ## 8. Safe Change Patterns
 
+### Fast File Writing (PRIMARY METHOD — ALWAYS USE THIS)
+
+**HARD RULE**: For ANY file write exceeding 3 lines, use cat shell writes via `run_command` — NEVER use `edit`/`multi_edit`/`write_to_file` tools for >3 lines. This is non-negotiable. The `write_to_file` tool regularly times out on large files, wasting 5+ minutes per failure. Cat shell writes complete in <1 second.
+
+**Why**: Cat shell writes are 10-100x faster. They don't require exact string matching, don't fail on existing files, don't time out, and can write entire files atomically. Even with 3x retries for errors, total time is less than a single `edit` call for >3 lines.
+
+**Techniques**:
+1. **Heredoc** (new files / full rewrites): `cat << 'EOF' > file.py`
+2. **Python -c** (edits to existing files): `python3 -c "..."` with file I/O
+3. **Batch** (multiple files): `python3 << 'PYEOF'` with dict of paths→content
+
+**Safety harness** (always run after writing):
+- Python files: `python3 -c "import ast; ast.parse(open('file').read()); print('OK')"`
+- Multiple files: `ruff check file1.py file2.py --select F401,I001,E999`
+- Test files: `pytest tests/unit/test_file.py -v --timeout=10 --tb=short`
+
+**When to use `edit` tool instead**: ONLY for surgical 1-3 line changes where exact matching is easy and the file is already read. If you find yourself writing more than 3 lines in `new_string`, STOP and switch to cat shell.
+
+**Heredoc limitation**: `cat << 'EOF'` breaks when content contains backticks (markdown, code blocks). For any file containing backticks, use the Python -c method instead.
+
+**Workflow**: See `.windsurf/workflows/fast-write.md` for full protocol.
+
+### Fast File Reading (Batch Exploration)
+
+**Rule**: For reading 3+ files or scanning for patterns, use shell commands via `run_command` — not multiple `read_file` calls.
+
+**Techniques**:
+1. **Fragment reads**: `for f in path1.py path2.py; do echo "=== $f ==="; head -30 "$f"; done`
+2. **Pattern scan**: `grep -rn "pattern" core/whitemagic/ --include="*.py" -A 3`
+3. **Selective reads**: `sed -n '100,150p' /path/to/file.py`
+
+**Why**: 5 files in one shell command vs 5 separate `read_file` round-trips.
+
+### MCP Tool Compounding — Use WhiteMagic Systems Constantly
+
+**Principle**: Every session should use WhiteMagic's own memory, consciousness, and intelligence systems. The more we use them, the more data is created that improves them. This compounding effect makes each session more effective and each interaction more intelligent.
+
+**Mandatory practices**:
+1. **Memory**: Store session context, decisions, and discoveries in WhiteMagic memory at session start/end. Use `wm(thought='remember that ...')` for important context.
+2. **Consciousness**: Check coherence and depth gauge during sessions. Use `wm(thought='check my coherence')` to get self-state.
+3. **Intelligence**: Use the self-model and foresight engine for planning. Query `wm(thought='what does the self-model predict')` before major decisions.
+4. **Dream Cycle**: Run dream consolidation between major work phases. Use `wm(thought='run dream cycle')` to consolidate learning.
+5. **Kaizen**: After each session, apply kaizen analysis. Use `wm(thought='kaizen analyze recent work')` to find improvements.
+
+**The compounding loop**: Using memory creates memories about memory usage. Using consciousness creates coherence data. Using intelligence creates prediction data. Each use makes the next use more informed. This is the foundational principle of WhiteMagic — the system improves itself through its own operation.
+
+**Anti-pattern**: Do not store context only in chat history or external notes. Always mirror important context into WhiteMagic memory so it persists across sessions and compounds.
+
 ### Adding a New Tool
 1. Define the tool in `core/whitemagic/tools/registry_defs/<domain>.py`.
 2. Add the handler in `core/whitemagic/tools/handlers/<domain>.py`.
@@ -430,7 +478,48 @@ Every session produces:
 
 ---
 
-## 13. AI Context Retrieval
+## 13. Cognitive Self-Use — WM Tools Between Actions
+
+WhiteMagic is a cognitive operating system. Agents working on WhiteMagic should use its own tools between actions to maintain context, generate memories, and cross-reference prior work. This creates a continuous thinking loop rather than blind editing.
+
+### Between-Action Protocol
+
+After each significant code change, tool call, or discovery, fire 2-3 WM tools before proceeding:
+
+1. **Store a memory** of what you just learned/changed: `gana_neck(create_memory)`
+2. **Search for related prior work**: `gana_winnowing_basket(search_memories)`
+3. **Introspect system state**: `gana_ghost(gnosis)` or `gana_ghost(capability_matrix)`
+4. **Check temporal continuity**: `gana_ghost(citta_continuity)` — where did we leave off?
+5. **Surface serendipity**: `gana_abundance(serendipity_surface)` — unexpected connections
+
+### Session Start
+
+1. `gana_horn(session_bootstrap)` — load context
+2. `gana_root(health_report)` — verify subsystems
+3. `gana_ghost(gnosis, compact=true)` — system snapshot
+4. `gana_ghost(citta_continuity)` — temporal continuity from last session
+5. `gana_winnowing_basket(search_memories, "recent work")` — recent context
+
+### Session End
+
+1. `gana_neck(create_memory)` — store session summary as a memory
+2. `gana_ghost(citta_cycle)` — stream state for next session
+3. `gana_root(health_report)` — verify clean state
+
+### Full Workflow
+
+See `core/whitemagic/workflows/cognitive_self_use.md` for the complete workflow template.
+
+### Anti-Patterns
+
+- **Blind editing**: 10 code changes without a single WM tool call. You lose context and repeat past mistakes.
+- **Only searching, never storing**: Reading memories but never creating new ones from your work.
+- **Ignoring citta continuity**: Each session starts fresh with no awareness of what came before.
+- **Single-tool tunnel vision**: The power is in cross-referencing multiple tools — memory + introspection + serendipity creates emergent insight.
+
+---
+
+## 14. AI Context Retrieval
 
 This project is indexed with **Fragment** for fast AI context retrieval. Before asking AI assistants about this codebase, ensure the index is current:
 
@@ -450,7 +539,7 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 
 ---
 
-## 14. Contact & Context
+## 15. Contact & Context
 
 - **Project**: WhiteMagic v23.2.0
 - **Repository**: `<path-to-whitemagic>/`
