@@ -656,6 +656,11 @@ TOOL_TO_GANA: dict[str, str] = {
     "strata.archaeology":          "gana_chariot",
     "strata.list_checks":          "gana_chariot",
 
+    # ── v23: Polyglot Memory — Tail (acceleration) + Winnowing Basket (search) ──
+    "polyglot.memory_query":       "gana_tail",
+    "polyglot.search":             "gana_winnowing_basket",
+    "polyglot.status":             "gana_tail",
+
     # ── v23.4: Internal Wiki + External Repo (Chariot — self-knowledge + external scan) ──
     "wiki.generate":               "gana_chariot",
     "wiki.query":                  "gana_chariot",

@@ -144,6 +144,11 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "fragment.status": LazyHandler("fragment", "handle_fragment_status"),
     "fragment.query": LazyHandler("fragment", "handle_fragment_query"),
 
+    # --- Polyglot Memory (Julia/Elixir/Haskell/Rust backends) ---
+    "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
+    "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
+    "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
+
     # --- Windsurf ---
     "windsurf_list_conversations": LazyHandler("windsurf_conv", "handle_windsurf_list_conversations"),
     "windsurf_read_conversation": LazyHandler("windsurf_conv", "handle_windsurf_read_conversation"),
