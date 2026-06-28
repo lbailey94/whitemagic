@@ -68,6 +68,30 @@ class UnifiedContext:
     coherence_score: float = 0.7
     coherence_dimensions: dict[str, float] = field(default_factory=dict)
 
+    # Depth + Time Master (Citta Architecture)
+    depth_layer: str = "surface"  # surface, terminal, flow, dream
+    depth_intended_layer: str = "surface"
+    depth_in_sync: bool = True
+    time_advantage: float = 1.0
+
+    # Flow state (Citta Architecture)
+    in_flow: bool = False
+    flow_score: float = 0.0
+    flow_indicators: list[str] = field(default_factory=list)
+
+    # Citta stream continuity (Citta Architecture)
+    citta_session_count: int = 0
+    citta_time_gap: str = ""
+    citta_last_coherence: float = 0.0
+    citta_last_depth: str = "surface"
+    citta_emotional_tone: str = "neutral"
+    citta_where_we_left_off: str = ""
+
+    # Citta cycle (Citta Architecture)
+    citta_cycle_length: int = 0
+    citta_coherence_drift: float = 0.0
+    citta_emotional_coloring: str = "neutral"
+
     # Session state
     session_intention: str | None = None
     session_duration_minutes: int = 0
@@ -224,6 +248,10 @@ class ContextSynthesizer:
         self._gather_zodiac_state(ctx)
         self._gather_yin_yang_state(ctx)
         self._gather_coherence_state(ctx)
+        self._gather_depth_state(ctx)
+        self._gather_flow_state(ctx)
+        self._gather_citta_continuity(ctx)
+        self._gather_citta_cycle(ctx)
         self._gather_session_state(ctx)
 
         # Cache result
@@ -392,22 +420,103 @@ class ContextSynthesizer:
             logger.warning("Failed to gather yin-yang state: %s", e, exc_info=True)
 
     def _gather_coherence_state(self, ctx: UnifiedContext) -> None:
-        """Gather coherence metric state."""
+        """Gather coherence metric state — fresh measurement with memory count."""
         if not self._coherence_metric:
             return
 
         try:
-            # Get qualitative level
+            # Get actual memory count for accurate memory_accessibility
+            memories_accessible = self._get_memory_count()
+            ctx.coherence_score = self._coherence_metric.measure(
+                memories_accessible=memories_accessible,
+            )
             ctx.coherence_level = self._coherence_metric.get_coherence_level()
-
-            # Calculate score
-            scores = self._coherence_metric.scores
-            if scores:
-                ctx.coherence_score = sum(scores.values()) / len(scores)
-                ctx.coherence_dimensions = dict(scores)
-
+            ctx.coherence_dimensions = dict(self._coherence_metric.scores)
         except Exception as e:
             logger.warning("Failed to gather coherence state: %s", e, exc_info=True)
+
+    def _get_memory_count(self) -> int:
+        """Get total memory count from SQLite backend."""
+        try:
+            import sqlite3
+            from whitemagic.config.paths import WM_ROOT
+            db_path = WM_ROOT / "memory" / "whitemagic.db"
+            if db_path.exists():
+                conn = sqlite3.connect(str(db_path))
+                count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                conn.close()
+                return count
+        except Exception:
+            pass
+        return 0
+    def _gather_depth_state(self, ctx: UnifiedContext) -> None:
+        """Gather depth gauge + time master sync state."""
+        try:
+            from whitemagic.core.consciousness.depth_gauge import (
+                get_depth_gauge,
+                sync_with_time_master,
+            )
+            gauge = get_depth_gauge()
+            ctx.depth_layer = gauge.current_layer.value
+            try:
+                sync = sync_with_time_master()
+                ctx.depth_intended_layer = sync["intended_layer"]
+                ctx.depth_in_sync = sync["in_sync"]
+                ctx.time_advantage = sync["time_advantage"]
+            except Exception:
+                ctx.depth_intended_layer = ctx.depth_layer
+        except Exception as e:
+            logger.debug("Depth state not available: %s", e, exc_info=True)
+
+    def _gather_flow_state(self, ctx: UnifiedContext) -> None:
+        """Gather flow state with auto-detected indicators."""
+        try:
+            from whitemagic.gardens.presence.flow_state import get_flow_state
+            flow = get_flow_state()
+            # Auto-detect from session activity
+            import time as _time
+            from whitemagic.tools.session_state import get_session_start_time
+            start = get_session_start_time()
+            session_min = (_time.time() - start) / 60 if start else 0.0
+            # Use coherence score we just gathered
+            flow.auto_detect_indicators(
+                tool_call_rate=0.0,  # will be enriched by PRAT state
+                coherence=ctx.coherence_score,
+                session_duration_min=session_min,
+            )
+            ctx.in_flow = flow.am_i_in_flow()
+            ctx.flow_score = flow.flow_score()
+            ctx.flow_indicators = [i.value for i in flow.current_indicators]
+        except Exception as e:
+            logger.debug("Flow state not available: %s", e, exc_info=True)
+
+    def _gather_citta_continuity(self, ctx: UnifiedContext) -> None:
+        """Gather citta stream continuity — cross-session temporal context."""
+        try:
+            from whitemagic.core.consciousness.citta_stream import get_continuity_context
+            cont = get_continuity_context()
+            ctx.citta_session_count = cont.get("session_count", 0)
+            ctx.citta_time_gap = cont.get("time_gap_human", "")
+            ctx.citta_last_coherence = cont.get("last_coherence", 0.0)
+            ctx.citta_last_depth = cont.get("last_depth_layer", "surface")
+            ctx.citta_emotional_tone = cont.get("last_emotional_tone", "neutral")
+            ctx.citta_where_we_left_off = cont.get("where_we_left_off", "")
+        except Exception as e:
+            logger.debug("Citta continuity not available: %s", e, exc_info=True)
+
+    def _gather_citta_cycle(self, ctx: UnifiedContext) -> None:
+        """Gather citta cycle state — recursive stream summary."""
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+            cycle = get_citta_cycle()
+            summary = cycle.get_cycle_summary()
+            ctx.citta_cycle_length = summary.get("stream_length", 0)
+            ctx.citta_coherence_drift = summary.get("coherence_drift", 0.0)
+            ec = summary.get("emotional_coloring", {})
+            ctx.citta_emotional_coloring = ec.get("dominant", "neutral")
+        except Exception as e:
+            logger.debug("Citta cycle not available: %s", e, exc_info=True)
+
 
     def _gather_session_state(self, ctx: UnifiedContext) -> None:
         """Gather session state."""
@@ -457,6 +566,13 @@ class ContextSynthesizer:
    Burnout risk: {ctx.burnout_risk:.0%}
 
 🧠 Coherence: {ctx.coherence_level} ({ctx.coherence_score:.0%})
+
+🌊 Depth: {ctx.depth_layer.upper()} (sync: {ctx.depth_in_sync}, {ctx.time_advantage:.1f}x)
+   Flow: {'IN FLOW' if ctx.in_flow else 'not in flow'} (score: {ctx.flow_score:.2f}, indicators: {', '.join(ctx.flow_indicators) or 'none'})
+
+🔄 Citta Stream: {ctx.citta_session_count} sessions, {ctx.citta_cycle_length} cycle entries
+   Last coherence: {ctx.citta_last_coherence:.2f}, emotional tone: {ctx.citta_emotional_tone}
+   Drift: {ctx.citta_coherence_drift:.4f}, coloring: {ctx.citta_emotional_coloring}
 
 📍 Dominant: {ctx.get_dominant_influence()}
 🎯 Recommended morphology: {ctx.get_recommended_morphology()}

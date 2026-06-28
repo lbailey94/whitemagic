@@ -54,7 +54,14 @@ class DharmaGovernor:
 
     def govern(self, task_description: str, context: dict[str, Any] | None = None) -> GovernanceDecision:
         """Evaluate a task and return a binding decision.
+
+        Coherence-aware: when system coherence is low, strictness increases
+        (more conservative governance). When coherence is high, strictness
+        relaxes (more permissive, trusting the system's judgment).
         """
+        # Coherence-adaptive strictness
+        effective_strictness = self._adjust_strictness_for_coherence()
+
         # Construct action dict for Dharma evaluation
         action = {
             "description": task_description,
@@ -82,9 +89,9 @@ class DharmaGovernor:
         if score < 0.3:
             gov_action = GovernanceAction.BLOCK
             guidance = "Ethical score critical. Action blocked."
-        elif score < self.strictness:
+        elif score < effective_strictness:
             gov_action = GovernanceAction.WARN
-            guidance = "Ethical score low. Proceed with caution."
+            guidance = f"Ethical score low (strictness: {effective_strictness:.2f}). Proceed with caution."
 
         return GovernanceDecision(
             action=gov_action,
@@ -92,6 +99,43 @@ class DharmaGovernor:
             concerns=concerns,
             guidance=guidance,
         )
+
+    def _adjust_strictness_for_coherence(self) -> float:
+        """Adjust strictness based on current coherence.
+
+        High coherence (≥0.9): relax strictness by 0.1 (trust the system)
+        Medium coherence (0.5-0.9): use baseline strictness
+        Low coherence (<0.5): increase strictness by 0.2 (be conservative)
+        Fragmented (<0.3): increase strictness by 0.3 (be very conservative)
+        """
+        try:
+            from whitemagic.core.consciousness.coherence import get_coherence_metric
+            metric = get_coherence_metric()
+            # Measure with actual memory count for accurate assessment
+            try:
+                import sqlite3
+                from whitemagic.config.paths import WM_ROOT
+                db_path = WM_ROOT / "memory" / "whitemagic.db"
+                if db_path.exists():
+                    conn = sqlite3.connect(str(db_path))
+                    count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+                    conn.close()
+                    metric.measure(memories_accessible=count)
+                else:
+                    metric.measure()
+            except Exception:
+                metric.measure()
+            level = metric.get_coherence_level()
+            if level == "transcendent":
+                return max(0.5, self.strictness - 0.1)
+            elif level in ("highly_coherent", "coherent"):
+                return self.strictness
+            elif level == "partial":
+                return min(0.95, self.strictness + 0.2)
+            else:  # fragmented or dissociated
+                return min(0.95, self.strictness + 0.3)
+        except Exception:
+            return self.strictness
 
 # Global singleton
 _governor: DharmaGovernor | None = None
