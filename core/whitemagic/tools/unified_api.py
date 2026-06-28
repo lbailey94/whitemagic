@@ -468,6 +468,14 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
         status_value = str(out.get("status", "")).lower()
         telemetry_status = "success" if status_value in {"success", "ok"} else "error"
         telemetry_error = out.get("error_code") if telemetry_status == "error" else None
+        # Token economy: record this tool call
+        try:
+            from whitemagic.core.consciousness.token_economy import get_token_tracker
+            _economy = get_token_tracker()
+            _economy.record_mcp_tool(canonical, duration * 1000)
+        except (ImportError, ModuleNotFoundError):
+            pass
+
         try:
             from whitemagic.core.monitoring.telemetry import get_telemetry
             get_telemetry().record_call(canonical, duration, telemetry_status, telemetry_error)

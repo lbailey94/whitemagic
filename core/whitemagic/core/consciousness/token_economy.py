@@ -184,6 +184,13 @@ class TokenEconomyTracker:
 
     def record_api_call(self, description: str, tokens: int) -> None:
         """Record an API token usage"""
+        self.used_tokens += tokens
+        self.history.append({
+            'tokens': tokens,
+            'source': 'api',
+            'operation': description,
+            'timestamp': datetime.now().isoformat()
+        })
         self.record_operation(
             ComputeType.API_TOKENS,
             description,

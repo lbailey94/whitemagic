@@ -249,6 +249,8 @@ async def _generate(
                 "done": result.get("done", True),
                 "total_duration_ns": result.get("total_duration"),
                 "eval_count": result.get("eval_count"),
+                # Token economy: record actual LLM token usage
+                "_token_economy_record": True,
                 "latency_s": round(elapsed, 2),
             }
 

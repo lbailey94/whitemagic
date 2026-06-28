@@ -63,6 +63,14 @@ class OpenAIEmbeddings(EmbeddingProvider):
                 model=self.model,
                 dimensions=self._dimensions if self.model == "text-embedding-3-small" else None
             )
+            # Token economy: record embedding API usage
+            try:
+                from whitemagic.core.consciousness.token_economy import get_token_tracker
+                tokens = getattr(response, "usage", None)
+                token_count = tokens.total_tokens if tokens else max(1, len(text) // 4)
+                get_token_tracker().record_api_call(f"openai_embed:{self.model}", token_count)
+            except (ImportError, AttributeError, RuntimeError):
+                pass
             return response.data[0].embedding
         except OpenAIError as e:
             raise RuntimeError(f"OpenAI embedding failed: {str(e)}") from e
@@ -102,6 +110,14 @@ class OpenAIEmbeddings(EmbeddingProvider):
                 model=self.model,
                 dimensions=self._dimensions if self.model == "text-embedding-3-small" else None
             )
+            # Token economy: record batch embedding API usage
+            try:
+                from whitemagic.core.consciousness.token_economy import get_token_tracker
+                tokens = getattr(response, "usage", None)
+                token_count = tokens.total_tokens if tokens else max(1, sum(len(t) for t in texts) // 4)
+                get_token_tracker().record_api_call(f"openai_embed_batch:{self.model}", token_count)
+            except (ImportError, AttributeError, RuntimeError):
+                pass
             return [item.embedding for item in response.data]
         except OpenAIError as e:
             raise RuntimeError(f"OpenAI batch embedding failed: {str(e)}") from e

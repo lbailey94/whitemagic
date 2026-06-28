@@ -131,6 +131,12 @@ def handle_ollama_agent(**kwargs: Any) -> dict[str, Any]:
         response = result.get("response", "")
         eval_count = result.get("eval_count", 0)
         total_tokens += eval_count
+        # Token economy: record actual local LLM token usage
+        try:
+            from whitemagic.core.consciousness.token_economy import get_token_tracker
+            get_token_tracker().record_usage(eval_count, source="local", operation=f"ollama_agent:{model}")
+        except (ImportError, AttributeError):
+            pass
 
         # Parse tool calls from response
         calls = _parse_tool_calls(response)

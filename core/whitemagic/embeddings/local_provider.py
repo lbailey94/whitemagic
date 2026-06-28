@@ -59,8 +59,17 @@ class LocalEmbeddingProvider:
         model = self._load_model()
         if model is None:
             return None
-        
+
+        import time as _time
+        _start = _time.time()
         embedding = model.encode(text, convert_to_numpy=True)
+        _duration_ms = (_time.time() - _start) * 1000
+        # Token economy: record local compute (not API tokens)
+        try:
+            from whitemagic.core.consciousness.token_economy import get_token_tracker
+            get_token_tracker().record_local_script(f"local_embed:{self._model_name}", _duration_ms)
+        except (ImportError, AttributeError, RuntimeError):
+            pass
         return embedding.tolist()
     
     def embed_batch(self, texts: List[str], batch_size: int = 32) -> Optional[List[List[float]]]:

@@ -90,6 +90,12 @@ class TokenBudgetTracker:
         self._request_count += 1
         # Update EMA
         self._ema_usage = self._alpha * total + (1 - self._alpha) * self._ema_usage
+        # Bridge to consciousness token economy
+        try:
+            from whitemagic.core.consciousness.token_economy import get_token_tracker
+            get_token_tracker().record_api_call(f"inference:{self._request_count}", total)
+        except (ImportError, RuntimeError, AttributeError):
+            pass
 
     def recommend_downgrade(self, requested_tier: InferenceTier) -> InferenceTier | None:
         """Recommend a lower tier if token budget is running low.

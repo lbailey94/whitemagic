@@ -319,6 +319,19 @@ def route_prat_call(gana_name: str, tool: str | None = None,
         try:
             result = call_tool(tool, **tool_args)
             _call_success = not (isinstance(result, dict) and result.get("status") == "error")
+            # Token economy: estimate tokens from result size
+            try:
+                from whitemagic.core.consciousness.token_economy import get_token_tracker
+                _econ = get_token_tracker()
+                _result_tokens = max(1, len(str(result)) // 4) if result else 0
+                _input_tokens = max(1, len(str(tool_args)) // 4) if tool_args else 0
+                _econ.record_usage(
+                    _input_tokens + _result_tokens,
+                    source="api",
+                    operation=f"prat:{gana_name}:{tool}",
+                )
+            except (ImportError, AttributeError, TypeError):
+                pass
         except (ValueError, KeyError, TypeError) as e:
             # Known tool execution errors
             _call_success = False

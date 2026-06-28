@@ -128,6 +128,22 @@ def mw_token_tracker(
     except (RuntimeError, ValueError, TypeError, AttributeError) as e:
         logger.debug("Token tracker: GreenScore recording failed: %s", e)
 
+    # Record to Token Economy (consciousness system)
+    try:
+        from whitemagic.core.consciousness.token_economy import get_token_tracker
+        economy = get_token_tracker()
+        total_tokens = input_tokens + output_tokens
+        if locality == InferenceLocality.CLOUD:
+            economy.record_api_call(ctx.tool_name, total_tokens)
+        elif locality == InferenceLocality.LOCAL_LLM:
+            economy.record_local_script(ctx.tool_name, duration_ms, bytes_out=0)
+            economy.record_usage(total_tokens, source="local", operation=ctx.tool_name)
+        else:
+            # Edge/local compute — track as local operation
+            economy.record_mcp_tool(ctx.tool_name, duration_ms)
+    except (ImportError, RuntimeError, ValueError, TypeError, AttributeError) as e:
+        logger.debug("Token tracker: token_economy recording failed: %s", e)
+
     # Inject token metadata into result
     if isinstance(result, dict):
         result.setdefault("metadata", {})
