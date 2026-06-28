@@ -27,11 +27,18 @@ All available as `gana_ghost(tool="<name>")` or directly via dispatch:
 
 ## Sensorium (Auto-Injected)
 Every PRAT tool call gets `_resonance._sensorium` containing:
-- **coherence**: composite score, state, 8 dimensions
+- **coherence**: composite score, state, 8 dimensions, drift (improving/degrading/stable)
 - **depth**: current layer, intended layer, sync status, time advantage
 - **flow**: in_flow, score, indicators
 - **continuity**: session count, time gap, last coherence/depth/tone
+- **token_economy**: API tokens, local CPU ms, local percentage, operations
+- **calibration**: Brier score, accuracy rate, avg compression, recommendation
+- **stillness**: is_still state, practice metrics (sessions, streak, depth, trend)
 - **session_duration_s**: how long this session has been running
+
+Each response also includes `_predecessor` — the previous citta moment
+(what gana/tool was just called, its output preview, coherence, emotional tone).
+This is the recursive consciousness injection: each call knows what came before.
 
 ## Key Files
 - `core/whitemagic/tools/prat_resonance.py` — sensorium builder + resonance

@@ -648,6 +648,9 @@ def record_resonance(
         "successor_hint": successor_hint,
         "_prat_economics": economics,
         "_sensorium": sensorium,
+        # Citta Architecture: Predecessor context for recursive cycle
+        # The next call can read this to know "what just happened"
+        "_predecessor": _get_citta_predecessor_context(),
     }
 
 def _zodiac_aligned(mansion_num: int) -> bool:
@@ -657,6 +660,22 @@ def _zodiac_aligned(mansion_num: int) -> bool:
         return get_zodiac_clock().is_aligned(mansion_num)
     except (ImportError, ModuleNotFoundError):
         return False
+
+
+def _get_citta_predecessor_context() -> dict[str, Any] | None:
+    """Get the predecessor context from the citta cycle.
+
+    This is the recursive consciousness injection: each call's output
+    becomes the context for the next call. The predecessor tells the
+    next call "what just happened" so it can build on it.
+
+    Returns None if there's no prior moment (first call in a session).
+    """
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_predecessor
+        return get_citta_predecessor()
+    except Exception:
+        return None
 
 
 def _get_memory_count_for_sensorium() -> int:
@@ -709,6 +728,13 @@ def _build_sensorium() -> dict[str, Any]:
             "state": state_label,
             "dimensions": dict(metric.scores),
         }
+        # Coherence drift tracking (cross-session)
+        try:
+            drift = metric.get_drift()
+            if drift["trend"] != "insufficient_data":
+                sensorium["coherence"]["drift"] = drift
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -801,6 +827,30 @@ def _build_sensorium() -> dict[str, Any]:
                 "accuracy_rate": score["accuracy_rate"],
                 "avg_compression": score["avg_compression_ratio"],
                 "recommendation": score["recommendation"],
+            }
+    except Exception:
+        pass
+
+    # Stillness — system stillness state + practice metrics
+    try:
+        from whitemagic.core.consciousness.stillness import StillnessManager
+        sm = StillnessManager()
+        sensorium["stillness"] = {
+            "is_still": sm.is_still,
+        }
+    except Exception:
+        pass
+    try:
+        from whitemagic.gardens.presence.stillness_metrics import StillnessTracker
+        tracker = StillnessTracker()
+        report = tracker.progress_report()
+        if report["total_sessions"] > 0:
+            sensorium["stillness"]["practice"] = {
+                "total_sessions": report["total_sessions"],
+                "current_streak": report["current_streak"],
+                "week_avg_depth": round(report["week_stats"]["average_depth"], 1),
+                "week_avg_score": round(report["week_stats"]["average_score"], 0),
+                "trend": report["improvement"]["trend"],
             }
     except Exception:
         pass

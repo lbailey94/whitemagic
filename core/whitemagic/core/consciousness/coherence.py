@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from whitemagic.config.paths import WM_ROOT
+from whitemagic.config.paths import WM_ROOT, get_state_root
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fileio import atomic_write, file_lock
 
@@ -33,6 +33,35 @@ class CoherenceMetric:
         self.scores: dict[str, float] = {d: 0.0 for d in self.DIMENSIONS}
         self.history: list[dict[str, Any]] = []
         self.last_measured: datetime | None = None
+        self._drift_file: Path = get_state_root() / "citta" / "coherence_drift.jsonl"
+        self._drift_file.parent.mkdir(parents=True, exist_ok=True)
+        self._load_drift_history()
+
+    def _load_drift_history(self) -> None:
+        """Load persisted coherence history for cross-session drift tracking."""
+        try:
+            if self._drift_file.exists():
+                with open(self._drift_file) as f:
+                    for line in f:
+                        if line.strip():
+                            entry = __import__("json").loads(line)
+                            self.history.append(entry)
+        except Exception:
+            pass
+
+    def _persist_measurement(self, overall: float) -> None:
+        """Persist a coherence measurement for cross-session drift tracking."""
+        try:
+            import json
+            entry = {
+                "timestamp": self.last_measured.isoformat() if self.last_measured else datetime.now().isoformat(),
+                "overall": overall,
+                "scores": dict(self.scores),
+            }
+            with open(self._drift_file, "a") as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception:
+            pass
 
     def measure(self,
                 memories_accessible: int = 0,
@@ -85,8 +114,52 @@ class CoherenceMetric:
             "overall": overall,
             "scores": dict(self.scores),
         })
+        self._persist_measurement(overall)
 
         return overall
+
+    def get_drift(self, window: int = 20) -> dict[str, Any]:
+        """Calculate coherence drift over recent history.
+
+        Tracks whether coherence is improving, degrading, or stable.
+        Persists across sessions via drift file.
+
+        Args:
+            window: Number of recent measurements to consider.
+
+        Returns:
+            Dict with drift direction, magnitude, and trend.
+        """
+        if len(self.history) < 2:
+            return {"direction": "stable", "magnitude": 0.0, "trend": "insufficient_data"}
+
+        recent = self.history[-window:]
+        n = len(recent)
+        scores = [e["overall"] for e in recent]
+
+        if n < 4:
+            delta = scores[-1] - scores[0]
+        else:
+            quarter = max(1, n // 4)
+            early_avg = sum(scores[:quarter]) / quarter
+            late_avg = sum(scores[-quarter:]) / quarter
+            delta = late_avg - early_avg
+
+        if delta > 0.02:
+            direction = "improving"
+        elif delta < -0.02:
+            direction = "degrading"
+        else:
+            direction = "stable"
+
+        return {
+            "direction": direction,
+            "magnitude": round(delta, 4),
+            "trend": f"{direction} ({delta:+.4f})",
+            "measurements": n,
+            "current": round(scores[-1], 4),
+            "window_avg": round(sum(scores) / n, 4),
+        }
 
     def get_report(self) -> str:
         """Generate coherence report."""
