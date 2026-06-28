@@ -138,6 +138,12 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "strata.archaeology": LazyHandler("strata", "handle_strata_archaeology"),
     "strata.list_checks": LazyHandler("strata", "handle_strata_list_checks"),
 
+    # --- Fragment (Rust-powered codebase search, 100x faster) ---
+    "fragment.search": LazyHandler("fragment", "handle_fragment_search"),
+    "fragment.index": LazyHandler("fragment", "handle_fragment_index"),
+    "fragment.status": LazyHandler("fragment", "handle_fragment_status"),
+    "fragment.query": LazyHandler("fragment", "handle_fragment_query"),
+
     # --- Windsurf ---
     "windsurf_list_conversations": LazyHandler("windsurf_conv", "handle_windsurf_list_conversations"),
     "windsurf_read_conversation": LazyHandler("windsurf_conv", "handle_windsurf_read_conversation"),

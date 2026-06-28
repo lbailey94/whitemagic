@@ -644,7 +644,7 @@ TOOL_TO_GANA: dict[str, str] = {
     # ── v22: Karma Record (Hairy Head — Detail & Debug) ──
     "karma_record":                "gana_hairy_head",
 
-    # ── v23: Fragment (Rust) — Winnowing Basket (search acceleration) ──
+    # ── v23: Fragment (Rust) — Winnowing Basket (search) + Chariot (codebase nav) ──
     "fragment.search":             "gana_winnowing_basket",
     "fragment.index":              "gana_winnowing_basket",
     "fragment.status":             "gana_winnowing_basket",
