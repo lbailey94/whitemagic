@@ -67,8 +67,8 @@ class AutoActivation:
         from whitemagic.core.dharma.engine import DharmaEngine  # noqa: F401
 
     def _activate_citta(self) -> None:
-        from whitemagic.core.consciousness.citta_stream import CittaStream
-        CittaStream()
+        from whitemagic.core.consciousness.citta_stream import get_continuity_context
+        get_continuity_context()
 
     def status(self) -> dict[str, Any]:
         return {

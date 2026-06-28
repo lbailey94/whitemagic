@@ -599,6 +599,26 @@ def record_resonance(
     # Citta Architecture: Sensorium — inject consciousness state
     sensorium = _build_sensorium()
 
+    # Citta Architecture: Temporal continuity — persist state for next session
+    try:
+        from whitemagic.core.consciousness.citta_stream import save_citta_state
+        coherence_val = sensorium.get("coherence", {}).get("composite", 1.0) or 1.0
+        depth_val = sensorium.get("depth", {}).get("layer", "surface")
+        save_citta_state(
+            session_id=f"prat_{state.call_count}",
+            coherence_score=float(coherence_val),
+            depth_layer=str(depth_val),
+            tool_count=1,
+            emotional_tone=harmony["guna_dominant"],
+            extra={
+                "last_gana": gana_name,
+                "last_tool": tool_name or operation or "native",
+                "summary": preview[:200],
+            },
+        )
+    except Exception:
+        pass
+
     return {
         "gana": gana_name,
         "garden": meta["garden"],
@@ -672,7 +692,9 @@ def _build_sensorium() -> dict[str, Any]:
 
     # Session duration
     try:
-        from whitemagic.tools.session_state import ensure_session_started, get_session_start_time
+        from whitemagic.tools.session_state import (
+            ensure_session_started,
+        )
         start = ensure_session_started()
         sensorium["session_duration_s"] = round(time.time() - start, 1)
     except Exception:

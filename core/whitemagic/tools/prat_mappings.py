@@ -117,6 +117,10 @@ TOOL_TO_GANA: dict[str, str] = {
     "consciousness.narrative":      "gana_ghost",
     "consciousness.unified_field":  "gana_ghost",
     "consciousness.status":         "gana_ghost",
+    # Citta Stream — temporal continuity (Ghost = introspection)
+    "citta.continuity":             "gana_ghost",
+    "citta.stream_summary":         "gana_ghost",
+    "citta.sensorium":              "gana_ghost",
 
     # ═══ WILLOW — Resilience & Flexibility ═══
     "rate_limiter.stats":      "gana_willow",

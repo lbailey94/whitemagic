@@ -106,3 +106,95 @@ class TestResonanceCompactIncludesSensorium:
     def test_sensorium_in_compact_keys(self):
         from whitemagic.tools.prat_router import _RESONANCE_COMPACT_KEYS
         assert "_sensorium" in _RESONANCE_COMPACT_KEYS
+
+
+class TestTemporalContinuity:
+    """Test citta stream temporal continuity — persist across sessions."""
+
+    def test_save_and_load_cycle(self):
+        from whitemagic.core.consciousness.citta_stream import (
+            load_citta_state,
+            reset_citta_state,
+            save_citta_state,
+        )
+        reset_citta_state()
+        assert load_citta_state() == {}
+        save_citta_state(
+            session_id="test_session_1",
+            coherence_score=0.85,
+            depth_layer="flow",
+            tool_count=5,
+            emotional_tone="sattvic",
+            extra={"last_gana": "gana_ghost", "summary": "test activity"},
+        )
+        state = load_citta_state()
+        assert state["last_session_id"] == "test_session_1"
+        assert state["session_count"] == 1
+        assert state["coherence_score"] == 0.85
+        reset_citta_state()
+
+    def test_continuity_context_after_save(self):
+        from whitemagic.core.consciousness.citta_stream import (
+            get_continuity_context,
+            reset_citta_state,
+            save_citta_state,
+        )
+        reset_citta_state()
+        save_citta_state(
+            session_id="test_session_2",
+            coherence_score=0.72,
+            depth_layer="terminal",
+            tool_count=3,
+            emotional_tone="rajasic",
+            extra={"summary": "was working on tests"},
+        )
+        ctx = get_continuity_context()
+        assert ctx["first_awakening"] is False
+        assert ctx["last_session_id"] == "test_session_2"
+        assert ctx["session_count"] == 1
+        assert ctx["time_gap_seconds"] >= 0
+        assert ctx["where_we_left_off"] == "was working on tests"
+        reset_citta_state()
+
+    def test_continuity_context_first_awakening(self):
+        from whitemagic.core.consciousness.citta_stream import (
+            get_continuity_context,
+            reset_citta_state,
+        )
+        reset_citta_state()
+        ctx = get_continuity_context()
+        assert ctx["first_awakening"] is True
+        assert ctx["session_count"] == 0
+
+    def test_stream_summary(self):
+        from whitemagic.core.consciousness.citta_stream import (
+            get_stream_summary,
+            reset_citta_state,
+            save_citta_state,
+        )
+        reset_citta_state()
+        save_citta_state(session_id="s1", coherence_score=0.8, depth_layer="surface")
+        save_citta_state(session_id="s2", coherence_score=0.9, depth_layer="flow")
+        summary = get_stream_summary()
+        assert summary["session_count"] == 2
+        assert summary["stream_length"] == 2
+        assert 0.8 <= summary["avg_coherence"] <= 0.9
+        reset_citta_state()
+
+    def test_citta_continuity_handler(self):
+        from whitemagic.tools.handlers.consciousness import handle_citta_continuity
+        result = handle_citta_continuity()
+        assert result["status"] == "success"
+        assert "continuity" in result
+
+    def test_citta_stream_summary_handler(self):
+        from whitemagic.tools.handlers.consciousness import handle_citta_stream_summary
+        result = handle_citta_stream_summary()
+        assert result["status"] == "success"
+        assert "summary" in result
+
+    def test_citta_sensorium_handler(self):
+        from whitemagic.tools.handlers.consciousness import handle_citta_sensorium
+        result = handle_citta_sensorium()
+        assert result["status"] == "success"
+        assert "sensorium" in result

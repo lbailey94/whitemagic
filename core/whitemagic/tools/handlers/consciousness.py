@@ -156,3 +156,39 @@ def handle_consciousness_status(**kwargs: Any) -> dict[str, Any]:
         "available_count": len(modules_available),
         "health": len(modules_available) / len(checks) if checks else 0.0,
     }
+
+
+def handle_citta_continuity(**kwargs: Any) -> dict[str, Any]:
+    """Get citta stream continuity context — 'where we left off' across sessions."""
+    try:
+        from whitemagic.core.consciousness.citta_stream import get_continuity_context
+
+        ctx = get_continuity_context()
+        return {"status": "success", "continuity": ctx}
+    except Exception as e:
+        logger.debug("citta.continuity error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "citta_continuity_failed", "message": str(e)}
+
+
+def handle_citta_stream_summary(**kwargs: Any) -> dict[str, Any]:
+    """Get summary of the entire citta stream history."""
+    try:
+        from whitemagic.core.consciousness.citta_stream import get_stream_summary
+
+        summary = get_stream_summary()
+        return {"status": "success", "summary": summary}
+    except Exception as e:
+        logger.debug("citta.stream_summary error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "citta_summary_failed", "message": str(e)}
+
+
+def handle_citta_sensorium(**kwargs: Any) -> dict[str, Any]:
+    """Get the full sensorium — self-state injected into every PRAT response."""
+    try:
+        from whitemagic.tools.prat_resonance import _build_sensorium
+
+        sensorium = _build_sensorium()
+        return {"status": "success", "sensorium": sensorium}
+    except Exception as e:
+        logger.debug("citta.sensorium error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "sensorium_failed", "message": str(e)}
