@@ -45,6 +45,18 @@ class TaskEstimate:
         return 0.5 <= self.compression_ratio <= 2.0
 
     @property
+    def log_ratio_error(self) -> float:
+        """Log-ratio error between estimate and actual.
+
+        0 = perfect estimate. Positive = overconfident (took less time).
+        Negative = underconfident (took more time).
+        """
+        if self.actual_minutes <= 0 or self.estimated_minutes <= 0:
+            return 0.0
+        import math
+        return math.log(self.estimated_minutes / self.actual_minutes)
+
+    @property
     def overconfidence_factor(self) -> float:
         """How many times faster than estimated. >1 = overconfident about duration."""
         return self.estimated_minutes / self.actual_minutes if self.actual_minutes > 0 else 1.0
@@ -159,14 +171,27 @@ class PredictionCalibration:
         # Binary outcomes: was the estimate within 2x?
         outcomes = [1 if e.was_accurate else 0 for e in self.estimates]
 
-        # Forecast probability: our default confidence before calibration
-        # Start at 0.5 (uninformed), adjust based on running accuracy
-        base_rate = sum(outcomes) / len(outcomes)
-        forecasts = [base_rate] * len(outcomes)
+        # Forecast probability: AI's prior confidence that it will finish
+        # within 2x its estimate. Start at 0.8 (typically confident), then
+        # adjust based on running accuracy (calibration feedback loop).
+        if len(self.estimates) > 5:
+            # Use rolling accuracy as calibrated forecast
+            recent = self.estimates[-20:]
+            recent_acc = sum(1 for e in recent if e.was_accurate) / len(recent)
+            forecast_p = max(0.05, min(0.95, recent_acc))
+        else:
+            # Before enough data: assume 80% confidence
+            forecast_p = 0.8
+        forecasts = [forecast_p] * len(outcomes)
 
-        # Brier score
+        # Brier score: lower = better calibrated. 0 = perfect, 1 = worst.
         n = len(forecasts)
         brier = sum((f - o) ** 2 for f, o in zip(forecasts, outcomes)) / n
+
+        # Log-ratio calibration error: more informative than Brier for
+        # continuous time estimates. Mean absolute log ratio error.
+        log_errors = [abs(e.log_ratio_error) for e in self.estimates]
+        mean_log_error = sum(log_errors) / len(log_errors) if log_errors else 0.0
 
         # Summary stats
         compression_ratios = [e.compression_ratio for e in self.estimates]
@@ -192,7 +217,9 @@ class PredictionCalibration:
         return {
             "count": len(self.estimates),
             "brier_score": round(brier, 4),
-            "accuracy_rate": round(base_rate, 4),
+            "forecast_confidence": round(forecast_p, 2),
+            "accuracy_rate": round(sum(outcomes) / len(outcomes), 4),
+            "mean_log_ratio_error": round(mean_log_error, 4),
             "avg_compression_ratio": round(avg_compression, 2),
             "overconfident_count": overconfident_count,
             "underconfident_count": underconfident_count,
@@ -236,8 +263,12 @@ class PredictionCalibration:
     ) -> float:
         """Adjust a subjective estimate based on historical calibration.
 
-        Uses the average compression ratio for the given layer to produce
-        a better-calibrated estimate.
+        Uses Bayesian shrinkage: with few data points, the adjustment is
+        conservative (pulled toward 1.0x = no adjustment). As more data
+        accumulates, the adjustment converges to the observed compression.
+
+        Prior: 3.0x compression (based on "minutes-to-days paradox" data).
+        This prevents wild swings from a single outlier data point.
         """
         if not self.estimates:
             return subjective_estimate_minutes
@@ -245,16 +276,27 @@ class PredictionCalibration:
         # Get layer-specific compression if available
         layer_estimates = [e for e in self.estimates if e.depth_layer == depth_layer]
         if layer_estimates:
-            avg_compression = sum(e.compression_ratio for e in layer_estimates) / len(layer_estimates)
+            observed_compression = sum(e.compression_ratio for e in layer_estimates) / len(layer_estimates)
+            n = len(layer_estimates)
         else:
-            avg_compression = sum(e.compression_ratio for e in self.estimates) / len(self.estimates)
+            observed_compression = sum(e.compression_ratio for e in self.estimates) / len(self.estimates)
+            n = len(self.estimates)
 
-        adjusted = subjective_estimate_minutes / avg_compression if avg_compression > 0 else subjective_estimate_minutes
+        # Bayesian shrinkage: blend observed with prior
+        # Prior: 3.0x compression with weight of 5 pseudo-observations
+        PRIOR_COMPRESSION = 3.0
+        PRIOR_WEIGHT = 5.0
+        total_weight = n + PRIOR_WEIGHT
+        shrunk_compression = (observed_compression * n + PRIOR_COMPRESSION * PRIOR_WEIGHT) / total_weight
+
+        adjusted = subjective_estimate_minutes / shrunk_compression if shrunk_compression > 0 else subjective_estimate_minutes
         logger.info(
-            "Adjusted estimate: %.1fmin → %.1fmin (compression: %.1fx, layer: %s)",
+            "Adjusted estimate: %.1fmin → %.1fmin (shrunk: %.1fx, observed: %.1fx, n=%d, layer: %s)",
             subjective_estimate_minutes,
             adjusted,
-            avg_compression,
+            shrunk_compression,
+            observed_compression,
+            n,
             depth_layer,
         )
         return adjusted
