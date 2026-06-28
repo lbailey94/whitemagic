@@ -255,9 +255,40 @@ class ContinuousAudit:
 
         return any(safe in issue.lower() for safe in safe_fixes)
 
-    def _fix_issue(self, issue: str):
-        """Attempt to fix an issue"""
-        raise NotImplementedError("Issue fixer not yet implemented — dispatch to appropriate fixer needed")
+    def _fix_issue(self, issue: str) -> dict[str, Any]:
+        """Attempt to fix an issue by dispatching to the appropriate fixer.
+
+        Only handles safe, well-defined fixes. Returns a result dict.
+        """
+        issue_lower = issue.lower()
+
+        if "empty directory" in issue_lower:
+            path = issue_lower.split("empty directory")[-1].strip().rstrip(".")
+            try:
+                from pathlib import Path
+                p = Path(path)
+                if p.exists() and p.is_dir() and not any(p.iterdir()):
+                    (p / ".gitkeep").touch()
+                    self.issues_fixed += 1
+                    return {"status": "fixed", "action": "created .gitkeep", "path": str(p)}
+            except Exception as e:
+                return {"status": "failed", "error": str(e)}
+
+        if "missing __init__" in issue_lower:
+            path = issue_lower.split("missing __init__")[-1].strip().rstrip(".")
+            try:
+                from pathlib import Path
+                p = Path(path)
+                if p.exists() and p.is_dir():
+                    init_file = p / "__init__.py"
+                    if not init_file.exists():
+                        init_file.touch()
+                        self.issues_fixed += 1
+                        return {"status": "fixed", "action": "created __init__.py", "path": str(init_file)}
+            except Exception as e:
+                return {"status": "failed", "error": str(e)}
+
+        return {"status": "skipped", "reason": "no safe auto-fix available for this issue type"}
 
     def get_metrics(self) -> dict[str, Any]:
         """Get audit system metrics"""

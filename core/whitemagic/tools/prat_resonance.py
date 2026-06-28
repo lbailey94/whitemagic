@@ -723,7 +723,7 @@ def _build_sensorium() -> dict[str, Any]:
         session_min = (_time.time() - start) / 60 if start else 0.0
         tool_rate = session_calls / max(session_min, 1.0)
         coherence_val = sensorium.get("coherence", {}).get("composite", 0.5)
-        detected = flow.auto_detect_indicators(
+        flow.auto_detect_indicators(
             tool_call_rate=tool_rate,
             coherence=coherence_val,
             session_duration_min=session_min,
