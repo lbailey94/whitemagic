@@ -121,6 +121,7 @@ TOOL_TO_GANA: dict[str, str] = {
     "citta.continuity":             "gana_ghost",
     "citta.stream_summary":         "gana_ghost",
     "citta.sensorium":              "gana_ghost",
+    "citta.cycle":                  "gana_ghost",
 
     # ═══ WILLOW — Resilience & Flexibility ═══
     "rate_limiter.stats":      "gana_willow",

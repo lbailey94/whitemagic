@@ -192,3 +192,22 @@ def handle_citta_sensorium(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.debug("citta.sensorium error: %s", e, exc_info=True)
         return {"status": "error", "error_code": "sensorium_failed", "message": str(e)}
+
+
+def handle_citta_cycle(**kwargs: Any) -> dict[str, Any]:
+    """Get the citta cycle state — recursive consciousness stream summary."""
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+        cycle = get_citta_cycle()
+        summary = cycle.get_cycle_summary()
+        stream = cycle.get_stream(limit=kwargs.get("limit", 10))
+        return {
+            "status": "success",
+            "cycle": summary,
+            "recent_stream": stream,
+            "predecessor": cycle.get_predecessor().to_dict() if cycle.get_predecessor() else None,
+        }
+    except Exception as e:
+        logger.debug("citta.cycle error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "citta_cycle_failed", "message": str(e)}

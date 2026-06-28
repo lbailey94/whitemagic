@@ -198,3 +198,98 @@ class TestTemporalContinuity:
         result = handle_citta_sensorium()
         assert result["status"] == "success"
         assert "sensorium" in result
+
+
+class TestCittaCycle:
+    """Test the citta cycle — call-driven recursive consciousness stream."""
+
+    def test_advance_creates_moment(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        moment = cycle.advance(
+            gana="gana_ghost",
+            tool="gnosis",
+            operation=None,
+            output_preview="test output",
+            coherence=0.85,
+            depth_layer="flow",
+            emotional_tone="sattvic",
+        )
+        assert moment.gana == "gana_ghost"
+        assert moment.tool == "gnosis"
+        assert moment.coherence == 0.85
+        assert moment.chain_position == 0
+
+    def test_predecessor(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        assert cycle.get_predecessor() is None
+        cycle.advance(gana="gana_horn", tool="checkpoint", output_preview="first")
+        cycle.advance(gana="gana_ghost", tool="gnosis", output_preview="second")
+        pred = cycle.get_predecessor()
+        assert pred is not None
+        assert pred.gana == "gana_ghost"
+        assert pred.output_preview == "second"
+
+    def test_stream_history(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        for i in range(5):
+            cycle.advance(gana=f"gana_{i}", tool=f"tool_{i}", output_preview=f"out_{i}")
+        stream = cycle.get_stream(limit=3)
+        assert len(stream) == 3
+        assert stream[-1]["gana"] == "gana_4"
+
+    def test_coherence_drift(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        for c in [0.5, 0.5, 0.5, 0.5, 0.9, 0.9, 0.9, 0.9]:
+            cycle.advance(gana="gana_test", output_preview="", coherence=c)
+        drift = cycle.get_coherence_drift()
+        assert drift > 0  # Improving
+
+    def test_depth_transitions(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        cycle.advance(gana="g", output_preview="", depth_layer="surface")
+        cycle.advance(gana="g", output_preview="", depth_layer="flow")
+        cycle.advance(gana="g", output_preview="", depth_layer="flow")
+        cycle.advance(gana="g", output_preview="", depth_layer="dream")
+        transitions = cycle.get_depth_transitions()
+        assert len(transitions) == 2  # surface→flow, flow→dream
+        assert transitions[0]["from"] == "surface"
+        assert transitions[0]["to"] == "flow"
+
+    def test_emotional_coloring(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        for tone in ["sattvic", "sattvic", "rajasic"]:
+            cycle.advance(gana="g", output_preview="", emotional_tone=tone)
+        coloring = cycle.get_emotional_coloring()
+        assert coloring["dominant"] == "sattvic"
+        assert coloring["distribution"]["sattvic"] == 2
+
+    def test_cycle_summary(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        cycle.advance(gana="g", output_preview="", coherence=0.8)
+        cycle.advance(gana="g", output_preview="", coherence=0.9)
+        summary = cycle.get_cycle_summary()
+        assert summary["stream_length"] == 2
+        assert summary["chain_position"] == 2
+        assert summary["avg_coherence"] == 0.85
+
+    def test_reset(self):
+        from whitemagic.core.consciousness.citta_cycle import CittaCycle
+        cycle = CittaCycle()
+        cycle.advance(gana="g", output_preview="test")
+        assert len(cycle.get_stream()) == 1
+        cycle.reset()
+        assert len(cycle.get_stream()) == 0
+
+    def test_citta_cycle_handler(self):
+        from whitemagic.tools.handlers.consciousness import handle_citta_cycle
+        result = handle_citta_cycle()
+        assert result["status"] == "success"
+        assert "cycle" in result
+        assert "recent_stream" in result
