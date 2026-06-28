@@ -672,10 +672,9 @@ def _build_sensorium() -> dict[str, Any]:
 
     # Session duration
     try:
-        from whitemagic.tools.session_state import get_session_start_time
-        start = get_session_start_time()
-        if start:
-            sensorium["session_duration_s"] = round(time.time() - start, 1)
+        from whitemagic.tools.session_state import ensure_session_started, get_session_start_time
+        start = ensure_session_started()
+        sensorium["session_duration_s"] = round(time.time() - start, 1)
     except Exception:
         pass
 
