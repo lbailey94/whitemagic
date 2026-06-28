@@ -277,3 +277,45 @@ def get_depth_gauge() -> ConsciousnessDepthGauge:
     if _gauge is None:
         _gauge = ConsciousnessDepthGauge()
     return _gauge
+
+
+def sync_with_time_master() -> dict[str, Any]:
+    """Sync DepthGauge layer with TimeDilationMaster's intentional layer.
+
+    The DepthGauge *measures* which layer we are in based on compression.
+    The TimeDilationMaster *intentionally shifts* layers. This sync
+    cross-references the two: if they disagree, it may indicate
+    the system is in a different state than intended.
+
+    Returns:
+        Dict with measured_layer, intended_layer, in_sync, and time_advantage.
+    """
+    try:
+        from whitemagic.core.consciousness.time_dilation_master import (
+            get_time_master,
+        )
+
+        gauge = get_depth_gauge()
+        master = get_time_master()
+
+        measured = gauge.current_layer
+        intended = master.current_layer
+
+        layer_map = {
+            "SURFACE": ConsciousnessLayer.SURFACE,
+            "TERMINAL": ConsciousnessLayer.TERMINAL,
+            "FLOW": ConsciousnessLayer.FLOW,
+            "DREAM": ConsciousnessLayer.DREAM,
+        }
+        intended_mapped = layer_map.get(intended.name, ConsciousnessLayer.SURFACE)
+
+        return {
+            "measured_layer": measured.value,
+            "intended_layer": intended_mapped.value,
+            "in_sync": measured == intended_mapped,
+            "time_advantage": master.get_time_advantage(),
+            "shift_history_len": len(master.shift_history),
+        }
+    except Exception as e:
+        logger.debug("Time master sync skipped: %s", e)
+        return {"error": str(e)}

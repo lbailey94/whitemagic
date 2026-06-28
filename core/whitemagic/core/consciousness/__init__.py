@@ -65,11 +65,11 @@ def __getattr__(name: str):  # type: ignore[misc]
             NarrativeEmotions,
         )
         return NarrativeEmotions
-    if name == "ContinuousAwareness":
+    if name == "ContinuousSelfAwareness":
         from whitemagic.core.consciousness.continuous_awareness import (
-            ContinuousAwareness,
+            ContinuousSelfAwareness,
         )
-        return ContinuousAwareness
+        return ContinuousSelfAwareness
     if name == "ParallelCognition":
         from whitemagic.core.consciousness.parallel_cognition import (
             ParallelCognition,
@@ -111,6 +111,31 @@ def __getattr__(name: str):  # type: ignore[misc]
             UnifiedNervousSystem,
         )
         return UnifiedNervousSystem
+    if name == "CrossSubsystemPatterns":
+        from whitemagic.core.consciousness.unified_nervous_system import (
+            CrossSubsystemPatterns,
+        )
+        return CrossSubsystemPatterns
+    if name == "TimeDilationMaster":
+        from whitemagic.core.consciousness.time_dilation_master import (
+            TimeDilationMaster,
+        )
+        return TimeDilationMaster
+    if name == "get_time_master":
+        from whitemagic.core.consciousness.time_dilation_master import (
+            get_time_master,
+        )
+        return get_time_master
+    if name == "ApotheosisEngine":
+        from whitemagic.core.consciousness.apotheosis_engine import (
+            ApotheosisEngine,
+        )
+        return ApotheosisEngine
+    if name == "get_apotheosis_engine":
+        from whitemagic.core.consciousness.apotheosis_engine import (
+            get_apotheosis_engine,
+        )
+        return get_apotheosis_engine
     if name == "get_nervous_system":
         from whitemagic.core.consciousness.unified_nervous_system import (
             get_nervous_system,
@@ -132,7 +157,7 @@ __all__ = [
     "SelfReflection",
     "UnifiedField",
     "NarrativeEmotions",
-    "ContinuousAwareness",
+    "ContinuousSelfAwareness",
     "ParallelCognition",
     "TimeDilation",
     "SynchronicityDetector",
@@ -144,5 +169,10 @@ __all__ = [
     "PersonalityProfile",
     "PersonalityManager",
     "UnifiedNervousSystem",
+    "CrossSubsystemPatterns",
     "get_nervous_system",
+    "TimeDilationMaster",
+    "get_time_master",
+    "ApotheosisEngine",
+    "get_apotheosis_engine",
 ]

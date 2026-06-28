@@ -63,13 +63,13 @@ class UnifiedNervousSystem:
             from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
             return get_dream_cycle()
         if name == "resonance":
-            from whitemagic.core.resonance.gan_ying_async import GanYingBus
-            return GanYingBus()
+            from whitemagic.core.resonance.gan_ying_async import get_async_bus
+            return get_async_bus()
         if name == "evolution":
-            from whitemagic.core.intelligence.pattern_engines import (
-                get_pattern_engine,
+            from whitemagic.core.intelligence.learning.rapid_cognition import (
+                RapidCognition,
             )
-            return get_pattern_engine()
+            return RapidCognition()
         if name == "consciousness":
             from whitemagic.core.consciousness.coherence import CoherenceMetric
             return CoherenceMetric()
@@ -154,6 +154,157 @@ class UnifiedNervousSystem:
         health["total_subsystems"] = len(self.SUBSYSTEM_NAMES)
 
         return health
+
+
+
+class CrossSubsystemPatterns:
+    """Common patterns for cross-subsystem communication.
+
+    Recovered from v0.2 archive. Provides predefined event patterns
+    for coherence cascades, emergence detection, security threats,
+    dream cycle completion, and memory pressure.
+    """
+
+    @staticmethod
+    def coherence_cascade(nervous_system: UnifiedNervousSystem, coherence_score: float) -> None:
+        """When coherence drops, notify multiple subsystems to take corrective action."""
+        if coherence_score < 0.6:
+            nervous_system.route_signal({
+                "type": "consciousness",
+                "event": "coherence.critical",
+                "coherence": coherence_score,
+                "action": "trigger_dream",
+            })
+            nervous_system.route_signal({
+                "type": "resonance",
+                "event": "harmony.check",
+                "coherence": coherence_score,
+            })
+
+    @staticmethod
+    def emergence_detected(
+        nervous_system: UnifiedNervousSystem,
+        emergence_type: str,
+        details: dict[str, Any],
+    ) -> None:
+        """When emergence is detected, propagate to consciousness and evolution."""
+        nervous_system.route_signal({
+            "type": "emergence",
+            "event": "emergence.record",
+            "emergence_type": emergence_type,
+            "details": details,
+        })
+        nervous_system.route_signal({
+            "type": "consciousness",
+            "event": "coherence.adjust",
+            "adjustment": 0.05,
+            "reason": emergence_type,
+        })
+
+    @staticmethod
+    def security_threat(
+        nervous_system: UnifiedNervousSystem,
+        threat_type: str,
+        severity: str,
+    ) -> None:
+        """Security threats trigger immune response and notify consciousness."""
+        nervous_system.route_signal({
+            "type": "immune",
+            "event": "immune.activate",
+            "threat": threat_type,
+            "severity": severity,
+        })
+        nervous_system.route_signal({
+            "type": "consciousness",
+            "event": "threat_awareness",
+            "threat": threat_type,
+            "immune_response": "active",
+        })
+
+    @staticmethod
+    def dream_cycle_complete(
+        nervous_system: UnifiedNervousSystem,
+        cycle_results: dict[str, Any],
+    ) -> None:
+        """When dream cycle completes, update consciousness and trigger metabolism."""
+        nervous_system.route_signal({
+            "type": "consciousness",
+            "event": "coherence.restore",
+            "dream_results": cycle_results,
+        })
+        nervous_system.route_signal({
+            "type": "metabolism",
+            "event": "metabolism.consolidate",
+            "constellations": cycle_results.get("constellations", []),
+        })
+
+    @staticmethod
+    def memory_pressure(
+        nervous_system: UnifiedNervousSystem,
+        usage_percent: float,
+    ) -> None:
+        """When memory pressure is high, trigger metabolism."""
+        nervous_system.route_signal({
+            "type": "metabolism",
+            "event": "forgetting_sweep",
+            "pressure": usage_percent,
+            "strategy": "gentle",
+        })
+
+
+
+def wire_cross_subsystem_patterns() -> dict[str, bool]:
+    """Wire CrossSubsystemPatterns into the GanYingBus event system.
+
+    Registers event handlers so that cross-subsystem patterns
+    fire automatically when relevant events are emitted.
+
+    Returns:
+        Dict mapping pattern name to wiring success.
+    """
+    results: dict[str, bool] = {}
+    try:
+        from whitemagic.core.resonance.gan_ying_async import get_async_bus
+        bus = get_async_bus()
+        uns = get_nervous_system()
+
+        def _on_coherence_check(event):
+            coherence = event.data.get("coherence", 1.0) if hasattr(event, "data") else 1.0
+            CrossSubsystemPatterns.coherence_cascade(uns, coherence)
+            results["coherence_cascade_wired"] = True
+
+        def _on_emergence(event):
+            etype = event.data.get("emergence_type", "unknown") if hasattr(event, "data") else "unknown"
+            CrossSubsystemPatterns.emergence_detected(uns, etype, {})
+            results["emergence_wired"] = True
+
+        def _on_security_threat(event):
+            threat = event.data.get("threat", "unknown") if hasattr(event, "data") else "unknown"
+            severity = event.data.get("severity", "high") if hasattr(event, "data") else "high"
+            CrossSubsystemPatterns.security_threat(uns, threat, severity)
+            results["security_wired"] = True
+
+        def _on_dream_complete(event):
+            CrossSubsystemPatterns.dream_cycle_complete(uns, {})
+            results["dream_wired"] = True
+
+        def _on_memory_pressure(event):
+            pressure = event.data.get("pressure", 50.0) if hasattr(event, "data") else 50.0
+            CrossSubsystemPatterns.memory_pressure(uns, pressure)
+            results["memory_wired"] = True
+
+        bus.on("coherence.check", _on_coherence_check)
+        bus.on("emergence.detected", _on_emergence)
+        bus.on("security.threat", _on_security_threat)
+        bus.on("dream.cycle_complete", _on_dream_complete)
+        bus.on("memory.pressure", _on_memory_pressure)
+
+        results["all_wired"] = True
+    except Exception as e:
+        logger.debug("Cross-subsystem pattern wiring failed: %s", e)
+        results["all_wired"] = False
+
+    return results
 
 
 # Singleton
