@@ -106,6 +106,9 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
     "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
     "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
+    "polyglot.evolution": LazyHandler("polyglot", "handle_polyglot_evolution"),
+    "polyglot.yield": LazyHandler("polyglot", "handle_polyglot_yield"),
+    "polyglot.actor": LazyHandler("polyglot", "handle_polyglot_actor"),
 
     # --- Unified Read API (v23.1) ---
     "wm_read": LazyHandler("wm_read", "handle_wm_read"),

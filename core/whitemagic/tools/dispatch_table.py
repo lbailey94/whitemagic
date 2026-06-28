@@ -154,6 +154,9 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
     "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
     "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
+    "polyglot.evolution": LazyHandler("polyglot", "handle_polyglot_evolution"),
+    "polyglot.yield": LazyHandler("polyglot", "handle_polyglot_yield"),
+    "polyglot.actor": LazyHandler("polyglot", "handle_polyglot_actor"),
 
     # --- Windsurf ---
     "windsurf_list_conversations": LazyHandler("windsurf_conv", "handle_windsurf_list_conversations"),

@@ -1,6 +1,7 @@
 #!/usr/bin/env julia
 # WhiteMagic Julia Yield Curve JSON stdio bridge
 # Reads JSON requests from stdin, writes JSON responses to stdout
+# Protocol: {"method": "value_at", "params": {...}}
 
 using JSON
 include(joinpath(@__DIR__, "..", "src", "YieldCurve.jl"))
@@ -12,6 +13,17 @@ while !eof(stdin)
     isempty(line) && continue
     try
         req = JSON.parse(line)
+        # Translate standard protocol {"method": ..., "params": {...}}
+        # to YieldCurveJL format {"command": ..., ...flat params...}
+        if haskey(req, "method") && !haskey(req, "command")
+            req["command"] = req["method"]
+        end
+        if haskey(req, "params") && isa(req["params"], Dict)
+            for (k, v) in req["params"]
+                req[k] = v
+            end
+            delete!(req, "params")
+        end
         resp = YieldCurveJL.handle_request(req)
         println(stdout, JSON.json(resp))
         flush(stdout)

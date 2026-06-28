@@ -446,6 +446,14 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
     ts = now_override or now_iso()
     call_started_at = time.time()
 
+    # Machine-time prediction: predict duration before executing
+    _effort_prediction = None
+    try:
+        from whitemagic.core.consciousness.machine_time import get_machine_time_estimator
+        _effort_prediction = get_machine_time_estimator().predict(canonical)
+    except Exception as e:
+        logger.debug("Machine-time prediction failed for %s: %s", canonical, e)
+
     if canonical not in FAST_INTERACTIVE_WRITE_TOOLS:
         # Touch dream cycle idle timer on every tool call
         try:
@@ -473,6 +481,25 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             from whitemagic.core.consciousness.token_economy import get_token_tracker
             _economy = get_token_tracker()
             _economy.record_mcp_tool(canonical, duration * 1000)
+        except (ImportError, ModuleNotFoundError):
+            pass
+
+        # Machine-time: record actual duration and update calibration
+        try:
+            from whitemagic.core.consciousness.machine_time import get_machine_time_estimator
+            _estimator = get_machine_time_estimator()
+            _estimator.record_actual(canonical, duration, _effort_prediction)
+        except (ImportError, ModuleNotFoundError):
+            pass
+        try:
+            from whitemagic.core.consciousness.prediction_calibration import get_calibration
+            get_calibration().record_auto(
+                task_id=request_id,
+                description=canonical,
+                estimated_seconds_machine=_effort_prediction.predicted_seconds if _effort_prediction else duration,
+                actual_seconds_machine=duration,
+                task_type=_effort_prediction.operation_type if _effort_prediction else "unknown",
+            )
         except (ImportError, ModuleNotFoundError):
             pass
 

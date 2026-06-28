@@ -96,6 +96,20 @@ class UnifiedContext:
     session_intention: str | None = None
     session_duration_minutes: int = 0
     recent_events: list[dict[str, Any]] = field(default_factory=list)
+
+    # Token economy (sensorium)
+    token_budget_used: float = 0.0
+    token_local_ratio: float = 0.0
+    token_total_operations: int = 0
+
+    # Machine-time telemetry (sensorium)
+    telemetry_total_calls: int = 0
+    telemetry_p50_ms: float = 0.0
+    telemetry_p90_ms: float = 0.0
+    telemetry_throughput_cps: float = 0.0
+    machine_time_predictions: int = 0
+    machine_time_mean_crps: float = 0.0
+
     attributes: dict[str, Any] = field(default_factory=dict)
 
     # Temporal
@@ -253,6 +267,8 @@ class ContextSynthesizer:
         self._gather_citta_continuity(ctx)
         self._gather_citta_cycle(ctx)
         self._gather_session_state(ctx)
+        self._gather_token_economy(ctx)
+        self._gather_telemetry(ctx)
 
         # Cache result
         self._cache = ctx
@@ -543,6 +559,37 @@ class ContextSynthesizer:
         except Exception as e:
             logger.debug("Session state not available: %s", e, exc_info=True)
 
+    def _gather_token_economy(self, ctx: UnifiedContext) -> None:
+        """Gather token economy state — API vs local compute distribution."""
+        try:
+            from whitemagic.core.consciousness.token_economy import get_token_tracker
+            tracker = get_token_tracker()
+            budget = tracker.get_budget_status()
+            ctx.token_budget_used = budget.get("usage_percent", 0.0) / 100.0
+            ctx.token_local_ratio = tracker.get_local_ratio()
+            ctx.token_total_operations = len(tracker.history)
+        except Exception as e:
+            logger.debug("Token economy state not available: %s", e, exc_info=True)
+
+    def _gather_telemetry(self, ctx: UnifiedContext) -> None:
+        """Gather telemetry and machine-time calibration state."""
+        try:
+            from whitemagic.core.monitoring.telemetry import get_telemetry
+            summary = get_telemetry().get_summary()
+            ctx.telemetry_total_calls = summary.get("total_calls", 0)
+            ctx.telemetry_p50_ms = summary.get("p50_latency_ms", 0.0)
+            ctx.telemetry_p90_ms = summary.get("p90_latency_ms", 0.0)
+            ctx.telemetry_throughput_cps = summary.get("throughput_cps", 0.0)
+        except Exception as e:
+            logger.debug("Telemetry state not available: %s", e, exc_info=True)
+        try:
+            from whitemagic.core.consciousness.machine_time import get_machine_time_estimator
+            crps_summary = get_machine_time_estimator().get_crps_summary()
+            ctx.machine_time_predictions = crps_summary.get("count", 0)
+            ctx.machine_time_mean_crps = crps_summary.get("mean_crps", 0.0) or 0.0
+        except Exception as e:
+            logger.debug("Machine-time state not available: %s", e, exc_info=True)
+
     def get_summary(self) -> str:
         """Get human-readable context summary."""
         ctx = self.gather()
@@ -566,6 +613,13 @@ class ContextSynthesizer:
    Burnout risk: {ctx.burnout_risk:.0%}
 
 🧠 Coherence: {ctx.coherence_level} ({ctx.coherence_score:.0%})
+   Dimensions: {', '.join(f'{d}={s:.0%}' for d, s in ctx.coherence_dimensions.items() if s < 0.7) or 'all healthy'}
+
+💰 Token Economy: {ctx.token_budget_used:.0%} budget used, {ctx.token_local_ratio:.0%} local
+   Operations: {ctx.token_total_operations}
+
+📊 Telemetry: {ctx.telemetry_total_calls} calls, p50={ctx.telemetry_p50_ms:.0f}ms, p90={ctx.telemetry_p90_ms:.0f}ms
+   Throughput: {ctx.telemetry_throughput_cps:.1f} cps, CRPS={ctx.machine_time_mean_crps:.6f}
 
 🌊 Depth: {ctx.depth_layer.upper()} (sync: {ctx.depth_in_sync}, {ctx.time_advantage:.1f}x)
    Flow: {'IN FLOW' if ctx.in_flow else 'not in flow'} (score: {ctx.flow_score:.2f}, indicators: {', '.join(ctx.flow_indicators) or 'none'})

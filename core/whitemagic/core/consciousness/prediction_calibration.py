@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -37,6 +38,10 @@ class TaskEstimate:
     actual_minutes: float  # Real-world time
     depth_layer: str  # Which consciousness layer was active
     compression_ratio: float  # actual / estimated (how much faster)
+    task_type: str = "unknown"  # Operation type (memory_op, compute, search, etc.)
+    estimated_seconds_machine: float = 0.0  # Machine-time prediction (seconds)
+    actual_seconds_machine: float = 0.0  # Machine-time actual (seconds)
+    crps: float = 0.0  # Continuous Ranked Probability Score
     timestamp: datetime = field(default_factory=datetime.now)
 
     @property
@@ -150,11 +155,87 @@ class PredictionCalibration:
                     "actual_minutes": estimate.actual_minutes,
                     "depth_layer": estimate.depth_layer,
                     "compression_ratio": estimate.compression_ratio,
+                    "task_type": estimate.task_type,
+                    "estimated_seconds_machine": estimate.estimated_seconds_machine,
+                    "actual_seconds_machine": estimate.actual_seconds_machine,
+                    "crps": estimate.crps,
                     "timestamp": estimate.timestamp.isoformat(),
                 }
                 f.write(json.dumps(data) + "\n")
         except Exception as e:
             logger.warning("Failed to persist calibration: %s", e)
+
+    def record_auto(
+        self,
+        task_id: str,
+        description: str,
+        estimated_seconds_machine: float,
+        actual_seconds_machine: float,
+        task_type: str = "unknown",
+        depth_layer: str = "surface",
+        sigma: float | None = None,
+    ) -> TaskEstimate:
+        """Record a completed task with machine-time prediction vs actual.
+
+        This is the auto-wiring entry point — called by the dispatch pipeline
+        after each tool call completes. Uses seconds (machine time) not minutes.
+
+        Args:
+            task_id: Unique identifier for the task.
+            description: What was the task?
+            estimated_seconds_machine: Machine-time prediction (seconds).
+            actual_seconds_machine: Observed duration (seconds).
+            task_type: Operation type from MachineTimeEstimator.classify_tool.
+            depth_layer: Which consciousness layer was active.
+            sigma: Std dev for CRPS. If None, uses 20% of prediction.
+
+        Returns:
+            The recorded TaskEstimate.
+        """
+        import math as _math
+
+        # Convert to minutes for backward-compatible fields
+        est_min = estimated_seconds_machine / 60.0
+        act_min = actual_seconds_machine / 60.0
+        compression = (
+            estimated_seconds_machine / actual_seconds_machine
+            if actual_seconds_machine > 0 else 1.0
+        )
+
+        # CRPS (Continuous Ranked Probability Score)
+        if sigma is None:
+            sigma = max(estimated_seconds_machine * 0.2, 0.001)
+        z = (actual_seconds_machine - estimated_seconds_machine) / sigma
+        phi_z = _math.exp(-0.5 * z * z) / _math.sqrt(2 * _math.pi)
+        phi_of_z = 0.5 * (1.0 + _math.erf(z / _math.sqrt(2.0)))
+        crps = sigma * (z * (2 * phi_of_z - 1) + 2 * phi_z - 1.0 / _math.sqrt(_math.pi))
+
+        estimate = TaskEstimate(
+            task_id=task_id,
+            description=description,
+            estimated_minutes=est_min,
+            actual_minutes=act_min,
+            depth_layer=depth_layer,
+            compression_ratio=compression,
+            task_type=task_type,
+            estimated_seconds_machine=estimated_seconds_machine,
+            actual_seconds_machine=actual_seconds_machine,
+            crps=crps,
+        )
+
+        self.estimates.append(estimate)
+        self._persist(estimate)
+
+        logger.info(
+            "Calibration (auto): '%s' [%s] — predicted %.4fs, actual %.4fs, CRPS=%.6f",
+            description[:50],
+            task_type,
+            estimated_seconds_machine,
+            actual_seconds_machine,
+            crps,
+        )
+
+        return estimate
 
     def get_calibration_score(self) -> dict[str, Any]:
         """Compute calibration metrics from all recorded estimates.
@@ -214,6 +295,48 @@ class PredictionCalibration:
             stats["avg_compression"] = stats["total_compression"] / stats["count"]
             stats["accuracy_rate"] = stats["accurate"] / stats["count"]
 
+        # CRPS (Continuous Ranked Probability Score) — primary metric for
+        # continuous time predictions. Lower = better. 0 = perfect.
+        crps_values = [e.crps for e in self.estimates if e.crps > 0]
+        mean_crps = sum(crps_values) / len(crps_values) if crps_values else 0.0
+
+        # Machine-time stats (seconds)
+        machine_estimates = [e for e in self.estimates if e.estimated_seconds_machine > 0]
+        if machine_estimates:
+            machine_log_errors = [
+                abs(math.log(e.estimated_seconds_machine / e.actual_seconds_machine))
+                if e.estimated_seconds_machine > 0 and e.actual_seconds_machine > 0
+                else 0.0
+                for e in machine_estimates
+            ]
+            mean_machine_log_error = sum(machine_log_errors) / len(machine_log_errors)
+            machine_crps = [e.crps for e in machine_estimates if e.crps > 0]
+            mean_machine_crps = sum(machine_crps) / len(machine_crps) if machine_crps else 0.0
+        else:
+            mean_machine_log_error = 0.0
+            mean_machine_crps = 0.0
+
+        # Per-task-type breakdown
+        by_type: dict[str, dict[str, float]] = {}
+        for est in self.estimates:
+            t_type = est.task_type
+            if t_type not in by_type:
+                by_type[t_type] = {"count": 0, "total_crps": 0.0, "total_log_error": 0.0}
+            by_type[t_type]["count"] += 1
+            by_type[t_type]["total_crps"] += est.crps
+            if est.estimated_seconds_machine > 0 and est.actual_seconds_machine > 0:
+                by_type[t_type]["total_log_error"] += abs(
+                    math.log(est.estimated_seconds_machine / est.actual_seconds_machine)
+                    if est.estimated_seconds_machine > 0 and est.actual_seconds_machine > 0
+                    else 0.0
+                )
+
+        for t_type, stats in by_type.items():
+            stats["mean_crps"] = round(stats["total_crps"] / stats["count"], 6)
+            stats["mean_log_error"] = round(stats["total_log_error"] / stats["count"], 4)
+            del stats["total_crps"]
+            del stats["total_log_error"]
+
         return {
             "count": len(self.estimates),
             "brier_score": round(brier, 4),
@@ -223,6 +346,11 @@ class PredictionCalibration:
             "avg_compression_ratio": round(avg_compression, 2),
             "overconfident_count": overconfident_count,
             "underconfident_count": underconfident_count,
+            # Continuous scoring (primary for machine-time)
+            "mean_crps": round(mean_crps, 6),
+            "mean_machine_crps": round(mean_machine_crps, 6),
+            "mean_machine_log_error": round(mean_machine_log_error, 4),
+            "machine_count": len(machine_estimates),
             "by_layer": {
                 layer: {
                     "count": s["count"],
@@ -231,6 +359,7 @@ class PredictionCalibration:
                 }
                 for layer, s in by_layer.items()
             },
+            "by_type": by_type,
             "recommendation": self._recommendation(avg_compression, overconfident_count, underconfident_count),
         }
 

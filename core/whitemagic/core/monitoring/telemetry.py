@@ -1,8 +1,10 @@
-"""Unified Telemetry System - v12.3
-Tracks tool latency, errors, and success rates.
+"""Unified Telemetry System - v13.0
+Tracks tool latency, errors, success rates, percentiles, and throughput.
 """
 
 import logging
+import statistics
+import time
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +24,12 @@ class Telemetry:
 
         # In-memory buffer for fast summaries (last 100 calls)
         self.recent_calls: deque[dict[str, Any]] = deque(maxlen=100)
+
+        # Per-tool duration history for percentile computation (last 200 per tool)
+        self._tool_durations: dict[str, deque[float]] = {}
+
+        # Throughput tracking
+        self._call_timestamps: deque[float] = deque(maxlen=500)
 
         # Aggregated stats
         self.stats: dict[str, Any] = {
@@ -73,6 +81,14 @@ class Telemetry:
         if status != "success":
             per_tool[tool]["errors"] += 1
 
+        # Track per-tool durations for percentile computation
+        if tool not in self._tool_durations:
+            self._tool_durations[tool] = deque(maxlen=200)
+        self._tool_durations[tool].append(duration)
+
+        # Track call timestamps for throughput
+        self._call_timestamps.append(time.time())
+
         self.recent_calls.append(event)
 
         # 2. Persist to JSON-L
@@ -92,27 +108,105 @@ class Telemetry:
         reuse_total = hits + misses
         reuse_rate = hits / max(1, reuse_total)
 
-        # Top 5 most-called tools
+        # Top 5 most-called tools with percentiles
         per_tool = cast("dict[str, dict[str, Any]]", self.stats["per_tool"])
         top_tools = sorted(per_tool.items(), key=lambda x: x[1]["calls"], reverse=True)[:5]
+
+        top_tools_enriched = []
+        for name, stats in top_tools:
+            entry = {"tool": name, "calls": stats["calls"], "avg_ms": round(stats["total_latency"] / max(1, stats["calls"]) * 1000, 2)}
+            # Add percentiles from duration history
+            durations = list(self._tool_durations.get(name, []))
+            if durations:
+                s = sorted(durations)
+                entry["p50_ms"] = round(self._percentile(s, 50) * 1000, 2)
+                entry["p90_ms"] = round(self._percentile(s, 90) * 1000, 2)
+                entry["p99_ms"] = round(self._percentile(s, 99) * 1000, 2)
+            top_tools_enriched.append(entry)
+
+        # Throughput: calls per second over recent window
+        throughput = self._compute_throughput()
 
         return {
             "total_calls": self.stats["total_calls"],
             "avg_latency_ms": round(avg_latency * 1000, 2),
+            "p50_latency_ms": round(self._global_percentile(50) * 1000, 2),
+            "p90_latency_ms": round(self._global_percentile(90) * 1000, 2),
+            "p99_latency_ms": round(self._global_percentile(99) * 1000, 2),
             "success_rate": round(success_rate, 4),
             "error_count": self.stats["error_count"],
             "errors_by_code": self.stats["errors_by_code"],
+            "throughput_cps": round(throughput, 2),
             "context_reuse": {
                 "hits": hits,
                 "misses": misses,
                 "reuse_rate": round(reuse_rate, 4),
             },
-            "top_tools": [
-                {"tool": name, "calls": stats["calls"], "avg_ms": round(stats["total_latency"] / max(1, stats["calls"]) * 1000, 2)}
-                for name, stats in top_tools
-            ],
+            "top_tools": top_tools_enriched,
             "recent_events": list(self.recent_calls)[-10:],
         }
+
+    def get_tool_profile(self, tool_name: str) -> dict[str, Any]:
+        """Get detailed profile for a specific tool."""
+        per_tool = cast("dict[str, dict[str, Any]]", self.stats["per_tool"])
+        stats = per_tool.get(tool_name)
+        if not stats:
+            return {"tool": tool_name, "message": "No calls recorded"}
+
+        durations = sorted(list(self._tool_durations.get(tool_name, [])))
+        profile = {
+            "tool": tool_name,
+            "calls": stats["calls"],
+            "errors": stats["errors"],
+            "error_rate": round(stats["errors"] / max(1, stats["calls"]), 4),
+            "avg_ms": round(stats["total_latency"] / max(1, stats["calls"]) * 1000, 2),
+        }
+        if durations:
+            profile.update({
+                "p50_ms": round(self._percentile(durations, 50) * 1000, 2),
+                "p90_ms": round(self._percentile(durations, 90) * 1000, 2),
+                "p99_ms": round(self._percentile(durations, 99) * 1000, 2),
+                "min_ms": round(durations[0] * 1000, 2),
+                "max_ms": round(durations[-1] * 1000, 2),
+                "stdev_ms": round(statistics.stdev(durations) * 1000, 2) if len(durations) > 1 else 0.0,
+            })
+        return profile
+
+    def get_all_tool_profiles(self) -> dict[str, Any]:
+        """Get profiles for all tools that have been called."""
+        per_tool = cast("dict[str, dict[str, Any]]", self.stats["per_tool"])
+        return {tool: self.get_tool_profile(tool) for tool in sorted(per_tool)}
+
+    def _percentile(self, sorted_data: list[float], pct: float) -> float:
+        """Compute percentile from sorted data."""
+        if not sorted_data:
+            return 0.0
+        if len(sorted_data) == 1:
+            return sorted_data[0]
+        k = (len(sorted_data) - 1) * (pct / 100.0)
+        f = int(k)
+        c = min(f + 1, len(sorted_data) - 1)
+        if f == c:
+            return sorted_data[f]
+        return sorted_data[f] * (c - k) + sorted_data[c] * (k - f)
+
+    def _global_percentile(self, pct: float) -> float:
+        """Compute percentile across all tool calls."""
+        all_durations = []
+        for durations in self._tool_durations.values():
+            all_durations.extend(durations)
+        if not all_durations:
+            return 0.0
+        return self._percentile(sorted(all_durations), pct)
+
+    def _compute_throughput(self) -> float:
+        """Compute calls per second over the recent window."""
+        if len(self._call_timestamps) < 2:
+            return 0.0
+        span = self._call_timestamps[-1] - self._call_timestamps[0]
+        if span <= 0:
+            return 0.0
+        return len(self._call_timestamps) / span
 
 # Global instance
 _telemetry = None

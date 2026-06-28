@@ -32,6 +32,10 @@ from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
+# Lazy-imported evolution backend cache
+_evo_backend: Any = None
+_evo_backend_time: float = 0.0
+
 
 class PolyglotAccelerator:
     """Unified accelerator with smart backend routing."""
@@ -276,8 +280,104 @@ class PolyglotAccelerator:
         return result
 
     # ========================================================================
-    # Python Fallbacks
+    # Evolution Operations (Rust-accelerated with Python fallback)
     # ========================================================================
+
+    def _get_evo_backend(self) -> Any:
+        """Try to get a RustEvolutionBackend instance."""
+        global _evo_backend, _evo_backend_time
+        now = time.monotonic()
+        if _evo_backend is not None and (now - _evo_backend_time) < 300.0:
+            return _evo_backend
+        try:
+            import sys
+            from pathlib import Path
+            _bridge = Path(__file__).resolve().parent.parent.parent.parent.parent / "polyglot" / "bridges" / "python"
+            if str(_bridge) not in sys.path:
+                sys.path.insert(0, str(_bridge))
+            from whitemagic_polyglot import RustEvolutionBackend
+            backend = RustEvolutionBackend()
+            backend.call("ping", timeout=5.0)
+            _evo_backend = backend
+            _evo_backend_time = now
+            return backend
+        except Exception:
+            return None
+
+    def shannon_entropy(self, p: float) -> float:
+        """Compute Shannon entropy H(p) = -p*log2(p) - (1-p)*log2(1-p)."""
+        start = time.time()
+        backend = self._get_evo_backend()
+        if backend is not None:
+            try:
+                raw = backend.call("shannon_entropy", p=p)
+                if raw.get("status") == "ok":
+                    self.rust_calls += 1
+                    self.total_time_ms += (time.time() - start) * 1000
+                    return float(raw["result"]["entropy"])
+            except Exception:
+                pass
+        # Python fallback
+        if p <= 0 or p >= 1:
+            return 0.0
+        result = -p * math.log2(p) - (1 - p) * math.log2(1 - p)
+        self.python_calls += 1
+        self.total_time_ms += (time.time() - start) * 1000
+        return result
+
+    def boltzmann_select(self, energies: list[float], temperature: float, k: int = 1, seed: int = 42) -> list[int]:
+        """Select k indices using Boltzmann sampling."""
+        start = time.time()
+        backend = self._get_evo_backend()
+        if backend is not None:
+            try:
+                raw = backend.call("boltzmann_select", energies=energies, temperature=temperature, k=k, seed=seed)
+                if raw.get("status") == "ok":
+                    self.rust_calls += 1
+                    self.total_time_ms += (time.time() - start) * 1000
+                    return cast(list[int], raw["result"]["selected_indices"])
+            except Exception:
+                pass
+        # Python fallback: proportional sampling
+        import random
+        rng = random.Random(seed)
+        if not energies or temperature <= 0:
+            return list(range(min(k, len(energies))))
+        probs = [math.exp(-e / temperature) for e in energies]
+        total = sum(probs)
+        probs = [p / total for p in probs]
+        selected = rng.choices(range(len(energies)), weights=probs, k=k)
+        self.python_calls += 1
+        self.total_time_ms += (time.time() - start) * 1000
+        return selected
+
+    def hrr_encode(self, description: str, dim: int = 384, impact: float = 0.5) -> list[float]:
+        """Encode a hypothesis as an HRR vector."""
+        start = time.time()
+        backend = self._get_evo_backend()
+        if backend is not None:
+            try:
+                raw = backend.call("hrr_encode", description=description, dim=dim, impact=impact)
+                if raw.get("status") == "ok":
+                    self.rust_calls += 1
+                    self.total_time_ms += (time.time() - start) * 1000
+                    return cast(list[float], raw["result"]["vector"])
+            except Exception:
+                pass
+        # Python fallback: deterministic hash-based vector
+        import hashlib
+        result = []
+        for i in range(dim):
+            h = hashlib.sha256(f"{description}:{i}:{impact}".encode()).digest()
+            val = (int.from_bytes(h[:8], 'little') / 2**64 - 0.5) * 2 * impact
+            result.append(val)
+        self.python_calls += 1
+        self.total_time_ms += (time.time() - start) * 1000
+        return result
+
+    # ========================================================================
+    # Python Fallbacks
+    # ====================================================================
 
     @staticmethod
     def _py_cosine(a: Sequence[float], b: Sequence[float]) -> float:
