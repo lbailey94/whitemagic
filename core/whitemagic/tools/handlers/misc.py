@@ -415,7 +415,7 @@ def handle_token_report(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     try:
-        from whitemagic.core.token_economy import get_token_economy
+        from whitemagic.core.consciousness.token_economy import get_token_economy
         economy = get_token_economy()
         try:
             budget_status = economy.get_budget_status()

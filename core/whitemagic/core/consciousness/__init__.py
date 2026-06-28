@@ -141,6 +141,16 @@ def __getattr__(name: str):  # type: ignore[misc]
             get_nervous_system,
         )
         return get_nervous_system
+    if name == "PredictionCalibration":
+        from whitemagic.core.consciousness.prediction_calibration import (
+            PredictionCalibration,
+        )
+        return PredictionCalibration
+    if name == "get_calibration":
+        from whitemagic.core.consciousness.prediction_calibration import (
+            get_calibration,
+        )
+        return get_calibration
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -175,4 +185,6 @@ __all__ = [
     "get_time_master",
     "ApotheosisEngine",
     "get_apotheosis_engine",
+    "PredictionCalibration",
+    "get_calibration",
 ]

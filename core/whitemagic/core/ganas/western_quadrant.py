@@ -142,7 +142,7 @@ Digestion turns matter into energy.
     async def _execute_core(self, call: GanaCall, morphed_template: str) -> Any:
         """Execute nourishment logic via TokenEconomy."""
         try:
-            from whitemagic.core.token_economy import get_token_economy
+            from whitemagic.core.consciousness.token_economy import get_token_economy
             economy = get_token_economy()
             status = economy.get_budget_status()
 

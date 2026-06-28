@@ -773,6 +773,38 @@ def _build_sensorium() -> dict[str, Any]:
     except Exception:
         pass
 
+    # Token economy — API vs local compute distribution
+    try:
+        from whitemagic.core.consciousness.token_economy import get_token_tracker
+        tracker = get_token_tracker()
+        summary = tracker.get_session_summary()
+        if "totals" in summary:
+            sensorium["token_economy"] = {
+                "api_tokens": summary["totals"]["api_tokens"],
+                "local_cpu_ms": round(summary["totals"]["local_cpu_ms"], 1),
+                "local_percentage": round(summary["totals"]["local_percentage"], 1),
+                "operations": summary["total_operations"],
+                "insight": summary.get("insight", ""),
+            }
+    except Exception:
+        pass
+
+    # Prediction calibration — estimate accuracy tracking
+    try:
+        from whitemagic.core.consciousness.prediction_calibration import get_calibration
+        cal = get_calibration()
+        score = cal.get_calibration_score()
+        if "count" in score and score["count"] > 0:
+            sensorium["calibration"] = {
+                "count": score["count"],
+                "brier_score": score["brier_score"],
+                "accuracy_rate": score["accuracy_rate"],
+                "avg_compression": score["avg_compression_ratio"],
+                "recommendation": score["recommendation"],
+            }
+    except Exception:
+        pass
+
     return sensorium
 
 

@@ -52,6 +52,21 @@ class TokenBudget:
 
 
 @dataclass
+class TokenUsage:
+    """Record of token usage (merged from core/token_economy.py)."""
+
+    operation: str
+    tokens_used: int
+    tokens_available: int
+    efficiency: float
+    timestamp: datetime | None = None
+
+    def __post_init__(self) -> Any:
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
+
+
+@dataclass
 class ComputeOperation:
     """A single compute operation"""
     timestamp: datetime
@@ -122,8 +137,8 @@ class TokenEconomyTracker:
         """Get breakdown by source (test-compatible API)"""
         breakdown = {}
         for entry in self.history:
-            source = entry['source']
-            breakdown[source] = breakdown.get(source, 0) + entry['tokens']
+            source = entry.get('source', 'unknown')
+            breakdown[source] = breakdown.get(source, 0) + entry.get('tokens', 0)
         return breakdown
 
     def get_local_ratio(self) -> float:
@@ -131,8 +146,8 @@ class TokenEconomyTracker:
         if not self.history:
             return 0.0
 
-        local_tokens = sum(e['tokens'] for e in self.history if e['source'] == 'local')
-        total_tokens = sum(e['tokens'] for e in self.history)
+        local_tokens = sum(e.get('tokens', 0) for e in self.history if e.get('source') == 'local')
+        total_tokens = sum(e.get('tokens', 0) for e in self.history)
 
         return local_tokens / total_tokens if total_tokens > 0 else 0.0
 
@@ -219,6 +234,86 @@ class TokenEconomyTracker:
             cpu_ms=duration_ms
         )
 
+    # --- Merged from core/token_economy.py ---
+
+    def track_usage(self, operation: str, tokens: int) -> TokenUsage:
+        """Track token usage for an operation (merged API)."""
+        self.used_tokens += tokens
+        usage = TokenUsage(
+            operation=operation,
+            tokens_used=tokens,
+            tokens_available=self.total_budget - self.used_tokens,
+            efficiency=tokens / self.total_budget if self.total_budget > 0 else 0,
+        )
+        self.history.append(usage.__dict__ | {"source": "api"})
+        return usage
+
+    def get_budget_status(self) -> dict[str, Any]:
+        """Get current budget status."""
+        used_percent = (self.used_tokens / self.total_budget) * 100 if self.total_budget > 0 else 0
+        return {
+            "total_budget": self.total_budget,
+            "tokens_used": self.used_tokens,
+            "tokens_remaining": self.total_budget - self.used_tokens,
+            "usage_percent": used_percent,
+            "status": "optimal" if used_percent < 60 else "monitor" if used_percent < 80 else "critical",
+            "operations_tracked": len(self.history),
+        }
+
+    def optimize_allocation(self) -> dict[str, Any]:
+        """Provide optimization recommendations."""
+        status = self.get_budget_status()
+        recommendations: list[str] = []
+        if status["usage_percent"] > 70:
+            recommendations.append("Consider using more concise responses")
+            recommendations.append("Prioritize high-value operations")
+        if self.get_local_ratio() < 0.3:
+            recommendations.append("Increase local compute — offload more to Rust/Python")
+        return {
+            "status": status["status"],
+            "recommendations": recommendations,
+        }
+
+    # --- Merged from autonomous/token_economy.py ---
+
+    def record_api(self, tokens: int) -> None:
+        """Record API token usage (autonomous API)."""
+        self.api_tokens = getattr(self, "api_tokens", 0) + tokens
+        self.record_usage(tokens, source="api")
+
+    def record_local(self, operations: int = 1) -> None:
+        """Record local CPU operation (autonomous API)."""
+        self.local_operations = getattr(self, "local_operations", 0) + operations
+        self.history.append({
+            "tokens": operations,
+            "source": "local",
+            "operation": "local_compute",
+            "timestamp": datetime.now().isoformat(),
+        })
+
+    def record_rust(self, operations: int = 1) -> None:
+        """Record Rust bridge operation (autonomous API)."""
+        self.rust_operations = getattr(self, "rust_operations", 0) + operations
+        self.record_rust_operation("autonomous_rust", 0.0)
+
+    def record_mcp(self, calls: int = 1) -> None:
+        """Record MCP tool call (autonomous API)."""
+        self.mcp_calls = getattr(self, "mcp_calls", 0) + calls
+
+    def snapshot(self) -> dict[str, Any]:
+        """Take a snapshot of token economy (autonomous API)."""
+        import time as _time
+        snap = {
+            "timestamp": _time.time(),
+            "api_tokens": getattr(self, "api_tokens", 0),
+            "local_operations": getattr(self, "local_operations", 0),
+            "rust_operations": getattr(self, "rust_operations", 0),
+            "mcp_calls": getattr(self, "mcp_calls", 0),
+            "local_ratio": self.get_local_ratio(),
+        }
+        self.history.append(snap)
+        return snap
+
     def get_session_summary(self) -> dict[str, Any]:
         """Get summary of current session"""
         if not self.operations:
@@ -259,6 +354,22 @@ class TokenEconomyTracker:
                 'local_percentage': local_percentage,
             },
             'insight': self._generate_insight(local_percentage, by_type)
+        }
+
+    # --- Aliases for backward compatibility (autonomous/token_economy.py API) ---
+
+    def local_ratio(self) -> float:
+        """Alias for get_local_ratio() (autonomous API compatibility)."""
+        return self.get_local_ratio()
+
+    def summary(self) -> dict[str, Any]:
+        """Summary in autonomous API format."""
+        return {
+            "api_tokens": getattr(self, "api_tokens", 0),
+            "local_operations": getattr(self, "local_operations", 0),
+            "rust_operations": getattr(self, "rust_operations", 0),
+            "mcp_calls": getattr(self, "mcp_calls", 0),
+            "local_ratio": round(self.get_local_ratio(), 3),
         }
 
     def _generate_insight(self, local_pct: float, by_type: dict[str, Any]) -> str:
@@ -316,3 +427,8 @@ def get_token_tracker() -> TokenEconomyTracker:
 
 # Alias for test compatibility
 TokenEconomy = TokenEconomyTracker
+
+
+def get_token_economy() -> TokenEconomyTracker:
+    """Get the global token economy instance (merged from core/token_economy.py)."""
+    return get_token_tracker()

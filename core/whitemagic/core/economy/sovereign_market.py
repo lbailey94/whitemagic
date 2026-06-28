@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from whitemagic.core.polyglot.bittensor_bridge import get_bittensor_bridge
-from whitemagic.core.token_economy import get_token_economy
+from whitemagic.core.consciousness.token_economy import get_token_economy
 
 logger = logging.getLogger(__name__)
 

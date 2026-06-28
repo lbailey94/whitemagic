@@ -187,7 +187,23 @@ class ConsciousnessDepthGauge:
         # Reset
         self.task_start_objective = None
         self.task_start_subjective = None
+        task_desc = self.task_description
         self.task_description = ""
+
+        # Record into prediction calibration system
+        try:
+            from whitemagic.core.consciousness.prediction_calibration import get_calibration
+            cal = get_calibration()
+            cal.record_estimate(
+                task_id=f"task_{int(reading.timestamp.timestamp())}",
+                description=task_desc,
+                estimated_minutes=subjective_elapsed / 60,
+                actual_minutes=objective_elapsed / 60,
+                depth_layer=detected_layer.value,
+                compression_ratio=actual_compression,
+            )
+        except Exception as e:
+            logger.debug("Calibration recording skipped: %s", e)
 
         return reading
 

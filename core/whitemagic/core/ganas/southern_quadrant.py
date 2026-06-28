@@ -681,7 +681,7 @@ Joy increases when shared. Dreams regenerate what waking depletes.
         # Sovereign budget logic
         try:
             from whitemagic.core.economy.sovereign_market import get_market
-            from whitemagic.core.token_economy import get_token_economy
+            from whitemagic.core.consciousness.token_economy import get_token_economy
 
             economy = get_token_economy()
             status = economy.get_budget_status()

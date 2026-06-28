@@ -120,6 +120,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "consciousness.smarana":        "gana_ghost",
     "consciousness.flow":           "gana_ghost",
     "consciousness.time_dilation":  "gana_ghost",
+    "consciousness.calibration":    "gana_ghost",
+    "consciousness.token_economy":  "gana_ghost",
     # Citta Stream — temporal continuity (Ghost = introspection)
     "citta.continuity":             "gana_ghost",
     "citta.stream_summary":         "gana_ghost",

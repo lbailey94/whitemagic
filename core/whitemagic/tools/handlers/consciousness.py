@@ -357,3 +357,45 @@ def handle_citta_cycle(**kwargs: Any) -> dict[str, Any]:
     except Exception as e:
         logger.debug("citta.cycle error: %s", e, exc_info=True)
         return {"status": "error", "error_code": "citta_cycle_failed", "message": str(e)}
+
+
+def handle_consciousness_calibration(**kwargs: Any) -> dict[str, Any]:
+    """Get prediction calibration — AI's time estimate accuracy tracking."""
+    try:
+        from whitemagic.core.consciousness.prediction_calibration import get_calibration
+
+        cal = get_calibration()
+        score = cal.get_calibration_score()
+
+        if "count" not in score or score["count"] == 0:
+            return {
+                "status": "success",
+                "message": "No task estimates recorded yet. Use depth_gauge.begin_task()/end_task() to start tracking.",
+                "count": 0,
+            }
+
+        return {"status": "success", "calibration": score}
+    except Exception as e:
+        logger.debug("consciousness.calibration error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "calibration_failed", "message": str(e)}
+
+
+def handle_consciousness_token_economy(**kwargs: Any) -> dict[str, Any]:
+    """Get token economy — API vs local compute distribution."""
+    try:
+        from whitemagic.core.consciousness.token_economy import get_token_tracker
+
+        tracker = get_token_tracker()
+        summary = tracker.get_session_summary()
+        budget = tracker.get_budget_status()
+        optimization = tracker.optimize_allocation()
+
+        return {
+            "status": "success",
+            "session_summary": summary,
+            "budget": budget,
+            "optimization": optimization,
+        }
+    except Exception as e:
+        logger.debug("consciousness.token_economy error: %s", e, exc_info=True)
+        return {"status": "error", "error_code": "token_economy_failed", "message": str(e)}

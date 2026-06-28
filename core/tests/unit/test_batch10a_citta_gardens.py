@@ -70,7 +70,7 @@ class TestSessionHealth:
 
 class TestTokenEconomy:
     def test_record_and_ratio(self):
-        from whitemagic.autonomous.token_economy import TokenEconomy
+        from whitemagic.core.consciousness.token_economy import TokenEconomy
         eco = TokenEconomy()
         eco.record_api(1000)
         eco.record_local(500)

@@ -294,6 +294,8 @@ _DISPATCH_OPERATIONAL: dict[str, Callable[..., dict[str, Any]]] = {
     "consciousness.smarana": LazyHandler("consciousness", "handle_consciousness_smarana"),
     "consciousness.flow": LazyHandler("consciousness", "handle_consciousness_flow"),
     "consciousness.time_dilation": LazyHandler("consciousness", "handle_consciousness_time_dilation"),
+    "consciousness.calibration": LazyHandler("consciousness", "handle_consciousness_calibration"),
+    "consciousness.token_economy": LazyHandler("consciousness", "handle_consciousness_token_economy"),
 
     # --- Citta Stream (v23.3.1: Temporal Continuity) ---
     "citta.continuity": LazyHandler("consciousness", "handle_citta_continuity"),
