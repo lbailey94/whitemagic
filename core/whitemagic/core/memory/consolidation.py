@@ -570,6 +570,7 @@ class MemoryConsolidator:
                     content=str(strategy_content),
                     memory_type=MemoryType.LONG_TERM,
                     title=f"Strategy: {cluster.theme} (consolidated)",
+                    subsystem="consolidation",
                     tags=cluster.shared_tags | {"strategy", "consolidated"},
                     importance=min(1.0, (cluster.avg_importance or 0.5) + self._importance_boost),
                 )

@@ -1072,7 +1072,9 @@ class PredictiveEngine:
     def _get_foresight_engine(self):
         """Lazy accessor for the ForesightEngine."""
         if self._foresight_engine_instance is None:
-            from whitemagic.core.intelligence.foresight_engine import get_foresight_engine
+            from whitemagic.core.intelligence.foresight_engine import (
+                get_foresight_engine,
+            )
             self._foresight_engine_instance = get_foresight_engine()
         return self._foresight_engine_instance
 
@@ -1087,7 +1089,9 @@ class PredictiveEngine:
     def _get_predictive_maintenance(self):
         """Lazy accessor for the PredictiveMaintenanceEngine."""
         if self._predictive_maintenance_instance is None:
-            from whitemagic.autonomous.apotheosis_engine import PredictiveMaintenanceEngine
+            from whitemagic.core.consciousness.apotheosis_engine import (
+                PredictiveMaintenanceEngine,
+            )
             self._predictive_maintenance_instance = PredictiveMaintenanceEngine()
         return self._predictive_maintenance_instance
 

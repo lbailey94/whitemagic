@@ -378,6 +378,7 @@ async def handle_galaxy_export(params: dict) -> dict:
     """Export memories from a galaxy as Arrow IPC bytes (base64-encoded)."""
     try:
         import base64
+
         from whitemagic.core.memory.unified import get_unified_memory
         um = get_unified_memory()
 
@@ -418,6 +419,7 @@ async def handle_galaxy_import(params: dict) -> dict:
     """Import memories from base64-encoded Arrow IPC bytes."""
     try:
         import base64
+
         from whitemagic.core.memory.unified import get_unified_memory
         um = get_unified_memory()
 

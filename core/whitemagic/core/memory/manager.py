@@ -76,6 +76,7 @@ class MemoryManager:
             content=content,
             memory_type=self._parse_memory_type(memory_type),
             tags={str(t).lower() for t in tags} if tags else set(),
+            subsystem="memory_manager",
             title=title,
             metadata=metadata,
             importance=float(metadata.get("importance", 0.5)),

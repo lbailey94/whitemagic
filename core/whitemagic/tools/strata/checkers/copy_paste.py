@@ -1,12 +1,11 @@
 import hashlib
 import re
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.checkers import register
-
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 # Minimum block size to flag as copy-paste
 _DUPLICATE_BLOCK_SIZE = 75

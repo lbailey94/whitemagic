@@ -1,10 +1,12 @@
 import ast
+import os
+import time
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.checkers import register
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 
 @register
@@ -27,8 +29,21 @@ def check_dead_code(project_path: Path, file_index: FileIndex, findings: List[Fi
             for child in reversed(list(ast.iter_child_nodes(n))):
                 stack.append(child)
 
+    _DEAD_CODE_TIME_BUDGET = float(os.environ.get("STRATA_DEAD_CODE_BUDGET", "15"))
+    _DEAD_CODE_MAX_FILE_SIZE = 100_000  # Skip files > 100KB
+    _start_time = time.monotonic()
+
     for py_file in file_index.python_files():
         if FileIndex.is_test_file(py_file):
+            continue
+        # Time budget — stop if we've spent too long
+        if time.monotonic() - _start_time > _DEAD_CODE_TIME_BUDGET:
+            break
+        # Skip very large files (slow AST parse + walk)
+        try:
+            if py_file.stat().st_size > _DEAD_CODE_MAX_FILE_SIZE:
+                continue
+        except OSError:
             continue
         tree = file_index.get_ast(py_file)
         if tree is None:

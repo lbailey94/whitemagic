@@ -16,13 +16,13 @@ from typing import Any
 
 import numpy as np
 
-from ..core.memory.core import MemoryManager
-from ..embeddings import (
+from whitemagic.core.memory.core import MemoryManager
+from whitemagic.embeddings import (
     EmbeddingConfig,
     EmbeddingProvider,
     get_embedding_provider,
 )
-from ..embeddings.storage import (
+from whitemagic.embeddings.storage import (
     EmbeddingCache,
     FileBasedEmbeddingCache,
 )

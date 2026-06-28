@@ -281,6 +281,7 @@ def ground(ctx, action: str, params: str | None, json_flag: bool) -> None:
         wm ground "consolidate" --json
     """
     import json as json_lib
+
     from whitemagic.tools.unified_api import call_tool
 
     json_output = _get_json_output(ctx, json_flag)
@@ -311,7 +312,6 @@ def ground(ctx, action: str, params: str | None, json_flag: bool) -> None:
     if json_output:
         click.echo(_json_dumps({"verdict": verdict, "result": result}, indent=2, default=str))
     else:
-        colors = {"GO": "green", "CAUTION": "yellow", "NO-GO": "red"}
         icons = {"GO": "✅", "CAUTION": "⚠️", "NO-GO": "🛑"}
 
         click.echo(f"\n{icons.get(verdict, '?')} Dharma Verdict: {verdict}")

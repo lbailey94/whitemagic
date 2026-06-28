@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+
+import pytest
 import tempfile
 import time
 from pathlib import Path
@@ -169,9 +171,11 @@ class TestHomeostaticMonitor:
         assert any(c.change_type == "added" for c in changes)
 
 
+@pytest.mark.xdist_group(name="immune_scan")
 class TestGranularAwareness:
     """Test granular awareness."""
 
+    @pytest.mark.timeout(60)
     def test_scan(self):
         from whitemagic.defense.granular_awareness import GranularAwareness
         awareness = GranularAwareness()

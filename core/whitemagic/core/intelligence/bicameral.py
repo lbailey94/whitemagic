@@ -360,6 +360,7 @@ class BicameralReasoner:
         """
         try:
             import numpy as np
+
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
             emb_a = engine.encode(text_a)

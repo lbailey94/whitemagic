@@ -1,10 +1,10 @@
 import ast
 from pathlib import Path
-from typing import List, Dict, Tuple, Set
+from typing import Dict, List, Set, Tuple
 
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.checkers import register
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 
 @register

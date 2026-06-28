@@ -5,14 +5,13 @@ Detects structural stubs, archive drift, config inconsistencies, and dead code.
 """
 import json
 from pathlib import Path
-from typing import List, Optional, Dict
-
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
-from whitemagic.tools.strata.config import load_config
+from typing import Dict, List, Optional
 
 # Import checkers package to trigger auto-registration
-import whitemagic.tools.strata.checkers  # strata: ignore[unused_import]
+import whitemagic.tools.strata.checkers  # noqa: F401  triggers auto-registration
+from whitemagic.tools.strata.config import load_config
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 # Re-export for backward compatibility
 __all__ = ["Strata", "Finding", "FindingSeverity", "main"]
@@ -98,8 +97,8 @@ class Strata:
 
     def _changed_lines_since(self, ref: str) -> Optional[Dict[str, set]]:
         """Return mapping of file paths to sets of changed line numbers since the given git ref."""
-        import subprocess
         import re as _re
+        import subprocess
         try:
             result = subprocess.run(
                 ["git", "diff", "-U0", ref, "--"],
@@ -543,6 +542,7 @@ def main() -> None:
     if args.command == "analyze" and getattr(args, "list_checks", False):
         import inspect
         import re as _re
+
         from whitemagic.tools.strata.checkers import get_checkers
         print("Registered STRATA checkers:")
         print("-" * 60)

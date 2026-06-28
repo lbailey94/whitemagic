@@ -84,6 +84,7 @@ def cleanup_broker() -> None:
 
 
 import atexit
+
 atexit.register(cleanup_broker)
 
 

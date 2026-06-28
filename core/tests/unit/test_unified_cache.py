@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from whitemagic.core.cache.unified_cache_bridge import (
     PyUnifiedCache,
     UnifiedCacheBridge,
@@ -213,6 +215,7 @@ class TestUnifiedCacheBridge:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.xdist_group(name="semantic_cache")
 class TestSemanticCacheUnifiedIntegration:
     """Test that mw_semantic_cache uses the unified cache bridge."""
 

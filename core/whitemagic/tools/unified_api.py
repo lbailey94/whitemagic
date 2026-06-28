@@ -718,7 +718,9 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
             # Working memory context injection (v23.2: bridge working memory to dispatch)
             if canonical not in LIGHTWEIGHT_STATUS_TOOLS:
                 try:
-                    from whitemagic.core.intelligence.working_memory import get_working_memory
+                    from whitemagic.core.intelligence.working_memory import (
+                        get_working_memory,
+                    )
                     _wm = get_working_memory()
                     _wm_context = _wm.get_context(max_tokens=500, dense=True)
                     if _wm_context and "_working_memory_context" not in dispatch_kwargs:
@@ -849,10 +851,10 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                     )
                     # Sync to active scratchpad if one exists
                     try:
+                        from whitemagic.config.paths import WM_ROOT
                         from whitemagic.core.memory.scratchpad_interleave import (
                             ScratchpadManager,
                         )
-                        from whitemagic.config.paths import WM_ROOT
                         _sm_mgr = ScratchpadManager(
                             scratch_dir=WM_ROOT / "scratchpads",
                         )

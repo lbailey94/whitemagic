@@ -1,16 +1,33 @@
 # ruff: noqa: BLE001
-"""Parallel Test Runner - Run tests across 64+ worker threads
+"""Parallel Test Runner — DEPRECATED, use pytest-xdist instead.
 
-Version: 2.6.6 "Ganapati Day"
-Threading: CPU-bound, scales with cores but can parallelize I/O
+This module is kept for backward compatibility but emits a DeprecationWarning
+on import. All test parallelization should go through pytest-xdist via:
 
-Philosophy:
-    Tests are love letters to the future.
-    Running them in parallel = expressing that love faster.
-    Each test is a prayer that the code works.
+    pytest -n auto --dist=loadgroup --progress
+
+The custom subprocess-per-file approach in this module is strictly inferior:
+- No shared fixture caching (each subprocess reimports everything)
+- No loadgroup scheduling (can't group stateful tests)
+- 60s per-file timeout is too coarse
+- No progress bar integration
+
+Version: 2.7.0 "Ganapati Day — Retired"
 """
 
 import logging
+import warnings
+
+logger = logging.getLogger(__name__)
+
+warnings.warn(
+    "whitemagic.parallel.runner is deprecated. Use pytest-xdist instead: "
+    "pytest -n auto --dist=loadgroup --progress",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+# Re-export dataclasses for backward compat
 import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
@@ -18,8 +35,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from whitemagic.config.concurrency import TEST_RUNNER_WORKERS
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -47,7 +62,6 @@ class TestSuiteResult:
 
     @property
     def success_rate(self) -> float:
-        """Calculate success rate."""
         if self.total_tests == 0:
             return 0.0
         return (self.passed / self.total_tests) * 100
@@ -63,10 +77,8 @@ def _run_single_test_file_worker(test_file: str, test_root: str) -> TestResult:
             timeout=60,
             cwd=str(test_root),
         )
-
         passed = result.returncode == 0
         duration = time.time() - start
-
         return TestResult(
             name=Path(test_file).name,
             passed=passed,
@@ -91,13 +103,12 @@ def _run_single_test_file_worker(test_file: str, test_root: str) -> TestResult:
 
 
 class ParallelTestRunner:
-    """Run tests in parallel using multiple workers.
+    """DEPRECATED: Use pytest-xdist instead.
 
-    CPU-bound operations benefit from process-based parallelism,
-    but test I/O (file reads, imports) benefits from threading.
+    Run tests in parallel using multiple workers.
 
-    Default: 64 workers (I Ching hexagram alignment)
-    Can scale based on available cores.
+    Deprecated since v23.3.1. Use pytest-xdist:
+        pytest -n auto --dist=loadgroup --progress
     """
 
     def __init__(
@@ -106,24 +117,20 @@ class ParallelTestRunner:
         test_dir: str = "tests",
         use_processes: bool = False,
     ):
-        """Initialize test runner.
-
-        Args:
-            max_workers: Number of parallel workers
-            test_dir: Directory containing tests
-            use_processes: Use ProcessPoolExecutor (better for CPU-bound)
-
-        """
+        warnings.warn(
+            "ParallelTestRunner is deprecated. Use pytest-xdist: "
+            "pytest -n auto --dist=loadgroup --progress",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.max_workers = max_workers
         self.test_dir = Path(test_dir)
         self.use_processes = use_processes
 
     def _discover_tests(self, pattern: str = "test_*.py") -> list[Path]:
-        """Discover all test files."""
         return list(self.test_dir.rglob(pattern))
 
     def _run_single_test_file(self, test_file: Path) -> TestResult:
-        """Run a single test file (runs in worker)."""
         start = time.time()
         try:
             result = subprocess.run(
@@ -133,10 +140,8 @@ class ParallelTestRunner:
                 timeout=60,
                 cwd=str(self.test_dir.parent),
             )
-
             passed = result.returncode == 0
             duration = time.time() - start
-
             return TestResult(
                 name=test_file.name,
                 passed=passed,
@@ -160,15 +165,6 @@ class ParallelTestRunner:
             )
 
     def run_all(self, pattern: str = "test_*.py") -> TestSuiteResult:
-        """Run all tests in parallel.
-
-        Args:
-            pattern: Glob pattern for test files
-
-        Returns:
-            TestSuiteResult with aggregated results
-
-        """
         start_time = time.time()
         test_files = self._discover_tests(pattern)
 
@@ -177,9 +173,7 @@ class ParallelTestRunner:
         failed = 0
         errors = 0
 
-        # Choose executor based on configuration
         Executor = ProcessPoolExecutor if self.use_processes else ThreadPoolExecutor
-
         max_workers = min(self.max_workers, len(test_files))
         if self.use_processes:
             max_workers = min(max_workers, TEST_RUNNER_WORKERS)
@@ -201,7 +195,6 @@ class ParallelTestRunner:
                 try:
                     result = future.result()
                     results.append(result)
-
                     if result.passed:
                         passed += 1
                     elif result.error:
@@ -213,29 +206,23 @@ class ParallelTestRunner:
                     errors += 1
 
         duration = time.time() - start_time
-
         return TestSuiteResult(
             total_tests=len(test_files),
             passed=passed,
             failed=failed,
             errors=errors,
-            skipped=0,  # Would need to parse output to detect
+            skipped=0,
             duration_seconds=duration,
             results=results,
         )
 
     def run_fast(self) -> TestSuiteResult:
-        """Run quick subset of tests for fast feedback."""
-        # Find smaller test files (likely faster)
         all_tests = self._discover_tests()
         quick_tests = sorted(all_tests, key=lambda f: f.stat().st_size)[:20]
-
         results = []
-        for tf in quick_tests[:10]:  # Run 10 fastest
+        for tf in quick_tests[:10]:
             results.append(self._run_single_test_file(tf))
-
         passed = sum(1 for r in results if r.passed)
-
         return TestSuiteResult(
             total_tests=len(results),
             passed=passed,
@@ -248,6 +235,6 @@ class ParallelTestRunner:
 
 
 def run_tests_parallel(test_dir: str = "tests", workers: int = 64) -> TestSuiteResult:
-    """Convenience function to run all tests in parallel."""
+    """DEPRECATED: Use pytest-xdist. Convenience function kept for compat."""
     runner = ParallelTestRunner(max_workers=workers, test_dir=test_dir)
     return runner.run_all()

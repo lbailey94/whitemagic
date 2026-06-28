@@ -274,21 +274,27 @@ def register_all_commands(main_group, get_memory, status_command_ref, json_dumps
 
     # 20. Interactive commands (repl, stream, pipeline)
     try:
-        from whitemagic.cli.commands.interactive_commands import register_interactive_commands
+        from whitemagic.cli.commands.interactive_commands import (
+            register_interactive_commands,
+        )
         register_interactive_commands(main_group)
     except (ImportError, ModuleNotFoundError):
         pass
 
     # 21. Discoverability commands (manifest, capabilities, tools search/schema)
     try:
-        from whitemagic.cli.commands.discoverability_commands import register_discoverability_commands
+        from whitemagic.cli.commands.discoverability_commands import (
+            register_discoverability_commands,
+        )
         register_discoverability_commands(main_group)
     except (ImportError, ModuleNotFoundError):
         pass
 
     # 22. Cognitive workflow commands (think, reflect, dream, evolve, ground)
     try:
-        from whitemagic.cli.commands.cognitive_commands import register_cognitive_commands
+        from whitemagic.cli.commands.cognitive_commands import (
+            register_cognitive_commands,
+        )
         register_cognitive_commands(main_group)
     except (ImportError, ModuleNotFoundError):
         pass

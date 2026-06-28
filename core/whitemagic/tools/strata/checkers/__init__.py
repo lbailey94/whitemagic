@@ -1,9 +1,8 @@
 from pathlib import Path
-from typing import List, Callable
+from typing import Callable, List
 
-from whitemagic.tools.strata.models import Finding
 from whitemagic.tools.strata.file_index import FileIndex
-
+from whitemagic.tools.strata.models import Finding
 
 CheckerFunc = Callable[[Path, FileIndex, List[Finding]], None]
 

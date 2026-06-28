@@ -111,7 +111,9 @@ def handle_wm_write(**kwargs: Any) -> dict[str, Any]:
         # v23.1 Harmonic: ensure consolidation daemon is running after writes
         if isinstance(result, dict) and result.get("status") == "success":
             try:
-                from whitemagic.core.memory.consolidation import get_consolidation_daemon
+                from whitemagic.core.memory.consolidation import (
+                    get_consolidation_daemon,
+                )
                 daemon = get_consolidation_daemon()
                 if not daemon._started:
                     daemon.start()
@@ -246,8 +248,9 @@ def _write_scratchpad(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 def _write_file(kwargs: dict[str, Any]) -> dict[str, Any]:
     """Atomic file write via fileio.atomic_write."""
-    from whitemagic.utils.fileio import atomic_write
     from pathlib import Path
+
+    from whitemagic.utils.fileio import atomic_write
 
     path = kwargs.get("path")
     if not path:

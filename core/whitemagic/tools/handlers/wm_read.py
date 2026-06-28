@@ -163,7 +163,9 @@ def handle_wm_read(**kwargs: Any) -> dict[str, Any]:
         # v23.1 Harmonic: attend read results into WorkingMemory
         if isinstance(result, dict) and result.get("status") == "success":
             try:
-                from whitemagic.core.intelligence.working_memory import get_working_memory
+                from whitemagic.core.intelligence.working_memory import (
+                    get_working_memory,
+                )
                 wm = get_working_memory()
                 for entry in (result.get("results") or [])[:3]:
                     mid = entry.get("memory_id") or entry.get("id") or ""

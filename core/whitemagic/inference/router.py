@@ -26,8 +26,8 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import Any
 
 from whitemagic.inference.complexity import (

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from whitemagic.core.memory.neural_system import NeuralMemory, get_neural_system
+from whitemagic.core.memory.unified import get_unified_memory
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class MemoryConsolidator:
     """Automatically consolidate episodic → semantic memory."""
 
     def __init__(self, memory_system: Any | None = None):
-        self.memory = memory_system or get_neural_system()
+        self.memory = memory_system or get_unified_memory()
 
         # Extraction patterns
         self.patterns = {
@@ -119,7 +119,7 @@ class MemoryConsolidator:
         self,
         session_id: str | None,
         minutes: int,
-    ) -> list[NeuralMemory]:
+    ) -> list[Any]:
         """Get episodic memories to consolidate."""
         if session_id:
             # Get by session ID
@@ -145,7 +145,7 @@ class MemoryConsolidator:
 
     def _extract_semantic_content(
         self,
-        memories: list[NeuralMemory],
+        memories: list[Any],
     ) -> list[ExtractedKnowledge]:
         """Extract lasting knowledge from episodic memories."""
         extracted = []
@@ -185,7 +185,7 @@ class MemoryConsolidator:
 
         return extracted
 
-    def _calculate_confidence(self, memory: NeuralMemory, knowledge_type: str) -> float:
+    def _calculate_confidence(self, memory: Any, knowledge_type: str) -> float:
         """Calculate confidence score for extracted knowledge."""
         confidence = 0.5  # Base confidence
 
@@ -237,7 +237,7 @@ class MemoryConsolidator:
 
         return unique
 
-    def _create_semantic_memory(self, knowledge: ExtractedKnowledge) -> NeuralMemory | None:
+    def _create_semantic_memory(self, knowledge: ExtractedKnowledge) -> Any | None:
         """Create a semantic memory from extracted knowledge."""
         try:
             # Format title based on type
@@ -270,7 +270,7 @@ class MemoryConsolidator:
             logger.warning("Failed to create semantic memory: %s", e, exc_info=True)
             return None
 
-    def _archive_episodic(self, memories: list[NeuralMemory]) -> int:
+    def _archive_episodic(self, memories: list[Any]) -> int:
         """Archive episodic memories after consolidation."""
         archived = 0
 

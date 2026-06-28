@@ -257,8 +257,7 @@ class ContinuousAudit:
 
     def _fix_issue(self, issue: str):
         """Attempt to fix an issue"""
-        # Placeholder - real implementation would dispatch to appropriate fixer
-        pass
+        raise NotImplementedError("Issue fixer not yet implemented — dispatch to appropriate fixer needed")
 
     def get_metrics(self) -> dict[str, Any]:
         """Get audit system metrics"""

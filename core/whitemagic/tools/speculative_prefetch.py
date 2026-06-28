@@ -229,7 +229,9 @@ class SpeculativePrefetcher:
     def _try_go_prefetch(self, predictions: list[tuple[str, float]]) -> bool:
         """Try Go concurrent prefetch. Returns True if Go handled it."""
         try:
-            from whitemagic.core.acceleration.go_mesh_bridge import go_concurrent_prefetch
+            from whitemagic.core.acceleration.go_mesh_bridge import (
+                go_concurrent_prefetch,
+            )
             gana_tools = _get_gana_tools()
             tools_to_prefetch = []
             for gana_name, prob in predictions:

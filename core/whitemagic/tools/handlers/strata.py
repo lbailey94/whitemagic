@@ -133,10 +133,10 @@ def handle_strata_archaeology(**kwargs: Any) -> dict[str, Any]:
 
     try:
         from whitemagic.tools.strata.archaeology import (
-            excavate,
-            fossil,
-            extinction,
             composition,
+            excavate,
+            extinction,
+            fossil,
             temper,
         )
 

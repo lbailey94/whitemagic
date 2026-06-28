@@ -831,8 +831,8 @@ def mw_semantic_cache(
 
     # Fallback: try legacy QueryCache
     try:
-        from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
         from whitemagic.config.paths import CACHE_DIR
+        from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
         legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
         cached = legacy_cache.get(key)
         if cached:
@@ -862,8 +862,9 @@ def mw_semantic_cache(
             output_tokens = max(1, len(answer) // 4)
             # Store in unified cache
             try:
-                from whitemagic.core.cache import get_unified_cache
                 import json as _json
+
+                from whitemagic.core.cache import get_unified_cache
                 unified = get_unified_cache()
                 cache_payload = _json.dumps({
                     "result": answer,
@@ -875,8 +876,10 @@ def mw_semantic_cache(
                 pass
             # Also store in legacy cache for backward compat
             try:
-                from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
                 from whitemagic.config.paths import CACHE_DIR
+                from whitemagic.core.intelligence.agentic.token_optimizer import (
+                    QueryCache,
+                )
                 legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
                 legacy_cache.set(key, answer, output_tokens)
             except Exception:
@@ -884,8 +887,8 @@ def mw_semantic_cache(
 
     # Record transition for speculative prefetcher (Markov prediction)
     try:
-        from whitemagic.tools.speculative_prefetch import get_prefetcher
         from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+        from whitemagic.tools.speculative_prefetch import get_prefetcher
         gana = TOOL_TO_GANA.get(ctx.tool_name)
         if gana:
             get_prefetcher().on_call_complete(gana)

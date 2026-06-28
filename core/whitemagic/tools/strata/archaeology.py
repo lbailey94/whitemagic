@@ -247,7 +247,7 @@ def composition(project_path: Path, top_n: int = 10) -> str:
 
     author_commits = Counter()
     author_lines = Counter()
-    author_files: Dict[str, Set[str]] = defaultdict(set)
+    # author_files tracking removed — was unused
     monthly_commits: Dict[str, int] = defaultdict(int)
 
     for entry in log:
@@ -265,10 +265,7 @@ def composition(project_path: Path, top_n: int = 10) -> str:
                 if line.startswith("author "):
                     author_lines[line[7:]] += 1
                 if line.startswith("filename "):
-                    fname = line[9:]
-                    # Find the author from previous line... this is approximate
-                    # A simpler approach: just count files touched
-                    pass
+                    pass  # filename available via line[9:] if needed
         except RuntimeError:
             continue
 

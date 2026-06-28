@@ -52,7 +52,7 @@ class PatternFederation:
     def _connect_to_gan_ying(self) -> None:
         """Connect to Gan Ying Bus and register auto-federation listener."""
         try:
-            from whitemagic.core.resonance._consolidated import get_bus, EventType
+            from whitemagic.core.resonance._consolidated import EventType, get_bus
             self.bus = get_bus()
             # Auto-federate: listen for PATTERN_DETECTED events and contribute them
             self.bus.listen(EventType.PATTERN_DETECTED, self._on_pattern_detected)
@@ -127,7 +127,10 @@ class PatternFederation:
         # Emit to Gan Ying
         if self.bus:
             try:
-                from whitemagic.core.resonance._consolidated import EventType, ResonanceEvent
+                from whitemagic.core.resonance._consolidated import (
+                    EventType,
+                    ResonanceEvent,
+                )
                 self.bus.emit(ResonanceEvent(
                     source="pattern_federation",
                     event_type=EventType.PATTERN_DETECTED,

@@ -394,7 +394,7 @@ def wire_default_subsystems() -> UnifiedNervousSystem:
     uns = get_nervous_system()
 
     # Wire Apotheosis Engine to listen to all subsystems
-    from whitemagic.autonomous.apotheosis_engine import get_apotheosis_engine
+    from whitemagic.core.consciousness.apotheosis_engine import get_apotheosis_engine
     get_apotheosis_engine()
 
     def apotheosis_handler(event: BiologicalEvent) -> None:

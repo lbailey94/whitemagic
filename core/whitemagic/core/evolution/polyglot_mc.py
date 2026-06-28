@@ -227,8 +227,8 @@ class PolyglotMCOrchestrator:
             return result
 
         # Python fallback
-        import random
         import math
+        import random
 
         trials = []
         for _ in range(task.n_trials):

@@ -1,7 +1,7 @@
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from whitemagic.tools.strata.models import Finding
 

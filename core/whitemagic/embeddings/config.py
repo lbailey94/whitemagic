@@ -6,6 +6,7 @@ Handles configuration for embedding providers with environment variable support.
 
 import os
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -78,12 +79,12 @@ class EmbeddingConfig(BaseModel):
             # Start with config file values
             provider = config.embeddings.provider
             model = config.embeddings.model
-            cache_enabled = config.embeddings.cache_enabled
+            _ = config.embeddings.cache_enabled  # cache setting read but not yet used
         except Exception:
             # Fallback to defaults if config not available
             provider = "local"
             model = "all-MiniLM-L6-v2"
-            cache_enabled = True
+            pass  # cache_enabled was True
         
         # Environment variables override config file
         provider = os.getenv("WM_EMBEDDING_PROVIDER", provider)

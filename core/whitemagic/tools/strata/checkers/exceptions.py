@@ -2,9 +2,9 @@ import ast
 from pathlib import Path
 from typing import List
 
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.checkers import register
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 
 def _try_body_is_import_only(try_node: ast.Try) -> bool:

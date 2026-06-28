@@ -167,7 +167,8 @@ def process_wisdom_archives(limit_files: int = 1000, memory_type: str = "long_te
                         "original_path": str(path),
                         "archaeology_matches": finding.get("matches", []),
                         "grimoire_chapters": finding.get("anthropology", {}).get("chapters", [])
-                    }
+                    },
+                    subsystem="archaeology"
                 )
                 processed += 1
             except Exception as e:

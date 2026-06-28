@@ -4,9 +4,13 @@ Tests the full stack: dispatch → handler → JSON stdio bridge → backend.
 Skips gracefully if Julia/Elixir/Haskell are not available.
 """
 
+import os
 import subprocess
 
 import pytest
+
+
+_UNDER_XDIST = bool(os.environ.get("PYTEST_XDIST_WORKER"))
 
 
 # --- Availability checks (cached at module level) ---
@@ -61,6 +65,8 @@ class TestPolyglotStatus:
             assert "available" in backends[name]
 
 
+@pytest.mark.xdist_group(name="julia")
+@pytest.mark.skipif(_UNDER_XDIST, reason="Julia subprocess flaky under xdist parallel load — run serially")
 class TestPolyglotMemoryQueryJulia:
     """Test polyglot.memory_query routed to Julia backend."""
 

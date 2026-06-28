@@ -230,8 +230,8 @@ def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
     # Rust PyO3 fast path
     try:
         import sqlite3
-        import whitemagic_rs
 
+        import whitemagic_rs
         from whitemagic.core.memory.unified import get_unified_memory
         um = get_unified_memory()
         backend = um.backend

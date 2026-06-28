@@ -162,7 +162,7 @@ class TestSessionTemplates:
 class TestComprehensiveReview:
     def test_review(self):
         from whitemagic.root_modules.comprehensive_review import ComprehensiveReview
-        review = ComprehensiveReview()
+        review = ComprehensiveReview(fast=True)
         result = review.review_codebase()
         assert "stubs" in result
         assert "tests" in result

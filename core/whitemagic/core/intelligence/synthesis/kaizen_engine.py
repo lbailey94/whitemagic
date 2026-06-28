@@ -205,7 +205,7 @@ class KaizenEngine:
         paths, and 80+ other checks across 15 languages.
         """
         try:
-            from whitemagic.tools.strata import Strata, FindingSeverity
+            from whitemagic.tools.strata import FindingSeverity, Strata
 
             # Determine the WhiteMagic core path
             core_path = str(Path(__file__).parent.parent.parent.parent.parent)
@@ -688,7 +688,9 @@ class KaizenEngine:
     def _get_evolution_engine(self):
         """Lazy accessor for the ContinuousEvolutionEngine."""
         if self._evolution_engine_instance is None:
-            from whitemagic.core.evolution.continuous_evolution import ContinuousEvolutionEngine
+            from whitemagic.core.evolution.continuous_evolution import (
+                ContinuousEvolutionEngine,
+            )
             self._evolution_engine_instance = ContinuousEvolutionEngine()
         return self._evolution_engine_instance
 
@@ -738,7 +740,9 @@ class KaizenEngine:
     def _get_apotheosis_engine(self):
         """Lazy accessor for the ApotheosisEngine."""
         if self._apotheosis_engine_instance is None:
-            from whitemagic.autonomous.apotheosis_engine import get_apotheosis_engine
+            from whitemagic.core.consciousness.apotheosis_engine import (
+                get_apotheosis_engine,
+            )
             self._apotheosis_engine_instance = get_apotheosis_engine()
         return self._apotheosis_engine_instance
 

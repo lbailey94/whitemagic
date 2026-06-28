@@ -15,7 +15,6 @@ import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
-
 # ---------------------------------------------------------------------------
 # wm manifest — Tool format export
 # ---------------------------------------------------------------------------

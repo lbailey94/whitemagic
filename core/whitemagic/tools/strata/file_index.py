@@ -2,7 +2,7 @@ import ast
 import hashlib
 import json
 from pathlib import Path
-from typing import List, Iterator, Optional, Set, Dict
+from typing import Dict, Iterator, List, Optional, Set
 
 __all__ = ["FileIndex"]
 

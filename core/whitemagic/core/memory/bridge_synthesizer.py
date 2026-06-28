@@ -263,6 +263,7 @@ class BridgeSynthesizer:
                         content=insight.hypothesis,
                         memory_type=MemoryType.LONG_TERM,
                         tags={"bridge_insight", "dream_synthesis", "v14"},
+                        subsystem="bridge_synthesizer",
                         importance=0.7 + (insight.confidence * 0.2),
                         title=f"Bridge Insight: {insight.bridge_node_id[:8]}",
                         metadata={

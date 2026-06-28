@@ -957,8 +957,9 @@ class DreamCycle:
         """
         result: dict[str, Any] = {"enriched": 0, "entities_extracted": 0}
         try:
-            from whitemagic.core.memory.unified import get_unified_memory
             import re
+
+            from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
 

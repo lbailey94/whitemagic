@@ -10,7 +10,11 @@ from __future__ import annotations
 
 import logging
 
-from .gan_ying_enhanced_recovered import CascadeTrigger, ExtendedEventType, get_enhanced_bus
+from .gan_ying_enhanced_recovered import (
+    CascadeTrigger,
+    ExtendedEventType,
+    get_enhanced_bus,
+)
 
 logger = logging.getLogger(__name__)
 

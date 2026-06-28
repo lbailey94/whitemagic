@@ -123,6 +123,8 @@ class MultiSpectralReasoner:
     def reason(self, question: str, lenses: Sequence[ReasoningLens] | None = None, context: ReasoningContext | None = None) -> ReasoningResult:
         from whitemagic.core.intelligence.multi_spectral_reasoning import (
             ReasoningContext as _RealContext,
+        )
+        from whitemagic.core.intelligence.multi_spectral_reasoning import (
             ReasoningLens as _RealLens,
         )
 

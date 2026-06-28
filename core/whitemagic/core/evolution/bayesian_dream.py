@@ -25,7 +25,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # The 12 dream phases in order
 DREAM_PHASES = [
     "triage",

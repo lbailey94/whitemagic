@@ -112,7 +112,8 @@ Private filenames are intentionally not enumerated in this public index.
 | `V23_2_ROADMAP.md` | v23.2 roadmap — local-first multi-user, real-time sync, WASM, Rust SIMD, Mojo removal | Jun 26 |
 | `30_OBJECTIVES_PLAN.md` | 30-objective plan — 6 phased objectives | May 15 |
 | `WHITEMAGIC_DEFERRED_TRIAGE_2026-05-15.md` | External Fragment + STRATA audit findings | May 15 |
-| `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all systems | May 29 |
+| `WHITEMAGIC_CAPABILITIES_INVENTORY_2026-05-29.md` | Live snapshot of all systems (superseded) | May 29 |
+| `CAPABILITIES_SUMMARY_2026-06-28.md` | Updated capabilities summary — 48 subsystems, 32 fusions, live probe data | Jun 28 |
 | `COMPETITIVE_LANDSCAPE_2026-04-27.md` | Verified competitive landscape | Apr 27 |
 | `KARMA_LEDGER_PAPER_OUTLINE.md` | arxiv preprint outline | Apr 27 |
 | `WHITEMAGIC_PAPER_2026-06-18.md` | Technical paper for AI/AGI/ASI audience | Jun 18 |

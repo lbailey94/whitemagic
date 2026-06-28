@@ -14,7 +14,11 @@ from whitemagic.core.memory.consolidation import (
     DEFAULT_LABILE_WINDOW,
     MAX_LABILE,
     LabileMemory,
+)
+from whitemagic.core.memory.consolidation import (
     MemoryConsolidator as ReconsolidationEngine,
+)
+from whitemagic.core.memory.consolidation import (
     get_consolidator as get_reconsolidation_engine,
 )
 

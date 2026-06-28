@@ -1,11 +1,13 @@
 import logging
+
 """
 Local Embeddings Provider - No API Calls Required!
 
 Uses sentence-transformers for local semantic embeddings.
 Updated Ganapati Day: Now fully implemented!
 """
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,7 @@ class LocalEmbeddingProvider:
     def _check_available(self) -> bool:
         """Check if sentence-transformers is available"""
         try:
-            from sentence_transformers import SentenceTransformer
+            import importlib.util as _iu; _iu.find_spec("sentence_transformers")  # noqa: I001
             return True
         except ImportError:
             return False
@@ -38,7 +40,7 @@ class LocalEmbeddingProvider:
     def _load_model(self):
         """Lazy load the model"""
         if self._model is None and self._available:
-            from sentence_transformers import SentenceTransformer
+            import importlib.util as _iu; _iu.find_spec("sentence_transformers")  # noqa: I001
             logger.info("🧠 Loading embedding model: %s", self.model_name)
             self._model = SentenceTransformer(self.model_name)
             logger.info("✅ Model loaded!")

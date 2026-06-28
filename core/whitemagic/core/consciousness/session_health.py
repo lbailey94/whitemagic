@@ -91,10 +91,10 @@ class SessionHealthCheck:
         """Check core imports work."""
         try:
             # Test critical imports  # noqa: F401
+            from whitemagic.core.resonance.gan_ying import get_bus  # noqa: F401
             from whitemagic.gardens.dharma.core import get_dharma_core  # noqa: F401
             from whitemagic.homeostasis import Homeostasis  # noqa: F401
             from whitemagic.immune import ImmuneSystem  # noqa: F401
-            from whitemagic.core.resonance.gan_ying import get_bus  # noqa: F401
 
             return {"status": "healthy", "message": "All core imports successful"}
         except ImportError as e:
@@ -195,7 +195,11 @@ class SessionHealthCheck:
         try:
             from datetime import datetime
 
-            from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent, get_bus
+            from whitemagic.core.resonance.gan_ying import (
+                EventType,
+                ResonanceEvent,
+                get_bus,
+            )
 
             bus = get_bus()
 

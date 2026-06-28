@@ -57,22 +57,66 @@ build-mojo:
 
 # === Testing ===
 
-# Run Python test suite
+# Run Python test suite (parallel with xdist + progress bar)
 test:
-    cd core && .venv/bin/python3 -m pytest tests/ -v --timeout=30
+    PYTHONPATH=core .venv/bin/python3 -m pytest core/tests/ \
+        --ignore=core/tests/archive_v14 \
+        --ignore=core/tests/archive_v11 \
+        --ignore=core/tests/archive \
+        --ignore=core/tests/archive_polyglot \
+        --ignore=core/tests/legacy \
+        --ignore=core/tests/adhoc \
+        --ignore=core/tests/verify \
+        --ignore=core/tests/benchmarks \
+        --ignore=core/tests/pre_v4.5.0_reorganization \
+        --ignore=core/tests/pending \
+        --ignore=core/tests/archive_v4.5.0_reorg \
+        -n auto --dist=loadgroup \
+        --progress \
+        --timeout=30 \
+        -q
 
-# Run optimized fast test suite (xdist parallelized)
+# Run fast subset only (unit tests, fail-fast)
 test-fast:
-    ./core/scripts/test_runner_optimize.sh
+    PYTHONPATH=core .venv/bin/python3 -m pytest core/tests/unit/ \
+        -n auto --dist=loadgroup \
+        --progress \
+        --timeout=5 \
+        -x --tb=short -q
+
+# Run test gauntlet: tier1 (unit) → tier2 (integration) → tier3 (full)
+test-gauntlet:
+    @echo "=== Tier 1: Unit tests (<30s target) ===" && \
+    PYTHONPATH=core .venv/bin/python3 -m pytest core/tests/unit/ \
+        -n auto --dist=loadgroup --progress --timeout=5 -x --tb=short -q && \
+    echo "=== Tier 2: Integration tests (<3min target) ===" && \
+    PYTHONPATH=core .venv/bin/python3 -m pytest core/tests/integration/ \
+        -n auto --dist=loadgroup --progress --timeout=15 -x --tb=short -q && \
+    echo "=== Tier 3: Full suite ===" && \
+    PYTHONPATH=core .venv/bin/python3 -m pytest core/tests/ \
+        --ignore=core/tests/archive_v14 --ignore=core/tests/archive_v11 \
+        --ignore=core/tests/archive --ignore=core/tests/archive_polyglot \
+        --ignore=core/tests/legacy --ignore=core/tests/adhoc \
+        --ignore=core/tests/verify --ignore=core/tests/benchmarks \
+        --ignore=core/tests/pre_v4.5.0_reorganization --ignore=core/tests/pending \
+        --ignore=core/tests/archive_v4.5.0_reorg \
+        -n auto --dist=loadgroup --progress --timeout=30 -q
 
 # Boost dev environment (compile cache clears and flags)
 boost:
     ./core/scripts/dev_env_boost.sh
 
-
 # Run Python tests with coverage
 test-cov:
-    cd core && .venv/bin/python3 -m pytest tests/ -v --cov=whitemagic --timeout=30
+    PYTHONPATH=core .venv/bin/python3 -m pytest core/tests/ \
+        --ignore=core/tests/archive_v14 --ignore=core/tests/archive_v11 \
+        --ignore=core/tests/archive --ignore=core/tests/archive_polyglot \
+        --ignore=core/tests/legacy --ignore=core/tests/adhoc \
+        --ignore=core/tests/verify --ignore=core/tests/benchmarks \
+        --ignore=core/tests/pre_v4.5.0_reorganization --ignore=core/tests/pending \
+        --ignore=core/tests/archive_v4.5.0_reorg \
+        -n auto --dist=loadgroup \
+        --cov=whitemagic --timeout=30 -q
 
 # Run Rust tests
 test-rust:
@@ -80,6 +124,22 @@ test-rust:
 
 # Run all tests
 test-all: test test-rust
+
+# Run stub audit
+check-stubs:
+    cd core && .venv/bin/python3 scripts/check_stubs.py
+
+# Run duplicate code audit
+check-duplicates:
+    cd core && .venv/bin/python3 scripts/check_duplicates.py
+
+# Run doc drift check
+check-docs:
+    cd core && .venv/bin/python3 scripts/check_doc_drift.py
+
+# Sync stub registry to allowlist JSON
+sync-stubs:
+    cd core && .venv/bin/python3 scripts/sync_stub_registry.py
 
 # === Linting ===
 

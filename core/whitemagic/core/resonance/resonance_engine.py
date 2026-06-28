@@ -213,7 +213,9 @@ class ResonanceEngine:
     def _get_julia_engine(self):
         """Lazy accessor for the Julia-inspired resonance engine."""
         if self._julia_engine_instance is None:
-            from whitemagic.core.resonance.julia_resonance import ResonanceEngine as JuliaRE
+            from whitemagic.core.resonance.julia_resonance import (
+                ResonanceEngine as JuliaRE,
+            )
             self._julia_engine_instance = JuliaRE()
         return self._julia_engine_instance
 
@@ -248,7 +250,9 @@ class ResonanceEngine:
     def _get_transfer_engine(self):
         """Lazy accessor for the ResonanceTransferEngine."""
         if self._transfer_engine_instance is None:
-            from whitemagic.core.evolution.resonance_transfer import ResonanceTransferEngine
+            from whitemagic.core.evolution.resonance_transfer import (
+                ResonanceTransferEngine,
+            )
             self._transfer_engine_instance = ResonanceTransferEngine()
         return self._transfer_engine_instance
 

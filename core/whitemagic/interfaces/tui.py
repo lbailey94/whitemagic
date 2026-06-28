@@ -93,7 +93,9 @@ class TelemetryPanel(Static):
             lines.append(f"[red]Health error: {e}[/]")
 
         try:
-            from whitemagic.core.intelligence.agentic.coherence_persistence import get_coherence
+            from whitemagic.core.intelligence.agentic.coherence_persistence import (
+                get_coherence,
+            )
             coh = get_coherence()
             stats = coh.get_iteration_stats()
             level = stats.get("coherence_level", 100)

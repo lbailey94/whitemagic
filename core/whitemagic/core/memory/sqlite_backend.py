@@ -470,9 +470,10 @@ class SQLiteBackend:
             if query:
                 # FTS search with BM25 ranking (lower rank = better match)
                 fts_query = query.strip()
-                # Sanitize FTS5-unsafe characters (brackets, quotes, etc.)
-                for ch in '[]{}()^~*':
-                    fts_query = fts_query.replace(ch, '')
+                # Sanitize FTS5-unsafe characters (brackets, quotes, colons, etc.)
+                # FTS5 treats : as column filter, , as syntax, etc.
+                for ch in r'[]{}()^~*:,;\/':
+                    fts_query = fts_query.replace(ch, ' ')
                 fts_query = fts_query.strip()
                 if not fts_query:
                     fts_query = query.strip().replace('[', '').replace(']', '')

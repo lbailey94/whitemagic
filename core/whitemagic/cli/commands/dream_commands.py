@@ -18,9 +18,9 @@ import click
 
 try:
     from rich.console import Console
-    from rich.table import Table
     from rich.panel import Panel
-    from rich.markdown import Markdown
+    from rich.table import Table
+    # Markdown import removed — unused, add back if needed
     HAS_RICH = True
     console: Console | None = Console()
 except ImportError:

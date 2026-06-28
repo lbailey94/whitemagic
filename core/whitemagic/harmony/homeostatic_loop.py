@@ -107,6 +107,12 @@ class HomeostaticConfig:
     # Consciousness thresholds (Citta Architecture)
     consciousness_advise: float = 0.6
     consciousness_correct: float = 0.3
+    # Codebase health (STRATA integration)
+    codebase_health_advise: float = 0.85
+    codebase_health_correct: float = 0.65
+    codebase_health_check_interval: int = 6  # every N check cycles
+    # Apotheosis engine (autonomous evolution)
+    apotheosis_check_interval: int = 3  # every N check cycles
 
 
 class HomeostaticLoop:
@@ -249,6 +255,12 @@ class HomeostaticLoop:
 
         consciousness_actions = self._check_consciousness()
         actions.extend(consciousness_actions)
+
+        apotheosis_actions = self._check_apotheosis()
+        actions.extend(apotheosis_actions)
+
+        codebase_actions = self._check_codebase_health()
+        actions.extend(codebase_actions)
 
         # Record actions and feed back to Salience Arbiter
         if actions:
@@ -612,7 +624,6 @@ class HomeostaticLoop:
         try:
             from whitemagic.core.consciousness import (
                 CoherenceMetric,
-                ConsciousnessDepthGauge,
             )
 
             # Check module availability
@@ -673,6 +684,138 @@ class HomeostaticLoop:
             logger.debug("Consciousness modules not available for homeostatic check")
         except Exception as e:
             logger.debug("Consciousness check skipped: %s", e)
+        return []
+
+    def _check_apotheosis(self) -> list[HomeostaticAction]:
+        """Check Apotheosis Engine health (autonomous evolution).
+
+        Runs the Apotheosis Engine tick periodically to perform
+        self-monitoring, predictive maintenance, and capability discovery.
+        Reports health degradation as advisory or corrective actions.
+        """
+        if self._total_checks % self._config.apotheosis_check_interval != 0:
+            return []
+
+        try:
+            from whitemagic.core.consciousness.apotheosis_engine import (
+                get_apotheosis_engine,
+            )
+
+            engine = get_apotheosis_engine()
+            if not engine._running:
+                engine.start()
+
+            # Run a tick with available tools
+            try:
+                from whitemagic.tools.registry import get_registry
+                registry = get_registry()
+                available = list(registry.callable.keys()) if hasattr(registry, 'callable') else []
+            except Exception:
+                available = []
+
+            results = engine.tick(available[:20])  # Limit for performance
+
+            # Check for health issues
+            actions: list[HomeostaticAction] = []
+            health = results.get("health", {})
+            for metric, info in health.items():
+                status = info.get("status", "healthy")
+                if status in ("degraded", "critical"):
+                    actions.append(HomeostaticAction(
+                        dimension=f"apotheosis_{metric}",
+                        level=ActionLevel.CORRECT if status == "critical" else ActionLevel.ADVISE,
+                        value=info.get("value", 0.0),
+                        threshold=0.6,
+                        action_taken=f"Apotheosis {metric} {status}: {info.get('value', 0):.2f}",
+                    ))
+
+            # Check for predictive alerts
+            alerts = results.get("predictive_alerts", [])
+            for alert in alerts:
+                actions.append(self._advise(
+                    f"apotheosis_predictive_{alert['component']}",
+                    alert["confidence"],
+                    0.8,
+                    f"Predictive alert: {alert['issue']} (confidence: {alert['confidence']:.2f})",
+                ))
+
+            # Check for auto-heal actions
+            heal_actions = results.get("auto_heal_actions", [])
+            for action in heal_actions:
+                actions.append(HomeostaticAction(
+                    dimension="apotheosis_auto_heal",
+                    level=ActionLevel.CORRECT,
+                    value=0.0,
+                    threshold=1.0,
+                    action_taken=f"Auto-heal: {action}",
+                ))
+
+            return actions
+
+        except ImportError:
+            logger.debug("Apotheosis engine not available for homeostatic check")
+        except Exception as e:
+            logger.debug("Apotheosis check skipped: %s", e)
+        return []
+
+    def _check_codebase_health(self) -> list[HomeostaticAction]:
+        """Check codebase health via STRATA static analysis.
+
+        Runs dead_code, structural_stub, and archive_drift checkers
+        periodically (every N check cycles) to avoid running on every tick.
+        Reports findings as advisory or corrective actions.
+        """
+        # Only run every N cycles to avoid overhead
+        if self._total_checks % self._config.codebase_health_check_interval != 0:
+            return []
+
+        try:
+            from pathlib import Path
+
+            from whitemagic.tools.strata import FindingSeverity, Strata
+
+            core_path = str(Path(__file__).resolve().parent.parent.parent.parent)
+            if not Path(core_path, "AGENTS.md").exists():
+                return []
+
+            strata = Strata(core_path)
+            findings = strata.analyze(incremental=True)
+
+            # Count findings by severity
+            errors = [f for f in findings if f.severity == FindingSeverity.ERROR]
+            warnings = [f for f in findings if f.severity == FindingSeverity.WARNING]
+            infos = [f for f in findings if f.severity == FindingSeverity.INFO]
+
+            # Health score: weighted by severity
+            total = len(findings)
+            if total == 0:
+                health = 1.0
+            else:
+                penalty = len(errors) * 0.1 + len(warnings) * 0.05 + len(infos) * 0.01
+                health = max(0.0, 1.0 - penalty)
+
+            if health < self._config.codebase_health_correct:
+                return [HomeostaticAction(
+                    dimension="codebase_health",
+                    level=ActionLevel.CORRECT,
+                    value=health,
+                    threshold=self._config.codebase_health_correct,
+                    action_taken=(
+                        f"Codebase health critical: {len(errors)} errors, "
+                        f"{len(warnings)} warnings, {len(infos)} info. "
+                        "Run STRATA analysis for details."
+                    ),
+                )]
+            if health < self._config.codebase_health_advise:
+                return [self._advise(
+                    "codebase_health",
+                    health,
+                    self._config.codebase_health_advise,
+                    f"Codebase health below optimal: {len(warnings)} warnings, "
+                    f"{len(infos)} info findings from STRATA.",
+                )]
+        except Exception as e:
+            logger.debug("Codebase health check skipped: %s", e)
         return []
 
     # ------------------------------------------------------------------

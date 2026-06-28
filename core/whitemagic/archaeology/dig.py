@@ -255,7 +255,7 @@ class ChariotArchaeologist:
         dir_path = Path(directory)
         unread = []
         for root, _, files in os.walk(dir_path):
-            if any(ex in root for e in self.exclude_dirs for ex in (e,)):
+            if any(ex in root for ex in self.exclude_dirs):
                 continue
             for file in files:
                 fpath = str(Path(root) / file)

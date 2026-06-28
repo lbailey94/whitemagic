@@ -27,27 +27,24 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
     detector = get_anomaly_detector()
     alerts = detector.check()
 
-    # Enrich with STRATA codebase findings
+    # STRATA findings are deferred to the homeostatic loop's codebase health sensor
+    # (running full STRATA analysis on every anomaly check is too slow)
     strata_anomalies: list[dict[str, Any]] = []
     try:
-        from whitemagic.tools.strata import Strata, FindingSeverity
-        from pathlib import Path
-        core_path = str(Path(__file__).parent.parent.parent.parent.parent)
-        if Path(core_path, "AGENTS.md").exists():
-            strata = Strata(core_path)
-            findings = strata.analyze(incremental=True)
-            for f in findings:
-                if f.severity in (FindingSeverity.ERROR, FindingSeverity.WARNING):
-                    strata_anomalies.append({
-                        "source": "strata",
-                        "dimension": "codebase_quality",
-                        "severity": f.severity.value,
-                        "category": f.category,
-                        "file": f.file,
-                        "line": f.line,
-                        "message": f.message,
-                        "suggestion": f.suggestion,
-                    })
+        from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
+        loop = get_homeostatic_loop()
+        stats = loop.get_stats()
+        # Check if codebase health sensor has recent findings
+        recent = stats.get("recent_actions", [])
+        for action in recent:
+            if action.get("dimension") == "codebase_health":
+                strata_anomalies.append({
+                    "source": "homeostatic_codebase_sensor",
+                    "dimension": "codebase_quality",
+                    "severity": "warning" if action.get("level") == "correct" else "info",
+                    "message": action.get("action_taken", "Codebase health issue detected"),
+                })
+                break
     except Exception:
         pass
 
@@ -76,6 +73,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
         "alert_count": len(all_alerts),
         "harmony_alerts": len(alerts),
         "strata_alerts": len(strata_anomalies),
+        "strata_note": "STRATA analysis deferred to homeostatic loop (periodic codebase health sensor)",
         "thermal_alerts": len(thermal_anomalies),
     }
 

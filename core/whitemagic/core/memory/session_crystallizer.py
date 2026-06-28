@@ -85,7 +85,7 @@ def crystallize_session(
             tags=tags,
         )
 
-        um.store(memory)
+        um.store(memory, subsystem="session_crystallizer")
 
         logger.info(
             f"💎 Session crystallized: '{title}' → {mem_id} "

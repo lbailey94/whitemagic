@@ -24,8 +24,8 @@ Example usage:
 
 from .base import EmbeddingProvider
 from .config import EmbeddingConfig
-from .openai_provider import OpenAIEmbeddings
 from .local_provider import LocalEmbeddings
+from .openai_provider import OpenAIEmbeddings
 from .storage import EmbeddingCache, FileBasedEmbeddingCache
 
 

@@ -226,7 +226,10 @@ class RecursiveImprovementLoop:
         """Lazy-load and adapt exploration weights (Objective P)."""
         if self._exploration_weights is None:
             try:
-                from whitemagic.core.evolution.info_theory import AdaptiveWeights, system_uncertainty
+                from whitemagic.core.evolution.info_theory import (
+                    AdaptiveWeights,
+                    system_uncertainty,
+                )
                 weights = AdaptiveWeights()
                 # Adapt based on current cycle's confidence distribution
                 if self._last_cycle and self._last_cycle.hypotheses:
@@ -455,7 +458,9 @@ class RecursiveImprovementLoop:
 
         # KaizenEngine — codebase + memory analysis
         try:
-            from whitemagic.core.intelligence.synthesis.kaizen_engine import get_kaizen_engine
+            from whitemagic.core.intelligence.synthesis.kaizen_engine import (
+                get_kaizen_engine,
+            )
             engine = get_kaizen_engine()
             report = engine.analyze()
             for prop in report.proposals:
@@ -486,7 +491,9 @@ class RecursiveImprovementLoop:
 
         # PredictiveEngine — milestone/velocity/gap predictions
         try:
-            from whitemagic.core.intelligence.synthesis.predictive_engine import get_predictive_engine
+            from whitemagic.core.intelligence.synthesis.predictive_engine import (
+                get_predictive_engine,
+            )
             engine = get_predictive_engine()
             report = engine.predict()
             for pred in report.predictions[:10]:
@@ -516,7 +523,9 @@ class RecursiveImprovementLoop:
 
         # EmergenceEngine — novel pattern detection
         try:
-            from whitemagic.core.intelligence.agentic.emergence_engine import get_emergence_engine
+            from whitemagic.core.intelligence.agentic.emergence_engine import (
+                get_emergence_engine,
+            )
             engine = get_emergence_engine()
             insights = engine.scan_for_emergence()
             for insight in insights[:5]:
@@ -631,7 +640,9 @@ class RecursiveImprovementLoop:
                     # Objective P: Compute information gain
                     ig = 0.0
                     try:
-                        from whitemagic.core.evolution.info_theory import information_gain as compute_ig
+                        from whitemagic.core.evolution.info_theory import (
+                            information_gain as compute_ig,
+                        )
                         ig = compute_ig(claim["confidence"])
                     except (ImportError, Exception):
                         pass
@@ -795,7 +806,9 @@ class RecursiveImprovementLoop:
 
         # Apply Brier calibration to hypothesis confidence
         try:
-            from whitemagic.core.intelligence.synthesis.predictive_engine import get_predictive_engine
+            from whitemagic.core.intelligence.synthesis.predictive_engine import (
+                get_predictive_engine,
+            )
             engine = get_predictive_engine()
             cal = engine.get_calibration()
             if cal:
@@ -836,7 +849,9 @@ class RecursiveImprovementLoop:
 
         # Phase 3b: Auto-generate prescience claims from PredictiveEngine
         try:
-            from whitemagic.core.intelligence.synthesis.predictive_engine import get_predictive_engine
+            from whitemagic.core.intelligence.synthesis.predictive_engine import (
+                get_predictive_engine,
+            )
             engine = get_predictive_engine()
             claim_results = engine.auto_prescience_claims(min_confidence=0.7)
             results["auto_prescience"] = claim_results
@@ -1133,7 +1148,9 @@ class RecursiveImprovementLoop:
 
         # Re-run the relevant kaizen check to get after_count
         try:
-            from whitemagic.core.intelligence.synthesis.kaizen_engine import get_kaizen_engine
+            from whitemagic.core.intelligence.synthesis.kaizen_engine import (
+                get_kaizen_engine,
+            )
             engine = get_kaizen_engine()
             report = engine.analyze()
 

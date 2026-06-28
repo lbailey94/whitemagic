@@ -101,6 +101,7 @@ class MetricsExporter:
         # Memory metrics
         try:
             import sqlite3
+
             from whitemagic.config.paths import DB_PATH
             conn = sqlite3.connect(str(DB_PATH))
             cur = conn.cursor()
@@ -205,6 +206,7 @@ class MetricsExporter:
 
         try:
             from pathlib import Path
+
             from whitemagic.tools.strata import Strata
 
             core_path = str(Path(__file__).parent.parent.parent.parent.parent)

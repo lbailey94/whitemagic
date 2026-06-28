@@ -16,6 +16,8 @@ Covers:
 import json
 import unittest
 
+import pytest
+
 
 
 # ---------------------------------------------------------------------------
@@ -382,6 +384,7 @@ class TestAuditExport(unittest.TestCase):
 # 8. Dispatch pipeline integration
 # ---------------------------------------------------------------------------
 
+@pytest.mark.xdist_group(name="dispatch_pipeline")
 class TestDispatchPipeline(unittest.TestCase):
 
     def test_sanitizer_in_pipeline(self):

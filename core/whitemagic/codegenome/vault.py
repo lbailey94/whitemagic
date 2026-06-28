@@ -155,8 +155,9 @@ class GeneseedVault:
         write_result = None
         if write_output:
             try:
-                from whitemagic.optimization.rust_code_writing import write_file
                 import os
+
+                from whitemagic.optimization.rust_code_writing import write_file
                 base_path = os.path.dirname(write_output) or "."
                 rel_path = os.path.basename(write_output)
                 write_result = write_file(base_path, rel_path, final_code)

@@ -238,7 +238,6 @@ class AgentSwarm:
 
         # Validate engagement token if provided
         token_valid = True
-        token_scope: list[str] = []
         if engagement_token_id:
             try:
                 from whitemagic.security.engagement_tokens import get_token_manager
@@ -248,9 +247,6 @@ class AgentSwarm:
                     target=plan_id,
                 )
                 token_valid = result.get("valid", False)
-                if token_valid:
-                    token_details = result.get("token", {})
-                    token_scope = token_details.get("scope", [])
             except Exception as e:
                 logger.debug("Engagement token validation failed: %s", e)
                 token_valid = False
@@ -314,7 +310,11 @@ class AgentSwarm:
 
         # Emit Gan Ying event for task routing
         try:
-            from whitemagic.core.resonance._consolidated import EventType, get_bus, ResonanceEvent
+            from whitemagic.core.resonance._consolidated import (
+                EventType,
+                ResonanceEvent,
+                get_bus,
+            )
             get_bus().emit(ResonanceEvent(
                 source="agent_swarm",
                 event_type=EventType.TASK_CREATED,
@@ -359,7 +359,11 @@ class AgentSwarm:
 
         # Emit Gan Ying event for task completion
         try:
-            from whitemagic.core.resonance._consolidated import EventType, get_bus, ResonanceEvent
+            from whitemagic.core.resonance._consolidated import (
+                EventType,
+                ResonanceEvent,
+                get_bus,
+            )
             get_bus().emit(ResonanceEvent(
                 source="agent_swarm",
                 event_type=EventType.TASK_COMPLETED if success else EventType.TASK_FAILED,

@@ -54,7 +54,7 @@ def handle_archaeology_scan_directory(**kwargs: Any) -> dict[str, Any]:
     arch = _arch()
     found_files = arch.find_unread(directory, patterns) if recursive else []
     stats = arch.stats(scan_disk=True)
-    file_list = [f.path for f in found_files[:100]]
+    file_list = [f if isinstance(f, str) else getattr(f, 'path', str(f)) for f in found_files[:100]]
     return {
         "status": "success",
         "directory": directory,
@@ -81,7 +81,7 @@ def handle_archaeology_mark_read(**kwargs: Any) -> dict[str, Any]:
         note=kwargs.get("note"),
         insight=kwargs.get("insight"),
     )
-    return {"status": "success", "entry": entry.to_dict()}
+    return {"status": "success", "entry": entry if isinstance(entry, dict) else entry.to_dict()}
 
 
 def handle_archaeology_mark_written(**kwargs: Any) -> dict[str, Any]:
@@ -96,7 +96,7 @@ def handle_archaeology_mark_written(**kwargs: Any) -> dict[str, Any]:
         context=kwargs.get("context"),
         note=kwargs.get("note"),
     )
-    return {"status": "success", "entry": entry.to_dict()}
+    return {"status": "success", "entry": entry if isinstance(entry, dict) else entry.to_dict()}
 
 
 def handle_archaeology_have_read(**kwargs: Any) -> dict[str, Any]:
@@ -131,8 +131,15 @@ def handle_archaeology_find_changed(**kwargs: Any) -> dict[str, Any]:
     Returns:
         dict[str, Any]
     """
-    changed = _arch().find_changed(kwargs.get("directory"))
-    return {"status": "success", "changed_files": [e.to_dict() for e in changed], "count": len(changed)}
+    # ChariotArchaeologist stores history entries as dicts; find_changed
+    # scans history for 'written' type entries on the given directory.
+    arch = _arch()
+    directory = kwargs.get("directory", "")
+    changed = []
+    for entry in getattr(arch, '_history', []):
+        if entry.get("type") == "written" and (not directory or directory in entry.get("path", "")):
+            changed.append(entry)
+    return {"status": "success", "changed_files": changed, "count": len(changed)}
 
 
 def handle_archaeology_recent_reads(**kwargs: Any) -> dict[str, Any]:
@@ -143,7 +150,7 @@ def handle_archaeology_recent_reads(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     recent = _arch().get_recent_reads(kwargs.get("limit", 50))
-    return {"status": "success", "recent": [e.to_dict() for e in recent]}
+    return {"status": "success", "recent": [e if isinstance(e, dict) else e.to_dict() for e in recent]}
 
 
 def handle_archaeology_stats(**kwargs: Any) -> dict[str, Any]:
@@ -154,7 +161,11 @@ def handle_archaeology_stats(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     try:
-        return {"status": "success", **_arch().stats()}
+        arch_stats = _arch().stats()
+        # Normalize keys for introspection.py compatibility
+        if "total_files_tracked" in arch_stats and "total_files" not in arch_stats:
+            arch_stats["total_files"] = arch_stats["total_files_tracked"]
+        return {"status": "success", **arch_stats}
     except ImportError:
         return {
             "status": "success",
@@ -183,7 +194,7 @@ def handle_archaeology_search(**kwargs: Any) -> dict[str, Any]:
         dict[str, Any]
     """
     results = _arch().search(kwargs.get("query", ""))
-    return {"status": "success", "results": [e.to_dict() for e in results]}
+    return {"status": "success", "results": [e if isinstance(e, dict) else e.to_dict() for e in results]}
 
 
 def handle_archaeology_process_wisdom(**kwargs: Any) -> dict[str, Any]:

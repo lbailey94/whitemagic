@@ -5,6 +5,7 @@ Uses OpenAI's text embedding models for cloud-based embedding generation.
 """
 
 from typing import List
+
 from openai import AsyncOpenAI, OpenAIError
 
 from .base import EmbeddingProvider

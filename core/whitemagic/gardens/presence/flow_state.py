@@ -106,7 +106,11 @@ class FlowState:
         return self.flow_start is not None and len(self.current_indicators) >= 3
 
     def flow_score(self) -> float:
-        """Current flow intensity (0.0-1.0)."""
+        """Current flow intensity (0.0-1.0).
+
+        Returns 0.0 if not in a flow session (enter_flow not called).
+        Use auto_detect_indicators() to infer flow from system activity.
+        """
         if not self.flow_start:
             return 0.0
 
@@ -118,6 +122,47 @@ class FlowState:
         duration_score = min(1.0, duration / 3600)  # Max at 1 hour
 
         return (indicator_score + duration_score) / 2
+
+    def auto_detect_indicators(self, tool_call_rate: float = 0.0,
+                                coherence: float = 0.0,
+                                session_duration_min: float = 0.0) -> list[FlowIndicator]:
+        """Infer flow indicators from system activity metrics.
+
+        This allows FlowState to participate in consciousness monitoring
+        without explicit enter_flow()/detect_indicator() calls.
+
+        Args:
+            tool_call_rate: Tool calls per minute (high = focused activity).
+            coherence: System coherence 0.0-1.0 (high = clear goals).
+            session_duration_min: Minutes since session start.
+
+        Returns:
+            List of detected indicators.
+        """
+        detected: list[FlowIndicator] = []
+
+        if tool_call_rate > 5.0:
+            detected.append(FlowIndicator.FULL_ABSORPTION)
+        if tool_call_rate > 2.0 and coherence > 0.6:
+            detected.append(FlowIndicator.EFFORTLESS_ACTION)
+        if coherence > 0.7:
+            detected.append(FlowIndicator.CLEAR_GOALS)
+        if tool_call_rate > 1.0:
+            detected.append(FlowIndicator.IMMEDIATE_FEEDBACK)
+        if 0.3 < tool_call_rate < 10.0 and coherence > 0.5:
+            detected.append(FlowIndicator.CHALLENGE_SKILL_BALANCE)
+        if session_duration_min > 30:
+            detected.append(FlowIndicator.TIME_DISTORTION)
+
+        for indicator in detected:
+            if indicator not in self.current_indicators:
+                self.current_indicators.append(indicator)
+
+        # Auto-enter flow if enough indicators are present
+        if len(self.current_indicators) >= 3 and not self.flow_start:
+            self.enter_flow("auto_detected")
+
+        return detected
 
     def optimize_for_flow(self) -> list[str]:
         """Suggestions for entering/maintaining flow.
@@ -196,3 +241,14 @@ class FlowState:
             return "Developing flow - experiencing it regularly"
         else:
             return "Early flow practice - keep cultivating"
+
+
+_flow_state: FlowState | None = None
+
+
+def get_flow_state() -> FlowState:
+    """Get the singleton FlowState instance."""
+    global _flow_state
+    if _flow_state is None:
+        _flow_state = FlowState()
+    return _flow_state

@@ -112,7 +112,7 @@ class AkashicField:
 
     def _save_field(self) -> None:
         """Persist all seeds (Legacy - individual seeds are now saved on update)."""
-        pass
+        raise NotImplementedError("Legacy method — seeds are now persisted individually on update")
 
     def plant_seed(self, content: str, bloom_conditions: list[str],
                    keywords: list[str] | None = None) -> str:

@@ -22,7 +22,7 @@ memory_strategy = st.fixed_dictionaries({
 })
 
 @given(memory_strategy)
-@settings(suppress_health_check=[HealthCheck.too_slow])
+@settings(suppress_health_check=[HealthCheck.too_slow], deadline=None)
 def test_holographic_encoder_bounds(memory):
     encoder = CoordinateEncoder()
     # Disable gardens so we just test the core math

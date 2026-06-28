@@ -147,7 +147,10 @@ def handle_dna_validate(**kwargs: Any) -> dict[str, Any]:
     try:
         from collections import namedtuple
 
-        from whitemagic.core.intelligence.immune.dna import DNAValidator, ImmuneRegulator
+        from whitemagic.core.intelligence.immune.dna import (
+            DNAValidator,
+            ImmuneRegulator,
+        )
 
         # Build a minimal threat object if threat_type is provided
         threat_type = kwargs.get("threat_type", "unknown")

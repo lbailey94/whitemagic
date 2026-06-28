@@ -967,7 +967,7 @@ class GasTownOrchestrator:
         results = []
 
         try:
-            from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+            from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 futures: dict[Any, tuple[ImmortalClone, MEOW]] = {}
                 clone_id = 0

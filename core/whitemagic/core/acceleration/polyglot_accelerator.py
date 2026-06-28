@@ -254,6 +254,7 @@ class PolyglotAccelerator:
         if self._rust_available:
             try:
                 import json as _json
+
                 import whitemagic_rs
                 if hasattr(whitemagic_rs, 'search_query'):
                     # Build index — Rust expects JSON string, returns (doc_count, vocab_size)

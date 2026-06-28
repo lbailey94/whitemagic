@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import math
 
+import pytest
+
 from whitemagic.core.evolution.yield_curve import (
     YieldCurve,
     YieldPortfolio,
@@ -10,6 +12,7 @@ from whitemagic.core.evolution.yield_curve import (
 )
 
 
+@pytest.mark.xdist_group(name="yield_curve")
 class TestYieldCurve:
     def test_decaying(self):
         curve = YieldCurve(improvement_id="h1", yield_type=YieldType.DECAYING, v0=1.0, lambda_=0.1)
@@ -57,6 +60,7 @@ class TestYieldCurve:
         assert "lambda" in params
 
 
+@pytest.mark.xdist_group(name="yield_curve")
 class TestYieldPortfolio:
     def test_add_and_get(self):
         portfolio = YieldPortfolio()

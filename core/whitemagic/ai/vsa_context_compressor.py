@@ -124,7 +124,7 @@ class VSAContextCompressor:
         for item in items:
             content = item.get("content", "")
             source = item.get("source", "memory")
-            item_id = item.get("id", "")
+            # item_id available via item.get("id") if needed
 
             if not content:
                 continue

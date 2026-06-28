@@ -2,10 +2,9 @@ import ast
 from pathlib import Path
 from typing import List
 
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.checkers import register
-
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 # Functions commonly known to be async coroutines
 _ASYNC_FUNCS = {

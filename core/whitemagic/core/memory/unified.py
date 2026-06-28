@@ -167,12 +167,15 @@ class UnifiedMemory:
     def store(self, content: Any, memory_type: MemoryType | str = MemoryType.SHORT_TERM,
               tags: set[str] | None = None, emotional_valence: float = 0.0,
               importance: float = 0.5, metadata: dict | None = None, title: str | None = None,
-              auto_embed: bool = True, galaxy: str = "universal", **kwargs: Any) -> Memory:
+              auto_embed: bool = True, galaxy: str = "universal",
+              subsystem: str | None = None, **kwargs: Any) -> Memory:
         """Store a new memory.
 
         v14.0: Surprise-gated ingestion evaluates novelty before storage.
         High surprise → boosted importance. Low surprise → reinforce existing.
         v23.1: Galaxy parameter routes memory to cognitive galaxy (6D).
+        v23.4: If galaxy is "universal" and subsystem is provided, auto-routes
+               via GalaxyRouter.route(subsystem, metadata).
         """
         # Convert string memory_type to enum for backward compatibility
         if isinstance(memory_type, str):
@@ -182,6 +185,18 @@ class UnifiedMemory:
                 memory_type = MemoryType.SHORT_TERM
 
         metadata = metadata or {}
+
+        # v23.4: Auto-route galaxy via GalaxyRouter if subsystem is provided
+        # and no explicit galaxy was given (galaxy defaults to "universal").
+        if galaxy == "universal" and subsystem:
+            try:
+                from whitemagic.core.memory.galaxy_router import get_galaxy_router
+                routed = get_galaxy_router().route(subsystem, metadata)
+                if routed and routed != "universal":
+                    galaxy = routed
+            except Exception:
+                pass  # Graceful degradation: fall back to universal
+
         enable_surprise_gate = bool(kwargs.pop("enable_surprise_gate", True))
         enable_entity_extraction = bool(kwargs.pop("enable_entity_extraction", True))
         enable_holographic_index = bool(kwargs.pop("enable_holographic_index", True))

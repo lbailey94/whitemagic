@@ -709,6 +709,7 @@ class CoreAccessLayer:
 
             try:
                 import numpy as np
+
                 from whitemagic.core.memory.qfhrr import get_quantized_hrr_engine
 
                 conn = self._get_conn()
@@ -776,6 +777,7 @@ class CoreAccessLayer:
 
         try:
             import numpy as np
+
             from whitemagic.core.memory.embeddings import get_embedding_engine
             from whitemagic.core.memory.qfhrr import get_quantized_hrr_engine
 
@@ -791,7 +793,6 @@ class CoreAccessLayer:
 
             # Compute similarity against all cached vectors
             # Vectorized: for each cached vector, compute mean LUT similarity
-            K = qfhrr.K
             lut = qfhrr._sim_lut
 
             # Batch similarity: for each pair (query_q[d], cache[n, d]),

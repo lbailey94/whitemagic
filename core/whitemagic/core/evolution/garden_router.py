@@ -17,7 +17,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # Garden definitions with default priors
 GARDEN_CONFIG: dict[str, dict[str, Any]] = {
     "courage": {

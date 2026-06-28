@@ -143,7 +143,9 @@ class PatternEngine:
     def _get_enhanced_pattern_engine(self):
         """Lazy accessor for the EnhancedPatternEngine."""
         if self._enhanced_pattern_engine_instance is None:
-            from whitemagic.core.patterns.pattern_consciousness.pattern_engine_enhanced import EnhancedPatternEngine
+            from whitemagic.core.patterns.pattern_consciousness.pattern_engine_enhanced import (
+                EnhancedPatternEngine,
+            )
             self._enhanced_pattern_engine_instance = EnhancedPatternEngine()
         return self._enhanced_pattern_engine_instance
 
@@ -174,7 +176,9 @@ class PatternEngine:
     def _get_sub_clustering_engine(self):
         """Lazy accessor for the SubClusteringEngine."""
         if self._sub_clustering_engine_instance is None:
-            from whitemagic.core.intelligence.synthesis.sub_clustering import get_sub_clustering_engine
+            from whitemagic.core.intelligence.synthesis.sub_clustering import (
+                get_sub_clustering_engine,
+            )
             self._sub_clustering_engine_instance = get_sub_clustering_engine()
         return self._sub_clustering_engine_instance
 

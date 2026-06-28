@@ -38,6 +38,44 @@ jobs:
         working-directory: core
         run: uv run ruff check whitemagic/ tests/
 
+  # ─── stub audit ─────────────────────────────────────────────────────
+  stubs:
+    name: Stub audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - working-directory: core
+        run: uv sync --all-extras --dev
+      - name: Run stub audit
+        working-directory: core
+        run: uv run python scripts/check_stubs.py
+
+  # ─── duplicate code audit ───────────────────────────────────────────
+  duplicates:
+    name: Duplicate code audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - working-directory: core
+        run: uv sync --all-extras --dev
+      - name: Run duplicate audit
+        working-directory: core
+        run: uv run python scripts/check_duplicates.py
+
   # ─── type check (mypy) ──────────────────────────────────────────────
   typecheck:
     name: mypy type check
@@ -68,7 +106,7 @@ jobs:
     name: pytest
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: lint
+    needs: [lint, stubs]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -83,7 +121,7 @@ jobs:
       - run: pip install uv
       - working-directory: core
         run: uv sync --all-extras --dev
-      - name: Run pytest
+      - name: Run pytest (parallel with xdist)
         working-directory: core
         env:
           WM_STATE_ROOT: /tmp/whitemagic_ci_state
@@ -102,5 +140,6 @@ jobs:
             --ignore=tests/pending \
             --ignore=tests/archive_v4.5.0_reorg \
             -p no:cacheprovider \
+            -n auto --dist=loadgroup \
             --timeout=60 \
             -q

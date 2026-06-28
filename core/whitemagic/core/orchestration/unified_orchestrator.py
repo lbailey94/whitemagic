@@ -565,7 +565,8 @@ reconsolidating with each retrieval, growing in wisdom through each dream cycle.
             um.store(
                 content=emergence_narrative,
                 title=f"Identity Emergence: {name}",
-                tags=["identity", "emergence", "milestone", "self_naming"],  # type: ignore[arg-type]
+                tags=["identity", "emergence", "milestone", "self_naming"],
+                subsystem="emergence_engine",  # type: ignore[arg-type]
                 importance=1.0,  # Maximum importance
             )
             logger.info("   📖 Emergence narrative stored as sacred memory")

@@ -11,9 +11,11 @@ from __future__ import annotations
 
 from whitemagic.core.nurturing.nurturing_engine import (
     EmotionalState,
-    NurturingEngine as HeartEngine,
     ResonancePulse,
     get_heart,
+)
+from whitemagic.core.nurturing.nurturing_engine import (
+    NurturingEngine as HeartEngine,
 )
 
 __all__ = [

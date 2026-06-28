@@ -2,32 +2,47 @@ import ast
 from pathlib import Path
 from typing import List
 
-from whitemagic.tools.strata.models import Finding, FindingSeverity
-from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.checkers import register
+from whitemagic.tools.strata.file_index import FileIndex
+from whitemagic.tools.strata.models import Finding, FindingSeverity
+
+
+def _find_protocol_ranges(tree: ast.AST) -> list[tuple[int, int]]:
+    """Pre-compute line ranges of Protocol/runtime_checkable classes.
+    Returns list of (start_line, end_line) tuples.
+    """
+    ranges = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            is_protocol = False
+            for dec in node.decorator_list:
+                if isinstance(dec, ast.Name) and dec.id == "runtime_checkable":
+                    is_protocol = True
+                elif isinstance(dec, ast.Call):
+                    if isinstance(dec.func, ast.Name) and dec.func.id == "runtime_checkable":
+                        is_protocol = True
+            if not is_protocol:
+                for base in node.bases:
+                    if isinstance(base, ast.Name) and base.id == "Protocol":
+                        is_protocol = True
+                    elif isinstance(base, ast.Attribute) and base.attr == "Protocol":
+                        is_protocol = True
+            if is_protocol and hasattr(node, 'lineno') and hasattr(node, 'end_lineno'):
+                ranges.append((node.lineno, node.end_lineno))
+    return ranges
 
 
 def _is_inside_protocol(node: ast.AST, tree: ast.AST) -> bool:
     """Return True if the node is inside a class decorated with @runtime_checkable or inheriting from Protocol."""
-    # Walk up from node to find enclosing ClassDef
-    for parent in ast.walk(tree):
-        if isinstance(parent, ast.ClassDef):
-            # Check if node is inside this class (by line range heuristic)
-            if hasattr(node, 'lineno') and hasattr(parent, 'lineno') and hasattr(parent, 'end_lineno'):
-                if parent.lineno <= node.lineno <= parent.end_lineno:
-                    # Check decorators
-                    for dec in parent.decorator_list:
-                        if isinstance(dec, ast.Name) and dec.id == "runtime_checkable":
-                            return True
-                        if isinstance(dec, ast.Call):
-                            if isinstance(dec.func, ast.Name) and dec.func.id == "runtime_checkable":
-                                return True
-                    # Check bases
-                    for base in parent.bases:
-                        if isinstance(base, ast.Name) and base.id == "Protocol":
-                            return True
-                        if isinstance(base, ast.Attribute) and base.attr == "Protocol":
-                            return True
+    if not hasattr(node, 'lineno'):
+        return False
+    # Use pre-computed ranges instead of walking tree per node
+    if not hasattr(tree, '_protocol_ranges'):
+        tree._protocol_ranges = _find_protocol_ranges(tree)  # type: ignore[attr-defined]
+    node_line = node.lineno
+    for start, end in tree._protocol_ranges:  # type: ignore[attr-defined]
+        if start <= node_line <= end:
+            return True
     return False
 
 

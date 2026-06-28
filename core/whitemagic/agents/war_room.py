@@ -687,7 +687,11 @@ class WarRoom:
 
         # Emit Gan Ying event for campaign deployment
         try:
-            from whitemagic.core.resonance._consolidated import EventType, get_bus, ResonanceEvent
+            from whitemagic.core.resonance._consolidated import (
+                EventType,
+                ResonanceEvent,
+                get_bus,
+            )
             get_bus().emit(ResonanceEvent(
                 source="war_room",
                 event_type=EventType.TASK_CREATED,

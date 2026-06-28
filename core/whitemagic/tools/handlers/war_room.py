@@ -192,8 +192,9 @@ def handle_fool_guard_dare_to_die(**kwargs: Any) -> dict[str, Any]:
     """Deploy a Dare-to-Die clone for chaos injection."""
     mission = kwargs.get("mission", "break_groupthink")
     try:
-        from whitemagic.core.intelligence.agentic.fool_guard import deploy_dare_to_die
         import asyncio
+
+        from whitemagic.core.intelligence.agentic.fool_guard import deploy_dare_to_die
         result = asyncio.run(deploy_dare_to_die(mission=mission))
         return {
             "status": "success",
@@ -209,8 +210,11 @@ def handle_fool_guard_ralph(**kwargs: Any) -> dict[str, Any]:
     """Deploy a Ralph Wiggum probe for anti-groupthink chaos injection."""
     mission = kwargs.get("mission", "I'm helping!")
     try:
-        from whitemagic.core.intelligence.agentic.fool_guard import ralph_wiggum_maneuver
         import asyncio
+
+        from whitemagic.core.intelligence.agentic.fool_guard import (
+            ralph_wiggum_maneuver,
+        )
         result = asyncio.run(ralph_wiggum_maneuver(mission=mission))
         return {
             "status": "success",

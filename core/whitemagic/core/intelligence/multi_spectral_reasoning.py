@@ -268,7 +268,10 @@ class MultiSpectralReasoner:
         # Emit reasoning result to bus
         if self.bus:
             try:
-                from whitemagic.core.resonance._consolidated import EventType, ResonanceEvent
+                from whitemagic.core.resonance._consolidated import (
+                    EventType,
+                    ResonanceEvent,
+                )
                 self.bus.emit(ResonanceEvent(
                     source="multi_spectral_reasoner",
                     event_type=EventType.WISDOM_INTEGRATED,
