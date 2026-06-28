@@ -93,7 +93,7 @@ class DreamDaemon:
     def _consolidate_memories(self) -> None:
         """Move short-term memories to long-term or prune them."""
         try:
-            from whitemagic.automation.consolidator import consolidate_now
+            from whitemagic.core.automation.consolidator import consolidate_now
             report = consolidate_now(minutes=self.interval // 60 or 60)
             created = report.get("semantic_created", 0)
             archived = report.get("episodic_archived", 0)

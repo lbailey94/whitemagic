@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from whitemagic.sessions.manager import Session, SessionManager
+from whitemagic.session.manager import Session, SessionManager
 
 
 def get_active_session() -> Session | None:

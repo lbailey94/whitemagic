@@ -173,7 +173,7 @@ class UnifiedOrchestrator:
         logger.info("  🧬 Bootstrapping nervous system...")
 
         try:
-            from whitemagic.core.autonomous.unified_nervous_system import (
+            from whitemagic.autonomous.unified_nervous_system import (
                 get_nervous_system,
                 wire_default_subsystems,
             )

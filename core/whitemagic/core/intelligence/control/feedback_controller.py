@@ -18,7 +18,7 @@ from whitemagic.core.resonance.gan_ying_enhanced import (
     ResonanceEvent,
     get_bus,
 )
-from whitemagic.sessions.manager import SessionManager
+from whitemagic.session.manager import SessionManager
 
 logger = logging.getLogger(__name__)
 

@@ -60,7 +60,7 @@ def session_init(name: str = "default_session", goals: list = None) -> dict[str,
     Returns:
         dict[str, Any]
     """
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
     manager = SessionManager()
     session = manager.create_session(name=name, goals=goals)
     return {"session_id": session.id, "name": session.name, "status": session.status.value}
@@ -72,7 +72,7 @@ def session_get_active() -> dict[str, Any]:
     Returns:
         dict[str, Any]
     """
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
     manager = SessionManager()
     session = manager.get_active_session()
     return {"session_id": session.id if session else None, "status": "active" if session else "none"}

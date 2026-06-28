@@ -165,20 +165,20 @@ class TestSQLiteBackend:
     """Test SQLite backend."""
 
     def test_set_and_get(self, tmp_path):
-        from whitemagic.storage.sqlite_backend import SQLiteBackend
+        from whitemagic.core.storage.sqlite_backend import SQLiteBackend
         backend = SQLiteBackend(data_dir=tmp_path)
         backend.set("key1", {"nested": "value"})
         assert backend.get("key1") == {"nested": "value"}
 
     def test_delete(self, tmp_path):
-        from whitemagic.storage.sqlite_backend import SQLiteBackend
+        from whitemagic.core.storage.sqlite_backend import SQLiteBackend
         backend = SQLiteBackend(data_dir=tmp_path)
         backend.set("key1", "value")
         assert backend.delete("key1") is True
         assert backend.get("key1") is None
 
     def test_keys(self, tmp_path):
-        from whitemagic.storage.sqlite_backend import SQLiteBackend
+        from whitemagic.core.storage.sqlite_backend import SQLiteBackend
         backend = SQLiteBackend(data_dir=tmp_path)
         backend.set("test_key1", "v1")
         backend.set("test_key2", "v2")
@@ -186,7 +186,7 @@ class TestSQLiteBackend:
         assert len(keys) == 2
 
     def test_log_and_get_events(self, tmp_path):
-        from whitemagic.storage.sqlite_backend import SQLiteBackend
+        from whitemagic.core.storage.sqlite_backend import SQLiteBackend
         backend = SQLiteBackend(data_dir=tmp_path)
         backend.log_event("test_event", source="test", data={"x": 1})
         events = backend.recent_events()

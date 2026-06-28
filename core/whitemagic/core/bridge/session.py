@@ -11,7 +11,7 @@ def session_init(
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Initialize a new work session."""
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
 
     actual_name = session_name or name or "default_session"
 
@@ -35,7 +35,7 @@ def session_get_context(
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Get context of current/active session."""
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
 
     manager = SessionManager()
     session = manager.get_active_session()
@@ -54,7 +54,7 @@ def session_get_context(
 
 def session_checkpoint(session_name: str | None = None, include_state: bool = True, **kwargs: Any) -> dict[str, Any]:
     """Checkpoint the current session."""
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
 
     manager = SessionManager()
     session = manager.get_active_session()
@@ -74,7 +74,7 @@ def session_checkpoint(session_name: str | None = None, include_state: bool = Tr
 
 def session_list(include_archived: bool = False, **kwargs: Any) -> dict[str, Any]:
     """List recent sessions."""
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
 
     manager = SessionManager()
     sessions = manager.list_sessions(limit=5)
@@ -92,7 +92,7 @@ def session_create_handoff(
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Create a handoff package for another agent/role."""
-    from whitemagic.sessions.manager import SessionManager
+    from whitemagic.session.manager import SessionManager
 
     manager = SessionManager()
     session = manager.get_active_session()

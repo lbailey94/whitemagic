@@ -25,7 +25,7 @@ class SecurityHomeostasisLink:
         actions: list[dict[str, Any]] = []
 
         try:
-            from whitemagic.immune.detector import get_detector
+            from whitemagic.core.immune.detector import get_detector
             detector = get_detector()
             threats = detector.detected_threats
 

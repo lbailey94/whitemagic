@@ -41,7 +41,7 @@ Be sharp, decisive, and clear.
         """Execute initialization logic.
         Uses SessionManager to create/initialize session.
         """
-        from whitemagic.sessions.manager import SessionManager
+        from whitemagic.session.manager import SessionManager
 
         manager = SessionManager()
         # Extract args from state_vector

@@ -13,13 +13,13 @@ class TestEnhancedGanYingBus:
     """Test enhanced GanYing bus."""
 
     def test_init(self):
-        from whitemagic.resonance.gan_ying_enhanced import EnhancedGanYingBus
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import EnhancedGanYingBus
         bus = EnhancedGanYingBus()
         assert bus.event_count == 0
         assert bus.listener_count() == 0
 
     def test_emit_and_listen(self):
-        from whitemagic.resonance.gan_ying_enhanced import EnhancedGanYingBus
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import EnhancedGanYingBus
         bus = EnhancedGanYingBus()
         received = []
         bus.on("test_event", lambda e: received.append(e))
@@ -29,7 +29,7 @@ class TestEnhancedGanYingBus:
         assert bus.event_count == 1
 
     def test_cascade(self):
-        from whitemagic.resonance.gan_ying_enhanced import (
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import (
             CascadeTrigger,
             EnhancedGanYingBus,
             ExtendedEventType,
@@ -46,7 +46,7 @@ class TestEnhancedGanYingBus:
         assert len(received) == 1
 
     def test_recent_events(self):
-        from whitemagic.resonance.gan_ying_enhanced import EnhancedGanYingBus
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import EnhancedGanYingBus
         bus = EnhancedGanYingBus()
         bus.emit(source="test", event_type="e1")
         bus.emit(source="test", event_type="e2")
@@ -58,8 +58,8 @@ class TestCascadeProtocols:
     """Test cascade protocols."""
 
     def test_init_all(self):
-        from whitemagic.resonance.cascade_protocols import init_all_cascades
-        from whitemagic.resonance.gan_ying_enhanced import get_enhanced_bus
+        from whitemagic.core.resonance.cascade_protocols_recovered import init_all_cascades
+        from whitemagic.core.resonance.gan_ying_enhanced_recovered import get_enhanced_bus
         init_all_cascades()
         bus = get_enhanced_bus()
         assert len(bus._cascades) > 0

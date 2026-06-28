@@ -639,7 +639,7 @@ def _capabilities_portal() -> dict[str, Any]:
 def _capability_discovery_portal() -> dict[str, Any]:
     """Capability Discovery — emergent capability testing results (fused from CapabilityDiscoveryEngine)."""
     try:
-        from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+        from whitemagic.autonomous.apotheosis_engine import get_apotheosis_engine
         engine = get_apotheosis_engine()
         cap = engine.capability
         return {
@@ -689,7 +689,7 @@ def record_metric(metric: str, value: float) -> None:
 
 def discover_capabilities(available_tools: list[str]) -> list[dict[str, Any]]:
     """Discover emergent capabilities by testing unused tools and combinations."""
-    from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+    from whitemagic.autonomous.apotheosis_engine import get_apotheosis_engine
     engine = get_apotheosis_engine()
     discoveries = engine.capability.discover_capabilities(available_tools)
     return [
@@ -706,6 +706,6 @@ def discover_capabilities(available_tools: list[str]) -> list[dict[str, Any]]:
 
 def report_emergent_capabilities() -> list[dict[str, Any]]:
     """Report discovered and tested capabilities with high confidence."""
-    from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+    from whitemagic.autonomous.apotheosis_engine import get_apotheosis_engine
     engine = get_apotheosis_engine()
     return engine.capability.report_emergent_capabilities()

@@ -91,7 +91,7 @@ class DailyRitual:
         # 2. Run Yin analysis
         logger.info("2. 🌑 Running Yin phase analysis...")
         try:
-            from whitemagic.orchestration.yin_phase import YinPhase
+            from whitemagic.core.orchestration.yin_phase import YinPhase
             yin = YinPhase(self.base_dir)
             results = yin.run_full_cycle()
             actions.append(f"Yin analysis: {results['analyses']['patterns']['total']} patterns")

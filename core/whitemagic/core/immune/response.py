@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .antibodies import get_antibody_library
+from .antibodies_recovered import get_antibody_library
 from .detector import Threat, ThreatLevel, get_detector
 
 logger = logging.getLogger(__name__)

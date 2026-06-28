@@ -3,23 +3,20 @@
 from whitemagic.core.immune.antibodies import AntibodyLibrary
 
 try:
-    from whitemagic.core.immune.immune_memory import ImmuneMemory
+    from whitemagic.core.immune.memory import ImmuneMemory
 except ImportError:
     ImmuneMemory = None  # type: ignore[assignment,misc]
 
 try:
-    from whitemagic.core.immune.immune_response import ImmuneResponse
+    from whitemagic.core.immune.response import ImmuneResponse
 except ImportError:
     ImmuneResponse = None  # type: ignore[assignment,misc]
 
 try:
-    from whitemagic.core.immune.threat_detector import ThreatDetector
+    from whitemagic.core.immune.detector import ThreatDetector, ThreatLevel, ThreatType
 except ImportError:
     ThreatDetector = None  # type: ignore[assignment,misc]
-
-try:
-    from whitemagic.core.immune.threat_level import ThreatLevel
-except ImportError:
     ThreatLevel = None  # type: ignore[assignment,misc]
+    ThreatType = None  # type: ignore[assignment,misc]
 
-__all__ = ["AntibodyLibrary", "ImmuneMemory", "ImmuneResponse", "ThreatDetector", "ThreatLevel"]
+__all__ = ["AntibodyLibrary", "ImmuneMemory", "ImmuneResponse", "ThreatDetector", "ThreatLevel", "ThreatType"]

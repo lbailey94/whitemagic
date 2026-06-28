@@ -9,7 +9,7 @@ from typing import Any
 
 from whitemagic.core.resonance.gan_ying_enhanced import EventType, emit_event
 from whitemagic.gardens.practice import get_practice_garden
-from whitemagic.orchestration.conductor import (
+from whitemagic.core.orchestration.conductor import (
     ConductorConfig,
     ConductorOrchestrator,
     IterationResult,

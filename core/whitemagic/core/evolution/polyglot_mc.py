@@ -113,7 +113,7 @@ class PolyglotMCOrchestrator:
 
         # Julia
         try:
-            from whitemagic.resonance.julia_resonance import julia_available
+            from whitemagic.core.resonance.julia_resonance import julia_available
             if julia_available():
                 self._available_backends.add(MCBackend.JULIA)
                 self._backend_performance[MCBackend.JULIA] = 50_000.0

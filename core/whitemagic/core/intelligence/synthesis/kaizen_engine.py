@@ -738,7 +738,7 @@ class KaizenEngine:
     def _get_apotheosis_engine(self):
         """Lazy accessor for the ApotheosisEngine."""
         if self._apotheosis_engine_instance is None:
-            from whitemagic.core.autonomous.apotheosis_engine import get_apotheosis_engine
+            from whitemagic.autonomous.apotheosis_engine import get_apotheosis_engine
             self._apotheosis_engine_instance = get_apotheosis_engine()
         return self._apotheosis_engine_instance
 

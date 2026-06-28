@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 
 try:
-    from whitemagic.automation.daemon import AutomationDaemon
+    from whitemagic.core.automation.daemon import AutomationDaemon
 except ImportError:
     AutomationDaemon = None
 from whitemagic.core.consciousness.dharma import Intent, get_dharma

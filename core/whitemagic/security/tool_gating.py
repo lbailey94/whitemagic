@@ -250,7 +250,7 @@ class ToolGate:
     def _report_blocked_tool(self, tool_name: str, risk: ToolRisk, reason: str) -> None:
         """Report blocked tool to immune system for pattern learning."""
         try:
-            from whitemagic.immune.security_integration import report_threat
+            from whitemagic.core.immune.security_integration import report_threat
             report_threat(
                 threat_type="tool_blocked",
                 tool=tool_name,
@@ -302,7 +302,7 @@ class ToolGate:
     def _report_path_violation(self, tool_name: str, param: str, path: str, reason: str) -> None:
         """Report path violation to immune system."""
         try:
-            from whitemagic.immune.security_integration import report_threat
+            from whitemagic.core.immune.security_integration import report_threat
             report_threat(
                 threat_type="path_violation",
                 tool=tool_name,
@@ -316,7 +316,7 @@ class ToolGate:
     def _report_url_violation(self, tool_name: str, url: str) -> None:
         """Report URL violation to immune system."""
         try:
-            from whitemagic.immune.security_integration import report_threat
+            from whitemagic.core.immune.security_integration import report_threat
             report_threat(
                 threat_type="url_blocked",
                 tool=tool_name,

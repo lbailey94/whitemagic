@@ -63,7 +63,7 @@ class UnifiedNervousSystem:
             from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
             return get_dream_cycle()
         if name == "resonance":
-            from whitemagic.resonance.gan_ying_async import GanYingBus
+            from whitemagic.core.resonance.gan_ying_async import GanYingBus
             return GanYingBus()
         if name == "evolution":
             from whitemagic.core.intelligence.pattern_engines import (

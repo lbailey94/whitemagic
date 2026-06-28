@@ -1087,7 +1087,7 @@ class PredictiveEngine:
     def _get_predictive_maintenance(self):
         """Lazy accessor for the PredictiveMaintenanceEngine."""
         if self._predictive_maintenance_instance is None:
-            from whitemagic.core.autonomous.apotheosis_engine import PredictiveMaintenanceEngine
+            from whitemagic.autonomous.apotheosis_engine import PredictiveMaintenanceEngine
             self._predictive_maintenance_instance = PredictiveMaintenanceEngine()
         return self._predictive_maintenance_instance
 
