@@ -85,7 +85,7 @@ opentelemetry-api==1.39.1
 packaging==26.0
 pandocfilters==1.5.1
 pathable==0.4.4
-pathspec==1.0.4
+pathspec==1.1.1
 pathvalidate==3.3.1
 platformdirs==4.5.1
 pluggy==1.6.0
