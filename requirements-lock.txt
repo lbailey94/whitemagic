@@ -116,7 +116,7 @@ pytz==2025.2
 PyYAML==6.0.3
 pyzmq==27.1.0
 readme_renderer==44.0
-redis==7.1.1
+redis==8.0.1
 referencing==0.36.2
 requests==2.32.5
 requests-toolbelt==1.0.0
