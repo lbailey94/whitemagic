@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 """Skill Forge - The Recursive Blacksmith.
 ======================================
 
@@ -17,6 +16,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from whitemagic.config.paths import get_state_root
 from whitemagic.core.intelligence.omni.universal_router import ExecutionChain
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,9 @@ class SkillForge:
     """Forges transient actions into permanent skills.
     """
 
-    def __init__(self, skill_library_path: Path = Path("memory/skills")):
+    def __init__(self, skill_library_path: Path | None = None):
+        if skill_library_path is None:
+            skill_library_path = get_state_root() / "skills"
         self.skill_library_path = skill_library_path
         self.skill_library_path.mkdir(parents=True, exist_ok=True)
         self.known_skills: dict[str, ForgedSkill] = {}
@@ -77,10 +79,10 @@ class SkillForge:
                 self.known_skills[skill.name] = skill
                 count += 1
             except Exception as e:
-                logger.warning("Failed to load skill %s: %s", skill_file, e, exc_info=True)
+                logger.warning("Failed to load skill %s: %s", skill_file, e)
 
         if count > 0:
-            logger.info("🧠 Skill Forge loaded %s crystallized skills.", count, exc_info=True)
+            logger.info("Skill Forge loaded %s crystallized skills.", count)
 
     def assess_pattern(self, chain: ExecutionChain, success_metric: float) -> bool:
         """Determine if a chain is worthy of becoming a skill.
@@ -94,7 +96,7 @@ class SkillForge:
         """Convert a Chain into a clean, reusable Skill.
         In a full system, this would write Python code.
         """
-        logger.info("🔨 Forging new skill: '%s' from chain for '%s'", name, chain.intent, exc_info=True)
+        logger.info("Forging new skill: '%s' from chain for '%s'", name, chain.intent)
 
         skill = ForgedSkill(
             name=name,
@@ -103,6 +105,7 @@ class SkillForge:
             optimized_chain=chain,
         )
 
+        self.known_skills[skill.name] = skill
         self._save_skill(skill)
         return skill
 
@@ -127,7 +130,7 @@ class SkillForge:
         with open(skill_file, "w") as f:
             json.dump(data, f, indent=2)
 
-        logger.info("💾 Skill saved to %s", skill_file, exc_info=True)
+        logger.info("Skill saved to %s", skill_file)
         self._update_skills_md()
 
     def _update_skills_md(self) -> None:
@@ -151,18 +154,21 @@ class SkillForge:
         with open(catalog_path, "w") as f:
             f.write("\n".join(content))
 
-        logger.info("📘 Updated SKILLS.md registry at %s", catalog_path, exc_info=True)
+        logger.info("Updated SKILLS.md registry at %s", catalog_path)
 
 # Singleton accessor
-_forge = None
-def get_skill_forge() -> SkillForge:
-    """
-    Get the skill forge.
+_forge: SkillForge | None = None
 
-    Returns:
-        SkillForge
-    """
+
+def get_skill_forge() -> SkillForge:
+    """Get the singleton SkillForge instance."""
     global _forge
     if _forge is None:
         _forge = SkillForge()
     return _forge
+
+
+def reset_skill_forge() -> None:
+    """Reset the singleton — for testing."""
+    global _forge
+    _forge = None
