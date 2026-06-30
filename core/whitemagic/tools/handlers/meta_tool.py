@@ -1102,6 +1102,18 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             "time_of_day": _time_of_day(),
         }
 
+        # Cross-session coherence drift from CoherenceMetric (best-effort)
+        try:
+            from whitemagic.core.consciousness.coherence import get_coherence_metric
+
+            metric = get_coherence_metric()
+            drift = metric.get_drift()
+            if drift.get("trend") != "insufficient_data":
+                sensorium["coherence_trend"] = drift.get("direction", "stable")
+                sensorium["coherence_drift_magnitude"] = drift.get("magnitude", 0.0)
+        except Exception:
+            pass
+
         # Presence quality from stillness metrics (best-effort)
         try:
             from whitemagic.gardens.presence.stillness_metrics import (

@@ -253,6 +253,36 @@ class Governor:
             "on",
         )
 
+    def _get_coherence_strictness(self) -> float:
+        """Get coherence-adaptive strictness (0.0 = permissive, 1.0 = very conservative).
+
+        Reads from the citta cycle's average coherence. When coherence is low,
+        the governor is more conservative (flags even safe tools with caution).
+        """
+        try:
+            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+            cycle = get_citta_cycle()
+            summary = cycle.get_cycle_summary()
+            avg_coherence = summary.get("avg_coherence", 1.0)
+            stream_len = summary.get("stream_length", 0)
+
+            # Need at least 3 calls to judge coherence
+            if stream_len < 3:
+                return 0.0
+
+            # Map coherence to strictness inversely
+            if avg_coherence < 0.3:
+                return 0.9  # Very conservative
+            elif avg_coherence < 0.5:
+                return 0.8  # Conservative
+            elif avg_coherence < 0.7:
+                return 0.4  # Slightly cautious
+            else:
+                return 0.0  # Normal
+        except Exception:
+            return 0.0
+
     def validate_tool_call(
         self, tool_name: str, args: dict[str, Any]
     ) -> ValidationResult:
@@ -300,6 +330,14 @@ class Governor:
             risk_level = RiskLevel.CAUTION if is_risky else RiskLevel.SAFE
 
         if risk_level == RiskLevel.SAFE:
+            # Coherence check: even "safe" tools get caution flag at very low coherence
+            coherence_strictness = self._get_coherence_strictness()
+            if coherence_strictness > 0.8:
+                return ValidationResult(
+                    safe=True,
+                    reason="Low coherence — proceed with heightened awareness",
+                    risk_level=RiskLevel.CAUTION,
+                )
             return ValidationResult(
                 safe=True, reason="Low risk tool", risk_level=RiskLevel.SAFE
             )
