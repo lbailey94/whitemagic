@@ -373,3 +373,70 @@ def get_elemental_balance() -> dict[str, Any]:
         "harmony": engine.get_harmony_score(),
         "cycle": engine.get_current_cycle()
     }
+
+# ---------------------------------------------------------------------------
+# Unified constants — single source of truth for Wu Xing cycles
+# ---------------------------------------------------------------------------
+
+# Generative cycle: Wood → Fire → Earth → Metal → Water → Wood
+GENERATIVE: dict[Element, Element] = {
+    Element.WOOD: Element.FIRE,
+    Element.FIRE: Element.EARTH,
+    Element.EARTH: Element.METAL,
+    Element.METAL: Element.WATER,
+    Element.WATER: Element.WOOD,
+}
+
+# Destructive cycle: Wood → Earth, Fire → Metal, Earth → Water, Metal → Wood, Water → Fire
+DESTRUCTIVE: dict[Element, Element] = {
+    Element.WOOD: Element.EARTH,
+    Element.FIRE: Element.METAL,
+    Element.EARTH: Element.WATER,
+    Element.METAL: Element.WOOD,
+    Element.WATER: Element.FIRE,
+}
+
+# Element meanings for cross-system reference
+ELEMENT_MEANINGS: dict[Element, str] = {
+    Element.WOOD: "Growth, expansion, creativity, planning",
+    Element.FIRE: "Passion, inspiration, rapid action, illumination",
+    Element.EARTH: "Stability, grounding, nourishment, patience",
+    Element.METAL: "Structure, precision, discernment, cutting",
+    Element.WATER: "Wisdom, depth, flow, introspection, storage",
+}
+
+# Zodiac → Wu Xing mapping (Western elements to Chinese elements)
+ZODIAC_TO_WUXING: dict[str, Element] = {
+    "aries": Element.FIRE, "leo": Element.FIRE, "sagittarius": Element.FIRE,
+    "taurus": Element.EARTH, "virgo": Element.EARTH, "capricorn": Element.EARTH,
+    "gemini": Element.METAL, "libra": Element.METAL, "aquarius": Element.METAL,
+    "cancer": Element.WATER, "scorpio": Element.WATER, "pisces": Element.WATER,
+}
+
+
+def assess_balance() -> dict[str, Any]:
+    """Assess the current Wu Xing balance and provide recommendations.
+
+    Unified method combining energy tracking (from WuXingEngine) and
+    balance assessment (from wisdom/wu_xing.py).
+    """
+    engine = get_wuxing_engine()
+    balance = engine.get_balance_score()
+    harmony = engine.get_harmony_score()
+
+    # Find dominant and deficient elements
+    energies = {e: s.energy for e, s in engine.elements.items()}
+    dominant = max(energies, key=energies.get) if energies else Element.EARTH
+    deficient = min(energies, key=energies.get) if energies else Element.EARTH
+
+    return {
+        "balance": balance,
+        "harmony": harmony,
+        "dominant": dominant.value,
+        "deficient": deficient.value,
+        "dominant_meaning": ELEMENT_MEANINGS.get(dominant, ""),
+        "deficient_meaning": ELEMENT_MEANINGS.get(deficient, ""),
+        "generative_cycle": f"{dominant.value} generates {GENERATIVE.get(dominant, dominant).value}",
+        "recommendation": f"Nourish {deficient.value} through {GENERATIVE.get(deficient, deficient).value}",
+        "energies": {e.value: round(s.energy, 3) for e, s in engine.elements.items()},
+    }

@@ -204,5 +204,113 @@ def tzpf_cmd(actions_taken: int | None) -> None:
         click.echo("   Consider filing the LLC, submitting grants, or publishing.")
 
 
+@cli.command()
+def machine_time() -> None:
+    """Print machine-time estimation profiles and CRPS calibration."""
+    from whitemagic.core.consciousness.machine_time import get_machine_time_estimator
+
+    est = get_machine_time_estimator()
+    profile = est.get_profile()
+    crps_summary = est.get_crps_summary()
+
+    click.echo("Machine-Time Estimation Profiles")
+    click.echo("=" * 50)
+    click.echo(f"  Tools tracked:     {profile['total_tools_tracked']}")
+    click.echo(f"  Total observations: {profile['total_observations']}")
+    click.echo()
+
+    if profile["tool_profiles"]:
+        click.echo("Per-Tool Duration Profiles")
+        click.echo("-" * 50)
+        click.echo(f"{'Tool':<30} {'Count':>6} {'Median':>10} {'P90':>10} {'Mean':>10}")
+        click.echo("-" * 50)
+        for tool, stats in sorted(profile["tool_profiles"].items(), key=lambda x: x[1]["count"], reverse=True):
+            click.echo(f"{tool[:28]:<30} {stats['count']:>6} {stats['median']:>10.6f} {stats['p90']:>10.6f} {stats['mean']:>10.6f}")
+        click.echo()
+
+    if profile["type_profiles"]:
+        click.echo("Per-Operation-Type Profiles")
+        click.echo("-" * 50)
+        click.echo(f"{'Type':<20} {'Count':>6} {'Median':>10} {'P90':>10}")
+        click.echo("-" * 50)
+        for op_type, stats in sorted(profile["type_profiles"].items(), key=lambda x: x[1]["count"], reverse=True):
+            click.echo(f"{op_type[:18]:<20} {stats['count']:>6} {stats['median']:>10.6f} {stats['p90']:>10.6f}")
+        click.echo()
+
+    click.echo("CRPS Calibration Summary")
+    click.echo("-" * 50)
+    if crps_summary["count"] == 0:
+        click.echo("  No predictions recorded yet.")
+    else:
+        click.echo(f"  Predictions scored:  {crps_summary['count']}")
+        click.echo(f"  Mean CRPS:           {crps_summary['mean_crps']}")
+        click.echo(f"  Median CRPS:         {crps_summary['median_crps']}")
+        click.echo(f"  Mean log-ratio err:  {crps_summary['mean_log_ratio_error']}")
+        click.echo(f"  MAE log-ratio err:   {crps_summary['mae_log_ratio_error']}")
+        if crps_summary.get("per_type"):
+            click.echo()
+            click.echo("  By Operation Type:")
+            for op_type, stats in crps_summary["per_type"].items():
+                click.echo(f"    {op_type:<20} count={stats['count']:>4}  mean_crps={stats['mean_crps']}")
+
+
+@cli.command()
+def crps() -> None:
+    """Print CRPS decomposition for machine-time predictions."""
+    from whitemagic.core.consciousness.machine_time import get_machine_time_estimator
+
+    est = get_machine_time_estimator()
+
+    # Load prediction records from log
+    import json
+    predictions: list[float] = []
+    actuals: list[float] = []
+    sigmas: list[float] = []
+
+    if est.log_path.exists():
+        with open(est.log_path) as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                entry = json.loads(line)
+                if "predicted_seconds" in entry and "actual_seconds" in entry:
+                    predictions.append(entry["predicted_seconds"])
+                    actuals.append(entry["actual_seconds"])
+                    # Reconstruct sigma from p90-p50 if available, else 20% of prediction
+                    sigma = max(entry.get("predicted_seconds", 0) * 0.2, 0.001)
+                    sigmas.append(sigma)
+
+    if not predictions:
+        click.echo("No machine-time predictions with CRPS data yet.")
+        click.echo("Run some tool calls first to accumulate prediction data.")
+        return
+
+    from whitemagic.forecasting.scoring import crps_decomposition, dagstuhl_score
+
+    decomp = crps_decomposition(predictions, actuals, sigmas)
+    dagstuhl = dagstuhl_score(predictions, actuals, sigmas)
+
+    click.echo("CRPS Decomposition (Machine-Time Predictions)")
+    click.echo("=" * 50)
+    click.echo(f"  Predictions scored:  {decomp['count']}")
+    click.echo(f"  Mean CRPS:           {decomp['mean_crps']}")
+    click.echo(f"  Miscalibration:      {decomp['miscalibration']}")
+    click.echo(f"  Discrimination:      {decomp['discrimination']}")
+    click.echo(f"  Uncertainty:         {decomp['uncertainty']}")
+    click.echo(f"  CRPS Climatology:    {decomp['crps_climatology']}")
+    click.echo(f"  Skill Score:         {decomp['skill_score']}")
+    click.echo()
+    click.echo("Dagstuhl Comprehensive Scoring")
+    click.echo("-" * 50)
+    click.echo(f"  Mean Log Score:      {dagstuhl['mean_log_score']}")
+    click.echo(f"  QS-50 (median):      {dagstuhl['mean_quantile_score_50']}")
+    click.echo(f"  QS-90:               {dagstuhl['mean_quantile_score_90']}")
+    click.echo(f"  MAE:                 {dagstuhl['mae']}")
+    click.echo(f"  MAPE:                {dagstuhl['mape']}%")
+    click.echo(f"  Bias:                {dagstuhl['bias']}")
+    click.echo(f"  Log-ratio error:     {dagstuhl['mean_log_ratio_error']}")
+    click.echo(f"  MAE log-ratio:       {dagstuhl['mae_log_ratio_error']}")
+
+
 if __name__ == "__main__":
     cli()

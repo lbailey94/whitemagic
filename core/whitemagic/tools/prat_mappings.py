@@ -315,6 +315,8 @@ TOOL_TO_GANA: dict[str, str] = {
     "galaxy.sync":             "gana_void",
     "galaxy.lineage":          "gana_void",
     "galaxy.taxonomy":         "gana_void",
+    "galaxy.canonical_taxonomy": "gana_void",
+    "galaxy.export_tutorial":  "gana_void",
     "galaxy.lineage_stats":    "gana_void",
 
     # ═══ SIMPLIFIED ALIASES ═══
@@ -594,10 +596,21 @@ TOOL_TO_GANA: dict[str, str] = {
     "browser_extract_dom":         "gana_chariot",
     "browser_get_interactables":   "gana_chariot",
     "web_fetch":                   "gana_chariot",
+    "web_fetch_enhanced":          "gana_chariot",
     "web_search":                  "gana_chariot",
     "web_search_and_read":         "gana_chariot",
     "research_topic":              "gana_chariot",
     "browser_session_status":      "gana_chariot",
+    "image_analyze":               "gana_chariot",
+    "web_search_category":         "gana_chariot",
+    "web_search_batch":            "gana_chariot",
+    "deep_fetch":                  "gana_chariot",
+    "research_repo":               "gana_chariot",
+    "research_url":                "gana_chariot",
+    "rabbit_hole_research":        "gana_chariot",
+    "web_cache_list":              "gana_chariot",
+    "web_cache_clear":             "gana_chariot",
+    "parallel_reason":             "gana_three_stars",
 
     # ── v15.9: War Room & Shadow Clone Army (Ox — Endurance & Swarm) ──
     "war_room.status":             "gana_ox",

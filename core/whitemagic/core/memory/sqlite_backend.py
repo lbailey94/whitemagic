@@ -477,11 +477,28 @@ class SQLiteBackend:
                 fts_query = fts_query.strip()
                 if not fts_query:
                     fts_query = query.strip().replace('[', '').replace(']', '')
+
+                # For multi-word queries, try phrase match first
+                # Only fall back to individual keywords if phrase returns nothing
+                phrase_query = None
+                keyword_query = None
                 if " " in fts_query and not (fts_query.startswith('"') and fts_query.endswith('"')):
-                    # Multi-word query: try as phrase OR individual keywords
-                    keywords = [k for k in fts_query.split() if k]
+                    fts5_reserved = {"OR", "AND", "NOT", "NEAR"}
+                    keywords = [k for k in fts_query.split() if k and k.upper() not in fts5_reserved]
                     if keywords:
-                        fts_query = f'"{fts_query}" OR {" OR ".join(keywords)}'
+                        phrase_query = f'"{fts_query}"'
+                        keyword_query = " OR ".join(keywords)
+
+                # Try phrase first, fall back to keywords
+                if phrase_query:
+                    # Test phrase query
+                    test_sql = "SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?"
+                    phrase_count = conn.execute(test_sql, [phrase_query]).fetchone()[0]
+                    if phrase_count > 0:
+                        fts_query = phrase_query
+                    else:
+                        fts_query = keyword_query or phrase_query
+                # Single word or already quoted — use as-is
 
                 sql = """
                     SELECT m.*, fts.rank

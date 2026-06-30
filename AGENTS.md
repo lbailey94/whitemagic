@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 23.3.0 (AGENTS.md revision 23.3)
-**Last Updated**: 2026-06-27
+**Version**: 23.3.1 (AGENTS.md revision 23.3)
+**Last Updated**: 2026-06-29
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -19,6 +19,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup
 - v23.2.0: Mojo removed (8→7 polyglot languages); multi-user galaxy isolation (per-user SQLite namespaces, local profiles, X-User-Id header); real-time sync via Redis (galaxy lifecycle events on user-scoped channels, REDIS_URL env var support); Rust SIMD expansion (batch Euclidean distance, batch dot product, batch top-k) + RustCascadeBackend wired into GanYingBus; browser-first PWA substrate (MemoryStore, DharmaEngine, KarmaLedger, GnosisSnapshot in WASM, LocalTransport in TypeScript SDK, PWA shell with service worker); full suite 2,589 passed, 0 failed, ~110s
 - v23.3.0: `wm` meta-tool ('world in a seed') — single facade tool with sub-millisecond regex NLU routing to all 490 tools; `WM_MCP_PRAT=2` Seed mode (1 tool exposed to MCP); PRAT mode now exposes 29 tools (28 Ganas + `wm`); CLI `wm` command; full suite passing
+- v23.3.1: Memory system overhaul — 10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal); CITTA memory type for consciousness-stream memories; citta bridge auto-persists significant moments; HNSW index with disk persistence (16,219 embeddings, 0.26ms search); galaxy-aware search (semantic + FTS5); `galaxy.canonical_taxonomy` + `galaxy.export_tutorial` tools; oracle readings auto-persist to dreams galaxy; content_hash backfilled for all 12,737 memories; holographic coords for all memories; 2,853 cross-galaxy associations; FTS5 phrase-first search + join bug fix; 3,206 unit + 259 integration tests passing
 
 **The single most important rule**: *Tests are the guardrail. Never skip them.*
 
@@ -31,7 +32,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (current: 2589 passed, 2 skipped, 0 failed)
+# 2. Verify test baseline (current: 3206 passed, 1 skipped, 12 pre-existing failures)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift
@@ -246,38 +247,14 @@ grep -rn "stub" core/whitemagic/ --include="*.py" | grep -i "docstring\|placehol
 
 ## 8. Safe Change Patterns
 
-### Fast File Writing (PRIMARY METHOD — ALWAYS USE THIS)
+### File I/O Protocol
 
-**HARD RULE**: For ANY file write exceeding 3 lines, use cat shell writes via `run_command` — NEVER use `edit`/`multi_edit`/`write_to_file` tools for >3 lines. This is non-negotiable. The `write_to_file` tool regularly times out on large files, wasting 5+ minutes per failure. Cat shell writes complete in <1 second.
+**See global rules** (`~/.codeium/windsurf/windsurf/rules/global.md`) for the full file I/O protocol. Summary:
 
-**Why**: Cat shell writes are 10-100x faster. They don't require exact string matching, don't fail on existing files, don't time out, and can write entire files atomically. Even with 3x retries for errors, total time is less than a single `edit` call for >3 lines.
-
-**Techniques**:
-1. **Heredoc** (new files / full rewrites): `cat << 'EOF' > file.py`
-2. **Python -c** (edits to existing files): `python3 -c "..."` with file I/O
-3. **Batch** (multiple files): `python3 << 'PYEOF'` with dict of paths→content
-
-**Safety harness** (always run after writing):
-- Python files: `python3 -c "import ast; ast.parse(open('file').read()); print('OK')"`
-- Multiple files: `ruff check file1.py file2.py --select F401,I001,E999`
-- Test files: `pytest tests/unit/test_file.py -v --timeout=10 --tb=short`
-
-**When to use `edit` tool instead**: ONLY for surgical 1-3 line changes where exact matching is easy and the file is already read. If you find yourself writing more than 3 lines in `new_string`, STOP and switch to cat shell.
-
-**Heredoc limitation**: `cat << 'EOF'` breaks when content contains backticks (markdown, code blocks). For any file containing backticks, use the Python -c method instead.
-
-**Workflow**: See `.windsurf/workflows/fast-write.md` for full protocol.
-
-### Fast File Reading (Batch Exploration)
-
-**Rule**: For reading 3+ files or scanning for patterns, use shell commands via `run_command` — not multiple `read_file` calls.
-
-**Techniques**:
-1. **Fragment reads**: `for f in path1.py path2.py; do echo "=== $f ==="; head -30 "$f"; done`
-2. **Pattern scan**: `grep -rn "pattern" core/whitemagic/ --include="*.py" -A 3`
-3. **Selective reads**: `sed -n '100,150p' /path/to/file.py`
-
-**Why**: 5 files in one shell command vs 5 separate `read_file` round-trips.
+- **>10 lines or full rewrites**: Use `cat << 'EOF'` or `python3 << 'PYEOF'` shell writes via `run_command`
+- **1-3 line surgical edits**: Use the `edit` tool
+- **Batch reads**: Use `head`/`sed`/`grep` in one `run_command` call
+- **Always validate after writing**: `python3 -c "import ast; ..."` and `ruff check`
 
 ### MCP Tool Compounding — Use WhiteMagic Systems Constantly
 
@@ -541,7 +518,7 @@ The index lives in `.fragment/` and is ignored by git. Re-index after significan
 
 ## 15. Contact & Context
 
-- **Project**: WhiteMagic v23.2.0
+- **Project**: WhiteMagic v23.3.0
 - **Repository**: `<path-to-whitemagic>/`
 - **Virtual Environment**: `.venv/` (source before any Python work)
 - **Test Command (Tier 1)**: `cd core && python -m pytest tests/unit/ -q --timeout=5 -x`

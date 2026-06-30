@@ -114,21 +114,23 @@ def galactic_memory_recent(limit: int = 10, memory_type: str | None = None, **kw
         return {"status": "error", "error": str(e)}
 
 
-def galactic_memory_search(query: str, limit: int = 10, memory_type: str | None = None, **kwargs: Any) -> dict[str, Any]:
+def galactic_memory_search(query: str, limit: int = 10, memory_type: str | None = None, galaxy: str | None = None, **kwargs: Any) -> dict[str, Any]:
     """FTS5 search across memory content, with LIKE fallback.
 
     Returns a list of matching memories ranked by relevance.
+    Optionally filter by galaxy (e.g., 'aria', 'citta', 'codex').
     """
     api = _get_galactic()
     if api is None:
         return _unavailable("galactic_memory_search")
     try:
-        results = api["memory_search"](query=query, limit=int(limit), memory_type=memory_type)
+        results = api["memory_search"](query=query, limit=int(limit), memory_type=memory_type, galaxy=galaxy)
         return {
             "status": "ok",
             "function": "galactic_memory_search",
             "result": {
                 "query": query,
+                "galaxy": galaxy,
                 "count": len(results),
                 "memories": [m.to_dict() for m in results],
             },

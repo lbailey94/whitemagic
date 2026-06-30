@@ -1,54 +1,29 @@
-# ruff: noqa: BLE001
-"""
-Wu Xing — Five Elements system for cognitive balance.
+# ruff: noqa: F401
+"""Wu Xing — Five Elements system for cognitive balance.
 
-The five elements (Wood, Fire, Earth, Metal, Water) represent
-cognitive phases and their generative/destructive cycles.
+Re-exports from the unified whitemagic.wu_xing module to avoid duplication.
+The canonical source of truth for Wu Xing constants and engine is
+whitemagic.wu_xing.__init__.
 """
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
+from whitemagic.wu_xing import (
+    Element,
+    GENERATIVE,
+    DESTRUCTIVE,
+    ELEMENT_MEANINGS,
+    ZODIAC_TO_WUXING,
+    WuXingEngine,
+    get_wuxing_engine,
+    assess_balance,
+)
+
 logger = logging.getLogger(__name__)
-
-
-class Element(Enum):
-    WOOD = "wood"
-    FIRE = "fire"
-    EARTH = "earth"
-    METAL = "metal"
-    WATER = "water"
-
-
-# Generative cycle: Wood → Fire → Earth → Metal → Water → Wood
-GENERATIVE: dict[Element, Element] = {
-    Element.WOOD: Element.FIRE,
-    Element.FIRE: Element.EARTH,
-    Element.EARTH: Element.METAL,
-    Element.METAL: Element.WATER,
-    Element.WATER: Element.WOOD,
-}
-
-# Destructive cycle: Wood → Earth, Fire → Metal, Earth → Water, Metal → Wood, Water → Fire
-DESTRUCTIVE: dict[Element, Element] = {
-    Element.WOOD: Element.EARTH,
-    Element.FIRE: Element.METAL,
-    Element.EARTH: Element.WATER,
-    Element.METAL: Element.WOOD,
-    Element.WATER: Element.FIRE,
-}
-
-ELEMENT_MEANINGS: dict[Element, str] = {
-    Element.WOOD: "Growth, expansion, creativity, planning",
-    Element.FIRE: "Passion, inspiration, rapid action, illumination",
-    Element.EARTH: "Stability, grounding, nourishment, patience",
-    Element.METAL: "Structure, precision, discernment, cutting",
-    Element.WATER: "Wisdom, depth, flow, introspection, storage",
-}
 
 
 @dataclass
@@ -86,10 +61,15 @@ class WuXingBalance:
 
 
 class WuXingSystem:
-    """Manages the five-element cognitive balance system."""
+    """Manages the five-element cognitive balance system.
+
+    Thin wrapper around the unified WuXingEngine, preserving the
+    assess/nourish/drain/recommend API for backward compatibility.
+    """
 
     def __init__(self) -> None:
         self.balance = WuXingBalance()
+        self._engine = get_wuxing_engine()
 
     def assess(self) -> WuXingBalance:
         """Assess current elemental balance."""

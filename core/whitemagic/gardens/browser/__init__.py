@@ -26,11 +26,19 @@ from .distiller import DOMDistiller, SimplifiedElement
 from .screenshot import capture_element, capture_screenshot
 from .web_research import (
     BrowserSessionManager,
+    BatchSearchResult,
+    DeepFetchResult,
     FetchResult,
+    RepoResearchResult,
     SearchResponse,
+    URLResearchResult,
     SearchResult,
     research_topic,
+    deep_fetch,
+    research_repo,
+    research_url,
     web_fetch,
+    web_search_batch,
     web_search,
 )
 

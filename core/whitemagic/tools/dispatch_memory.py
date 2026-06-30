@@ -58,6 +58,8 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "galaxy.list_types": LazyHandler("galaxy", "handle_galaxy_list_types"),
     "galaxy.export": LazyHandler("galaxy", "handle_galaxy_export"),
     "galaxy.import": LazyHandler("galaxy", "handle_galaxy_import"),
+    "galaxy.canonical_taxonomy": LazyHandler("galaxy", "handle_galaxy_canonical_taxonomy"),
+    "galaxy.export_tutorial": LazyHandler("galaxy", "handle_galaxy_export_tutorial"),
 
     # --- v14.0 Living Graph ---
     "hybrid_recall": LazyHandler("living_graph", "handle_hybrid_recall"),
@@ -106,6 +108,9 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "polyglot.memory_query": LazyHandler("polyglot", "handle_polyglot_memory_query"),
     "polyglot.status": LazyHandler("polyglot", "handle_polyglot_status"),
     "polyglot.search": LazyHandler("polyglot", "handle_polyglot_search"),
+    "polyglot.evolution": LazyHandler("polyglot", "handle_polyglot_evolution"),
+    "polyglot.yield": LazyHandler("polyglot", "handle_polyglot_yield"),
+    "polyglot.actor": LazyHandler("polyglot", "handle_polyglot_actor"),
 
     # --- Unified Read API (v23.1) ---
     "wm_read": LazyHandler("wm_read", "handle_wm_read"),

@@ -1,7 +1,7 @@
 # WhiteMagic Documentation Index
 
-**Version**: 23.3.0
-**Last Updated**: June 27, 2026 (v23.3.0 — `wm` meta-tool, Seed MCP mode, PRAT mode now 29 tools)
+**Version**: 23.3.1
+**Last Updated**: June 29, 2026 (v23.3.1 — Memory system overhaul: 10-galaxy taxonomy, CITTA memory type, HNSW index, galaxy-aware search, oracle auto-persist)
 **Location**: Repository root (`INDEX.md`)  
 **Status**: Living Document — Update this index when adding, moving, or archiving docs.
 
@@ -742,4 +742,4 @@ local-first browsing memory capture tool. Not yet vendored into this repo.
 
 ---
 
-*This index is a living document. Last updated: 2026-06-27 by workspace inventory pass.*
+*This index is a living document. Last updated: 2026-06-29 by memory system overhaul session.*

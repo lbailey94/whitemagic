@@ -51,6 +51,9 @@ def _resolve_backend(backend_name: str) -> Any:
         "haskell": _wp.HaskellBackend,
         "rust": _wp.RustBackend,
         "koka": _wp.KokaBackend,
+        "rust_evolution": _wp.RustEvolutionBackend,
+        "julia_yield": _wp.JuliaYieldBackend,
+        "elixir_actor": _wp.ElixirActorBackend,
     }
     cls = mapping.get(backend_name)
     if cls is None:
@@ -173,6 +176,9 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
         "haskell": _wp.HaskellBackend,
         "rust": _wp.RustBackend,
         "koka": _wp.KokaBackend,
+        "rust_evolution": _wp.RustEvolutionBackend,
+        "julia_yield": _wp.JuliaYieldBackend,
+        "elixir_actor": _wp.ElixirActorBackend,
     }
 
     for name, cls in backends.items():
@@ -203,3 +209,138 @@ def handle_polyglot_status(**kwargs: Any) -> dict[str, Any]:
     _status_cache["result"] = result
     _status_cache["time"] = _time.monotonic()
     return result
+
+
+# ============================================================================
+# Specialized Backend Handlers
+# ============================================================================
+
+_evolution_cache: dict[str, Any] = {"backend": None, "time": 0.0}
+
+
+def _get_evolution_backend() -> Any:
+    """Get or reuse a RustEvolutionBackend instance."""
+    if _wp is None:
+        raise RuntimeError("Polyglot bridge unavailable")
+    now = _time.monotonic()
+    if _evolution_cache["backend"] is not None and (now - _evolution_cache["time"]) < 300.0:
+        return _evolution_cache["backend"]
+    backend = _wp.RustEvolutionBackend()
+    backend.call("ping", timeout=5.0)
+    _evolution_cache["backend"] = backend
+    _evolution_cache["time"] = now
+    return backend
+
+
+def handle_polyglot_evolution(**kwargs: Any) -> dict[str, Any]:
+    """Execute evolution operations through the Rust evolution backend.
+
+    Supported operations: shannon_entropy, kl_divergence, information_gain,
+    system_uncertainty, adapt_weights, exploration_score, thermo_cool,
+    thermo_reheat, thermo_adapt, boltzmann_probabilities, boltzmann_select,
+    hrr_encode, hrr_bind, hrr_unbind, hrr_superposition, hrr_synergy,
+    hrr_similarity, mc_run_trials, mc_importance_sampling,
+    mc_control_variates, mc_antithetic_variates, cf_project_forward,
+    cf_bootstrap_ci, cf_estimate_impact.
+    """
+    operation = kwargs.get("operation")
+    if not operation:
+        return {"status": "error", "error": "operation is required"}
+
+    try:
+        backend = _get_evolution_backend()
+    except Exception as e:
+        return {"status": "error", "error": str(e), "error_code": "evolution_unavailable"}
+
+    try:
+        params = {k: v for k, v in kwargs.items() if k != "operation"}
+        raw = backend.call(operation, **params)
+        result = raw.get("result", raw) if raw.get("status") == "ok" else raw
+        return {"status": "success", "operation": operation, "result": result}
+    except Exception as e:
+        logger.exception("Evolution backend %s failed", operation)
+        return {"status": "error", "error": str(e), "error_code": "evolution_execution_error"}
+
+
+_yield_cache: dict[str, Any] = {"backend": None, "time": 0.0}
+
+
+def _get_yield_backend() -> Any:
+    """Get or reuse a JuliaYieldBackend instance."""
+    if _wp is None:
+        raise RuntimeError("Polyglot bridge unavailable")
+    now = _time.monotonic()
+    if _yield_cache["backend"] is not None and (now - _yield_cache["time"]) < 300.0:
+        return _yield_cache["backend"]
+    backend = _wp.JuliaYieldBackend()
+    backend.call("ping", timeout=10.0)
+    _yield_cache["backend"] = backend
+    _yield_cache["time"] = now
+    return backend
+
+
+def handle_polyglot_yield(**kwargs: Any) -> dict[str, Any]:
+    """Execute yield curve operations through the Julia yield backend.
+
+    Supported operations: value_at, duration, fit_parameters,
+    portfolio_duration, select_by_horizon, detect_regime_change.
+    """
+    operation = kwargs.get("operation")
+    if not operation:
+        return {"status": "error", "error": "operation is required"}
+
+    try:
+        backend = _get_yield_backend()
+    except Exception as e:
+        return {"status": "error", "error": str(e), "error_code": "yield_unavailable"}
+
+    try:
+        params = {k: v for k, v in kwargs.items() if k != "operation"}
+        raw = backend.call(operation, **params)
+        result = raw.get("result", raw) if raw.get("status") == "ok" else raw
+        return {"status": "success", "operation": operation, "result": result}
+    except Exception as e:
+        logger.exception("Yield backend %s failed", operation)
+        return {"status": "error", "error": str(e), "error_code": "yield_execution_error"}
+
+
+_actor_cache: dict[str, Any] = {"backend": None, "time": 0.0}
+
+
+def _get_actor_backend() -> Any:
+    """Get or reuse an ElixirActorBackend instance."""
+    if _wp is None:
+        raise RuntimeError("Polyglot bridge unavailable")
+    now = _time.monotonic()
+    if _actor_cache["backend"] is not None and (now - _actor_cache["time"]) < 300.0:
+        return _actor_cache["backend"]
+    backend = _wp.ElixirActorBackend()
+    backend.call("ping", timeout=10.0)
+    _actor_cache["backend"] = backend
+    _actor_cache["time"] = now
+    return backend
+
+
+def handle_polyglot_actor(**kwargs: Any) -> dict[str, Any]:
+    """Execute actor operations through the Elixir actor backend.
+
+    Supported operations: start_actor, send_outcome, broadcast_outcome,
+    transfer_belief, get_posteriors, get_stats.
+    """
+    operation = kwargs.get("operation")
+    if not operation:
+        return {"status": "error", "error": "operation is required"}
+
+    try:
+        backend = _get_actor_backend()
+    except Exception as e:
+        return {"status": "error", "error": str(e), "error_code": "actor_unavailable"}
+
+    try:
+        params = {k: v for k, v in kwargs.items() if k != "operation"}
+        raw = backend.call(operation, **params)
+        result = raw.get("result", raw) if raw.get("status") == "ok" else raw
+        return {"status": "success", "operation": operation, "result": result}
+    except Exception as e:
+        logger.exception("Actor backend %s failed", operation)
+        return {"status": "error", "error": str(e), "error_code": "actor_execution_error"}

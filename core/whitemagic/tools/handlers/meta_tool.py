@@ -71,6 +71,14 @@ _PAYLOAD_MAP: dict[tuple[str, str], tuple[str, re.Pattern[str]]] = {
     # Web search — strip "search the web for"
     ("gana_chariot", "web_search"): ("query", re.compile(r"^\s*(?:web\s+search|search\s+the\s+web|search\s+online)\s*(?:for)?\s*:?\s*", re.I)),
     ("gana_chariot", "research_topic"): ("topic", re.compile(r"^\s*(?:research|investigate|explore)\s*(?:topic)?\s*:?\s*", re.I)),
+    ("gana_chariot", "web_search_and_read"): ("query", re.compile(r"^\s*(?:web\s+search\s+and\s+read|search\s+and\s+read|search\s+and\s+fetch)\s*:?\s*", re.I)),
+    ("gana_chariot", "web_fetch"): ("url", re.compile(r"^\s*(?:web\s+fetch|fetch\s+(?:the\s+)?(?:url|page)|read\s+(?:the\s+)?(?:url|page))\s*:?\s*", re.I)),
+    ("gana_chariot", "web_fetch_enhanced"): ("url", re.compile(r"^\s*(?:enhanced\s+fetch|fetch\s+enhanced|web\s+fetch\s+enhanced|outline\s+fetch|chunk\s+fetch)\s*:?\s*", re.I)),
+    ("gana_chariot", "deep_fetch"): ("url", re.compile(r"^\s*(?:deep\s+fetch|fetch\s+full\s+content)\s*:?\s*", re.I)),
+    ("gana_chariot", "web_search_category"): ("query", re.compile(r"^\s*(?:categor.*search|search.*categor)\s*:?\s*", re.I)),
+    ("gana_chariot", "research_repo"): ("repo", re.compile(r"^\s*(?:research\s+repo|repo\s+research|research\s+github)\s*:?\s*", re.I)),
+    ("gana_chariot", "research_url"): ("url", re.compile(r"^\s*(?:research\s+url|url\s+research)\s*:?\s*", re.I)),
+    ("gana_chariot", "rabbit_hole_research"): ("topic", re.compile(r"^\s*(?:rabbit\s+hole|deep\s+spiral|recursive\s+research)\s*:?\s*", re.I)),
 
     # Dream — strip "dream about"
     ("gana_abundance", "dream"): ("topic", re.compile(r"^\s*(?:dream|consolidate|sleep)\s*(?:about|on)?\s*:?\s*", re.I)),
@@ -124,6 +132,10 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(vector|embedding|similarity).*search", re.I), "gana_winnowing_basket", "vector.search"),
     (re.compile(r"\b(hybrid|semantic).*recall", re.I), "gana_winnowing_basket", "hybrid_recall"),
 
+    # Galaxy-filtered search — "search aria memories for consciousness"
+    (re.compile(r"\b(search|find|recall).*(aria|citta|codex|journal|dream|research|session|tutorial|substrate|universal).*memor", re.I), "gana_winnowing_basket", "search_memories"),
+    (re.compile(r"\bmemor.*(aria|citta|codex|journal|dream|research|session|tutorial|substrate)\b", re.I), "gana_winnowing_basket", "search_memories"),
+
     # Scratchpad / working memory
     (re.compile(r"\b(scratchpad|scratch pad|note|jot down)\b", re.I), "gana_heart", "scratchpad"),
     (re.compile(r"\b(working memory|active context|attend to)\b", re.I), "gana_heart", "working_memory.attend"),
@@ -159,6 +171,8 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(create|new).*galax", re.I), "gana_void", "galaxy.create"),
     (re.compile(r"\b(galax|universe|namespace|switch.*context)", re.I), "gana_void", "galaxy.list"),
     (re.compile(r"\b(backup|export|snapshot).*galax", re.I), "gana_void", "galaxy.backup"),
+    (re.compile(r"\b(galaxy|galaxies).*taxonom", re.I), "gana_void", "galaxy.canonical_taxonomy"),
+    (re.compile(r"\bexport.*tutorial|tutorial.*export\b", re.I), "gana_void", "galaxy.export_tutorial"),
 
     # Dreams / consolidation
     (re.compile(r"\b(dream|consolidat|sleep|cycle)\b", re.I), "gana_abundance", "dream"),
@@ -226,7 +240,18 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     # Codebase / archaeology
     (re.compile(r"\b(archaeology|codebase|scan|strata|code.*genome)\b", re.I), "gana_chariot", "archaeology"),
     (re.compile(r"\b(windsurf|conversation|browser.*navigate)\b", re.I), "gana_chariot", "windsurf_list_conversations"),
-    (re.compile(r"\b(web.*search|web.*fetch|research.*topic)\b", re.I), "gana_chariot", "web_search"),
+    # Web research — ordered most specific first to prevent collision
+    (re.compile(r"\b(rabbit.*hole|deep.*spiral|recursive.*research)\b", re.I), "gana_chariot", "rabbit_hole_research"),
+    (re.compile(r"\b(search.*and.*read|search.*and.*fetch)\b", re.I), "gana_chariot", "web_search_and_read"),
+    (re.compile(r"\b(batch.*search|search.*batch|parallel.*search)\b", re.I), "gana_chariot", "web_search_batch"),
+    (re.compile(r"\b(categor.*search|search.*categor)\b", re.I), "gana_chariot", "web_search_category"),
+    (re.compile(r"\b(research.*repo|repo.*research)\b", re.I), "gana_chariot", "research_repo"),
+    (re.compile(r"\b(research.*url|url.*research)\b", re.I), "gana_chariot", "research_url"),
+    (re.compile(r"\b(research.*topic|investigate|explore.*topic|deep.*research)\b", re.I), "gana_chariot", "research_topic"),
+    (re.compile(r"\b(deep.*fetch)\b", re.I), "gana_chariot", "deep_fetch"),
+    (re.compile(r"\b(enhanced.*fetch|fetch.*enhanced|outline.*fetch|chunk.*fetch)\b", re.I), "gana_chariot", "web_fetch_enhanced"),
+    (re.compile(r"\b(web.*fetch|fetch.*url|fetch.*page|read.*url|read.*page)\b", re.I), "gana_chariot", "web_fetch"),
+    (re.compile(r"\b(web.*search|search.*web|search.*online|search.*internet)\b", re.I), "gana_chariot", "web_search"),
 
     # Voting / marketplace
     (re.compile(r"\b(vote|ballot|election|marketplace|negotiate|engagement.*token)\b", re.I), "gana_wall", "vote.create"),
@@ -255,6 +280,21 @@ def classify(input_text: str) -> tuple[str, str | None, float]:
         return "gana_three_stars", "art_of_war.assess", 1.0
     if "sabha" in text_lower or "council" in text_lower:
         return "gana_three_stars", "sabha.convene", 1.0
+    # Web research — check before "think/reason/analyze" to prevent collision
+    if "rabbit hole" in text_lower:
+        return "gana_chariot", "rabbit_hole_research", 1.0
+    if "search and read" in text_lower or "search and fetch" in text_lower:
+        return "gana_chariot", "web_search_and_read", 1.0
+    if "deep fetch" in text_lower:
+        return "gana_chariot", "deep_fetch", 1.0
+    if "enhanced fetch" in text_lower or "fetch enhanced" in text_lower or "outline fetch" in text_lower or "chunk fetch" in text_lower:
+        return "gana_chariot", "web_fetch_enhanced", 1.0
+    if "web fetch" in text_lower or "fetch url" in text_lower or "fetch page" in text_lower:
+        return "gana_chariot", "web_fetch", 1.0
+    if "web search" in text_lower or "search the web" in text_lower or "search online" in text_lower:
+        return "gana_chariot", "web_search", 1.0
+    if "research topic" in text_lower or "research_topic" in text_lower:
+        return "gana_chariot", "research_topic", 1.0
     if (
         "think" in text_lower
         or "reason" in text_lower

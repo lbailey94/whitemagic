@@ -25,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+from pathlib import Path
 from urllib.parse import quote_plus, urlparse
 
 logger = logging.getLogger(__name__)
@@ -416,10 +417,80 @@ async def _brave_search(
         return None
 
 
+_CATEGORY_MODIFIERS: dict[str, list[str]] = {
+    "people": ["site:linkedin.com/in", "site:github.com", "site:twitter.com"],
+    "company": ["site:linkedin.com/company", "site:crunchbase.com", "site:github.com"],
+    "academic": ["site:arxiv.org", "site:scholar.google.com", "site:semanticscholar.org", "site:doi.org"],
+    "code": ["site:github.com", "site:stackoverflow.com", "site:gitlab.com", "site:docs.python.org"],
+    "docs": ["site:docs.", "site:readthedocs.io", "site:dev.to", "site:medium.com"],
+    "news": ["site:news.ycombinator.com", "site:techcrunch.com", "site:reuters.com", "site:bbc.co.uk"],
+}
+
+
+def _apply_category(query: str, category: str | None) -> str:
+    """Modify search query based on category filter (like Exa's category:people/company)."""
+    if not category or category == "general":
+        return query
+    modifiers = _CATEGORY_MODIFIERS.get(category.lower())
+    if not modifiers:
+        return query
+    # Use OR to join site modifiers for broader coverage
+    site_filter = " OR ".join(modifiers)
+    return f"({query}) ({site_filter})"
+
+
+# ---------------------------------------------------------------------------
+# Search result cache — avoid redundant Brave API calls
+# ---------------------------------------------------------------------------
+
+_search_cache: dict[str, tuple[float, SearchResponse]] = {}
+_SEARCH_CACHE_TTL = 3600  # 1 hour
+
+
+def _search_cache_key(query: str, num_results: int, category: str | None) -> str:
+    """Build a cache key for search parameters."""
+    cat = category or "none"
+    return f"{query}::{num_results}::{cat}"
+
+
+def _get_cached_search(query: str, num_results: int, category: str | None) -> SearchResponse | None:
+    """Return cached search result if still valid."""
+    import time as _time
+    key = _search_cache_key(query, num_results, category)
+    if key in _search_cache:
+        ts, result = _search_cache[key]
+        if _time.time() - ts < _SEARCH_CACHE_TTL:
+            logger.debug("Search cache hit: %s", query[:50])
+            return result
+        del _search_cache[key]
+    return None
+
+
+def _store_cached_search(query: str, num_results: int, category: str | None, result: SearchResponse) -> None:
+    """Store search result in cache."""
+    import time as _time
+    key = _search_cache_key(query, num_results, category)
+    _search_cache[key] = (_time.time(), result)
+    # Evict expired entries to prevent unbounded growth
+    now = _time.time()
+    expired = [k for k, (ts, _) in _search_cache.items() if now - ts > _SEARCH_CACHE_TTL]
+    for k in expired:
+        del _search_cache[k]
+
+
+def clear_search_cache() -> int:
+    """Clear the in-memory search cache. Returns count of entries removed."""
+    count = len(_search_cache)
+    _search_cache.clear()
+    return count
+
+
 async def web_search(
     query: str,
     num_results: int = 8,
     timeout: float = 10.0,
+    category: str | None = None,
+    force_refresh: bool = False,
 ) -> SearchResponse:
     """Search the web using Brave API (preferred) or DuckDuckGo HTML (fallback).
 
@@ -430,13 +501,25 @@ async def web_search(
         query: Search query string
         num_results: Maximum number of results to return
         timeout: Request timeout in seconds
+        category: Optional category filter — 'people', 'company', 'academic',
+                  'code', 'docs', 'news' — modifies query with site filters
+                  (analogous to Exa's category:people / category:company)
 
     Returns:
         SearchResponse with list of results
     """
+    # Check search cache first — avoids redundant Brave API calls
+    if not force_refresh:
+        cached = _get_cached_search(query, num_results, category)
+        if cached is not None:
+            return cached
+
+    modified_query = _apply_category(query, category)
+
     # Try Brave API first (more reliable, structured JSON)
-    brave_result = await _brave_search(query, num_results, timeout)
+    brave_result = await _brave_search(modified_query, num_results, timeout)
     if brave_result is not None:
+        _store_cached_search(query, num_results, category, brave_result)
         return brave_result
 
     # Fallback: DuckDuckGo HTML scraping (no API key needed)
@@ -448,7 +531,7 @@ async def web_search(
     start = time.monotonic()
 
     try:
-        encoded_query = quote_plus(query)
+        encoded_query = quote_plus(modified_query)
         # Use DuckDuckGo HTML-only endpoint (no JavaScript required)
         url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
 
@@ -854,9 +937,9 @@ def sync_web_fetch(url: str, max_chars: int = 30_000, timeout: float = 15.0) -> 
     return result
 
 
-def sync_web_search(query: str, num_results: int = 8, timeout: float = 10.0) -> SearchResponse:
+def sync_web_search(query: str, num_results: int = 8, timeout: float = 10.0, category: str | None = None) -> SearchResponse:
     """Synchronous wrapper for web_search."""
-    result: SearchResponse = _run_async(web_search(query, num_results=num_results, timeout=timeout))
+    result: SearchResponse = _run_async(web_search(query, num_results=num_results, timeout=timeout, category=category))
     return result
 
 
@@ -864,3 +947,828 @@ def sync_research_topic(topic: str, **kwargs: Any) -> ResearchReport:
     """Synchronous wrapper for research_topic."""
     result: ResearchReport = _run_async(research_topic(topic, **kwargs))
     return result
+
+
+def sync_deep_fetch(url: str, max_chars: int = 200_000, timeout: float = 30.0) -> DeepFetchResult:
+    """Synchronous wrapper for deep_fetch."""
+    result: DeepFetchResult = _run_async(deep_fetch(url, max_chars=max_chars, timeout=timeout))
+    return result
+
+
+def sync_research_repo(repo: str, max_pages: int = 5, max_chars_per_page: int = 50_000, store_memories: bool = True) -> RepoResearchResult:
+    """Synchronous wrapper for research_repo."""
+    result: RepoResearchResult = _run_async(research_repo(repo, max_pages=max_pages, max_chars_per_page=max_chars_per_page, store_memories=store_memories))
+    return result
+
+
+def sync_research_url(url: str, max_chars: int = 200_000, timeout: float = 30.0, store_memory: bool = True) -> URLResearchResult:
+    """Synchronous wrapper for research_url."""
+    result: URLResearchResult = _run_async(research_url(url, max_chars=max_chars, timeout=timeout, store_memory=store_memory))
+    return result
+
+# ---------------------------------------------------------------------------
+# deep_fetch -- Full-content retrieval with pagination (no chunk skimming)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class DeepFetchResult:
+    """Result from deep_fetch -- full page content with pagination metadata."""
+
+    url: str
+    title: str = ""
+    content: str = ""
+    content_length: int = 0
+    status_code: int = 0
+    duration_ms: float = 0.0
+    pages_fetched: int = 0
+    error: str | None = None
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+    @property
+    def success(self) -> bool:
+        return self.error is None and self.status_code in range(200, 400)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "url": self.url,
+            "title": self.title,
+            "content_length": self.content_length,
+            "status_code": self.status_code,
+            "duration_ms": round(self.duration_ms, 1),
+            "pages_fetched": self.pages_fetched,
+            "success": self.success,
+            "error": self.error,
+            "timestamp": self.timestamp,
+        }
+
+
+def _detect_next_page(html: str, current_url: str) -> str | None:
+    """Detect a 'next page' link from HTML content."""
+    try:
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "html.parser")
+        for a_tag in soup.find_all("a", href=True):
+            rel = a_tag.get("rel", [])
+            classes = a_tag.get("class", [])
+            text = a_tag.get_text(strip=True).lower()
+            if "next" in rel or "next" in classes or text in ("next", "next page", "\u00bb", "\u2192", "more"):
+                href = a_tag["href"]
+                if href and not href.startswith("#"):
+                    from urllib.parse import urljoin
+                    return urljoin(current_url, href)
+        return None
+    except Exception:
+        return None
+
+
+async def deep_fetch(
+    url: str,
+    max_chars: int = 200_000,
+    timeout: float = 30.0,
+    follow_redirects: bool = True,
+) -> DeepFetchResult:
+    """Fetch a URL with full-content retrieval -- no chunk skimming.
+
+    Unlike web_fetch (which caps at 30K chars), deep_fetch retrieves the
+    entire page content up to max_chars (default 200K). For paginated
+    content, it follows next-page links when detectable.
+
+    Args:
+        url: The URL to fetch
+        max_chars: Maximum total characters to return (default 200K)
+        timeout: Request timeout in seconds
+        follow_redirects: Follow HTTP redirects
+
+    Returns:
+        DeepFetchResult with full page content
+    """
+    if not HAS_HTTPX:
+        return DeepFetchResult(url=url, error="httpx not installed: pip install httpx")
+
+    start = time.monotonic()
+    all_content: list[str] = []
+    total_length = 0
+    pages = 0
+    current_url = url
+    title = ""
+    last_status = 0
+
+    for _page in range(10):
+        if total_length >= max_chars:
+            break
+
+        try:
+            async with httpx.AsyncClient(
+                headers=_DEFAULT_HEADERS,
+                follow_redirects=follow_redirects,
+                timeout=timeout,
+            ) as client:
+                response = await client.get(current_url)
+                last_status = response.status_code
+                pages += 1
+
+                content_type = response.headers.get("content-type", "")
+
+                if "text/html" in content_type or "application/xhtml" in content_type:
+                    html = response.text
+                    if not title:
+                        title = _extract_title(html)
+                    page_content = _html_to_text(html, max_chars=max_chars - total_length)
+                elif "text/plain" in content_type or "application/json" in content_type:
+                    page_content = response.text[:max_chars - total_length]
+                    if not title:
+                        title = urlparse(current_url).path.split("/")[-1] or current_url
+                else:
+                    page_content = f"[Binary content: {content_type}, {len(response.content)} bytes]"
+
+                all_content.append(page_content)
+                total_length += len(page_content)
+
+                next_url = _detect_next_page(response.text, current_url) if HAS_BS4 else None
+                if not next_url or next_url == current_url:
+                    break
+                current_url = next_url
+
+        except httpx.TimeoutException:
+            if pages > 0:
+                break
+            return DeepFetchResult(
+                url=url, error=f"Timeout after {timeout}s",
+                duration_ms=(time.monotonic() - start) * 1000,
+            )
+        except Exception as e:
+            if pages > 0:
+                break
+            return DeepFetchResult(
+                url=url, error=str(e),
+                duration_ms=(time.monotonic() - start) * 1000,
+            )
+
+    content = "\n\n---\n\n".join(all_content) if len(all_content) > 1 else (all_content[0] if all_content else "")
+
+    return DeepFetchResult(
+        url=url,
+        title=title,
+        content=content,
+        content_length=len(content),
+        status_code=last_status,
+        duration_ms=(time.monotonic() - start) * 1000,
+        pages_fetched=pages,
+    )
+
+
+# ---------------------------------------------------------------------------
+# research_repo -- Fetch GitHub repo docs and store as memories for Q&A
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RepoResearchResult:
+    """Result from research_repo -- repo docs fetched and stored as memories."""
+
+    repo: str
+    pages_fetched: int = 0
+    total_chars: int = 0
+    memory_ids: list[str] = field(default_factory=list)
+    wiki_url: str = ""
+    readme_url: str = ""
+    error: str | None = None
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+    @property
+    def success(self) -> bool:
+        return self.error is None and self.pages_fetched > 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "repo": self.repo,
+            "pages_fetched": self.pages_fetched,
+            "total_chars": self.total_chars,
+            "memory_ids": self.memory_ids,
+            "wiki_url": self.wiki_url,
+            "readme_url": self.readme_url,
+            "success": self.success,
+            "error": self.error,
+            "timestamp": self.timestamp,
+        }
+
+
+_GITHUB_DOC_PATHS = [
+    "README.md",
+    "README.rst",
+    "docs/README.md",
+    "docs/index.md",
+    "docs/getting-started.md",
+    "docs/architecture.md",
+    "docs/configuration.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "AGENTS.md",
+    ".github/README.md",
+]
+
+
+async def research_repo(
+    repo: str,
+    max_pages: int = 5,
+    max_chars_per_page: int = 50_000,
+    store_memories: bool = True,
+) -> RepoResearchResult:
+    """Research a GitHub repository by fetching its documentation.
+
+    Fetches README, docs, wiki pages from a GitHub repo, then optionally
+    stores them as WhiteMagic memories for later Q&A via hybrid_recall.
+    This replaces DeepWiki's instant repo Q&A with a self-contained approach.
+
+    Args:
+        repo: GitHub repo in owner/repo format (e.g. 'facebook/react')
+        max_pages: Maximum number of pages to fetch (default 5)
+        max_chars_per_page: Max chars per page (default 50K)
+        store_memories: Store fetched content as memories (default True)
+
+    Returns:
+        RepoResearchResult with fetched pages and memory IDs
+    """
+    import re as _re
+    if not _re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+        return RepoResearchResult(repo=repo, error="Invalid repo format. Use owner/repo (e.g. 'facebook/react')")
+
+    pages_fetched = 0
+    total_chars = 0
+    memory_ids: list[str] = []
+    wiki_url = f"https://github.com/{repo}/wiki"
+    readme_url = f"https://raw.githubusercontent.com/{repo}/HEAD/README.md"
+
+    urls_to_try: list[str] = []
+    for path in _GITHUB_DOC_PATHS[:max_pages + 1]:
+        urls_to_try.append(f"https://raw.githubusercontent.com/{repo}/HEAD/{path}")
+    urls_to_try.append(f"https://raw.githubusercontent.com/{repo}/HEAD/Home.md")
+
+    fetch_tasks = [web_fetch(u, max_chars=max_chars_per_page, timeout=15.0) for u in urls_to_try[:max_pages + 2]]
+    fetched = await asyncio.gather(*fetch_tasks, return_exceptions=True)
+
+    contents_to_store: list[dict[str, str]] = []
+    for i, result in enumerate(fetched):
+        if isinstance(result, Exception) or not hasattr(result, "success"):
+            continue
+        if not result.success or not result.content or len(result.content.strip()) < 50:
+            continue
+        pages_fetched += 1
+        total_chars += result.content_length
+        source_url = urls_to_try[i] if i < len(urls_to_try) else ""
+        contents_to_store.append({
+            "url": source_url,
+            "title": result.title or f"{repo} doc page {pages_fetched}",
+            "content": result.content,
+        })
+
+    if store_memories and contents_to_store:
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            mem = get_unified_memory()
+            for item in contents_to_store:
+                try:
+                    mem_id = mem.store(
+                        content=item["content"],
+                        metadata={
+                            "type": "repo_research",
+                            "repo": repo,
+                            "source_url": item["url"],
+                            "title": item["title"],
+                            "timestamp": datetime.now(UTC).isoformat(),
+                        },
+                        tags=["repo_research", repo, "documentation"],
+                    )
+                    if mem_id:
+                        memory_ids.append(str(mem_id))
+                except Exception as e:
+                    logger.debug("Failed to store repo research memory: %s", e, exc_info=True)
+        except Exception as e:
+            logger.debug("Memory system unavailable for repo research: %s", e, exc_info=True)
+
+    return RepoResearchResult(
+        repo=repo,
+        pages_fetched=pages_fetched,
+        total_chars=total_chars,
+        memory_ids=memory_ids,
+        wiki_url=wiki_url,
+        readme_url=readme_url,
+    )
+
+
+# ---------------------------------------------------------------------------
+# research_url -- Fetch any URL full content and store as memory for Q&A
+# ---------------------------------------------------------------------------
+
+@dataclass
+class URLResearchResult:
+    """Result from research_url -- URL content fetched and stored as memory."""
+
+    url: str
+    title: str = ""
+    content_length: int = 0
+    memory_id: str | None = None
+    pages_fetched: int = 0
+    error: str | None = None
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+    @property
+    def success(self) -> bool:
+        return self.error is None and self.content_length > 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "url": self.url,
+            "title": self.title,
+            "content_length": self.content_length,
+            "memory_id": self.memory_id,
+            "pages_fetched": self.pages_fetched,
+            "success": self.success,
+            "error": self.error,
+            "timestamp": self.timestamp,
+        }
+
+
+async def research_url(
+    url: str,
+    max_chars: int = 200_000,
+    timeout: float = 30.0,
+    store_memory: bool = True,
+) -> URLResearchResult:
+    """Fetch full content from any URL and store as a WhiteMagic memory.
+
+    Generalizes the research_repo approach to any URL on the open net.
+    Uses deep_fetch for full-content retrieval (no chunk skimming), then
+    stores the result as a memory for later Q&A via hybrid_recall.
+
+    Args:
+        url: The URL to research
+        max_chars: Maximum characters to retrieve (default 200K)
+        timeout: Request timeout in seconds
+        store_memory: Store content as a memory (default True)
+
+    Returns:
+        URLResearchResult with fetched content and memory ID
+    """
+    result = await deep_fetch(url, max_chars=max_chars, timeout=timeout)
+
+    if not result.success:
+        return URLResearchResult(
+            url=url, error=result.error or "Fetch failed",
+            content_length=0, pages_fetched=0,
+        )
+
+    memory_id = None
+    if store_memory and result.content:
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            mem = get_unified_memory()
+            mem_id = mem.store(
+                content=result.content,
+                metadata={
+                    "type": "url_research",
+                    "source_url": url,
+                    "title": result.title,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+                tags=["url_research", "web_content"],
+            )
+            if mem_id:
+                memory_id = str(mem_id)
+        except Exception as e:
+            logger.debug("Memory system unavailable for URL research: %s", e, exc_info=True)
+
+    return URLResearchResult(
+        url=url,
+        title=result.title,
+        content_length=result.content_length,
+        memory_id=memory_id,
+        pages_fetched=result.pages_fetched,
+    )
+
+
+# ---------------------------------------------------------------------------
+# web_search_batch -- Parallel multi-query search (Exa batch equivalent)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class BatchSearchResult:
+    """Result from web_search_batch -- multiple queries searched in parallel."""
+
+    queries: list[str]
+    total_results: int = 0
+    results_by_query: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    duration_ms: float = 0.0
+    errors: list[str] = field(default_factory=list)
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "queries": self.queries,
+            "total_results": self.total_results,
+            "results_by_query": self.results_by_query,
+            "duration_ms": round(self.duration_ms, 1),
+            "errors": self.errors,
+            "timestamp": self.timestamp,
+        }
+
+
+async def web_search_batch(
+    queries: list[str],
+    num_results_per_query: int = 5,
+    timeout: float = 10.0,
+    category: str | None = None,
+) -> BatchSearchResult:
+    """Search multiple queries in parallel via asyncio.gather.
+
+    This is the batch equivalent of web_search -- instead of searching
+    one query at a time, it runs all queries simultaneously, dramatically
+    speeding up multi-faceted research (e.g. rabbit hole exploration).
+
+    Args:
+        queries: List of search queries to run in parallel
+        num_results_per_query: Results per query (default 5, lower for batch)
+        timeout: Timeout per search in seconds
+        category: Optional category filter applied to all queries
+
+    Returns:
+        BatchSearchResult with results grouped by query
+    """
+    start = time.monotonic()
+
+    tasks = [
+        web_search(q, num_results=num_results_per_query, timeout=timeout, category=category)
+        for q in queries
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    batch = BatchSearchResult(queries=queries)
+    for i, result in enumerate(results):
+        query = queries[i]
+        if isinstance(result, Exception):
+            batch.errors.append(f"{query}: {result}")
+            batch.results_by_query[query] = []
+        else:
+            batch.results_by_query[query] = result.to_dict().get("results", [])
+            batch.total_results += len(batch.results_by_query[query])
+
+    batch.duration_ms = (time.monotonic() - start) * 1000
+    return batch
+
+
+def sync_web_search_batch(
+    queries: list[str],
+    num_results_per_query: int = 5,
+    timeout: float = 10.0,
+    category: str | None = None,
+) -> BatchSearchResult:
+    """Synchronous wrapper for web_search_batch."""
+    result: BatchSearchResult = _run_async(
+        web_search_batch(queries, num_results_per_query=num_results_per_query, timeout=timeout, category=category)
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Web Content Cache -- Persist fetched content for re-reading
+# ---------------------------------------------------------------------------
+
+def _get_cache_dir() -> Path:
+    """Get the web content cache directory under WM_STATE_ROOT."""
+    from whitemagic.config.paths import get_state_root
+    cache_dir = get_state_root() / "web_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def _cache_key(url: str) -> str:
+    """Generate a safe filename from a URL."""
+    import hashlib
+    url_hash = hashlib.sha256(url.encode()).hexdigest()[:16]
+    # Try to preserve domain for readability
+    parsed = urlparse(url)
+    domain = parsed.netloc.replace(".", "_")[:30]
+    return f"{domain}_{url_hash}"
+
+
+def cache_web_content(url: str, content: str, title: str = "", metadata: dict[str, Any] | None = None) -> Path:
+    """Save web content to the cache directory for later re-reading.
+
+    Stores content as markdown files with frontmatter metadata.
+    Images are noted but not downloaded (binary content tracked separately).
+
+    Args:
+        url: Source URL
+        content: Text content to cache
+        title: Page title
+        metadata: Additional metadata dict
+
+    Returns:
+        Path to the cached file
+    """
+    cache_dir = _get_cache_dir()
+    key = _cache_key(url)
+    filepath = cache_dir / f"{key}.md"
+
+    frontmatter_lines = [
+        "---",
+        f"url: {url}",
+        f"title: {title}",
+        f"cached_at: {datetime.now(UTC).isoformat()}",
+    ]
+    if metadata:
+        for k, v in metadata.items():
+            frontmatter_lines.append(f"{k}: {v}")
+    frontmatter_lines.append("---")
+    frontmatter_lines.append("")
+
+    full_content = "\n".join(frontmatter_lines) + content
+    filepath.write_text(full_content, encoding="utf-8")
+    logger.debug("Cached web content: %s -> %s", url, filepath)
+    return filepath
+
+
+def read_cached_content(url: str) -> str | None:
+    """Read previously cached content for a URL.
+
+    Returns None if not cached.
+    """
+    cache_dir = _get_cache_dir()
+    key = _cache_key(url)
+    filepath = cache_dir / f"{key}.md"
+    if filepath.exists():
+        return filepath.read_text(encoding="utf-8")
+    return None
+
+
+def list_cached_content() -> list[dict[str, Any]]:
+    """List all cached web content files with metadata."""
+    cache_dir = _get_cache_dir()
+    results = []
+    for f in cache_dir.glob("*.md"):
+        try:
+            content = f.read_text(encoding="utf-8")
+            # Extract frontmatter
+            if content.startswith("---"):
+                end = content.index("---", 3)
+                frontmatter = content[3:end].strip()
+                meta = {}
+                for line in frontmatter.split("\n"):
+                    if ": " in line:
+                        k, v = line.split(": ", 1)
+                        meta[k.strip()] = v.strip()
+                results.append({
+                    "file": str(f),
+                    "filename": f.name,
+                    "size_bytes": f.stat().st_size,
+                    **meta,
+                })
+        except Exception:
+            results.append({"file": str(f), "filename": f.name, "error": "parse_failed"})
+    return results
+
+
+def clear_cached_content(older_than_hours: int | None = None) -> int:
+    """Clear cached web content. Returns count of files removed.
+
+    Args:
+        older_than_hours: Only remove files older than this many hours.
+                         If None, removes all.
+    """
+    import time as _time
+    cache_dir = _get_cache_dir()
+    removed = 0
+    cutoff = _time.time() - (older_than_hours * 3600) if older_than_hours else None
+
+    for f in cache_dir.glob("*.md"):
+        if cutoff and f.stat().st_mtime > cutoff:
+            continue
+        f.unlink()
+        removed += 1
+    return removed
+
+
+# ---------------------------------------------------------------------------
+# Image extraction from web pages
+# ---------------------------------------------------------------------------
+
+def extract_image_urls(html: str, base_url: str = "") -> list[dict[str, str]]:
+    """Extract image URLs from HTML content.
+
+    Returns list of dicts with url, alt, and src attributes.
+    """
+    images = []
+    try:
+        from bs4 import BeautifulSoup
+        from urllib.parse import urljoin
+        soup = BeautifulSoup(html, "html.parser")
+        for img in soup.find_all("img"):
+            src = img.get("src") or img.get("data-src") or ""
+            if not src or src.startswith("data:"):
+                continue
+            alt = img.get("alt", "")
+            if base_url:
+                src = urljoin(base_url, src)
+            images.append({"url": src, "alt": alt})
+    except Exception:
+        pass
+    return images
+
+
+async def download_image(url: str, dest_dir: Path, timeout: float = 10.0) -> Path | None:
+    """Download an image to the specified directory.
+
+    Returns the path to the downloaded file, or None on failure.
+    """
+    if not HAS_HTTPX:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            response = await client.get(url)
+            if response.status_code != 200:
+                return None
+            content_type = response.headers.get("content-type", "")
+            if "image" not in content_type:
+                return None
+
+            # Generate filename from URL
+            import hashlib
+            url_hash = hashlib.sha256(url.encode()).hexdigest()[:8]
+            ext = content_type.split("/")[-1].split(";")[0]
+            if ext == "jpeg":
+                ext = "jpg"
+            filename = f"img_{url_hash}.{ext}"
+            filepath = dest_dir / filename
+            filepath.write_bytes(response.content)
+            return filepath
+    except Exception:
+        return None
+
+
+async def download_page_images(
+    html: str,
+    base_url: str,
+    dest_dir: Path,
+    max_images: int = 10,
+    timeout: float = 10.0,
+) -> list[dict[str, Any]]:
+    """Extract and download all images from a page.
+
+    Returns list of dicts with url, alt, local_path, and success status.
+    """
+    images = extract_image_urls(html, base_url)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    results = []
+    tasks = []
+    for img in images[:max_images]:
+        tasks.append(download_image(img["url"], dest_dir, timeout=timeout))
+
+    downloaded = await asyncio.gather(*tasks, return_exceptions=True)
+
+    for i, img in enumerate(images[:max_images]):
+        result = {"url": img["url"], "alt": img["alt"], "success": False}
+        if i < len(downloaded) and not isinstance(downloaded[i], Exception) and downloaded[i]:
+            result["local_path"] = str(downloaded[i])
+            result["success"] = True
+        elif isinstance(downloaded[i], Exception):
+            result["error"] = str(downloaded[i])
+        results.append(result)
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Cached fetch with deduplication — skip URLs already cached
+# ---------------------------------------------------------------------------
+
+async def cached_deep_fetch(
+    url: str,
+    max_chars: int = 200_000,
+    timeout: float = 30.0,
+    force_refresh: bool = False,
+    download_images: bool = False,
+) -> DeepFetchResult:
+    """Deep fetch with caching — returns cached content if available.
+
+    Args:
+        url: URL to fetch
+        max_chars: Max content size
+        timeout: Request timeout
+        force_refresh: Skip cache and re-fetch
+        download_images: Also download images from the page
+
+    Returns:
+        DeepFetchResult (from cache or fresh fetch)
+    """
+    if not force_refresh:
+        cached = read_cached_content(url)
+        if cached:
+            # Parse frontmatter and content
+            content = cached
+            title = ""
+            if cached.startswith("---"):
+                end = cached.index("---", 3)
+                frontmatter = cached[3:end].strip()
+                for line in frontmatter.split("\n"):
+                    if line.startswith("title: "):
+                        title = line[7:]
+                content = cached[end + 3:].strip()
+
+            return DeepFetchResult(
+                url=url,
+                title=title,
+                content=content,
+                content_length=len(content),
+                status_code=200,
+                duration_ms=0.0,
+                pages_fetched=0,
+            )
+
+    # Fresh fetch
+    result = await deep_fetch(url, max_chars=max_chars, timeout=timeout)
+
+    if result.success and result.content:
+        # Cache the content
+        cache_web_content(url, result.content, result.title, metadata={
+            "pages_fetched": result.pages_fetched,
+            "status_code": result.status_code,
+        })
+
+        # Download images if requested
+        if download_images and HAS_HTTPX:
+            try:
+                cache_dir = _get_cache_dir()
+                img_dir = cache_dir / "images" / _cache_key(url)
+                # Re-fetch HTML for image extraction (deep_fetch converts to text)
+                async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                    response = await client.get(url)
+                    if response.status_code == 200:
+                        imgs = await download_page_images(
+                            response.text, url, img_dir, max_images=10, timeout=timeout,
+                        )
+                        result.metadata = {"images_downloaded": sum(1 for i in imgs if i["success"])}
+            except Exception:
+                pass
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Depth-aware category selection for rabbit hole research
+# ---------------------------------------------------------------------------
+
+_DEPTH_CATEGORIES = {
+    0: None,          # Level 0: General search
+    1: "academic",    # Level 1: Academic/authoritative sources
+    2: "code",        # Level 2: Code/implementation sources
+    3: "docs",        # Level 3: Documentation sources
+    4: "news",        # Level 4: News/recent developments
+}
+
+
+def get_depth_category(depth: int) -> str | None:
+    """Get the recommended search category for a given rabbit hole depth."""
+    return _DEPTH_CATEGORIES.get(depth, "docs")
+
+
+# ---------------------------------------------------------------------------
+# Adaptive batch sizing — adjust parallel terms based on response times
+# ---------------------------------------------------------------------------
+
+class AdaptiveBatchSizer:
+    """Dynamically adjusts batch size based on observed response times.
+
+    Starts with a default batch size and adapts:
+    - Fast responses (< 2s) -> increase batch size
+    - Slow responses (> 5s) -> decrease batch size
+    - Errors -> decrease batch size more aggressively
+    """
+
+    def __init__(self, initial_size: int = 8, min_size: int = 2, max_size: int = 20) -> None:
+        self.current_size = initial_size
+        self.min_size = min_size
+        self.max_size = max_size
+        self._response_times: list[float] = []
+        self._error_count = 0
+
+    def record_response(self, duration_ms: float, error: bool = False) -> None:
+        """Record a response time and adjust batch size."""
+        if error:
+            self._error_count += 1
+            self.current_size = max(self.min_size, self.current_size - 2)
+            return
+
+        self._response_times.append(duration_ms / 1000.0)
+        if len(self._response_times) > 10:
+            self._response_times = self._response_times[-10:]
+
+        if len(self._response_times) >= 3:
+            avg_time = sum(self._response_times) / len(self._response_times)
+            if avg_time < 2.0:
+                self.current_size = min(self.max_size, self.current_size + 1)
+            elif avg_time > 5.0:
+                self.current_size = max(self.min_size, self.current_size - 1)
+
+    def get_batch_size(self) -> int:
+        """Get the current recommended batch size."""
+        return self.current_size

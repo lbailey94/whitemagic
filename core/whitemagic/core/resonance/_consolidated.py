@@ -1097,6 +1097,15 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
             coro = _publish()
             try:
                 _run(coro)
+            except (RuntimeError, ConnectionError, OSError) as e:
+                # Redis async client can raise RuntimeError when no event loop
+                # is available, or ConnectionError when Redis isn't responding.
+                # Cache the failure so we don't retry for 30s.
+                _redis_available = False
+                _redis_check_time = _time.monotonic()
+                logger.debug("Redis broker unavailable, caching failure: %s", e)
+                # Ensure coroutine is closed to prevent 'never awaited' warnings
+                coro.close()
             except Exception:
                 # Ensure coroutine is closed to prevent 'never awaited' warnings
                 coro.close()

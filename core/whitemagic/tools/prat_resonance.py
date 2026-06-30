@@ -620,9 +620,10 @@ def record_resonance(
         pass
 
     # Citta Architecture: Recursive cycle — advance the stream
+    citta_moment = None
     try:
-        from whitemagic.core.consciousness.citta_cycle import advance_citta
-        advance_citta(
+        from whitemagic.core.consciousness.citta_cycle import advance_citta, get_citta_cycle
+        citta_moment = advance_citta(
             gana=gana_name,
             tool=tool_name,
             operation=operation,
@@ -633,6 +634,16 @@ def record_resonance(
         )
     except Exception:
         pass
+
+    # Citta Architecture: Bridge — persist significant moments as memories
+    if citta_moment is not None:
+        try:
+            from whitemagic.core.consciousness.citta_bridge import get_citta_bridge
+            bridge = get_citta_bridge()
+            cycle = get_citta_cycle()
+            bridge.check_and_store(citta_moment, cycle.get_cycle_summary())
+        except Exception:
+            pass
 
     return {
         "gana": gana_name,

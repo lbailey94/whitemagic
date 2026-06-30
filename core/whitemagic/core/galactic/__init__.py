@@ -318,7 +318,8 @@ def memory_recent(limit: int = 10, memory_type: str | None = None) -> list[Memor
 
 
 def memory_search(
-    query: str, limit: int = 10, memory_type: str | None = None
+    query: str, limit: int = 10, memory_type: str | None = None,
+    galaxy: str | None = None,
 ) -> list[Memory]:
     """FTS5 search across memory content. Falls back to LIKE if FTS unavailable."""
     if not query or limit <= 0:
@@ -327,15 +328,43 @@ def memory_search(
     with connect() as conn:
         # Prefer FTS5 if present (it usually is in the live substrate).
         try:
+            # Build FTS5 query: phrase match first, keyword fallback
+            fts_query = query.strip()
+            # Sanitize FTS5-unsafe characters
+            for ch in r'[]{}()^~*:,;\/':
+                fts_query = fts_query.replace(ch, ' ')
+            fts_query = fts_query.strip()
+            if not fts_query:
+                fts_query = query.strip()
+
+            # For multi-word queries, try phrase match first
+            if " " in fts_query and not (fts_query.startswith('"') and fts_query.endswith('"')):
+                phrase_q = f'"{fts_query}"'
+                # Test if phrase match returns results
+                test_rows = conn.execute(
+                    "SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?",
+                    (phrase_q,),
+                ).fetchone()
+                if test_rows[0] > 0:
+                    fts_query = phrase_q
+                else:
+                    # Fall back to individual keywords (implicit AND in FTS5)
+                    fts5_reserved = {"OR", "AND", "NOT", "NEAR"}
+                    keywords = [k for k in fts_query.split() if k and k.upper() not in fts5_reserved]
+                    fts_query = " ".join(keywords) if keywords else fts_query
+
             sql = (
                 "SELECT m.* FROM memories_fts fts "
-                "JOIN memories m ON m.rowid = fts.rowid "
+                "JOIN memories m ON m.id = fts.id "
                 "WHERE memories_fts MATCH ?"
             )
-            params: tuple[Any, ...] = (query,)
+            params: tuple[Any, ...] = (fts_query,)
             if memory_type:
                 sql += " AND m.memory_type = ?"
                 params = params + (memory_type,)
+            if galaxy:
+                sql += " AND m.galaxy = ?"
+                params = params + (galaxy,)
             sql += " ORDER BY rank LIMIT ?"
             params = params + (limit,)
             rows = conn.execute(sql, params).fetchall()
@@ -352,6 +381,9 @@ def memory_search(
         if memory_type:
             sql += " AND memory_type = ?"
             params = params + (memory_type,)
+        if galaxy:
+            sql += " AND galaxy = ?"
+            params = params + (galaxy,)
         sql += " ORDER BY created_at DESC LIMIT ?"
         params = params + (limit,)
         rows = conn.execute(sql, params).fetchall()

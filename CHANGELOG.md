@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [23.3.1] - 2026-06-29
+
+### Added
+- **Galaxy taxonomy** — 10 canonical galaxies (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal) with descriptions and memory counts
+- **CITTA memory type** — new `MemoryType.CITTA` for consciousness-stream memories
+- **Citta bridge** — `citta_bridge.py` auto-persists significant citta moments (depth transitions, emotional peaks, high-coherence events) into the `citta` galaxy
+- **HNSW index with disk persistence** — 16,219 embeddings indexed at 0.26ms search latency (6.1x speedup), persists to disk for fast restart
+- **Galaxy-aware search** — `search_similar()` and `memory_search()` now accept `galaxy` parameter for galaxy-filtered results
+- **`galaxy.canonical_taxonomy` tool** — lists canonical galaxy taxonomy with descriptions and memory counts
+- **`galaxy.export_tutorial` tool** — exports tutorial galaxy memories as JSON for public repo synchronization
+- **Oracle → dream memory auto-persistence** — I Ching readings via `cast_oracle` now auto-store to the `dreams` galaxy
+- **NLU routing for galaxy search** — meta_tool.py routes "search aria memories for X" to galaxy-filtered search
+
+### Changed
+- All 12,737 memories migrated to appropriate galaxies via content-based classification
+- All 12,737 memories now have content_hash (was 12,581 NULL → 0 NULL)
+- All 12,737 memories now have holographic coordinates in `holographic_coords` table (was 438 missing → 0 missing)
+- FTS5 index rebuilt from 435 entries to 12,737 (full coverage)
+- FTS5 search fixed: phrase match tried first, keyword fallback only if phrase returns nothing
+- FTS5 join bug fixed in `galactic/__init__.py`: was joining on `rowid` (unstable after rebuild), now joins on `id`
+- 2,853 cross-galaxy semantic associations generated (aria↔citta, research↔codex, etc.)
+- 68 duplicate memories consolidated (demoted, not deleted)
+- 66 stale low-importance memories decayed
+- `galactic_memory_search` bridge passes `galaxy` parameter through to substrate
+
+### Test Results
+- Unit: 3,206 passed, 12 failed (all pre-existing: PWA shell files, surprise gate cardinality)
+- Integration: 259 passed, 0 failed
+
 ## [23.3.0] - 2026-06-27
 
 ### Added

@@ -363,6 +363,12 @@ class TemporalForecastDB:
             cat = r["category"] or "general"
             categories[cat] = categories.get(cat, 0) + 1
 
+        # ECCE (Empirical Cumulative Calibration Error) — bin-independent
+        ecce_val = None
+        if closed:
+            from whitemagic.forecasting.scoring import ecce as _ecce
+            ecce_val = round(_ecce(forecasts, outcomes), 4)
+
         return {
             "total": total,
             "validated": len(validated),
@@ -374,6 +380,7 @@ class TemporalForecastDB:
             "brier_skill_score": round(bss, 4) if bss == bss else None,
             "brier_index": round(bi, 1) if bi == bi else None,
             "calibration_gap": round(cg, 3) if cg == cg else None,
+            "ecce": ecce_val,
             "categories": categories,
         }
 

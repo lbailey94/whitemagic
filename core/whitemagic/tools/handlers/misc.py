@@ -223,7 +223,7 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
         oracle = get_i_ching()
         question = kwargs.get("question", "What guidance do you offer?")
         hexagram = oracle.cast_hexagram(question)
-        return {
+        result = {
             "status": "success",
             "hexagram": hexagram.number,
             "name": getattr(hexagram, "name", "Unknown"),
@@ -232,6 +232,31 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
             "guidance": getattr(hexagram, "guidance", ""),
             "question": question,
         }
+
+        # Auto-persist oracle reading as a dream memory
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            content = (
+                f"I Ching Reading — Hexagram {hexagram.number}: {getattr(hexagram, 'name', 'Unknown')}\n"
+                f"Question: {question}\n\n"
+                f"Judgment: {getattr(hexagram, 'judgment', '')}\n"
+                f"Guidance: {getattr(hexagram, 'guidance', '')}\n"
+            )
+            um.store(
+                content=content,
+                title=f"I Ching #{hexagram.number} — {getattr(hexagram, 'name', 'Unknown')}",
+                tags={"dream", "i_ching", "oracle", "divination"},
+                memory_type="LONG_TERM",
+                importance=0.7,
+                galaxy="dreams",
+                metadata={"oracle_type": "i_ching", "hexagram_number": hexagram.number},
+                auto_embed=False,
+            )
+        except Exception:
+            pass  # Non-critical — oracle result is still returned
+
+        return result
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
