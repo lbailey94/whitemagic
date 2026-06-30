@@ -29,9 +29,24 @@ def check_fstring_no_placeholder(project_path: Path, file_index: FileIndex, find
         if tree is None:
             continue
 
+        # Pre-collect JoinedStr nodes that are format_spec of a FormattedValue.
+        # In Python 3.12+, format specs like {x:.0f} are parsed as separate
+        # JoinedStr nodes — these are NOT f-strings without placeholders.
+        format_spec_ids: set[int] = set()
         for node in ast.walk(tree):
-            if isinstance(node, ast.JoinedStr) and not node.values:
-                # Empty f-string: f"" — no values at all
+            if isinstance(node, ast.FormattedValue) and node.format_spec:
+                if isinstance(node.format_spec, ast.JoinedStr):
+                    format_spec_ids.add(id(node.format_spec))
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.JoinedStr):
+                continue
+            # Skip format_spec JoinedStr nodes (Python 3.12+)
+            if id(node) in format_spec_ids:
+                continue
+            # Check if all values are constant strings (no FormattedValue)
+            has_formatted = any(isinstance(v, ast.FormattedValue) for v in node.values)
+            if not has_formatted:
                 findings.append(Finding(
                     severity=FindingSeverity.WARNING,
                     category="fstring_no_placeholder",
@@ -40,15 +55,3 @@ def check_fstring_no_placeholder(project_path: Path, file_index: FileIndex, find
                     message="f-string with no placeholders — remove the f-prefix.",
                     suggestion='Change f"..." to "..." — no expressions are interpolated.',
                 ))
-            elif isinstance(node, ast.JoinedStr):
-                # Check if all values are constant strings (no FormattedValue)
-                has_formatted = any(isinstance(v, ast.FormattedValue) for v in node.values)
-                if not has_formatted:
-                    findings.append(Finding(
-                        severity=FindingSeverity.WARNING,
-                        category="fstring_no_placeholder",
-                        file=str(py_file.relative_to(project_path)),
-                        line=node.lineno,
-                        message="f-string with no placeholders — remove the f-prefix.",
-                        suggestion='Change f"..." to "..." — no expressions are interpolated.',
-                    ))

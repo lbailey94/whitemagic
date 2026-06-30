@@ -33,24 +33,13 @@ def check_equality_comparison(project_path: Path, file_index: FileIndex, finding
         for node in ast.walk(tree):
             if isinstance(node, ast.Compare):
                 if len(node.ops) == 1 and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
-                    # Check left side
+                    # Check left side — use type+identity check to avoid
+                    # 0 == False and 1 == True matching (Python equality quirk)
                     left = node.left
-                    if isinstance(left, ast.Constant) and left.value in (True, False, None):
-                        op_str = "==" if isinstance(node.ops[0], ast.Eq) else "!="
-                        val = repr(left.value)
-                        findings.append(Finding(
-                            severity=FindingSeverity.WARNING,
-                            category="equality_comparison",
-                            file=str(py_file.relative_to(project_path)),
-                            line=node.lineno,
-                            message=f"Use 'is'/'is not' instead of '{op_str}' for comparison to {val}.",
-                            suggestion=f"Replace '{op_str} {val}' with 'is{'' if isinstance(node.ops[0], ast.Eq) else ' not'} {val}'.",
-                        ))
-                    # Check right side (comparators)
-                    for comparator in node.comparators:
-                        if isinstance(comparator, ast.Constant) and comparator.value in (True, False, None):
+                    if isinstance(left, ast.Constant) and isinstance(left.value, bool | type(None)):
+                        if left.value is True or left.value is False or left.value is None:
                             op_str = "==" if isinstance(node.ops[0], ast.Eq) else "!="
-                            val = repr(comparator.value)
+                            val = repr(left.value)
                             findings.append(Finding(
                                 severity=FindingSeverity.WARNING,
                                 category="equality_comparison",
@@ -59,3 +48,17 @@ def check_equality_comparison(project_path: Path, file_index: FileIndex, finding
                                 message=f"Use 'is'/'is not' instead of '{op_str}' for comparison to {val}.",
                                 suggestion=f"Replace '{op_str} {val}' with 'is{'' if isinstance(node.ops[0], ast.Eq) else ' not'} {val}'.",
                             ))
+                    # Check right side (comparators)
+                    for comparator in node.comparators:
+                        if isinstance(comparator, ast.Constant) and isinstance(comparator.value, bool | type(None)):
+                            if comparator.value is True or comparator.value is False or comparator.value is None:
+                                op_str = "==" if isinstance(node.ops[0], ast.Eq) else "!="
+                                val = repr(comparator.value)
+                                findings.append(Finding(
+                                    severity=FindingSeverity.WARNING,
+                                    category="equality_comparison",
+                                    file=str(py_file.relative_to(project_path)),
+                                    line=node.lineno,
+                                    message=f"Use 'is'/'is not' instead of '{op_str}' for comparison to {val}.",
+                                    suggestion=f"Replace '{op_str} {val}' with 'is{'' if isinstance(node.ops[0], ast.Eq) else ' not'} {val}'.",
+                                ))
