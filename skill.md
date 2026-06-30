@@ -1,7 +1,7 @@
 ---
 name: whitemagic
-version: 22.2.0
-description: Cognitive substrate for agentic AI — 5D holographic memory, Dharma ethical governance, Karma audit ledger, bicameral reasoning, dream consolidation, foresight engine. Lab/portfolio artifact, MIT-licensed.
+version: 23.3.1
+description: Cognitive operating system for agentic AI — 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, Karma audit ledger, 28-Gana PRAT meta-tools, bicameral reasoning, 12-phase dream cycle, polyglot acceleration (7 languages). MIT-licensed.
 author: WhiteMagic Labs
 homepage: https://whitemagic.dev
 repository: https://github.com/whitemagic-ai/whitemagic
@@ -22,15 +22,18 @@ Cognitive substrate for agentic AI — published as a research/portfolio artifac
 
 ## What it does
 
-WhiteMagic provides 479 callable MCP tools across 451 dispatch entries (or 28 Gana meta-tools in PRAT mode) covering memory, ethical governance, system introspection, multi-agent coordination, and metacognition. Distinguishing primitives:
+WhiteMagic provides 490 callable MCP tools across 490 dispatch entries (or 28 Gana meta-tools in PRAT mode, or 1 `wm` meta-tool in Seed mode) covering memory, ethical governance, system introspection, multi-agent coordination, and metacognition. Distinguishing primitives:
 
-- **5D holographic memory coordinates** with galactic-zone lifecycle (no memory is ever deleted; memories drift outward through CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE)
+- **5D holographic memory coordinates** with 10-galaxy taxonomy and galactic-zone lifecycle (no memory is ever deleted; memories drift outward through CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE)
 - **Dharma ethical governance** — three rule profiles (Default / Strict / Violet-Security), Karma side-effect ledger, Harmony Vector health scoring
-- **Cognitive primitives** — Corpus Callosum bicameral reasoner, dream consolidation cycle, voice audit (hallucination detection), foresight engine (Logos Layer), neurotransmitter telemetry
+- **Cognitive primitives** — Corpus Callosum bicameral reasoner, 12-phase dream consolidation cycle, voice audit (hallucination detection), foresight engine (Logos Layer), neurotransmitter telemetry
 - **8-stage dispatch pipeline** — input sanitizer → circuit breaker → rate limiter → RBAC → maturity gate → governor → handler → compact response
-- **Polyglot accelerators** — Rust, Haskell, Elixir, Go, Zig, Mojo (graceful Python fallback when missing)
+- **`wm` meta-tool** — single facade tool with sub-millisecond regex NLU routing to all 490 tools ("world in a seed")
+- **Polyglot accelerators** — Rust, Haskell, Elixir, Go, Zig, Julia, Koka (graceful Python fallback when missing)
+- **HNSW vector index** with disk persistence (16,219 embeddings, 0.26ms search)
+- **Multi-user galaxy isolation** — per-user SQLite namespaces, X-User-Id header, Redis real-time sync
 
-v22.2.0 release baseline: 2,216 tests pass. Current local audit baseline: 2,243 tests pass, 67 skipped, 0 failures as of 2026-05-20. MIT-licensed. No telemetry, no API keys required, no runtime state written into the repo (`WM_STATE_ROOT` controls all writes).
+v23.3.1: 3,206 unit + 259 integration tests passing. MIT-licensed. No telemetry, no API keys required, no runtime state written into the repo (`WM_STATE_ROOT` controls all writes).
 
 ## Install
 
@@ -87,7 +90,15 @@ await memory.create({ content: "...", tags: ["..."], galaxy: "default" });
 
 ## PRAT Mode (Recommended)
 
-Set `WM_MCP_PRAT=1` to collapse 451 dispatch tools into 28 Gana meta-tools — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each meta-tool routes to its underlying handlers and carries resonance context for deeper interaction. Estimated tool-description token savings: ~53% vs. flat dispatch (full benchmark scaffold in `core/scripts/benchmark_suite.py`).
+Set `WM_MCP_PRAT=1` to collapse 490 dispatch tools into 28 Gana meta-tools — consciousness lenses based on the Chinese Lunar Mansions (Xiu 宿). Each meta-tool routes to its underlying handlers and carries resonance context for deeper interaction.
+
+Set `WM_MCP_PRAT=2` for Seed mode — a single `wm` meta-tool with sub-millisecond regex NLU routing to all 490 tools. "World in a seed."
+
+## Skills Library
+
+WhiteMagic includes a portable `SKILL.md` library at `grimoire/skills/` covering all 28 Ganas, 4 development workflows, and 7 Hermes-native integrations. These work across Claude Code, Codex CLI, Gemini CLI, Copilot, Cursor, Cline, Windsurf, and OpenCode.
+
+See `grimoire/skills/SKILL_LIBRARY.md` for the full index.
 
 ## Security
 

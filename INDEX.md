@@ -561,6 +561,18 @@ The **Grimoire** is WhiteMagic's living documentation system — 28 chapters map
 |------|---------|
 | `CHAPTER_TEMPLATE.md` | Template for new grimoire chapters |
 
+### Skills: `grimoire/skills/`
+
+> **43 portable `SKILL.md` files** covering all 28 Ganas, 4 workflows, 4 development skills, and 7 Hermes-native integrations. Compatible with Claude Code, Codex CLI, Gemini CLI, Copilot, Cursor, Cline, Windsurf, and OpenCode.
+
+| Directory | Files | Content |
+|-----------|-------|---------|
+| `ganas/` | 28 | One SKILL.md per Gana — tools, workflows, invocation patterns |
+| `workflows/` | 4 | Code review, release, audit, deep research |
+| `development/` | 4 | Add tool, test suite, documentation, polyglot |
+| `hermes/` | 7 | Hermes-native skills with hook integration |
+| `SKILL_LIBRARY.md` | 1 | Full index of all skills |
+
 ---
 
 ## Polyglot Documentation: `polyglot/`
