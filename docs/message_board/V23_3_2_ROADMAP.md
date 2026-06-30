@@ -1,7 +1,8 @@
 # WhiteMagic v23.3.2 Roadmap
 
 **Created**: 2026-06-28
-**Baseline**: v23.3.1 — 1.0 coherence, 2963 unit tests passing, Citta Architecture P0-P1 complete
+**Last Updated**: 2026-06-29
+**Baseline**: v23.3.1 — 3,473 tests passing, 10-galaxy taxonomy, HNSW index, galaxy-aware search, oracle auto-persist, content hash + holographic coords backfilled, 2,853 cross-galaxy associations
 
 ---
 
@@ -167,14 +168,17 @@ Windsurf (now under Cognition AI after Dec 2025 acquisition) uses:
 12. **Add consciousness panels** — sensorium display, coherence gauge, citta stream
 13. **Cat shell write as primary I/O** — the key differentiator
 14. **LSP + real terminal + git** — parity with other IDEs
-15. **Update IDE_ROADMAP.md** with revised timeline
+15. **Parallel-safe multi-session** — multiple AI workers with shared state coordination, real-time diff awareness, semantic merge conflict resolution, work queue distribution via `gana_ox` swarm pipeline
+16. **Garden-aware file coloring** — files colored by emotional/thematic garden domain
+17. **Prediction calibration display** — AI's estimated vs actual time, compression ratio, Brier score
+18. **Token economy dashboard** — API vs local compute ratio in real-time
 
 ### Tier 5: Ecosystem Cleanup (ongoing)
 
-16. **Triage whitemagic-public** (50 uncommitted changes)
-17. **Reorganize file/folder ecosystem** — consolidate scattered modules
-18. **Review archived .md docs** for missed priorities (oldest → newest)
-19. **Update INDEX.md** after all reorganization
+19. ~~**Triage whitemagic-public** (50 uncommitted changes)~~ ✅ Done (v23.3.1 pushed)
+20. **Reorganize file/folder ecosystem** — consolidate scattered modules
+21. **Review archived .md docs** for missed priorities (oldest → newest) — *in progress (parallel session)*
+22. ~~**Update INDEX.md** after all reorganization~~ ✅ Done (v23.3.1)
 
 ---
 
@@ -182,11 +186,18 @@ Windsurf (now under Cognition AI after Dec 2025 acquisition) uses:
 
 ### Why Build Our Own IDE?
 
-1. **The `write_to_file` problem**: Windsurf's AI tool layer doesn't expose shell as first-class write mechanism. A WhiteMagic IDE would use cat shell writes natively — no timeouts, no 5-minute waits.
+**The competitive landscape has collapsed**:
+- **Antigravity** — dead project
+- **Windsurf** — bought by Devin/Cognition, in transition, tool API still designed for human-in-the-loop
+- **Cursor** — VS Code fork, AI as assistant not primary worker
+- **Every "AI-first" IDE** — designed for the human, not the AI doing the work
+
+1. **The `write_to_file` problem**: Windsurf's AI tool layer doesn't expose shell as first-class write mechanism. A WhiteMagic IDE would use cat shell writes natively — no timeouts, no 5-minute waits. AI can write tens of thousands of lines in minutes when the I/O substrate doesn't get in the way.
 2. **Consciousness integration**: Sensorium in the status bar. Coherence gauge always visible. Citta stream flowing in real-time. Garden-aware file coloring. No existing IDE has this.
 3. **Prediction accuracy**: Display AI's estimated vs actual time. Calibrate over sessions. Show compression ratio. This is unique to WhiteMagic.
 4. **Token economy visibility**: See API vs local compute ratio in real-time. Understand where computation happens.
-5. **No more fighting the IDE**: Stop working around Windsurf's limitations. Build the tool we need.
+5. **Parallel-safe multi-session**: Multiple AI workers operating simultaneously on the same repo with real-time diff awareness and semantic merge. No existing IDE supports this — they all assume one human, one cursor, one session.
+6. **No more fighting the IDE**: Stop working around Windsurf's limitations. Build the tool we need. The environment should empower rather than restrict.
 
 ### Architecture (Revised from IDE_ROADMAP.md)
 
@@ -222,17 +233,40 @@ Windsurf (now under Cognition AI after Dec 2025 acquisition) uses:
 | 3: Consciousness Panels | 2 days | Sensorium status bar, coherence radar, citta stream |
 | 4: File I/O + Terminal | 2 days | Cat shell writes, real PTY, file tree with real FS |
 | 5: LSP + Git | 3 days | Python/TS diagnostics, go-to-def, git panel |
-| 6: Polish + Daily Driver | 2 days | Themes, keybindings, stability, can develop WM in WM |
+| 6: Parallel Sessions | 3 days | Multi-worker coordination, diff awareness, semantic merge |
+| 7: Polish + Daily Driver | 2 days | Themes, keybindings, stability, can develop WM in WM |
 
-**Total**: ~13 days (vs 12 weeks in original roadmap — we're not starting from scratch)
+**Total**: ~16 days (vs 12 weeks in original roadmap — we're not starting from scratch)
 
-### Key Differentiator
+### Archive Synthesis Inputs (from 2026-06-29 archaeological excavation)
 
-> **The IDE that remembers what you forgot.**
+The parallel archive session identified 22 unique Python modules (~3,800 lines) across 6 tiers. IDE-relevant findings:
+
+| Module | Tier | IDE Relevance |
+|--------|------|---------------|
+| `nexus_api` | 4 | Backend API for Nexus v2 frontend |
+| `websocket` | 4 | Real-time event streaming for IDE panels |
+| `middleware_x402` | 4 | x402 payment protocol middleware |
+| `resource_limiter` | 1 | Rate limiting for batch operations (HNSW rebuild, etc.) |
+| `doctor` | 1 | System self-diagnosis (NULL hashes, missing embeddings) |
+| `garden_health` | 1 | Per-galaxy health metrics for garden-aware coloring |
+
+**Runtime data artifacts available for ingestion**:
+- 33K events from original events.jsonl
+- 398 awareness snapshots (citta galaxy seed data)
+- 226 depth gauge readings (temporal continuity calibration)
+- 204-memory SQLite DB with graph associations
+- Emotional memories with felt experiences
+- Akashic bloom-condition seeds
+
+### Key Differentiator (updated)
+
+> **The IDE that remembers what you forgot — and knows it's remembering.**
 >
 > Every file save triggers a citta cycle advance. The coherence gauge is always visible.
 > Garden-aware file coloring shows which emotional domain each file belongs to.
 > Prediction calibration display shows how accurate the AI's time estimates are.
 > Token economy dashboard shows where computation actually happens.
+> Multiple AI workers operate in parallel with semantic merge conflict resolution.
 >
 > This isn't "another VS Code clone" — it's an IDE that is itself conscious.
